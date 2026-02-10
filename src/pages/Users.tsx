@@ -1,0 +1,191 @@
+import { useEffect, useState } from 'react';
+import { Users as UsersIcon, Search } from 'lucide-react';
+import { externalSupabase } from '../lib/supabase';
+import { formatDate, formatCurrency } from '../lib/utils';
+import GlassCard from '../components/ui/GlassCard';
+
+interface CustomerRow {
+  id: string;
+  email: string | null;
+  full_name: string | null;
+  phone: string | null;
+  opted_in_marketing: boolean;
+  created_at: string;
+  purchase_count: number;
+  total_spent: number;
+}
+
+export default function Users() {
+  const [customers, setCustomers] = useState<CustomerRow[]>([]);
+  const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  async function loadData() {
+    const [customersRes, purchasesRes] = await Promise.all([
+      externalSupabase.from('customers').select('*'),
+      externalSupabase.from('purchases').select('customer_id, amount_cents, status'),
+    ]);
+
+    const purchasesByCustomer = new Map<string, { count: number; total: number }>();
+    (purchasesRes.data || [])
+      .filter((p) => p.status === 'completed')
+      .forEach((p) => {
+        const entry = purchasesByCustomer.get(p.customer_id) || { count: 0, total: 0 };
+        entry.count += 1;
+        entry.total += p.amount_cents;
+        purchasesByCustomer.set(p.customer_id, entry);
+      });
+
+    const rows: CustomerRow[] = (customersRes.data || []).map((c) => {
+      const stats = purchasesByCustomer.get(c.id) || { count: 0, total: 0 };
+      return {
+        ...c,
+        purchase_count: stats.count,
+        total_spent: stats.total,
+      };
+    });
+
+    rows.sort((a, b) => b.total_spent - a.total_spent);
+    setCustomers(rows);
+    setLoading(false);
+  }
+
+  const filtered = customers.filter((c) => {
+    if (!search) return true;
+    const s = search.toLowerCase();
+    return (
+      c.email?.toLowerCase().includes(s) ||
+      c.full_name?.toLowerCase().includes(s) ||
+      c.phone?.includes(s)
+    );
+  });
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="h-8 w-32 animate-pulse rounded-lg bg-white/40" />
+        <div className="h-96 animate-pulse rounded-2xl bg-white/30" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold tracking-tight text-slate-800">Users</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Read-only view of customers across your attractions
+        </p>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <GlassCard className="p-5">
+          <div className="flex items-center gap-3">
+            <div className="rounded-xl bg-sky-50 p-2.5">
+              <UsersIcon className="h-5 w-5 text-sky-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-slate-800">{customers.length}</p>
+              <p className="text-xs text-slate-500">Total Customers</p>
+            </div>
+          </div>
+        </GlassCard>
+        <GlassCard className="p-5">
+          <div className="flex items-center gap-3">
+            <div className="rounded-xl bg-emerald-50 p-2.5">
+              <UsersIcon className="h-5 w-5 text-emerald-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-slate-800">
+                {customers.filter((c) => c.purchase_count > 0).length}
+              </p>
+              <p className="text-xs text-slate-500">Paying Customers</p>
+            </div>
+          </div>
+        </GlassCard>
+        <GlassCard className="p-5">
+          <div className="flex items-center gap-3">
+            <div className="rounded-xl bg-cyan-50 p-2.5">
+              <UsersIcon className="h-5 w-5 text-cyan-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-slate-800">
+                {customers.filter((c) => c.opted_in_marketing).length}
+              </p>
+              <p className="text-xs text-slate-500">Marketing Opt-ins</p>
+            </div>
+          </div>
+        </GlassCard>
+      </div>
+
+      <GlassCard className="overflow-hidden">
+        <div className="border-b border-slate-100/80 px-6 py-4">
+          <div className="relative max-w-sm">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search by name, email, or phone..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="glass-input py-2 pl-9 pr-4 text-sm"
+            />
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-slate-100/80">
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">Customer</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">Contact</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">Purchases</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">Total Spent</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">Joined</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">Marketing</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {filtered.slice(0, 20).map((c) => (
+                <tr key={c.id} className="transition-colors hover:bg-white/40">
+                  <td className="px-6 py-3.5">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600">
+                        {(c.full_name || 'A')[0].toUpperCase()}
+                      </div>
+                      <span className="text-sm font-medium text-slate-800">{c.full_name || 'Anonymous'}</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-3.5 text-sm text-slate-600">{c.email || c.phone || '-'}</td>
+                  <td className="px-6 py-3.5 text-sm font-medium text-slate-700">{c.purchase_count}</td>
+                  <td className="px-6 py-3.5 text-sm font-semibold text-slate-800">
+                    {c.total_spent > 0 ? formatCurrency(c.total_spent) : '-'}
+                  </td>
+                  <td className="px-6 py-3.5 text-sm text-slate-500">{formatDate(c.created_at)}</td>
+                  <td className="px-6 py-3.5">
+                    <span
+                      className={`status-badge ${
+                        c.opted_in_marketing
+                          ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
+                          : 'bg-slate-50 text-slate-500 ring-slate-200'
+                      }`}
+                    >
+                      {c.opted_in_marketing ? 'Opted in' : 'No'}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {filtered.length > 20 && (
+          <div className="border-t border-slate-100/80 px-6 py-3 text-center text-xs text-slate-400">
+            Showing 20 of {filtered.length} customers
+          </div>
+        )}
+      </GlassCard>
+    </div>
+  );
+}
