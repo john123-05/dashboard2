@@ -5,9 +5,11 @@ import { useAuth } from '../contexts/AuthContext';
 import { formatRelative, statusColor } from '../lib/utils';
 import GlassCard from '../components/ui/GlassCard';
 import type { SupportTicket } from '../lib/types';
+import { useI18n } from '../lib/i18n';
 
 export default function Support() {
   const { currentOrg, user } = useAuth();
+  const { t } = useI18n();
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [showCreate, setShowCreate] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -60,12 +62,12 @@ export default function Support() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-800">Support</h2>
-          <p className="mt-1 text-sm text-slate-500">Manage support tickets and contact Liftpictures</p>
+          <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('support.title')}</h2>
+          <p className="mt-1 text-sm text-slate-500">{t('support.subtitle')}</p>
         </div>
         <button onClick={() => setShowCreate(true)} className="glass-button-primary">
           <Plus className="h-4 w-4" />
-          New Ticket
+          {t('support.new_ticket')}
         </button>
       </div>
 
@@ -74,8 +76,8 @@ export default function Support() {
           {tickets.length === 0 ? (
             <GlassCard className="p-12 text-center">
               <MessageSquare className="mx-auto mb-3 h-8 w-8 text-slate-300" />
-              <p className="text-sm text-slate-500">No support tickets yet</p>
-              <p className="mt-1 text-xs text-slate-400">Create one to get help from the Liftpictures team</p>
+              <p className="text-sm text-slate-500">{t('support.none')}</p>
+              <p className="mt-1 text-xs text-slate-400">{t('support.none_desc')}</p>
             </GlassCard>
           ) : (
             tickets.map((ticket) => (
@@ -114,9 +116,9 @@ export default function Support() {
 
         <div className="space-y-4">
           <GlassCard className="p-6">
-            <h3 className="mb-3 text-base font-semibold text-slate-800">Contact Liftpictures</h3>
+            <h3 className="mb-3 text-base font-semibold text-slate-800">{t('support.contact')}</h3>
             <p className="mb-4 text-sm text-slate-500">
-              Need direct support? Reach out to our team.
+              {t('support.contact_desc')}
             </p>
             <div className="space-y-3">
               <a

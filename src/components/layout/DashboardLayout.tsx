@@ -3,9 +3,11 @@ import { Outlet, Navigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import Sidebar from './Sidebar';
 import { Loader2, Mountain, ArrowRight } from 'lucide-react';
+import { useI18n } from '../../lib/i18n';
 
 export default function DashboardLayout() {
   const { user, loading, hasOrg, joinDemoOrg } = useAuth();
+  const { t } = useI18n();
   const [joining, setJoining] = useState(false);
 
   if (loading) {
@@ -13,7 +15,7 @@ export default function DashboardLayout() {
       <div className="mesh-gradient flex min-h-screen items-center justify-center">
         <div className="glass-panel animate-fade-in flex flex-col items-center gap-4 rounded-2xl px-8 py-10">
           <Loader2 className="h-8 w-8 animate-spin text-brand-500" />
-          <p className="text-sm text-slate-500">Loading dashboard...</p>
+          <p className="text-sm text-slate-500">{t('dashboard.loading')}</p>
         </div>
       </div>
     );
@@ -30,10 +32,9 @@ export default function DashboardLayout() {
           <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-100">
             <Mountain className="h-8 w-8 text-brand-600" />
           </div>
-          <h2 className="mb-2 text-xl font-bold text-slate-800">Welcome to Liftpictures</h2>
+          <h2 className="mb-2 text-xl font-bold text-slate-800">{t('dashboard.join_title')}</h2>
           <p className="mb-8 text-sm leading-relaxed text-slate-500">
-            You are not assigned to any organization yet. Join the demo organization to explore
-            the operator dashboard with sample data.
+            {t('dashboard.join_desc')}
           </p>
           <button
             onClick={async () => {
@@ -48,7 +49,7 @@ export default function DashboardLayout() {
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <>
-                Join Demo Organization
+                {t('dashboard.join_button')}
                 <ArrowRight className="h-4 w-4" />
               </>
             )}

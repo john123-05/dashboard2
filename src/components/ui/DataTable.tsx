@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import GlassCard from './GlassCard';
+import { useI18n } from '../../lib/i18n';
 
 interface Column<T> {
   key: string;
@@ -28,6 +29,7 @@ export default function DataTable<T extends Record<string, unknown>>({
   pageSize = 10,
   actions,
 }: DataTableProps<T>) {
+  const { t } = useI18n();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(0);
 
@@ -54,7 +56,7 @@ export default function DataTable<T extends Record<string, unknown>>({
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <input
                   type="text"
-                  placeholder="Search..."
+                  placeholder={t('table.search')}
                   value={search}
                   onChange={(e) => {
                     setSearch(e.target.value);
@@ -87,7 +89,7 @@ export default function DataTable<T extends Record<string, unknown>>({
             {paginated.length === 0 ? (
               <tr>
                 <td colSpan={columns.length} className="px-6 py-12 text-center text-sm text-slate-400">
-                  No data found
+                  {t('table.no_data')}
                 </td>
               </tr>
             ) : (
@@ -111,7 +113,7 @@ export default function DataTable<T extends Record<string, unknown>>({
       {totalPages > 1 && (
         <div className="flex items-center justify-between border-t border-slate-100/80 px-6 py-3">
           <p className="text-xs text-slate-400">
-            Showing {page * pageSize + 1}–{Math.min((page + 1) * pageSize, filtered.length)} of{' '}
+            {t('table.showing')} {page * pageSize + 1}–{Math.min((page + 1) * pageSize, filtered.length)} {t('table.of')}{' '}
             {filtered.length}
           </p>
           <div className="flex items-center gap-1">

@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { invokeEdgeFunction } from '../lib/edgeFunctions';
 import { useAuth } from '../contexts/AuthContext';
 import GlassCard from '../components/ui/GlassCard';
+import { useI18n } from '../lib/i18n';
 import type { Park, Attraction } from '../lib/types';
 
 interface StripePrice {
@@ -26,6 +27,7 @@ interface StripeProduct {
 
 export default function Settings() {
   const { profile, currentOrg, memberships, refreshProfile } = useAuth();
+  const { language, setLanguage, t } = useI18n();
   const [fullName, setFullName] = useState(profile?.full_name || '');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -182,26 +184,44 @@ export default function Settings() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight text-slate-800">Settings</h2>
-        <p className="mt-1 text-sm text-slate-500">Manage your profile and view organization details</p>
+        <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('settings.title')}</h2>
+        <p className="mt-1 text-sm text-slate-500">{t('settings.subtitle')}</p>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
         <GlassCard className="p-6">
-          <h3 className="mb-4 text-base font-semibold text-slate-800">Stripe Products</h3>
+          <h3 className="mb-4 text-base font-semibold text-slate-800">{t('settings.language')}</h3>
+          <label className="mb-1.5 block text-sm font-medium text-slate-700">
+            {t('settings.language')}
+          </label>
+          <select
+            value={language}
+            onChange={(e) => setLanguage(e.target.value as any)}
+            className="glass-input"
+          >
+            <option value="de">Deutsch</option>
+            <option value="en">English</option>
+            <option value="es">Español</option>
+            <option value="fr">Français</option>
+            <option value="it">Italiano</option>
+            <option value="nl">Nederlands</option>
+          </select>
+        </GlassCard>
+        <GlassCard className="p-6">
+          <h3 className="mb-4 text-base font-semibold text-slate-800">{t('settings.stripe_products')}</h3>
           <p className="mb-4 text-sm text-slate-600">
-            Select which Stripe products to track in your dashboard
+            {t('settings.stripe_products_desc')}
           </p>
           <button onClick={handleOpenProductModal} className="glass-button-primary">
             <Package className="h-4 w-4" />
-            Select Products
+            {t('settings.select_products')}
           </button>
         </GlassCard>
         <GlassCard className="p-6">
-          <h3 className="mb-4 text-base font-semibold text-slate-800">Profile</h3>
+          <h3 className="mb-4 text-base font-semibold text-slate-800">{t('settings.profile')}</h3>
           <form onSubmit={handleSaveProfile} className="space-y-4">
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-700">Full Name</label>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">{t('settings.full_name')}</label>
               <input
                 type="text"
                 value={fullName}
@@ -210,7 +230,7 @@ export default function Settings() {
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-700">Email</label>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">{t('settings.email')}</label>
               <input
                 type="email"
                 value={profile?.email || ''}
@@ -219,7 +239,7 @@ export default function Settings() {
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-700">Role</label>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">{t('settings.role')}</label>
               <input
                 type="text"
                 value={currentRole.replace('_', ' ')}
@@ -231,11 +251,11 @@ export default function Settings() {
               {saving ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : saved ? (
-                'Saved!'
+                t('settings.saved')
               ) : (
                 <>
                   <Save className="h-4 w-4" />
-                  Save Changes
+                  {t('settings.save')}
                 </>
               )}
             </button>
@@ -243,7 +263,7 @@ export default function Settings() {
         </GlassCard>
 
         <GlassCard className="p-6">
-          <h3 className="mb-4 text-base font-semibold text-slate-800">Organization</h3>
+          <h3 className="mb-4 text-base font-semibold text-slate-800">{t('settings.organization')}</h3>
           {currentOrg ? (
             <div className="space-y-4">
               <div className="flex items-center gap-3 rounded-xl bg-white/30 p-4">
@@ -252,12 +272,12 @@ export default function Settings() {
                 </div>
                 <div>
                   <p className="font-semibold text-slate-800">{currentOrg.name}</p>
-                  <p className="text-xs text-slate-500">slug: {currentOrg.slug}</p>
+                  <p className="text-xs text-slate-500">{t('settings.slug')}: {currentOrg.slug}</p>
                 </div>
               </div>
 
               <div className="space-y-3">
-                <p className="text-sm font-medium text-slate-600">Parks & Attractions</p>
+                <p className="text-sm font-medium text-slate-600">{t('settings.parks_attractions')}</p>
                 {parks.map((park) => (
                   <div key={park.id} className="rounded-xl bg-white/30 p-4">
                     <div className="mb-2 flex items-center gap-2">

@@ -5,6 +5,7 @@ import { invokeEdgeFunction } from '../lib/edgeFunctions';
 import { formatCurrency, formatNumber, exportToCSV } from '../lib/utils';
 import GlassCard from '../components/ui/GlassCard';
 import KPICard from '../components/ui/KPICard';
+import { useI18n } from '../lib/i18n';
 
 interface AttractionRevenue {
   name: string;
@@ -13,6 +14,7 @@ interface AttractionRevenue {
 }
 
 export default function Revenue() {
+  const { t } = useI18n();
   const [dailyRevenue, setDailyRevenue] = useState<{ date: string; amount: number }[]>([]);
   const [attractionRevenue, setAttractionRevenue] = useState<AttractionRevenue[]>([]);
   const [totals, setTotals] = useState({ revenue: 0, refunds: 0, pending: 0 });
@@ -93,12 +95,12 @@ export default function Revenue() {
   if (error) {
     return (
       <div className="space-y-6">
-        <h2 className="text-2xl font-bold tracking-tight text-slate-800">Revenue</h2>
+        <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('revenue.title')}</h2>
         <div className="rounded-2xl bg-red-50 border border-red-200 p-6">
-          <h3 className="text-lg font-semibold text-red-800 mb-2">Error Loading Stripe Data</h3>
+          <h3 className="text-lg font-semibold text-red-800 mb-2">{t('overview.error_title')}</h3>
           <p className="text-sm text-red-600 mb-4">{error}</p>
           <button onClick={loadData} className="glass-button-secondary">
-            Retry
+            {t('app.retry')}
           </button>
         </div>
       </div>
@@ -109,32 +111,32 @@ export default function Revenue() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-800">Revenue</h2>
-          <p className="mt-1 text-sm text-slate-500">Financial performance and breakdown</p>
+          <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('revenue.title')}</h2>
+          <p className="mt-1 text-sm text-slate-500">{t('revenue.subtitle')}</p>
         </div>
         <button onClick={handleExport} className="glass-button-secondary">
           <Download className="h-4 w-4" />
-          Export CSV
+          {t('revenue.export')}
         </button>
       </div>
 
       <div className="grid gap-6 sm:grid-cols-3">
         <KPICard
-          title="Total Revenue"
+          title={t('revenue.total')}
           value={formatCurrency(totals.revenue)}
           icon={DollarSign}
           iconColor="text-emerald-600"
           iconBg="bg-emerald-50"
         />
         <KPICard
-          title="Refunds"
+          title={t('revenue.refunds')}
           value={formatCurrency(totals.refunds)}
           icon={RefreshCw}
           iconColor="text-rose-600"
           iconBg="bg-rose-50"
         />
         <KPICard
-          title="Pending"
+          title={t('revenue.pending')}
           value={formatCurrency(totals.pending)}
           icon={DollarSign}
           iconColor="text-amber-600"
@@ -143,7 +145,7 @@ export default function Revenue() {
       </div>
 
       <GlassCard className="p-6">
-        <h3 className="mb-4 text-base font-semibold text-slate-800">Daily Revenue (30 days)</h3>
+        <h3 className="mb-4 text-base font-semibold text-slate-800">{t('revenue.daily')}</h3>
         <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={dailyRevenue}>
@@ -166,7 +168,7 @@ export default function Revenue() {
       </GlassCard>
 
       <GlassCard className="p-6">
-        <h3 className="mb-4 text-base font-semibold text-slate-800">Revenue by Attraction</h3>
+        <h3 className="mb-4 text-base font-semibold text-slate-800">{t('revenue.by_attraction')}</h3>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={attractionRevenue} layout="vertical">

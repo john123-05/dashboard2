@@ -3,6 +3,7 @@ import { Download } from 'lucide-react';
 import { invokeEdgeFunction } from '../lib/edgeFunctions';
 import { formatCurrency, formatDateTime, statusColor, exportToCSV } from '../lib/utils';
 import DataTable from '../components/ui/DataTable';
+import { useI18n } from '../lib/i18n';
 
 interface PurchaseRow {
   id: string;
@@ -16,6 +17,7 @@ interface PurchaseRow {
 }
 
 export default function Purchases() {
+  const { t } = useI18n();
   const [purchases, setPurchases] = useState<PurchaseRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -98,12 +100,12 @@ export default function Purchases() {
   if (error) {
     return (
       <div className="space-y-6">
-        <h2 className="text-2xl font-bold tracking-tight text-slate-800">Purchases</h2>
+        <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('purchases.title')}</h2>
         <div className="rounded-2xl bg-red-50 border border-red-200 p-6">
-          <h3 className="text-lg font-semibold text-red-800 mb-2">Error Loading Stripe Data</h3>
+          <h3 className="text-lg font-semibold text-red-800 mb-2">{t('overview.error_title')}</h3>
           <p className="text-sm text-red-600 mb-4">{error}</p>
           <button onClick={loadData} className="glass-button-secondary">
-            Retry
+            {t('app.retry')}
           </button>
         </div>
       </div>
@@ -113,39 +115,39 @@ export default function Purchases() {
   const columns = [
     {
       key: 'purchased_at',
-      label: 'Date',
+      label: t('purchases.table.date'),
       render: (item: PurchaseRow) => (
         <span className="text-slate-600">{formatDateTime(item.purchased_at)}</span>
       ),
     },
     {
       key: 'customer_email',
-      label: 'Customer',
+      label: t('purchases.table.customer'),
       render: (item: PurchaseRow) => (
         <span className="font-medium text-slate-700">{item.customer_email || 'Anonymous'}</span>
       ),
     },
     {
       key: 'attraction_name',
-      label: 'Attraction',
+      label: t('purchases.table.attraction'),
     },
     {
       key: 'amount_cents',
-      label: 'Amount',
+      label: t('purchases.table.amount'),
       render: (item: PurchaseRow) => (
         <span className="font-semibold text-slate-800">{formatCurrency(item.amount_cents)}</span>
       ),
     },
     {
       key: 'status',
-      label: 'Status',
+      label: t('purchases.table.status'),
       render: (item: PurchaseRow) => (
         <span className={`status-badge ${statusColor(item.status)}`}>{item.status}</span>
       ),
     },
     {
       key: 'stripe_payment_id',
-      label: 'Stripe ID',
+      label: t('purchases.table.stripe_id'),
       render: (item: PurchaseRow) => (
         <span className="font-mono text-xs text-slate-400">
           {item.stripe_payment_id ? item.stripe_payment_id.slice(0, 16) + '...' : '-'}
@@ -158,12 +160,12 @@ export default function Purchases() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-800">Purchases</h2>
-          <p className="mt-1 text-sm text-slate-500">All photo purchases across your attractions</p>
+          <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('purchases.title')}</h2>
+          <p className="mt-1 text-sm text-slate-500">{t('purchases.subtitle')}</p>
         </div>
         <button onClick={handleExport} className="glass-button-secondary">
           <Download className="h-4 w-4" />
-          Export CSV
+          {t('revenue.export')}
         </button>
       </div>
 

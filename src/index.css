@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+@keyframes typing {
+  0% { width: 0; }
+  60% { width: 10ch; }
+  100% { width: 0; }
+}
+
 @layer base {
   :root {
     --brand-orange: #e8722a;

@@ -16,24 +16,26 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useState } from 'react';
+import { useI18n } from '../../lib/i18n';
 
 const navItems = [
-  { to: '/', icon: LayoutDashboard, label: 'Overview' },
-  { to: '/revenue', icon: DollarSign, label: 'Revenue' },
-  { to: '/purchases', icon: ShoppingCart, label: 'Purchases' },
-  { to: '/users', icon: Users, label: 'Users' },
-  { to: '/photos', icon: Camera, label: 'Photos' },
-  { to: '/leads', icon: Mail, label: 'Leads' },
-  { to: '/personalization', icon: Wand2, label: 'Personalization' },
-  { to: '/support', icon: LifeBuoy, label: 'Support' },
-  { to: '/health', icon: Activity, label: 'System Health' },
-  { to: '/settings', icon: Settings, label: 'Settings' },
+  { to: '/', icon: LayoutDashboard, labelKey: 'nav.overview' },
+  { to: '/revenue', icon: DollarSign, labelKey: 'nav.revenue' },
+  { to: '/purchases', icon: ShoppingCart, labelKey: 'nav.purchases' },
+  { to: '/users', icon: Users, labelKey: 'nav.users' },
+  { to: '/photos', icon: Camera, labelKey: 'nav.photos' },
+  { to: '/leads', icon: Mail, labelKey: 'nav.leads' },
+  { to: '/personalization', icon: Wand2, labelKey: 'nav.personalization' },
+  { to: '/support', icon: LifeBuoy, labelKey: 'nav.support' },
+  { to: '/health', icon: Activity, labelKey: 'nav.system_health' },
+  { to: '/settings', icon: Settings, labelKey: 'nav.settings' },
 ];
 
 export default function Sidebar() {
   const { profile, currentOrg, signOut } = useAuth();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
+  const { t } = useI18n();
 
   return (
     <aside
@@ -54,7 +56,7 @@ export default function Sidebar() {
           <div className="animate-fade-in overflow-hidden">
             <h1 className="text-sm font-bold tracking-tight text-white">Liftpictures</h1>
             <p className="truncate text-[11px] text-slate-400">
-              {currentOrg?.name || 'Operator Dashboard'}
+              {currentOrg?.name || t('nav.operator_dashboard')}
             </p>
           </div>
         )}
@@ -84,7 +86,7 @@ export default function Sidebar() {
                     isActive ? 'text-brand-400' : 'text-slate-500 group-hover:text-slate-300'
                   }`}
                 />
-                {!collapsed && <span className="animate-fade-in">{item.label}</span>}
+                {!collapsed && <span className="animate-fade-in">{t(item.labelKey)}</span>}
               </NavLink>
             );
           })}
@@ -107,10 +109,10 @@ export default function Sidebar() {
             className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-slate-500 transition-colors hover:bg-white/[0.06] hover:text-rose-400 ${
               collapsed ? 'justify-center' : 'flex-1'
             }`}
-            title="Sign out"
+            title={t('nav.sign_out')}
           >
             <LogOut className="h-4 w-4 shrink-0" />
-            {!collapsed && <span>Sign out</span>}
+            {!collapsed && <span>{t('nav.sign_out')}</span>}
           </button>
 
           <button

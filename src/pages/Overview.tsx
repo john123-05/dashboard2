@@ -3,6 +3,7 @@ import { DollarSign, ShoppingCart, TrendingUp, Zap, Users as UsersIcon, Activity
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { useI18n } from '../lib/i18n';
 import { invokeEdgeFunction } from '../lib/edgeFunctions';
 import { formatCurrency, formatNumber, formatPercent, formatDateTime, formatRelative, statusColor } from '../lib/utils';
 import KPICard from '../components/ui/KPICard';
@@ -17,6 +18,7 @@ interface DailyData {
 
 export default function Overview() {
   const { profile } = useAuth();
+  const { t } = useI18n();
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [totalPurchases, setTotalPurchases] = useState(0);
   const [totalPhotos, setTotalPhotos] = useState(0);
@@ -199,10 +201,10 @@ export default function Overview() {
       <div className="space-y-6">
         <h2 className="text-2xl font-bold tracking-tight text-slate-800">Dashboard</h2>
         <div className="rounded-2xl bg-red-50 border border-red-200 p-6">
-          <h3 className="text-lg font-semibold text-red-800 mb-2">Error Loading Stripe Data</h3>
+          <h3 className="text-lg font-semibold text-red-800 mb-2">{t('overview.error_title')}</h3>
           <p className="text-sm text-red-600 mb-4">{error}</p>
           <button onClick={loadData} className="glass-button-secondary">
-            Retry
+            {t('app.retry')}
           </button>
         </div>
       </div>
@@ -213,18 +215,22 @@ export default function Overview() {
     <div className="space-y-6 overflow-x-hidden">
       <div>
         <div className="flex flex-wrap items-baseline gap-2">
-          <h2 className="text-2xl font-bold tracking-tight text-slate-800">Dashboard</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('overview.title')}</h2>
           <span className="text-sm font-medium text-slate-500">
             {(() => {
               const hour = new Date().getHours();
               const greeting =
-                hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+                hour < 12
+                  ? t('greeting.morning')
+                  : hour < 18
+                    ? t('greeting.afternoon')
+                    : t('greeting.evening');
               const name = profile?.full_name?.split(' ')[0];
               return name ? `${greeting}, ${name}` : greeting;
             })()}
           </span>
         </div>
-        <p className="mt-1 text-sm text-slate-500">Your park performance at a glance</p>
+        <p className="mt-1 text-sm text-slate-500">{t('overview.subtitle')}</p>
       </div>
 
       <div className="relative max-w-full overflow-hidden">
@@ -249,6 +255,7 @@ export default function Overview() {
           <div className="w-[240px] flex-none snap-start">
             <KPICard
               title="Total Revenue"
+              title={t('overview.kpi.total_revenue')}
               value={formatCurrency(totalRevenue)}
               change={12.5}
               icon={DollarSign}
@@ -258,7 +265,7 @@ export default function Overview() {
           </div>
           <div className="w-[240px] flex-none snap-start">
             <KPICard
-              title="Monthly Revenue"
+              title={t('overview.kpi.monthly_revenue')}
               value={formatCurrency(Math.round((dailyData.reduce((s, d) => s + d.revenue, 0) || 0) * 100))}
               icon={DollarSign}
               iconColor="text-sky-600"
@@ -267,7 +274,7 @@ export default function Overview() {
           </div>
           <div className="w-[240px] flex-none snap-start">
             <KPICard
-              title="Purchases"
+              title={t('overview.kpi.purchases')}
               value={formatNumber(totalPurchases)}
               change={8.2}
               icon={ShoppingCart}
@@ -277,7 +284,7 @@ export default function Overview() {
           </div>
           <div className="w-[240px] flex-none snap-start">
             <KPICard
-              title="Total Users"
+              title={t('overview.kpi.total_users')}
               value={totalUsers !== null ? formatNumber(totalUsers) : '—'}
               icon={UsersIcon}
               iconColor="text-indigo-600"
@@ -286,7 +293,7 @@ export default function Overview() {
           </div>
           <div className="w-[240px] flex-none snap-start">
             <KPICard
-              title="Health Alerts"
+              title={t('overview.kpi.health_alerts')}
               value={formatNumber(healthAlerts)}
               icon={Activity}
               iconColor="text-rose-600"
@@ -295,7 +302,7 @@ export default function Overview() {
           </div>
           <div className="w-[240px] flex-none snap-start">
             <KPICard
-              title="Conversion Rate"
+              title={t('overview.kpi.conversion_rate')}
               value={formatPercent(conversionRate)}
               change={2.1}
               icon={TrendingUp}
@@ -305,7 +312,7 @@ export default function Overview() {
           </div>
           <div className="w-[240px] flex-none snap-start">
             <KPICard
-              title="Active Attractions"
+              title={t('overview.kpi.active_attractions')}
               value={formatNumber(activeAttractions)}
               icon={Zap}
               iconColor="text-cyan-600"
@@ -317,7 +324,7 @@ export default function Overview() {
 
       <div className="grid gap-6 xl:grid-cols-5">
         <GlassCard className="p-6 xl:col-span-3">
-          <h3 className="mb-4 text-base font-semibold text-slate-800">Revenue Trend</h3>
+          <h3 className="mb-4 text-base font-semibold text-slate-800">{t('overview.revenue_trend')}</h3>
           <div className="h-64 mt-2">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={dailyData}>
@@ -365,7 +372,7 @@ export default function Overview() {
             </ResponsiveContainer>
           </div>
           <div className="mt-8">
-            <h4 className="mb-3 text-sm font-semibold text-slate-700">Purchases Trend</h4>
+            <h4 className="mb-3 text-sm font-semibold text-slate-700">{t('overview.purchases_trend')}</h4>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={dailyData}>
@@ -407,7 +414,7 @@ export default function Overview() {
         <div className="xl:col-span-2 flex flex-col gap-6">
           <GlassCard className="p-6 h-[320px] flex flex-col">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-base font-semibold text-slate-800">News & Aktivitäten</h3>
+              <h3 className="text-base font-semibold text-slate-800">{t('overview.news')}</h3>
             </div>
             <div className="space-y-3 overflow-y-auto pr-2 scrollbar-thin">
               {visibleActivity.map((item) => (
@@ -436,7 +443,7 @@ export default function Overview() {
                     </p>
                   </div>
                   <button
-                    aria-label="Dismiss"
+                    aria-label={t('app.dismiss')}
                     onClick={() => {
                       setDismissedActivity((prev) => {
                         const next = new Set(prev);
@@ -452,7 +459,7 @@ export default function Overview() {
               ))}
               {visibleActivity.length === 0 && (
                 <p className="py-6 text-center text-sm text-slate-400">
-                  Keine aktuellen Ereignisse
+                  {t('overview.no_activity')}
                 </p>
               )}
             </div>
@@ -460,13 +467,13 @@ export default function Overview() {
 
           <GlassCard className="p-6 xl:mt-6 h-[320px] flex flex-col">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-base font-semibold text-slate-800">Recent Purchases</h3>
+              <h3 className="text-base font-semibold text-slate-800">{t('overview.recent_purchases')}</h3>
               {recentPurchases.length > 4 && (
                 <button
                   className="text-xs font-semibold text-slate-500 hover:text-slate-700"
                   onClick={() => setShowAllPurchases((v) => !v)}
                 >
-                  {showAllPurchases ? 'Collapse' : 'Expand'}
+                  {showAllPurchases ? t('app.collapse') : t('app.expand')}
                 </button>
               )}
             </div>
@@ -492,7 +499,7 @@ export default function Overview() {
                 </div>
               ))}
               {recentPurchases.length === 0 && (
-                <p className="py-8 text-center text-sm text-slate-400">No recent purchases</p>
+                <p className="py-8 text-center text-sm text-slate-400">{t('overview.no_recent_purchases')}</p>
               )}
             </div>
           </GlassCard>

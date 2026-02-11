@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Image as ImageIcon, Upload, X, Sparkles, Wand2 } from 'lucide-react';
+import { Image as ImageIcon, Upload, X, Sparkles, Loader2 } from 'lucide-react';
 import { invokeEdgeFunction } from '../lib/edgeFunctions';
 import GlassCard from '../components/ui/GlassCard';
+import { useI18n } from '../lib/i18n';
 
 interface OverlayItem {
   id: string;
@@ -11,11 +12,14 @@ interface OverlayItem {
 }
 
 export default function Personalization() {
+  const { t } = useI18n();
   const [baseImage, setBaseImage] = useState<string | null>(null);
   const [overlays, setOverlays] = useState<OverlayItem[]>([]);
   const [message, setMessage] = useState('');
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -56,24 +60,45 @@ export default function Personalization() {
     [overlays]
   );
 
+  async function handleGenerate() {
+    setGenerating(true);
+    setGenerateError(null);
+    setOverlays([]);
+    const { data, error } = await invokeEdgeFunction('generate-overlays', {
+      method: 'POST',
+      body: { message, prompt, baseImageUrl: baseImage },
+    });
+    if (error) {
+      setGenerateError(error);
+      setGenerating(false);
+      return;
+    }
+    const newOverlays = (data?.overlays || []).map((o: { name: string; url: string }) => ({
+      id: crypto.randomUUID(),
+      name: o.name,
+      url: o.url,
+      enabled: true,
+    }));
+    setOverlays((prev) => [...newOverlays, ...prev]);
+    setGenerating(false);
+  }
+
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight text-slate-800">Personalization</h2>
-        <p className="mt-1 text-sm text-slate-500">
-          Customize overlays and messages on the latest photo preview
-        </p>
+        <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('personalization.title')}</h2>
+        <p className="mt-1 text-sm text-slate-500">{t('personalization.subtitle')}</p>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-3">
         <GlassCard className="p-6 xl:col-span-2">
           <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-base font-semibold text-slate-800">Preview</h3>
+            <h3 className="text-base font-semibold text-slate-800">{t('personalization.preview')}</h3>
             <button
               onClick={loadRecent}
               className="glass-button-secondary"
             >
-              Refresh
+              {t('app.refresh')}
             </button>
           </div>
 
@@ -89,7 +114,7 @@ export default function Personalization() {
             ) : (
               <div className="flex h-full w-full items-center justify-center text-slate-400">
                 <ImageIcon className="h-6 w-6" />
-                <span className="ml-2 text-sm">No recent photo</span>
+                <span className="ml-2 text-sm">{t('personalization.no_recent_photo')}</span>
               </div>
             )}
 
@@ -107,12 +132,32 @@ export default function Personalization() {
                 {message}
               </div>
             )}
+
+            {generating && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                <div className="flex flex-col items-center gap-4 rounded-2xl bg-white/80 px-6 py-5 shadow-lg backdrop-blur">
+                  <video
+                    src="https://xcrxltiiovpoladpaewd.supabase.co/storage/v1/object/public/test/_users_a6264f06-7d84-48b9-81d1-6a9e29e69b37_generated_c9f8234e-91e9-4185-b15c-f2e2ffe43415_generated_video.mov"
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    className="h-24 w-24 rounded-xl object-cover"
+                  />
+                  <div className="text-sm font-semibold text-slate-700">
+                    <span className="inline-block overflow-hidden whitespace-nowrap border-r-2 border-slate-500 pr-1 animate-[typing_2.4s_steps(12)_infinite]">
+                      Generating...
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </GlassCard>
 
         <div className="space-y-6">
           <GlassCard className="p-6">
-            <h3 className="mb-4 text-base font-semibold text-slate-800">Overlays</h3>
+            <h3 className="mb-4 text-base font-semibold text-slate-800">{t('personalization.overlays')}</h3>
             <div className="space-y-3">
               <input
                 ref={fileInputRef}
@@ -126,7 +171,7 @@ export default function Personalization() {
                 className="glass-button-secondary w-full"
               >
                 <Upload className="h-4 w-4" />
-                Upload overlay
+                {t('personalization.upload_overlay')}
               </button>
 
               <div className="space-y-2">
@@ -165,16 +210,16 @@ export default function Personalization() {
                   </div>
                 ))}
                 {overlays.length === 0 && (
-                  <p className="text-sm text-slate-400">No overlays yet</p>
+                  <p className="text-sm text-slate-400">{t('app.none')}</p>
                 )}
               </div>
             </div>
           </GlassCard>
 
           <GlassCard className="p-6">
-            <h3 className="mb-4 text-base font-semibold text-slate-800">Message</h3>
+            <h3 className="mb-4 text-base font-semibold text-slate-800">{t('personalization.message')}</h3>
             <label className="mb-1.5 block text-sm font-medium text-slate-700">
-              What message do you want to leave the visitor?
+              {t('personalization.message')}
             </label>
             <input
               value={message}
@@ -184,7 +229,7 @@ export default function Personalization() {
             />
             <div className="mt-4">
               <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                Personalizations (AI will generate overlays later)
+                {t('personalization.ai_hint')}
               </label>
               <textarea
                 value={prompt}
@@ -194,12 +239,20 @@ export default function Personalization() {
                 className="glass-input"
               />
             </div>
+            {generateError && (
+              <p className="mt-3 text-xs text-rose-600">{generateError}</p>
+            )}
             <button
               className="glass-button-primary mt-4 w-full"
-              disabled
+              onClick={handleGenerate}
+              disabled={generating || (!message && !prompt)}
             >
-              <Sparkles className="h-4 w-4" />
-              Generate overlays (coming soon)
+              {generating ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Sparkles className="h-4 w-4" />
+              )}
+              {t('personalization.generate')}
             </button>
           </GlassCard>
         </div>

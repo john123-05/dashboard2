@@ -3,6 +3,7 @@ import { Users as UsersIcon, Search } from 'lucide-react';
 import { invokeEdgeFunction } from '../lib/edgeFunctions';
 import { formatDate, formatCurrency } from '../lib/utils';
 import GlassCard from '../components/ui/GlassCard';
+import { useI18n } from '../lib/i18n';
 
 interface CustomerRow {
   id: string;
@@ -16,6 +17,7 @@ interface CustomerRow {
 }
 
 export default function Users() {
+  const { t } = useI18n();
   const [customers, setCustomers] = useState<CustomerRow[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -86,12 +88,12 @@ export default function Users() {
   if (error) {
     return (
       <div className="space-y-6">
-        <h2 className="text-2xl font-bold tracking-tight text-slate-800">Users</h2>
+        <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('users.title')}</h2>
         <div className="rounded-2xl bg-red-50 border border-red-200 p-6">
           <h3 className="text-lg font-semibold text-red-800 mb-2">Error Loading Users</h3>
           <p className="text-sm text-red-600 mb-4">{error}</p>
           <button onClick={loadData} className="glass-button-secondary">
-            Retry
+            {t('app.retry')}
           </button>
         </div>
       </div>
@@ -101,9 +103,9 @@ export default function Users() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight text-slate-800">Users</h2>
+        <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('users.title')}</h2>
         <p className="mt-1 text-sm text-slate-500">
-          Read-only view of customers across your attractions
+          {t('users.subtitle')}
         </p>
       </div>
 
@@ -115,7 +117,7 @@ export default function Users() {
             </div>
             <div>
               <p className="text-2xl font-bold text-slate-800">{customers.length}</p>
-              <p className="text-xs text-slate-500">Total Customers</p>
+              <p className="text-xs text-slate-500">{t('users.total')}</p>
             </div>
           </div>
         </GlassCard>
@@ -128,7 +130,7 @@ export default function Users() {
               <p className="text-2xl font-bold text-slate-800">
                 {customers.filter((c) => c.purchase_count > 0).length}
               </p>
-              <p className="text-xs text-slate-500">Paying Customers</p>
+              <p className="text-xs text-slate-500">{t('users.paying')}</p>
             </div>
           </div>
         </GlassCard>
@@ -141,7 +143,7 @@ export default function Users() {
               <p className="text-2xl font-bold text-slate-800">
                 {customers.filter((c) => c.opted_in_marketing).length}
               </p>
-              <p className="text-xs text-slate-500">Marketing Opt-ins</p>
+              <p className="text-xs text-slate-500">{t('users.optins')}</p>
             </div>
           </div>
         </GlassCard>
@@ -153,7 +155,7 @@ export default function Users() {
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
-              placeholder="Search by name, email, or phone..."
+              placeholder={t('users.search')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="glass-input py-2 pl-9 pr-4 text-sm"
@@ -164,12 +166,12 @@ export default function Users() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-slate-100/80">
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">Customer</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">Contact</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">Purchases</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">Total Spent</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">Joined</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">Marketing</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">{t('users.table.customer')}</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">{t('users.table.contact')}</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">{t('users.table.purchases')}</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">{t('users.table.total_spent')}</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">{t('users.table.joined')}</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">{t('users.table.marketing')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -180,7 +182,7 @@ export default function Users() {
                       <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600">
                         {(c.full_name || 'A')[0].toUpperCase()}
                       </div>
-                      <span className="text-sm font-medium text-slate-800">{c.full_name || 'Anonymous'}</span>
+                      <span className="text-sm font-medium text-slate-800">{c.full_name || t('app.unknown')}</span>
                     </div>
                   </td>
                   <td className="px-6 py-3.5 text-sm text-slate-600">{c.email || c.phone || '-'}</td>
@@ -197,7 +199,7 @@ export default function Users() {
                           : 'bg-slate-50 text-slate-500 ring-slate-200'
                       }`}
                     >
-                      {c.opted_in_marketing ? 'Opted in' : 'No'}
+                      {c.opted_in_marketing ? t('leads.opted_in') : t('leads.opted_out')}
                     </span>
                   </td>
                 </tr>

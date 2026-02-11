@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useI18n } from '../lib/i18n';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 
 export default function Register() {
   const { user, loading, signUp } = useAuth();
+  const { t } = useI18n();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -51,8 +53,8 @@ export default function Register() {
                 loading="lazy"
               />
             </div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-800">Create your account</h1>
-            <p className="mt-1 text-sm text-slate-500">Start managing your park operations</p>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-800">{t('auth.create_account')}</h1>
+            <p className="mt-1 text-sm text-slate-500">{t('nav.operator_dashboard')}</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -63,7 +65,7 @@ export default function Register() {
             )}
 
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-700">Full name</label>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">{t('auth.full_name')}</label>
               <input
                 type="text"
                 value={fullName}
@@ -75,7 +77,7 @@ export default function Register() {
             </div>
 
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-700">Email</label>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">{t('auth.email')}</label>
               <input
                 type="email"
                 value={email}
@@ -87,13 +89,13 @@ export default function Register() {
             </div>
 
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-700">Password</label>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">{t('auth.password')}</label>
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Min 6 characters"
+                placeholder={t('auth.password')}
                   required
                   className="glass-input pr-11"
                 />
@@ -112,14 +114,14 @@ export default function Register() {
               disabled={submitting}
               className="glass-button-primary mt-2 w-full py-3"
             >
-              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Create account'}
+              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : t('auth.create_account')}
             </button>
           </form>
 
           <p className="mt-6 text-center text-sm text-slate-500">
-            Already have an account?{' '}
+            {t('auth.have_account')}{' '}
             <Link to="/login" className="font-semibold text-brand-600 hover:text-brand-700">
-              Sign in
+              {t('auth.sign_in')}
             </Link>
           </p>
         </div>

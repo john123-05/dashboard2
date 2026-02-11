@@ -5,6 +5,7 @@ import { invokeEdgeFunction } from '../lib/edgeFunctions';
 import { formatNumber, formatPercent, formatRelative } from '../lib/utils';
 import GlassCard from '../components/ui/GlassCard';
 import KPICard from '../components/ui/KPICard';
+import { useI18n } from '../lib/i18n';
 
 interface AttractionPhotoStats {
   name: string;
@@ -17,6 +18,7 @@ interface AttractionPhotoStats {
 const CHART_COLORS = ['#0ea5e9', '#10b981', '#f59e0b', '#94a3b8'];
 
 export default function Photos() {
+  const { t } = useI18n();
   const [stats, setStats] = useState({ total: 0, purchased: 0, available: 0, expired: 0 });
   const [attractionStats, setAttractionStats] = useState<AttractionPhotoStats[]>([]);
   const [recentPhotos, setRecentPhotos] = useState<
@@ -106,12 +108,12 @@ export default function Photos() {
   if (error) {
     return (
       <div className="space-y-6">
-        <h2 className="text-2xl font-bold tracking-tight text-slate-800">Photos</h2>
+        <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('photos.title')}</h2>
         <div className="rounded-2xl bg-red-50 border border-red-200 p-6">
           <h3 className="text-lg font-semibold text-red-800 mb-2">Error Loading Photos</h3>
           <p className="text-sm text-red-600 mb-4">{error}</p>
           <button onClick={loadData} className="glass-button-secondary">
-            Retry
+            {t('app.retry')}
           </button>
         </div>
       </div>
@@ -121,20 +123,20 @@ export default function Photos() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight text-slate-800">Photos</h2>
-        <p className="mt-1 text-sm text-slate-500">Photo analytics and performance metrics</p>
+        <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('photos.title')}</h2>
+        <p className="mt-1 text-sm text-slate-500">{t('photos.subtitle')}</p>
       </div>
 
       <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-        <KPICard title="Total Photos" value={formatNumber(stats.total)} icon={Camera} />
-        <KPICard title="Purchased" value={formatNumber(stats.purchased)} icon={ShoppingBag} iconColor="text-emerald-600" iconBg="bg-emerald-100" />
-        <KPICard title="Available" value={formatNumber(stats.available)} icon={Eye} iconColor="text-amber-600" iconBg="bg-amber-100" />
-        <KPICard title="Conversion" value={formatPercent(conversionRate)} icon={Clock} iconColor="text-cyan-600" iconBg="bg-cyan-100" />
+        <KPICard title={t('photos.total')} value={formatNumber(stats.total)} icon={Camera} />
+        <KPICard title={t('photos.purchased')} value={formatNumber(stats.purchased)} icon={ShoppingBag} iconColor="text-emerald-600" iconBg="bg-emerald-100" />
+        <KPICard title={t('photos.available')} value={formatNumber(stats.available)} icon={Eye} iconColor="text-amber-600" iconBg="bg-amber-100" />
+        <KPICard title={t('photos.conversion')} value={formatPercent(conversionRate)} icon={Clock} iconColor="text-cyan-600" iconBg="bg-cyan-100" />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
         <GlassCard className="p-6">
-          <h3 className="mb-4 text-base font-semibold text-slate-800">Status Distribution</h3>
+          <h3 className="mb-4 text-base font-semibold text-slate-800">{t('photos.status_distribution')}</h3>
           <div className="flex items-center gap-8">
             <div className="h-48 w-48">
               <ResponsiveContainer width="100%" height="100%">
@@ -165,7 +167,7 @@ export default function Photos() {
         </GlassCard>
 
         <GlassCard className="p-6">
-          <h3 className="mb-4 text-base font-semibold text-slate-800">By Attraction</h3>
+          <h3 className="mb-4 text-base font-semibold text-slate-800">{t('photos.by_attraction')}</h3>
           <div className="space-y-3">
             {attractionStats.map((a) => {
               const pct = a.total > 0 ? (a.purchased / a.total) * 100 : 0;
@@ -192,7 +194,7 @@ export default function Photos() {
       </div>
 
       <GlassCard className="p-6">
-        <h3 className="mb-4 text-base font-semibold text-slate-800">Recent Photos</h3>
+        <h3 className="mb-4 text-base font-semibold text-slate-800">{t('photos.recent')}</h3>
         <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
           {recentPhotos.map((p) => (
             <div key={p.id} className="group overflow-hidden rounded-xl bg-white/30 transition-all hover:bg-white/50 hover:shadow-md">

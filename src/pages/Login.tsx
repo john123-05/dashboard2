@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useI18n } from '../lib/i18n';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 
 export default function Login() {
   const { user, loading, signIn } = useAuth();
+  const { t } = useI18n();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -46,8 +48,8 @@ export default function Login() {
                 loading="lazy"
               />
             </div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-800">Welcome back</h1>
-            <p className="mt-1 text-sm text-slate-500">Sign in to your operator dashboard</p>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-800">{t('auth.welcome')}</h1>
+            <p className="mt-1 text-sm text-slate-500">{t('nav.operator_dashboard')}</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -58,7 +60,7 @@ export default function Login() {
             )}
 
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-700">Email</label>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">{t('auth.email')}</label>
               <input
                 type="email"
                 value={email}
@@ -70,13 +72,13 @@ export default function Login() {
             </div>
 
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-700">Password</label>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">{t('auth.password')}</label>
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
+                placeholder={t('auth.password')}
                   required
                   className="glass-input pr-11"
                 />
@@ -95,14 +97,14 @@ export default function Login() {
               disabled={submitting}
               className="glass-button-primary mt-2 w-full py-3"
             >
-              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Sign in'}
+              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : t('auth.sign_in')}
             </button>
           </form>
 
           <p className="mt-6 text-center text-sm text-slate-500">
-            New operator?{' '}
+            {t('auth.new_operator')}{' '}
             <Link to="/register" className="font-semibold text-brand-600 hover:text-brand-700">
-              Create an account
+              {t('auth.create_account')}
             </Link>
           </p>
         </div>

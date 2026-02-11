@@ -6,8 +6,10 @@ import { formatDate, formatNumber, exportToCSV } from '../lib/utils';
 import GlassCard from '../components/ui/GlassCard';
 import DataTable from '../components/ui/DataTable';
 import KPICard from '../components/ui/KPICard';
+import { useI18n } from '../lib/i18n';
 
 export default function Leads() {
+  const { t } = useI18n();
   const [leads, setLeads] = useState<Record<string, unknown>[]>([]);
   const [sourceData, setSourceData] = useState<{ source: string; count: number }[]>([]);
   const [stats, setStats] = useState({ total: 0, optedIn: 0 });
@@ -69,7 +71,7 @@ export default function Leads() {
         email: l.email as string,
         name: (l.full_name as string) || '',
         source: l.source as string,
-        opted_in: l.opted_in ? 'Yes' : 'No',
+        opted_in: l.opted_in ? t('leads.opted_in') : t('leads.opted_out'),
         park: l.park_name as string,
         date: l.created_at as string,
       })),
@@ -93,12 +95,12 @@ export default function Leads() {
   if (error) {
     return (
       <div className="space-y-6">
-        <h2 className="text-2xl font-bold tracking-tight text-slate-800">Leads & Marketing</h2>
+        <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('leads.title')}</h2>
         <div className="rounded-2xl bg-red-50 border border-red-200 p-6">
           <h3 className="text-lg font-semibold text-red-800 mb-2">Error Loading Leads</h3>
           <p className="text-sm text-red-600 mb-4">{error}</p>
           <button onClick={loadData} className="glass-button-secondary">
-            Retry
+            {t('app.retry')}
           </button>
         </div>
       </div>
@@ -108,25 +110,25 @@ export default function Leads() {
   const columns = [
     {
       key: 'email',
-      label: 'Email',
+      label: t('leads.table.email'),
       render: (item: Record<string, unknown>) => (
         <span className="font-medium text-slate-700">{item.email as string}</span>
       ),
     },
     {
       key: 'full_name',
-      label: 'Name',
+      label: t('leads.table.name'),
       render: (item: Record<string, unknown>) => (
         <span>{(item.full_name as string) || '-'}</span>
       ),
     },
     {
       key: 'park_name',
-      label: 'Park',
+      label: t('leads.table.park'),
     },
     {
       key: 'source',
-      label: 'Source',
+      label: t('leads.table.source'),
       render: (item: Record<string, unknown>) => (
         <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
           {item.source as string}
@@ -135,7 +137,7 @@ export default function Leads() {
     },
     {
       key: 'opted_in',
-      label: 'Opt-in',
+      label: t('leads.table.opted_in'),
       render: (item: Record<string, unknown>) => (
         <span
           className={`status-badge ${
@@ -144,13 +146,13 @@ export default function Leads() {
               : 'bg-slate-50 text-slate-500 ring-slate-200'
           }`}
         >
-          {item.opted_in ? 'Yes' : 'No'}
+          {item.opted_in ? t('leads.opted_in') : t('leads.opted_out')}
         </span>
       ),
     },
     {
       key: 'created_at',
-      label: 'Date',
+      label: t('leads.table.date'),
       render: (item: Record<string, unknown>) => (
         <span className="text-slate-500">{formatDate(item.created_at as string)}</span>
       ),
@@ -161,22 +163,22 @@ export default function Leads() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-800">Leads & Marketing</h2>
-          <p className="mt-1 text-sm text-slate-500">Email lists, lead sources, and opt-in management</p>
+          <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('leads.title')}</h2>
+          <p className="mt-1 text-sm text-slate-500">{t('leads.subtitle')}</p>
         </div>
         <button onClick={handleExport} className="glass-button-secondary">
           <Download className="h-4 w-4" />
-          Export CSV
+          {t('leads.export')}
         </button>
       </div>
 
       <div className="grid gap-6 sm:grid-cols-2">
-        <KPICard title="Total Leads" value={formatNumber(stats.total)} icon={UserPlus} iconColor="text-sky-600" iconBg="bg-sky-50" />
-        <KPICard title="Marketing Opt-ins" value={formatNumber(stats.optedIn)} icon={Mail} iconColor="text-emerald-600" iconBg="bg-emerald-50" />
+        <KPICard title={t('leads.total')} value={formatNumber(stats.total)} icon={UserPlus} iconColor="text-sky-600" iconBg="bg-sky-50" />
+        <KPICard title={t('leads.optins')} value={formatNumber(stats.optedIn)} icon={Mail} iconColor="text-emerald-600" iconBg="bg-emerald-50" />
       </div>
 
       <GlassCard className="p-6">
-        <h3 className="mb-4 text-base font-semibold text-slate-800">Leads by Source</h3>
+        <h3 className="mb-4 text-base font-semibold text-slate-800">{t('leads.by_source')}</h3>
         <div className="h-48">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={sourceData}>
@@ -209,9 +211,9 @@ export default function Leads() {
               }}
               className="rounded-lg border border-slate-200/60 bg-white/60 px-3 py-1.5 text-sm text-slate-700"
             >
-              <option value="all">All leads</option>
-              <option value="yes">Opted in</option>
-              <option value="no">Not opted in</option>
+              <option value="all">{t('leads.all')}</option>
+              <option value="yes">{t('leads.opted_in')}</option>
+              <option value="no">{t('leads.opted_out')}</option>
             </select>
           </div>
         }

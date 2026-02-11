@@ -3,6 +3,7 @@ import { Activity, CheckCircle, AlertTriangle, XCircle, RefreshCw } from 'lucide
 import { invokeEdgeFunction } from '../lib/edgeFunctions';
 import { formatRelative, severityColor, formatNumber } from '../lib/utils';
 import GlassCard from '../components/ui/GlassCard';
+import { useI18n } from '../lib/i18n';
 
 interface ServiceStatus {
   name: string;
@@ -12,6 +13,7 @@ interface ServiceStatus {
 }
 
 export default function SystemHealth() {
+  const { t } = useI18n();
   const [events, setEvents] = useState<
     { id: string; event_type: string; severity: 'info' | 'warning' | 'error' | 'critical'; message: string; created_at: string }[]
   >([]);
@@ -78,12 +80,12 @@ export default function SystemHealth() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-800">System Health</h2>
-          <p className="mt-1 text-sm text-slate-500">Service status and recent system events</p>
+          <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('health.title')}</h2>
+          <p className="mt-1 text-sm text-slate-500">{t('health.subtitle')}</p>
         </div>
         <button onClick={handleRefresh} disabled={refreshing} className="glass-button-secondary">
           <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-          Refresh
+          {t('app.refresh')}
         </button>
       </div>
 
@@ -98,10 +100,10 @@ export default function SystemHealth() {
           )}
           <h3 className="text-base font-semibold text-slate-800">
             {services.some((s) => s.status === 'down')
-              ? 'Some Systems Down'
+              ? t('health.some_down')
               : services.some((s) => s.status === 'degraded')
-                ? 'Systems Degraded'
-                : 'All Systems Operational'}
+                ? t('health.degraded')
+                : t('health.all_ok')}
           </h3>
         </div>
         <div className="mb-4 flex flex-wrap gap-2">
@@ -119,12 +121,19 @@ export default function SystemHealth() {
                       : 'bg-rose-500'
                 }`}
               />
-              <span>{svc.name} {svc.status === 'operational' ? 'operativ' : svc.status === 'degraded' ? 'eingeschränkt' : 'gestört'}</span>
+              <span>
+                {svc.name}{' '}
+                {svc.status === 'operational'
+                  ? t('status.operational')
+                  : svc.status === 'degraded'
+                    ? t('status.degraded')
+                    : t('status.down')}
+              </span>
             </div>
           ))}
           {services.length === 0 && (
             <div className="rounded-full bg-white/40 px-3 py-1 text-xs text-slate-500">
-              Keine Verbindungen gefunden
+              {t('app.none')}
             </div>
           )}
         </div>
@@ -161,7 +170,7 @@ export default function SystemHealth() {
 
       {Object.keys(metrics).length > 0 && (
         <GlassCard className="p-6">
-          <h3 className="mb-4 text-base font-semibold text-slate-800">Live Metrics</h3>
+          <h3 className="mb-4 text-base font-semibold text-slate-800">{t('health.live_metrics')}</h3>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {Object.entries(metrics).map(([key, value]) => (
               <div key={key} className="rounded-xl bg-white/30 px-4 py-3">
@@ -176,10 +185,10 @@ export default function SystemHealth() {
       <div className="grid gap-4 sm:grid-cols-4">
         {(
           [
-            { label: 'Critical', count: severityCounts.critical, color: 'text-rose-600', bg: 'bg-rose-100', icon: XCircle },
-            { label: 'Errors', count: severityCounts.error, color: 'text-orange-600', bg: 'bg-orange-100', icon: AlertTriangle },
-            { label: 'Warnings', count: severityCounts.warning, color: 'text-amber-600', bg: 'bg-amber-100', icon: AlertTriangle },
-            { label: 'Info', count: severityCounts.info, color: 'text-sky-600', bg: 'bg-sky-100', icon: Activity },
+            { label: t('health.critical'), count: severityCounts.critical, color: 'text-rose-600', bg: 'bg-rose-100', icon: XCircle },
+            { label: t('health.errors'), count: severityCounts.error, color: 'text-orange-600', bg: 'bg-orange-100', icon: AlertTriangle },
+            { label: t('health.warnings'), count: severityCounts.warning, color: 'text-amber-600', bg: 'bg-amber-100', icon: AlertTriangle },
+            { label: t('health.info'), count: severityCounts.info, color: 'text-sky-600', bg: 'bg-sky-100', icon: Activity },
           ] as const
         ).map((item) => (
           <GlassCard key={item.label} className="p-4">
@@ -198,7 +207,7 @@ export default function SystemHealth() {
 
       <GlassCard className="overflow-hidden">
         <div className="border-b border-slate-100/80 px-6 py-4">
-          <h3 className="text-base font-semibold text-slate-800">Recent Events</h3>
+          <h3 className="text-base font-semibold text-slate-800">{t('health.recent_events')}</h3>
         </div>
         <div className="divide-y divide-slate-50">
           {events.slice(0, 20).map((event) => (
@@ -219,7 +228,7 @@ export default function SystemHealth() {
           ))}
           {events.length === 0 && (
             <div className="px-6 py-12 text-center text-sm text-slate-400">
-              No system events recorded
+              {t('health.no_events')}
             </div>
           )}
         </div>
