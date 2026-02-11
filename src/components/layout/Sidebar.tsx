@@ -6,11 +6,11 @@ import {
   Users,
   Camera,
   Mail,
+  Wand2,
   LifeBuoy,
   Activity,
   Settings,
   LogOut,
-  Mountain,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
@@ -24,6 +24,7 @@ const navItems = [
   { to: '/users', icon: Users, label: 'Users' },
   { to: '/photos', icon: Camera, label: 'Photos' },
   { to: '/leads', icon: Mail, label: 'Leads' },
+  { to: '/personalization', icon: Wand2, label: 'Personalization' },
   { to: '/support', icon: LifeBuoy, label: 'Support' },
   { to: '/health', icon: Activity, label: 'System Health' },
   { to: '/settings', icon: Settings, label: 'Settings' },
@@ -41,8 +42,13 @@ export default function Sidebar() {
       }`}
     >
       <div className="flex h-16 items-center gap-3 border-b border-white/[0.06] px-4">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-500/20">
-          <Mountain className="h-5 w-5 text-brand-400" />
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center">
+          <img
+            src="https://xcrxltiiovpoladpaewd.supabase.co/storage/v1/object/public/test/Liftpicutures%20Logo%20alt.jpg"
+            alt="Liftpictures"
+            className="h-9 w-9 rounded-xl object-cover"
+            loading="lazy"
+          />
         </div>
         {!collapsed && (
           <div className="animate-fade-in overflow-hidden">

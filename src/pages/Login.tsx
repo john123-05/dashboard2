@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Mountain, Loader2, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Eye, EyeOff } from 'lucide-react';
 
 export default function Login() {
   const { user, loading, signIn } = useAuth();
@@ -24,12 +24,27 @@ export default function Login() {
   }
 
   return (
-    <div className="mesh-gradient flex min-h-screen items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div
+      className="relative flex min-h-screen items-center justify-center p-4"
+      style={{
+        backgroundImage:
+          "url('https://xcrxltiiovpoladpaewd.supabase.co/storage/v1/object/public/test/Copy%20of%20Copy%20of%20Photo-%20und%20Videosystems%20since%202006.jpg')",
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+      }}
+    >
+      <div className="absolute inset-0 bg-slate-900/35 backdrop-blur-[1px]" />
+      <div className="relative w-full max-w-md">
         <div className="glass-panel-strong animate-slide-up rounded-3xl p-8">
           <div className="mb-8 text-center">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-500 shadow-lg shadow-brand-500/25">
-              <Mountain className="h-7 w-7 text-white" />
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl">
+              <img
+                src="https://xcrxltiiovpoladpaewd.supabase.co/storage/v1/object/public/test/Liftpicutures%20Logo%20alt.jpg"
+                alt="Liftpictures"
+                className="h-16 w-16 rounded-2xl object-cover"
+                loading="lazy"
+              />
             </div>
             <h1 className="text-2xl font-bold tracking-tight text-slate-800">Welcome back</h1>
             <p className="mt-1 text-sm text-slate-500">Sign in to your operator dashboard</p>

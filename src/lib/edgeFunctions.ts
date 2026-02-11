@@ -1,5 +1,4 @@
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from './supabase';
 
 interface EdgeFunctionResponse<T = any> {
   data: T | null;
@@ -19,7 +18,8 @@ export async function invokeEdgeFunction<T = any>(
     const url = `${SUPABASE_URL}/functions/v1/${functionName}`;
 
     const headers: Record<string, string> = {
-      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      apikey: SUPABASE_ANON_KEY,
       'Content-Type': 'application/json',
     };
 

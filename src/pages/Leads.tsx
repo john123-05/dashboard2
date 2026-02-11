@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Download, Mail, UserPlus, Filter } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { supabase } from '../lib/supabase';
+import { invokeEdgeFunction } from '../lib/edgeFunctions';
 import { formatDate, formatNumber, exportToCSV } from '../lib/utils';
 import GlassCard from '../components/ui/GlassCard';
 import DataTable from '../components/ui/DataTable';
@@ -13,18 +13,26 @@ export default function Leads() {
   const [stats, setStats] = useState({ total: 0, optedIn: 0 });
   const [filterOptIn, setFilterOptIn] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
   }, []);
 
   async function loadData() {
-    const { data } = await supabase
-      .from('leads')
-      .select('*, park:parks(name)')
-      .order('created_at', { ascending: false });
+    setLoading(true);
+    const { data, error: invokeError } = await invokeEdgeFunction('external-leads');
 
-    const rows: Record<string, unknown>[] = (data || []).map((l: Record<string, unknown>) => {
+    if (invokeError) {
+      console.error('Failed to fetch external leads:', invokeError);
+      setError(invokeError);
+      setLoading(false);
+      return;
+    }
+
+    const leads = data?.leads || [];
+
+    const rows: Record<string, unknown>[] = (leads || []).map((l: Record<string, unknown>) => {
       const park = l.park as Record<string, unknown> | null;
       return {
         ...l,
@@ -49,6 +57,7 @@ export default function Leads() {
         .sort((a, b) => b.count - a.count)
     );
 
+    setError(null);
     setLoading(false);
   }
 
@@ -76,6 +85,21 @@ export default function Leads() {
           {[...Array(2)].map((_, i) => (
             <div key={i} className="h-32 animate-pulse rounded-2xl bg-white/30" />
           ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <h2 className="text-2xl font-bold tracking-tight text-slate-800">Leads & Marketing</h2>
+        <div className="rounded-2xl bg-red-50 border border-red-200 p-6">
+          <h3 className="text-lg font-semibold text-red-800 mb-2">Error Loading Leads</h3>
+          <p className="text-sm text-red-600 mb-4">{error}</p>
+          <button onClick={loadData} className="glass-button-secondary">
+            Retry
+          </button>
         </div>
       </div>
     );

@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
-import { DollarSign, ShoppingCart, TrendingUp, Zap } from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { useEffect, useRef, useState } from 'react';
+import { DollarSign, ShoppingCart, TrendingUp, Zap, Users as UsersIcon, Activity, ChevronLeft, ChevronRight } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 import { invokeEdgeFunction } from '../lib/edgeFunctions';
-import { formatCurrency, formatNumber, formatPercent, formatDateTime, statusColor } from '../lib/utils';
+import { formatCurrency, formatNumber, formatPercent, formatDateTime, formatRelative, statusColor } from '../lib/utils';
 import KPICard from '../components/ui/KPICard';
 import GlassCard from '../components/ui/GlassCard';
 import type { Purchase, Photo } from '../lib/types';
@@ -15,12 +16,28 @@ interface DailyData {
 }
 
 export default function Overview() {
+  const { profile } = useAuth();
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [totalPurchases, setTotalPurchases] = useState(0);
   const [totalPhotos, setTotalPhotos] = useState(0);
   const [activeAttractions, setActiveAttractions] = useState(0);
   const [dailyData, setDailyData] = useState<DailyData[]>([]);
   const [recentPurchases, setRecentPurchases] = useState<(Purchase & { photo: Photo })[]>([]);
+  const [showAllPurchases, setShowAllPurchases] = useState(false);
+  const [totalUsers, setTotalUsers] = useState<number | null>(null);
+  const [activityItems, setActivityItems] = useState<
+    {
+      id: string;
+      kind: 'health' | 'support';
+      title: string;
+      message: string;
+      created_at: string;
+      severity?: 'info' | 'warning' | 'error' | 'critical';
+      status?: string;
+    }[]
+  >([]);
+  const [dismissedActivity, setDismissedActivity] = useState<Set<string>>(new Set());
+  const kpiScrollRef = useRef<HTMLDivElement | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -92,7 +109,7 @@ export default function Overview() {
       );
 
       const recentPayments = succeededPayments
-        .slice(0, 8)
+        .slice(0, 20)
         .map((p: { id: string; amount: number; created_at: string; status: string }) => ({
           id: p.id,
           amount_cents: Math.round(p.amount * 100),
@@ -102,6 +119,51 @@ export default function Overview() {
         }));
 
       setRecentPurchases(recentPayments);
+
+      const [{ data: healthEvents }, { data: supportTickets }, externalUsersResult] = await Promise.all([
+        supabase
+          .from('system_health_events')
+          .select('id, event_type, severity, message, created_at')
+          .order('created_at', { ascending: false })
+          .limit(10),
+        supabase
+          .from('support_tickets')
+          .select('id, subject, status, updated_at, created_at')
+          .order('updated_at', { ascending: false })
+          .limit(10),
+        invokeEdgeFunction('external-users'),
+      ]);
+
+      const healthItems = (healthEvents || []).map((e: any) => ({
+        id: `health-${e.id}`,
+        kind: 'health' as const,
+        title: `System health: ${String(e.event_type || 'event')}`,
+        message: String(e.message || ''),
+        created_at: e.created_at,
+        severity: e.severity,
+      }));
+
+      const ticketItems = (supportTickets || []).map((t: any) => ({
+        id: `support-${t.id}`,
+        kind: 'support' as const,
+        title: `Support ticket updated`,
+        message: `${t.subject} · ${String(t.status || '').replace('_', ' ')}`,
+        created_at: t.updated_at || t.created_at,
+        status: t.status,
+      }));
+
+      const merged = [...healthItems, ...ticketItems]
+        .filter((i) => i.created_at)
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .slice(0, 12);
+
+      setActivityItems(merged);
+      if (externalUsersResult?.error) {
+        setTotalUsers(null);
+      } else {
+        const count = externalUsersResult?.data?.customers?.length;
+        setTotalUsers(typeof count === 'number' ? count : null);
+      }
       setError(null);
       setLoading(false);
     } catch (error) {
@@ -112,6 +174,11 @@ export default function Overview() {
   }
 
   const conversionRate = totalPhotos > 0 ? (totalPurchases / totalPhotos) * 100 : 0;
+  const visiblePurchases = showAllPurchases ? recentPurchases : recentPurchases.slice(0, 4);
+  const visibleActivity = activityItems.filter((a) => !dismissedActivity.has(a.id));
+  const healthAlerts = visibleActivity.filter(
+    (a) => a.kind === 'health' && (a.severity === 'error' || a.severity === 'critical')
+  ).length;
 
   if (loading) {
     return (
@@ -143,50 +210,115 @@ export default function Overview() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 overflow-x-hidden">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight text-slate-800">Dashboard</h2>
+        <div className="flex flex-wrap items-baseline gap-2">
+          <h2 className="text-2xl font-bold tracking-tight text-slate-800">Dashboard</h2>
+          <span className="text-sm font-medium text-slate-500">
+            {(() => {
+              const hour = new Date().getHours();
+              const greeting =
+                hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+              const name = profile?.full_name?.split(' ')[0];
+              return name ? `${greeting}, ${name}` : greeting;
+            })()}
+          </span>
+        </div>
         <p className="mt-1 text-sm text-slate-500">Your park performance at a glance</p>
       </div>
 
-      <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-        <KPICard
-          title="Total Revenue"
-          value={formatCurrency(totalRevenue)}
-          change={12.5}
-          icon={DollarSign}
-          iconColor="text-emerald-600"
-          iconBg="bg-emerald-50"
-        />
-        <KPICard
-          title="Purchases"
-          value={formatNumber(totalPurchases)}
-          change={8.2}
-          icon={ShoppingCart}
-          iconColor="text-sky-600"
-          iconBg="bg-sky-50"
-        />
-        <KPICard
-          title="Conversion Rate"
-          value={formatPercent(conversionRate)}
-          change={2.1}
-          icon={TrendingUp}
-          iconColor="text-amber-600"
-          iconBg="bg-amber-50"
-        />
-        <KPICard
-          title="Active Attractions"
-          value={formatNumber(activeAttractions)}
-          icon={Zap}
-          iconColor="text-cyan-600"
-          iconBg="bg-cyan-50"
-        />
+      <div className="relative max-w-full overflow-hidden">
+        <button
+          className="absolute left-1 top-1/2 z-10 hidden -translate-y-1/2 items-center justify-center rounded-full bg-white/70 p-1.5 text-slate-500 shadow-sm backdrop-blur hover:text-slate-700 xl:flex"
+          onClick={() => kpiScrollRef.current?.scrollBy({ left: -320, behavior: 'smooth' })}
+          aria-label="Scroll left"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+        <button
+          className="absolute right-1 top-1/2 z-10 hidden -translate-y-1/2 items-center justify-center rounded-full bg-white/70 p-1.5 text-slate-500 shadow-sm backdrop-blur hover:text-slate-700 xl:flex"
+          onClick={() => kpiScrollRef.current?.scrollBy({ left: 320, behavior: 'smooth' })}
+          aria-label="Scroll right"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
+        <div
+          ref={kpiScrollRef}
+          className="flex w-full min-w-0 gap-4 overflow-x-auto pb-1 pr-2 scrollbar-thin snap-x snap-mandatory overscroll-x-contain"
+        >
+          <div className="w-[240px] flex-none snap-start">
+            <KPICard
+              title="Total Revenue"
+              value={formatCurrency(totalRevenue)}
+              change={12.5}
+              icon={DollarSign}
+              iconColor="text-emerald-600"
+              iconBg="bg-emerald-50"
+            />
+          </div>
+          <div className="w-[240px] flex-none snap-start">
+            <KPICard
+              title="Monthly Revenue"
+              value={formatCurrency(Math.round((dailyData.reduce((s, d) => s + d.revenue, 0) || 0) * 100))}
+              icon={DollarSign}
+              iconColor="text-sky-600"
+              iconBg="bg-sky-50"
+            />
+          </div>
+          <div className="w-[240px] flex-none snap-start">
+            <KPICard
+              title="Purchases"
+              value={formatNumber(totalPurchases)}
+              change={8.2}
+              icon={ShoppingCart}
+              iconColor="text-amber-600"
+              iconBg="bg-amber-50"
+            />
+          </div>
+          <div className="w-[240px] flex-none snap-start">
+            <KPICard
+              title="Total Users"
+              value={totalUsers !== null ? formatNumber(totalUsers) : '—'}
+              icon={UsersIcon}
+              iconColor="text-indigo-600"
+              iconBg="bg-indigo-50"
+            />
+          </div>
+          <div className="w-[240px] flex-none snap-start">
+            <KPICard
+              title="Health Alerts"
+              value={formatNumber(healthAlerts)}
+              icon={Activity}
+              iconColor="text-rose-600"
+              iconBg="bg-rose-50"
+            />
+          </div>
+          <div className="w-[240px] flex-none snap-start">
+            <KPICard
+              title="Conversion Rate"
+              value={formatPercent(conversionRate)}
+              change={2.1}
+              icon={TrendingUp}
+              iconColor="text-emerald-600"
+              iconBg="bg-emerald-50"
+            />
+          </div>
+          <div className="w-[240px] flex-none snap-start">
+            <KPICard
+              title="Active Attractions"
+              value={formatNumber(activeAttractions)}
+              icon={Zap}
+              iconColor="text-cyan-600"
+              iconBg="bg-cyan-50"
+            />
+          </div>
+        </div>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-5">
         <GlassCard className="p-6 xl:col-span-3">
           <h3 className="mb-4 text-base font-semibold text-slate-800">Revenue Trend</h3>
-          <div className="h-64">
+          <div className="h-64 mt-2">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={dailyData}>
                 <defs>
@@ -215,7 +347,12 @@ export default function Overview() {
                     borderRadius: '12px',
                     boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
                   }}
-                  formatter={(value) => [`$${Number(value ?? 0).toFixed(2)}`, 'Revenue']}
+                  formatter={(value, name) => {
+                    if (name === 'purchases') {
+                      return [Number(value ?? 0).toFixed(0), 'Purchases'];
+                    }
+                    return [`$${Number(value ?? 0).toFixed(2)}`, 'Revenue'];
+                  }}
                 />
                 <Area
                   type="monotone"
@@ -227,32 +364,139 @@ export default function Overview() {
               </AreaChart>
             </ResponsiveContainer>
           </div>
-        </GlassCard>
-
-        <GlassCard className="p-6 xl:col-span-2">
-          <h3 className="mb-4 text-base font-semibold text-slate-800">Recent Purchases</h3>
-          <div className="space-y-3">
-            {recentPurchases.map((p) => (
-              <div
-                key={p.id}
-                className="flex items-center justify-between rounded-xl bg-white/30 px-4 py-3 transition-colors hover:bg-white/50"
-              >
-                <div>
-                  <p className="text-sm font-medium text-slate-700">
-                    {formatCurrency(p.amount_cents)}
-                  </p>
-                  <p className="text-xs text-slate-400">{formatDateTime(p.purchased_at)}</p>
-                </div>
-                <span className={`status-badge ${statusColor(p.status)}`}>
-                  {p.status}
-                </span>
-              </div>
-            ))}
-            {recentPurchases.length === 0 && (
-              <p className="py-8 text-center text-sm text-slate-400">No recent purchases</p>
-            )}
+          <div className="mt-8">
+            <h4 className="mb-3 text-sm font-semibold text-slate-700">Purchases Trend</h4>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={dailyData}>
+                  <XAxis
+                    dataKey="date"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 11, fill: '#94a3b8' }}
+                  />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 11, fill: '#94a3b8' }}
+                    allowDecimals={false}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      background: 'rgba(255,255,255,0.9)',
+                      backdropFilter: 'blur(12px)',
+                      border: '1px solid rgba(255,255,255,0.3)',
+                      borderRadius: '12px',
+                      boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
+                    }}
+                    formatter={(value) => [Number(value ?? 0).toFixed(0), 'Purchases']}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="purchases"
+                    stroke="#10b981"
+                    strokeWidth={2.5}
+                    dot={false}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </GlassCard>
+
+        <div className="xl:col-span-2 flex flex-col gap-6">
+          <GlassCard className="p-6 h-[320px] flex flex-col">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-base font-semibold text-slate-800">News & Aktivitäten</h3>
+            </div>
+            <div className="space-y-3 overflow-y-auto pr-2 scrollbar-thin">
+              {visibleActivity.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-start justify-between gap-3 rounded-xl bg-white/30 px-4 py-3 transition-all duration-300 hover:bg-white/50"
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`h-2 w-2 rounded-full ${
+                          item.severity === 'critical'
+                            ? 'bg-rose-500'
+                            : item.severity === 'error'
+                              ? 'bg-orange-500'
+                              : item.severity === 'warning'
+                                ? 'bg-amber-500'
+                                : 'bg-emerald-500'
+                        }`}
+                      />
+                      <p className="text-sm font-semibold text-slate-700">{item.title}</p>
+                    </div>
+                    <p className="mt-1 text-xs text-slate-500 line-clamp-2">{item.message}</p>
+                    <p className="mt-1 text-[11px] text-slate-400">
+                      {formatRelative(item.created_at)}
+                    </p>
+                  </div>
+                  <button
+                    aria-label="Dismiss"
+                    onClick={() => {
+                      setDismissedActivity((prev) => {
+                        const next = new Set(prev);
+                        next.add(item.id);
+                        return next;
+                      });
+                    }}
+                    className="text-slate-400 hover:text-slate-600"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+              {visibleActivity.length === 0 && (
+                <p className="py-6 text-center text-sm text-slate-400">
+                  Keine aktuellen Ereignisse
+                </p>
+              )}
+            </div>
+          </GlassCard>
+
+          <GlassCard className="p-6 xl:mt-6 h-[320px] flex flex-col">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-base font-semibold text-slate-800">Recent Purchases</h3>
+              {recentPurchases.length > 4 && (
+                <button
+                  className="text-xs font-semibold text-slate-500 hover:text-slate-700"
+                  onClick={() => setShowAllPurchases((v) => !v)}
+                >
+                  {showAllPurchases ? 'Collapse' : 'Expand'}
+                </button>
+              )}
+            </div>
+            <div
+              className={`space-y-3 overflow-y-auto pr-2 scrollbar-thin ${
+                showAllPurchases ? '' : 'max-h-56'
+              }`}
+            >
+              {(showAllPurchases ? recentPurchases : visiblePurchases).map((p) => (
+                <div
+                  key={p.id}
+                  className="flex items-center justify-between rounded-xl bg-white/30 px-4 py-3 transition-colors hover:bg-white/50"
+                >
+                  <div>
+                    <p className="text-sm font-medium text-slate-700">
+                      {formatCurrency(p.amount_cents)}
+                    </p>
+                    <p className="text-xs text-slate-400">{formatDateTime(p.purchased_at)}</p>
+                  </div>
+                  <span className={`status-badge ${statusColor(p.status)}`}>
+                    {p.status}
+                  </span>
+                </div>
+              ))}
+              {recentPurchases.length === 0 && (
+                <p className="py-8 text-center text-sm text-slate-400">No recent purchases</p>
+              )}
+            </div>
+          </GlassCard>
+        </div>
       </div>
     </div>
   );

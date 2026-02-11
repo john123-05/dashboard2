@@ -22,7 +22,7 @@ export default function KPICard({
   const isPositive = change !== undefined && change >= 0;
 
   return (
-    <GlassCard className="p-6">
+    <GlassCard className="p-6 h-[132px]">
       <div className="flex items-start justify-between">
         <div className="space-y-3">
           <p className="text-sm font-medium text-slate-500">{title}</p>

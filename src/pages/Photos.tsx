@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Camera, ShoppingBag, Eye, Clock } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
-import { externalSupabase } from '../lib/supabase';
+import { invokeEdgeFunction } from '../lib/edgeFunctions';
 import { formatNumber, formatPercent, formatRelative } from '../lib/utils';
 import GlassCard from '../components/ui/GlassCard';
 import KPICard from '../components/ui/KPICard';
@@ -23,24 +23,26 @@ export default function Photos() {
     { id: string; image_url: string; thumbnail_url: string | null; status: string; taken_at: string; attraction_name: string }[]
   >([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
   }, []);
 
   async function loadData() {
-    const [photosRes, attractionsRes, recentRes] = await Promise.all([
-      externalSupabase.from('photos').select('id, status, attraction_id'),
-      externalSupabase.from('attractions').select('id, name'),
-      externalSupabase
-        .from('photos')
-        .select('id, image_url, thumbnail_url, status, taken_at, attraction:attractions(name)')
-        .order('taken_at', { ascending: false })
-        .limit(12),
-    ]);
+    setLoading(true);
+    const { data, error: invokeError } = await invokeEdgeFunction('external-photos');
 
-    const photos = photosRes.data || [];
-    const attractions = attractionsRes.data || [];
+    if (invokeError) {
+      console.error('Failed to fetch external photos:', invokeError);
+      setError(invokeError);
+      setLoading(false);
+      return;
+    }
+
+    const photos = data?.photos || [];
+    const attractions = data?.attractions || [];
+    const recent = data?.recent || [];
 
     setStats({
       total: photos.length,
@@ -65,7 +67,7 @@ export default function Photos() {
     setAttractionStats(Array.from(attrMap.values()).sort((a, b) => b.total - a.total));
 
     setRecentPhotos(
-      (recentRes.data || []).map((p: Record<string, unknown>) => {
+      (recent || []).map((p: Record<string, unknown>) => {
         const attraction = p.attraction as Record<string, unknown> | null;
         return {
           id: p.id as string,
@@ -77,7 +79,7 @@ export default function Photos() {
         };
       })
     );
-
+    setError(null);
     setLoading(false);
   }
 
@@ -96,6 +98,21 @@ export default function Photos() {
           {[...Array(4)].map((_, i) => (
             <div key={i} className="h-32 animate-pulse rounded-2xl bg-white/30" />
           ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <h2 className="text-2xl font-bold tracking-tight text-slate-800">Photos</h2>
+        <div className="rounded-2xl bg-red-50 border border-red-200 p-6">
+          <h3 className="text-lg font-semibold text-red-800 mb-2">Error Loading Photos</h3>
+          <p className="text-sm text-red-600 mb-4">{error}</p>
+          <button onClick={loadData} className="glass-button-secondary">
+            Retry
+          </button>
         </div>
       </div>
     );

@@ -1,48 +1,56 @@
 import { useEffect, useState } from 'react';
 import { Activity, CheckCircle, AlertTriangle, XCircle, RefreshCw } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { invokeEdgeFunction } from '../lib/edgeFunctions';
 import { formatRelative, severityColor, formatNumber } from '../lib/utils';
 import GlassCard from '../components/ui/GlassCard';
-import type { SystemHealthEvent } from '../lib/types';
 
 interface ServiceStatus {
   name: string;
   status: 'operational' | 'degraded' | 'down';
   latency?: number;
+  detail?: string;
 }
 
 export default function SystemHealth() {
-  const [events, setEvents] = useState<SystemHealthEvent[]>([]);
+  const [events, setEvents] = useState<
+    { id: string; event_type: string; severity: 'info' | 'warning' | 'error' | 'critical'; message: string; created_at: string }[]
+  >([]);
+  const [services, setServices] = useState<ServiceStatus[]>([]);
+  const [metrics, setMetrics] = useState<Record<string, unknown>>({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const services: ServiceStatus[] = [
-    { name: 'Photo Upload Service', status: 'operational', latency: 120 },
-    { name: 'Payment Processing', status: 'operational', latency: 85 },
-    { name: 'Camera Sync', status: 'operational', latency: 200 },
-    { name: 'Webhook Delivery', status: 'operational', latency: 45 },
-    { name: 'CDN / Image Delivery', status: 'operational', latency: 30 },
-    { name: 'Authentication', status: 'operational', latency: 65 },
-  ];
-
   useEffect(() => {
-    loadEvents();
+    loadHealth();
   }, []);
 
-  async function loadEvents() {
-    const { data } = await supabase
-      .from('system_health_events')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(50);
+  async function loadHealth() {
+    const { data, error } = await invokeEdgeFunction('system-health');
+    if (error) {
+      setEvents([
+        {
+          id: 'health-error',
+          event_type: 'system_health',
+          severity: 'critical',
+          message: error,
+          created_at: new Date().toISOString(),
+        },
+      ]);
+      setServices([]);
+      setMetrics({});
+      setLoading(false);
+      return;
+    }
 
-    setEvents((data || []) as SystemHealthEvent[]);
+    setServices(data?.services || []);
+    setEvents(data?.events || []);
+    setMetrics(data?.metrics || {});
     setLoading(false);
   }
 
   async function handleRefresh() {
     setRefreshing(true);
-    await loadEvents();
+    await loadHealth();
     setRefreshing(false);
   }
 
@@ -81,8 +89,44 @@ export default function SystemHealth() {
 
       <GlassCard className="p-6">
         <div className="mb-4 flex items-center gap-2">
-          <CheckCircle className="h-5 w-5 text-emerald-500" />
-          <h3 className="text-base font-semibold text-slate-800">All Systems Operational</h3>
+          {services.some((s) => s.status === 'down') ? (
+            <XCircle className="h-5 w-5 text-rose-500" />
+          ) : services.some((s) => s.status === 'degraded') ? (
+            <AlertTriangle className="h-5 w-5 text-amber-500" />
+          ) : (
+            <CheckCircle className="h-5 w-5 text-emerald-500" />
+          )}
+          <h3 className="text-base font-semibold text-slate-800">
+            {services.some((s) => s.status === 'down')
+              ? 'Some Systems Down'
+              : services.some((s) => s.status === 'degraded')
+                ? 'Systems Degraded'
+                : 'All Systems Operational'}
+          </h3>
+        </div>
+        <div className="mb-4 flex flex-wrap gap-2">
+          {services.map((svc) => (
+            <div
+              key={svc.name}
+              className="flex items-center gap-2 rounded-full bg-white/40 px-3 py-1 text-xs text-slate-600"
+            >
+              <span
+                className={`h-2 w-2 rounded-full animate-pulse ${
+                  svc.status === 'operational'
+                    ? 'bg-emerald-500'
+                    : svc.status === 'degraded'
+                      ? 'bg-amber-500'
+                      : 'bg-rose-500'
+                }`}
+              />
+              <span>{svc.name} {svc.status === 'operational' ? 'operativ' : svc.status === 'degraded' ? 'eingeschränkt' : 'gestört'}</span>
+            </div>
+          ))}
+          {services.length === 0 && (
+            <div className="rounded-full bg-white/40 px-3 py-1 text-xs text-slate-500">
+              Keine Verbindungen gefunden
+            </div>
+          )}
         </div>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {services.map((svc) => (
@@ -100,7 +144,12 @@ export default function SystemHealth() {
                         : 'bg-rose-500'
                   }`}
                 />
-                <span className="text-sm text-slate-700">{svc.name}</span>
+                <div>
+                  <span className="text-sm text-slate-700">{svc.name}</span>
+                  {svc.detail && (
+                    <p className="text-xs text-slate-400">{svc.detail}</p>
+                  )}
+                </div>
               </div>
               {svc.latency && (
                 <span className="text-xs text-slate-400">{svc.latency}ms</span>
@@ -109,6 +158,20 @@ export default function SystemHealth() {
           ))}
         </div>
       </GlassCard>
+
+      {Object.keys(metrics).length > 0 && (
+        <GlassCard className="p-6">
+          <h3 className="mb-4 text-base font-semibold text-slate-800">Live Metrics</h3>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {Object.entries(metrics).map(([key, value]) => (
+              <div key={key} className="rounded-xl bg-white/30 px-4 py-3">
+                <p className="text-xs uppercase tracking-wide text-slate-400">{key.replace(/_/g, ' ')}</p>
+                <p className="mt-1 text-sm font-semibold text-slate-800">{String(value ?? '-')}</p>
+              </div>
+            ))}
+          </div>
+        </GlassCard>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-4">
         {(

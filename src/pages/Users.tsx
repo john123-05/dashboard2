@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Users as UsersIcon, Search } from 'lucide-react';
-import { externalSupabase } from '../lib/supabase';
+import { invokeEdgeFunction } from '../lib/edgeFunctions';
 import { formatDate, formatCurrency } from '../lib/utils';
 import GlassCard from '../components/ui/GlassCard';
 
@@ -19,16 +19,25 @@ export default function Users() {
   const [customers, setCustomers] = useState<CustomerRow[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
   }, []);
 
   async function loadData() {
-    const [customersRes, purchasesRes] = await Promise.all([
-      externalSupabase.from('customers').select('*'),
-      externalSupabase.from('purchases').select('customer_id, amount_cents, status'),
-    ]);
+    setLoading(true);
+    const { data, error: invokeError } = await invokeEdgeFunction('external-users');
+
+    if (invokeError) {
+      console.error('Failed to fetch external users:', invokeError);
+      setError(invokeError);
+      setLoading(false);
+      return;
+    }
+
+    const customersRes = { data: data?.customers ?? [] } as { data: any[] };
+    const purchasesRes = { data: data?.purchases ?? [] } as { data: any[] };
 
     const purchasesByCustomer = new Map<string, { count: number; total: number }>();
     (purchasesRes.data || [])
@@ -51,6 +60,7 @@ export default function Users() {
 
     rows.sort((a, b) => b.total_spent - a.total_spent);
     setCustomers(rows);
+    setError(null);
     setLoading(false);
   }
 
@@ -69,6 +79,21 @@ export default function Users() {
       <div className="space-y-6">
         <div className="h-8 w-32 animate-pulse rounded-lg bg-white/40" />
         <div className="h-96 animate-pulse rounded-2xl bg-white/30" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <h2 className="text-2xl font-bold tracking-tight text-slate-800">Users</h2>
+        <div className="rounded-2xl bg-red-50 border border-red-200 p-6">
+          <h3 className="text-lg font-semibold text-red-800 mb-2">Error Loading Users</h3>
+          <p className="text-sm text-red-600 mb-4">{error}</p>
+          <button onClick={loadData} className="glass-button-secondary">
+            Retry
+          </button>
+        </div>
       </div>
     );
   }

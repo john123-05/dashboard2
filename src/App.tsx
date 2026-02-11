@@ -9,6 +9,7 @@ import Purchases from './pages/Purchases';
 import Users from './pages/Users';
 import Photos from './pages/Photos';
 import Leads from './pages/Leads';
+import Personalization from './pages/Personalization';
 import Support from './pages/Support';
 import SystemHealth from './pages/SystemHealth';
 import Settings from './pages/Settings';
@@ -27,6 +28,7 @@ export default function App() {
             <Route path="/users" element={<Users />} />
             <Route path="/photos" element={<Photos />} />
             <Route path="/leads" element={<Leads />} />
+            <Route path="/personalization" element={<Personalization />} />
             <Route path="/support" element={<Support />} />
             <Route path="/health" element={<SystemHealth />} />
             <Route path="/settings" element={<Settings />} />
