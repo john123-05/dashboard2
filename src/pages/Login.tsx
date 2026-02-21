@@ -20,7 +20,32 @@ export default function Login() {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  if (loading) return null;
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      const { data, error } = await invokeEdgeFunction('external-parks');
+      if (!error && !cancelled) {
+        const loadedParks = data?.parks || [];
+        setParks(loadedParks);
+        if (loadedParks.length > 0) {
+          setParkId((prev) => prev || loadedParks[0].id);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="mesh-gradient flex min-h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-brand-500" />
+      </div>
+    );
+  }
   if (user && activeParkId) return <Navigate to="/" replace />;
 
   async function handleSubmit(e: React.FormEvent) {
@@ -57,18 +82,6 @@ export default function Login() {
     setPark(parkId, selected?.name || null);
     setSubmitting(false);
   }
-
-  useEffect(() => {
-    (async () => {
-      const { data, error } = await invokeEdgeFunction('external-parks');
-      if (!error) {
-        setParks(data?.parks || []);
-        if (!parkId && data?.parks?.length) {
-          setParkId(data.parks[0].id);
-        }
-      }
-    })();
-  }, []);
 
   return (
     <div
