@@ -1,0 +1,2 @@
+/*\n  # Fix Profile Creation Policy\n\n  ## Changes\n  - Add INSERT policy so users can create their own profile during signup\n  - This allows the signup flow to complete successfully\n\n  ## Security\n  - Users can only insert a profile with their own user ID\n  - Prevents users from creating profiles for other users\n*/\n\n-- Allow authenticated users to insert their own profile\nCREATE POLICY "Users can insert own profile"\n  ON profiles FOR INSERT\n  TO authenticated\n  WITH CHECK (auth.uid() = id);
+;

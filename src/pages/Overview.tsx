@@ -3,6 +3,7 @@ import { DollarSign, ShoppingCart, TrendingUp, Zap, Users as UsersIcon, Activity
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { usePark } from '../contexts/ParkContext';
 import { useI18n } from '../lib/i18n';
 import { invokeEdgeFunction } from '../lib/edgeFunctions';
 import { formatCurrency, formatNumber, formatPercent, formatDateTime, formatRelative, statusColor } from '../lib/utils';
@@ -18,6 +19,7 @@ interface DailyData {
 
 export default function Overview() {
   const { profile } = useAuth();
+  const { parkId } = usePark();
   const { t } = useI18n();
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [totalPurchases, setTotalPurchases] = useState(0);
@@ -45,13 +47,38 @@ export default function Overview() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [parkId]);
 
   async function loadData() {
+    if (!parkId) {
+      setError('No park selected');
+      setLoading(false);
+      return;
+    }
+
     try {
-      const [revenueResult, paymentsResult] = await Promise.all([
+      const [
+        revenueResult,
+        paymentsResult,
+        externalUsersResult,
+        externalPhotosResult,
+        attractionsResult,
+        healthResult,
+      ] = await Promise.all([
         invokeEdgeFunction('stripe-revenue'),
         invokeEdgeFunction('stripe-payments'),
+        invokeEdgeFunction('external-users', {
+          query: { park_id: parkId },
+        }),
+        invokeEdgeFunction('external-photos', {
+          query: { park_id: parkId },
+        }),
+        invokeEdgeFunction('external-attractions', {
+          query: { park_id: parkId },
+        }),
+        invokeEdgeFunction('system-health', {
+          query: { park_id: parkId },
+        }),
       ]);
 
       if (revenueResult.error) {
@@ -68,16 +95,44 @@ export default function Overview() {
         return;
       }
 
+      if (externalUsersResult.error) {
+        console.error('Failed to fetch user/purchase data', externalUsersResult.error);
+        setError(`Users: ${externalUsersResult.error}`);
+        setLoading(false);
+        return;
+      }
+
+      if (externalPhotosResult.error) {
+        console.error('Failed to fetch photos data', externalPhotosResult.error);
+        setError(`Photos: ${externalPhotosResult.error}`);
+        setLoading(false);
+        return;
+      }
+
+      if (attractionsResult.error) {
+        console.error('Failed to fetch attractions data', attractionsResult.error);
+        setError(`Attractions: ${attractionsResult.error}`);
+        setLoading(false);
+        return;
+      }
+
       const revenueData = revenueResult.data;
-      const paymentsData = paymentsResult.data;
+      const payments = (paymentsResult.data?.payments || []) as {
+        id: string;
+        amount: number;
+        status: string;
+        created_at: string;
+      }[];
+      const succeededPayments = payments.filter((p) => p.status === 'succeeded');
 
-      const payments = paymentsData.payments || [];
-      const succeededPayments = payments.filter((p: { status: string }) => p.status === 'succeeded');
-
-      setTotalRevenue(Math.round(revenueData.total_revenue * 100));
+      const customers = (externalUsersResult.data?.customers || []) as { id: string }[];
+      const photos = (externalPhotosResult.data?.photos || []) as { id: string }[];
+      const attractions = (attractionsResult.data?.attractions || []) as { is_active?: boolean }[];
+      setTotalRevenue(Math.round((revenueData?.total_revenue || 0) * 100));
       setTotalPurchases(succeededPayments.length);
-      setTotalPhotos(0);
-      setActiveAttractions(0);
+      setTotalPhotos(photos.length);
+      setActiveAttractions(attractions.filter((a) => a.is_active !== false).length);
+      setTotalUsers(customers.length);
 
       const byDay = new Map<string, { revenue: number; purchases: number }>();
       for (let i = 6; i >= 0; i--) {
@@ -87,14 +142,14 @@ export default function Overview() {
         byDay.set(key, { revenue: 0, purchases: 0 });
       }
 
-      (revenueData.revenue_by_day || []).forEach((item: { date: string; amount: number }) => {
+      (revenueData?.revenue_by_day || []).forEach((item: { date: string; amount: number }) => {
         const entry = byDay.get(item.date);
         if (entry) {
           entry.revenue = item.amount;
         }
       });
 
-      succeededPayments.forEach((p: { created_at: string }) => {
+      succeededPayments.forEach((p) => {
         const day = new Date(p.created_at).toISOString().split('T')[0];
         const entry = byDay.get(day);
         if (entry) {
@@ -110,34 +165,26 @@ export default function Overview() {
         }))
       );
 
-      const recentPayments = succeededPayments
-        .slice(0, 20)
-        .map((p: { id: string; amount: number; created_at: string; status: string }) => ({
-          id: p.id,
-          amount_cents: Math.round(p.amount * 100),
-          purchased_at: p.created_at,
-          status: p.status,
-          photo: {} as Photo,
-        }));
+      const recentStripePurchases = succeededPayments.slice(0, 20).map((p) => ({
+        id: p.id,
+        amount_cents: Math.round(p.amount * 100),
+        purchased_at: p.created_at,
+        status: 'completed',
+        photo: {} as Photo,
+      }));
 
-      setRecentPurchases(recentPayments);
+      setRecentPurchases(recentStripePurchases as (Purchase & { photo: Photo })[]);
 
-      const [{ data: healthEvents }, { data: supportTickets }, externalUsersResult] = await Promise.all([
-        supabase
-          .from('system_health_events')
-          .select('id, event_type, severity, message, created_at')
-          .order('created_at', { ascending: false })
-          .limit(10),
+      const [{ data: supportTickets }] = await Promise.all([
         supabase
           .from('support_tickets')
           .select('id, subject, status, updated_at, created_at')
           .order('updated_at', { ascending: false })
           .limit(10),
-        invokeEdgeFunction('external-users'),
       ]);
 
-      const healthItems = (healthEvents || []).map((e: any) => ({
-        id: `health-${e.id}`,
+      const healthItems = ((healthResult.data?.events || []) as any[]).map((e: any) => ({
+        id: `health-${e.id || `${Date.now()}-${Math.random()}`}`,
         kind: 'health' as const,
         title: `System health: ${String(e.event_type || 'event')}`,
         message: String(e.message || ''),
@@ -160,12 +207,6 @@ export default function Overview() {
         .slice(0, 12);
 
       setActivityItems(merged);
-      if (externalUsersResult?.error) {
-        setTotalUsers(null);
-      } else {
-        const count = externalUsersResult?.data?.customers?.length;
-        setTotalUsers(typeof count === 'number' ? count : null);
-      }
       setError(null);
       setLoading(false);
     } catch (error) {
@@ -254,7 +295,6 @@ export default function Overview() {
         >
           <div className="w-[240px] flex-none snap-start">
             <KPICard
-              title="Total Revenue"
               title={t('overview.kpi.total_revenue')}
               value={formatCurrency(totalRevenue)}
               change={12.5}

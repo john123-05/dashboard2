@@ -10,12 +10,21 @@ export async function invokeEdgeFunction<T = any>(
   options: {
     method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
     body?: any;
+    query?: Record<string, string | number | boolean | null | undefined>;
   } = {}
 ): Promise<EdgeFunctionResponse<T>> {
-  const { method = 'GET', body } = options;
+  const { method = 'GET', body, query } = options;
 
   try {
-    const url = `${SUPABASE_URL}/functions/v1/${functionName}`;
+    const qs =
+      query && Object.keys(query).length > 0
+        ? `?${new URLSearchParams(
+            Object.entries(query)
+              .filter(([, v]) => v !== null && v !== undefined)
+              .map(([k, v]) => [k, String(v)])
+          ).toString()}`
+        : '';
+    const url = `${SUPABASE_URL}/functions/v1/${functionName}${qs}`;
 
     const headers: Record<string, string> = {
       Authorization: `Bearer ${SUPABASE_ANON_KEY}`,

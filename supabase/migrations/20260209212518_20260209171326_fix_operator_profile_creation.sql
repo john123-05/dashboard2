@@ -1,64 +1,12 @@
-/*
-  # Fix Operator Profile Creation Issue
-
-  The trigger that creates operator profiles on signup was being blocked by RLS.
-  This migration fixes the issue by adjusting the RLS policy to allow the trigger
-  to insert profiles without auth.uid() context restrictions.
-
-  Changes:
-  - Drop the restrictive INSERT policy on operator_profiles
-  - Create a more permissive INSERT policy that allows profile creation during signup
-  - Ensure the trigger function can bypass RLS for the insert operation
-*/
-
--- Drop existing INSERT policy that was too restrictive
-DROP POLICY IF EXISTS "Operators can insert own profile" ON operator_profiles;
-
--- Create new INSERT policy that works with the signup trigger
--- This allows inserts where the id matches the auth.uid() OR when no auth context exists (during trigger execution)
-CREATE POLICY "Allow profile creation during signup"
-  ON operator_profiles FOR INSERT
-  TO authenticated
-  WITH CHECK (
-    id = auth.uid() 
-    OR 
-    -- Allow inserts from the trigger (when called from SECURITY DEFINER context)
-    current_setting('request.jwt.claims', true)::json->>'sub' = id::text
-  );
-
--- Also allow inserts from service role (for admin operations if needed)
-CREATE POLICY "Service role can insert profiles"
-  ON operator_profiles FOR INSERT
-  TO service_role
-  WITH CHECK (true);
-
--- Recreate the trigger function with improved error handling
-CREATE OR REPLACE FUNCTION handle_new_operator()
-RETURNS trigger 
-SECURITY DEFINER
-SET search_path = public
-LANGUAGE plpgsql
-AS $$
-BEGIN
-  INSERT INTO public.operator_profiles (id, email, full_name)
-  VALUES (
-    NEW.id,
-    NEW.email,
-    COALESCE(NEW.raw_user_meta_data->>'full_name', split_part(NEW.email, '@', 1))
-  )
-  ON CONFLICT (id) DO NOTHING;
-  RETURN NEW;
-EXCEPTION
-  WHEN OTHERS THEN
-    -- Log the error but don't fail the auth signup
-    RAISE WARNING 'Error creating operator profile for user %: %', NEW.id, SQLERRM;
-    RETURN NEW;
-END;
-$$;
-
--- Ensure the trigger is properly set up
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW
-  EXECUTE FUNCTION handle_new_operator();
+/*\n  # Fix Operator Profile Creation Issue\n\n  The trigger that creates operator profiles on signup was being blocked by RLS.\n  This migration fixes the issue by adjusting the RLS policy to allow the trigger\n  to insert profiles without auth.uid() context restrictions.\n\n  Changes:\n  - Drop the restrictive INSERT policy on operator_profiles\n  - Create a more permissive INSERT policy that allows profile creation during signup\n  - Ensure the trigger function can bypass RLS for the insert operation\n*/\n\n-- Drop existing INSERT policy that was too restrictive\nDROP POLICY IF EXISTS "Operators can insert own profile" ON operator_profiles;
+\n\n-- Create new INSERT policy that works with the signup trigger\n-- This allows inserts where the id matches the auth.uid() OR when no auth context exists (during trigger execution)\nCREATE POLICY "Allow profile creation during signup"\n  ON operator_profiles FOR INSERT\n  TO authenticated\n  WITH CHECK (\n    id = auth.uid() \n    OR \n    -- Allow inserts from the trigger (when called from SECURITY DEFINER context)\n    current_setting('request.jwt.claims', true)::json->>'sub' = id::text\n  );
+\n\n-- Also allow inserts from service role (for admin operations if needed)\nCREATE POLICY "Service role can insert profiles"\n  ON operator_profiles FOR INSERT\n  TO service_role\n  WITH CHECK (true);
+\n\n-- Recreate the trigger function with improved error handling\nCREATE OR REPLACE FUNCTION handle_new_operator()\nRETURNS trigger \nSECURITY DEFINER\nSET search_path = public\nLANGUAGE plpgsql\nAS $$\nBEGIN\n  INSERT INTO public.operator_profiles (id, email, full_name)\n  VALUES (\n    NEW.id,\n    NEW.email,\n    COALESCE(NEW.raw_user_meta_data->>'full_name', split_part(NEW.email, '@', 1))\n  )\n  ON CONFLICT (id) DO NOTHING;
+\n  RETURN NEW;
+\nEXCEPTION\n  WHEN OTHERS THEN\n    -- Log the error but don't fail the auth signup\n    RAISE WARNING 'Error creating operator profile for user %: %', NEW.id, SQLERRM;
+\n    RETURN NEW;
+\nEND;
+\n$$;
+\n\n-- Ensure the trigger is properly set up\nDROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+\nCREATE TRIGGER on_auth_user_created\n  AFTER INSERT ON auth.users\n  FOR EACH ROW\n  EXECUTE FUNCTION handle_new_operator();
+;

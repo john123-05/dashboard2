@@ -1,0 +1,9 @@
+/*\n  # Fix Orphaned Records Ownership\n\n  ## Overview\n  This migration assigns user ownership to existing records that were created before\n  the authentication and RLS system was implemented. This ensures all data is accessible\n  to authenticated users through proper RLS policies.\n\n  ## Changes\n\n  ### 1. Update Datasets\n    - Set `user_id` for all datasets that have NULL user_id\n    - Assigns them to the first available user in the system\n    - This makes all associated leads accessible through the dataset relationship\n\n  ### 2. Update Leads  \n    - Set `owner_user_id` for all leads that have NULL owner_user_id\n    - Assigns them to the first available user in the system\n    - Provides direct ownership access to leads\n\n  ### 3. Future-Proofing\n    - Ensures that any future imports without explicit user assignment\n      will fail visibly rather than creating inaccessible data\n\n  ## Important Notes\n  - This migration only affects existing records with NULL user references\n  - New records must always specify proper user ownership\n  - If no users exist in the system, no changes are made\n*/\n\n-- Update datasets without user_id to assign to first available user\nDO $$\nDECLARE\n  first_user_id uuid;
+\nBEGIN\n  -- Get the first user ID from auth.users\n  SELECT id INTO first_user_id \n  FROM auth.users \n  ORDER BY created_at \n  LIMIT 1;
+\n\n  -- Only proceed if we found a user\n  IF first_user_id IS NOT NULL THEN\n    -- Update datasets without user_id\n    UPDATE datasets \n    SET user_id = first_user_id \n    WHERE user_id IS NULL;
+\n\n    -- Update leads without owner_user_id\n    UPDATE leads \n    SET owner_user_id = first_user_id \n    WHERE owner_user_id IS NULL;
+\n\n    RAISE NOTICE 'Updated datasets and leads to be owned by user: %', first_user_id;
+\n  ELSE\n    RAISE NOTICE 'No users found in system, skipping ownership updates';
+\n  END IF;
+\nEND $$;
+\n;

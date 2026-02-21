@@ -14,25 +14,31 @@ export function formatPercent(n: number): string {
 }
 
 export function formatDate(date: string): string {
+  const parsed = new Date(date);
+  if (Number.isNaN(parsed.getTime())) return '-';
   return new Intl.DateTimeFormat('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
-  }).format(new Date(date));
+  }).format(parsed);
 }
 
 export function formatDateTime(date: string): string {
+  const parsed = new Date(date);
+  if (Number.isNaN(parsed.getTime())) return '-';
   return new Intl.DateTimeFormat('en-US', {
     month: 'short',
     day: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
-  }).format(new Date(date));
+  }).format(parsed);
 }
 
 export function formatRelative(date: string): string {
+  const parsed = new Date(date);
+  if (Number.isNaN(parsed.getTime())) return '-';
   const now = Date.now();
-  const diff = now - new Date(date).getTime();
+  const diff = now - parsed.getTime();
   const minutes = Math.floor(diff / 60000);
   const hours = Math.floor(diff / 3600000);
   const days = Math.floor(diff / 86400000);

@@ -69,14 +69,18 @@ Deno.serve(async (req: Request) => {
   const metrics: Record<string, unknown> = {};
 
   try {
+    const url = new URL(req.url);
+    const parkId = url.searchParams.get("park_id");
+    const parkFilter = parkId ? `&park_id=eq.${parkId}` : "";
+
     const externalStart = Date.now();
     const [usersRes, photosRes, purchasesRes] = await Promise.all([
-      fetchExternal("users?select=id,created_at"),
+      fetchExternal(`users?select=id,created_at,park_id${parkFilter}`),
       fetchExternal(
-        "photos?select=id,created_at,captured_at,is_paid,storage_bucket,storage_path&order=created_at.desc&limit=200"
+        `photos?select=id,created_at,captured_at,is_paid,storage_bucket,storage_path,park_id${parkFilter}&order=created_at.desc&limit=200`
       ),
       fetchExternal(
-        "purchases?select=id,user_id,status,paid_at,created_at,amount_cents,total_amount_cents&order=created_at.desc&limit=200"
+        `purchases?select=id,user_id,status,paid_at,created_at,amount_cents,total_amount_cents,park_id${parkFilter}&order=created_at.desc&limit=200`
       ),
     ]);
     const externalLatency = Date.now() - externalStart;

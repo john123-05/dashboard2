@@ -7,9 +7,11 @@ import GlassCard from '../components/ui/GlassCard';
 import DataTable from '../components/ui/DataTable';
 import KPICard from '../components/ui/KPICard';
 import { useI18n } from '../lib/i18n';
+import { usePark } from '../contexts/ParkContext';
 
 export default function Leads() {
   const { t } = useI18n();
+  const { parkId } = usePark();
   const [leads, setLeads] = useState<Record<string, unknown>[]>([]);
   const [sourceData, setSourceData] = useState<{ source: string; count: number }[]>([]);
   const [stats, setStats] = useState({ total: 0, optedIn: 0 });
@@ -23,7 +25,9 @@ export default function Leads() {
 
   async function loadData() {
     setLoading(true);
-    const { data, error: invokeError } = await invokeEdgeFunction('external-leads');
+    const { data, error: invokeError } = await invokeEdgeFunction('external-leads', {
+      query: { park_id: parkId || undefined },
+    });
 
     if (invokeError) {
       console.error('Failed to fetch external leads:', invokeError);

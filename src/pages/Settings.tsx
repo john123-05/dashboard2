@@ -3,6 +3,7 @@ import { Save, Loader2, Building2, MapPin, Mountain, Package } from 'lucide-reac
 import { supabase } from '../lib/supabase';
 import { invokeEdgeFunction } from '../lib/edgeFunctions';
 import { useAuth } from '../contexts/AuthContext';
+import { usePark } from '../contexts/ParkContext';
 import GlassCard from '../components/ui/GlassCard';
 import { useI18n } from '../lib/i18n';
 import type { Park, Attraction } from '../lib/types';
@@ -27,6 +28,7 @@ interface StripeProduct {
 
 export default function Settings() {
   const { profile, currentOrg, memberships, refreshProfile } = useAuth();
+  const { parkId, parkName } = usePark();
   const { language, setLanguage, t } = useI18n();
   const [fullName, setFullName] = useState(profile?.full_name || '');
   const [saving, setSaving] = useState(false);
@@ -41,29 +43,52 @@ export default function Settings() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [parkId]);
 
   async function loadData() {
-    const [parksRes, attractionsRes] = await Promise.all([
-      supabase.from('parks').select('*'),
-      supabase.from('attractions').select('*'),
+    setLoading(true);
+    const [parksResult, attractionsResult] = await Promise.all([
+      invokeEdgeFunction('external-parks', {
+        query: { park_id: parkId || undefined },
+      }),
+      invokeEdgeFunction('external-attractions', {
+        query: { park_id: parkId || undefined },
+      }),
     ]);
 
     const attractionsByPark = new Map<string, Attraction[]>();
-    ((attractionsRes.data || []) as Attraction[]).forEach((a) => {
+    (((attractionsResult.data?.attractions || []) as any[]) || []).forEach((a) => {
       const list = attractionsByPark.get(a.park_id) || [];
-      list.push(a);
+      list.push({
+        id: a.id,
+        park_id: a.park_id,
+        name: a.name,
+        type: a.slug || 'attraction',
+        status: a.is_active ? 'active' : 'inactive',
+        created_at: a.created_at || new Date().toISOString(),
+        updated_at: a.updated_at || new Date().toISOString(),
+      } as Attraction);
       attractionsByPark.set(a.park_id, list);
     });
 
     setParks(
-      ((parksRes.data || []) as Park[]).map((p) => ({
-        ...p,
+      (((parksResult.data?.parks || []) as any[]) || []).map((p) => ({
+        id: p.id,
+        organization_id: currentOrg?.id || '',
+        name: p.name,
+        slug: p.slug,
+        location: null,
+        timezone: 'UTC',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
         attractions: attractionsByPark.get(p.id) || [],
       }))
     );
     setLoading(false);
   }
+
+  const selectedPark = parkId ? parks.find((p) => p.id === parkId) : parks[0];
+  const parksToRender = selectedPark ? [selectedPark] : parks;
 
   async function handleSaveProfile(e: React.FormEvent) {
     e.preventDefault();
@@ -264,21 +289,24 @@ export default function Settings() {
 
         <GlassCard className="p-6">
           <h3 className="mb-4 text-base font-semibold text-slate-800">{t('settings.organization')}</h3>
-          {currentOrg ? (
+          {parksToRender.length > 0 ? (
             <div className="space-y-4">
               <div className="flex items-center gap-3 rounded-xl bg-white/30 p-4">
                 <div className="rounded-xl bg-brand-100 p-3">
                   <Building2 className="h-5 w-5 text-brand-600" />
                 </div>
                 <div>
-                  <p className="font-semibold text-slate-800">{currentOrg.name}</p>
-                  <p className="text-xs text-slate-500">{t('settings.slug')}: {currentOrg.slug}</p>
+                  <p className="font-semibold text-slate-800">{selectedPark?.name || t('app.none')}</p>
+                  <p className="text-xs text-slate-500">{t('settings.slug')}: {selectedPark?.slug || '-'}</p>
+                  {parkName && (
+                    <p className="text-xs text-slate-500">Active Park: {parkName}</p>
+                  )}
                 </div>
               </div>
 
               <div className="space-y-3">
                 <p className="text-sm font-medium text-slate-600">{t('settings.parks_attractions')}</p>
-                {parks.map((park) => (
+                {parksToRender.map((park) => (
                   <div key={park.id} className="rounded-xl bg-white/30 p-4">
                     <div className="mb-2 flex items-center gap-2">
                       <MapPin className="h-4 w-4 text-brand-500" />
@@ -313,7 +341,7 @@ export default function Settings() {
               </div>
             </div>
           ) : (
-            <p className="text-sm text-slate-500">No organization assigned</p>
+            <p className="text-sm text-slate-500">{t('app.none')}</p>
           )}
         </GlassCard>
       </div>

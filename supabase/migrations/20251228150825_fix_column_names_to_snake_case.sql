@@ -1,0 +1,16 @@
+/*\n  # Fix Column Names to Snake Case\n\n  1. Problem\n    - PostgreSQL automatically converts unquoted camelCase column names to lowercase\n    - Columns like `source_placeUrl` were stored as `source_placeurl`\n    - This causes errors when code tries to reference `source_placeUrl`\n\n  2. Changes\n    - Rename all camelCase columns to proper snake_case format:\n      - source_placeurl → source_place_url\n      - source_imgurl → source_img_url\n      - reviewcount → review_count\n      - pluscode → plus_code\n      - phonenumber → phone_number\n      - currentstatus_raw → current_status_raw\n      - isclaimed → is_claimed\n\n  3. Impact\n    - Fixes import errors where column names couldn't be found\n    - Makes database schema consistent with PostgreSQL naming conventions\n    - All code must be updated to use new snake_case column names\n\n  4. Safety\n    - Uses IF EXISTS checks to prevent errors\n    - Data is preserved during rename operations\n    - No data loss occurs\n*/\n\n-- Rename camelCase columns to snake_case in leads table\nDO $$\nBEGIN\n  -- source_placeurl -> source_place_url\n  IF EXISTS (\n    SELECT 1 FROM information_schema.columns\n    WHERE table_name = 'leads' AND column_name = 'source_placeurl'\n  ) THEN\n    ALTER TABLE leads RENAME COLUMN source_placeurl TO source_place_url;
+\n  END IF;
+\n\n  -- source_imgurl -> source_img_url\n  IF EXISTS (\n    SELECT 1 FROM information_schema.columns\n    WHERE table_name = 'leads' AND column_name = 'source_imgurl'\n  ) THEN\n    ALTER TABLE leads RENAME COLUMN source_imgurl TO source_img_url;
+\n  END IF;
+\n\n  -- reviewcount -> review_count\n  IF EXISTS (\n    SELECT 1 FROM information_schema.columns\n    WHERE table_name = 'leads' AND column_name = 'reviewcount'\n  ) THEN\n    ALTER TABLE leads RENAME COLUMN reviewcount TO review_count;
+\n  END IF;
+\n\n  -- pluscode -> plus_code\n  IF EXISTS (\n    SELECT 1 FROM information_schema.columns\n    WHERE table_name = 'leads' AND column_name = 'pluscode'\n  ) THEN\n    ALTER TABLE leads RENAME COLUMN pluscode TO plus_code;
+\n  END IF;
+\n\n  -- phonenumber -> phone_number\n  IF EXISTS (\n    SELECT 1 FROM information_schema.columns\n    WHERE table_name = 'leads' AND column_name = 'phonenumber'\n  ) THEN\n    ALTER TABLE leads RENAME COLUMN phonenumber TO phone_number;
+\n  END IF;
+\n\n  -- currentstatus_raw -> current_status_raw\n  IF EXISTS (\n    SELECT 1 FROM information_schema.columns\n    WHERE table_name = 'leads' AND column_name = 'currentstatus_raw'\n  ) THEN\n    ALTER TABLE leads RENAME COLUMN currentstatus_raw TO current_status_raw;
+\n  END IF;
+\n\n  -- isclaimed -> is_claimed\n  IF EXISTS (\n    SELECT 1 FROM information_schema.columns\n    WHERE table_name = 'leads' AND column_name = 'isclaimed'\n  ) THEN\n    ALTER TABLE leads RENAME COLUMN isclaimed TO is_claimed;
+\n  END IF;
+\nEND $$;
+\n;

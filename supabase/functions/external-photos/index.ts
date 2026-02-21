@@ -49,12 +49,16 @@ Deno.serve(async (req: Request) => {
   if (envError) return envError;
 
   try {
+    const url = new URL(req.url);
+    const parkId = url.searchParams.get("park_id");
+    const parkFilter = parkId ? `&park_id=eq.${parkId}` : "";
+
     const [photosRes, recentRes] = await Promise.all([
       fetchExternal(
-        "photos?select=id,is_paid,created_at,captured_at,storage_bucket,storage_path,owner_user_id"
+        `photos?select=id,is_paid,created_at,captured_at,storage_bucket,storage_path,owner_user_id,park_id${parkFilter}`
       ),
       fetchExternal(
-        "photos?select=id,is_paid,created_at,captured_at,storage_bucket,storage_path,owner_user_id&order=captured_at.desc&limit=12"
+        `photos?select=id,is_paid,created_at,captured_at,storage_bucket,storage_path,owner_user_id,park_id${parkFilter}&order=captured_at.desc&limit=12`
       ),
     ]);
 

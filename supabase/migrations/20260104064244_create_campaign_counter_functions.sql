@@ -1,0 +1,13 @@
+/*\n  # Campaign Counter Functions\n  \n  1. Functions\n    - `increment_campaign_delivered` - Increment delivered count\n    - `increment_campaign_opens` - Increment open count\n    - `increment_campaign_clicks` - Increment click count\n    - `increment_campaign_bounces` - Increment bounce count\n  \n  2. Purpose\n    - Provide atomic increment operations for campaign statistics\n    - Used by webhook handler to update campaign metrics\n*/\n\nCREATE OR REPLACE FUNCTION increment_campaign_delivered(campaign_id_param uuid)\nRETURNS void AS $$\nBEGIN\n  UPDATE email_campaigns\n  SET delivered_count = delivered_count + 1,\n      updated_at = now()\n  WHERE id = campaign_id_param;
+\nEND;
+\n$$ LANGUAGE plpgsql;
+\n\nCREATE OR REPLACE FUNCTION increment_campaign_opens(campaign_id_param uuid)\nRETURNS void AS $$\nBEGIN\n  UPDATE email_campaigns\n  SET open_count = open_count + 1,\n      updated_at = now()\n  WHERE id = campaign_id_param;
+\nEND;
+\n$$ LANGUAGE plpgsql;
+\n\nCREATE OR REPLACE FUNCTION increment_campaign_clicks(campaign_id_param uuid)\nRETURNS void AS $$\nBEGIN\n  UPDATE email_campaigns\n  SET click_count = click_count + 1,\n      updated_at = now()\n  WHERE id = campaign_id_param;
+\nEND;
+\n$$ LANGUAGE plpgsql;
+\n\nCREATE OR REPLACE FUNCTION increment_campaign_bounces(campaign_id_param uuid)\nRETURNS void AS $$\nBEGIN\n  UPDATE email_campaigns\n  SET bounce_count = bounce_count + 1,\n      updated_at = now()\n  WHERE id = campaign_id_param;
+\nEND;
+\n$$ LANGUAGE plpgsql;
+;

@@ -1,12 +1,19 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../lib/i18n';
+import { usePark } from '../contexts/ParkContext';
+import { invokeEdgeFunction } from '../lib/edgeFunctions';
+import { supabase } from '../lib/supabase';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 
 export default function Login() {
   const { user, loading, signIn } = useAuth();
   const { t } = useI18n();
+  const { parkId: activeParkId, setPark } = usePark();
+  const [parks, setParks] = useState<{ id: string; name: string; slug: string }[]>([]);
+  const [parkId, setParkId] = useState('');
+  const [parkPassword, setParkPassword] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -14,16 +21,54 @@ export default function Login() {
   const [submitting, setSubmitting] = useState(false);
 
   if (loading) return null;
-  if (user) return <Navigate to="/" replace />;
+  if (user && activeParkId) return <Navigate to="/" replace />;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
     setSubmitting(true);
-    const { error } = await signIn(email, password);
-    if (error) setError(error);
+    if (!user) {
+      const { error } = await signIn(email, password);
+      if (error) {
+        setError(error);
+        setSubmitting(false);
+        return;
+      }
+    }
+
+    if (!parkId || !parkPassword) {
+      setError(t('auth.park_error_missing'));
+      setSubmitting(false);
+      return;
+    }
+
+    const { data: ok, error: parkError } = await supabase.rpc('verify_park_access', {
+      p_park_id: parkId,
+      p_password: parkPassword,
+    });
+
+    if (parkError || !ok) {
+      setError(t('auth.park_error_invalid'));
+      setSubmitting(false);
+      return;
+    }
+
+    const selected = parks.find((p) => p.id === parkId);
+    setPark(parkId, selected?.name || null);
     setSubmitting(false);
   }
+
+  useEffect(() => {
+    (async () => {
+      const { data, error } = await invokeEdgeFunction('external-parks');
+      if (!error) {
+        setParks(data?.parks || []);
+        if (!parkId && data?.parks?.length) {
+          setParkId(data.parks[0].id);
+        }
+      }
+    })();
+  }, []);
 
   return (
     <div
@@ -59,37 +104,69 @@ export default function Login() {
               </div>
             )}
 
+            {!user && (
+              <>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-slate-700">{t('auth.email')}</label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@company.com"
+                    required
+                    className="glass-input"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-slate-700">{t('auth.password')}</label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder={t('auth.password')}
+                      required
+                      className="glass-input pr-11"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-700">{t('auth.email')}</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@company.com"
-                required
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">{t('auth.park')}</label>
+              <select
+                value={parkId}
+                onChange={(e) => setParkId(e.target.value)}
                 className="glass-input"
-              />
+                required
+              >
+                {parks.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-700">{t('auth.password')}</label>
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                placeholder={t('auth.password')}
-                  required
-                  className="glass-input pr-11"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">{t('auth.park_password')}</label>
+              <input
+                type="password"
+                value={parkPassword}
+                onChange={(e) => setParkPassword(e.target.value)}
+                placeholder={t('auth.park_password_placeholder')}
+                required
+                className="glass-input"
+              />
             </div>
 
             <button

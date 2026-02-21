@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { Camera, ShoppingBag, Eye, Clock } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { invokeEdgeFunction } from '../lib/edgeFunctions';
@@ -6,6 +6,8 @@ import { formatNumber, formatPercent, formatRelative } from '../lib/utils';
 import GlassCard from '../components/ui/GlassCard';
 import KPICard from '../components/ui/KPICard';
 import { useI18n } from '../lib/i18n';
+import { usePark } from '../contexts/ParkContext';
+import type { ResolvedOverlayLayer, ResolvedPhotoOverlays } from '../lib/types';
 
 interface AttractionPhotoStats {
   name: string;
@@ -17,23 +19,57 @@ interface AttractionPhotoStats {
 
 const CHART_COLORS = ['#0ea5e9', '#10b981', '#f59e0b', '#94a3b8'];
 
+interface RecentPhotoItem {
+  id: string;
+  image_url: string;
+  thumbnail_url: string | null;
+  status: string;
+  taken_at: string;
+  attraction_name: string;
+  overlayLayers: ResolvedOverlayLayer[];
+}
+
+function overlayAnchorToPosition(anchor: string) {
+  switch (anchor) {
+    case 'top_left':
+      return 'left top';
+    case 'top':
+      return 'center top';
+    case 'top_right':
+      return 'right top';
+    case 'left':
+      return 'left center';
+    case 'right':
+      return 'right center';
+    case 'bottom_left':
+      return 'left bottom';
+    case 'bottom':
+      return 'center bottom';
+    case 'bottom_right':
+      return 'right bottom';
+    default:
+      return 'center center';
+  }
+}
+
 export default function Photos() {
   const { t } = useI18n();
+  const { parkId } = usePark();
   const [stats, setStats] = useState({ total: 0, purchased: 0, available: 0, expired: 0 });
   const [attractionStats, setAttractionStats] = useState<AttractionPhotoStats[]>([]);
-  const [recentPhotos, setRecentPhotos] = useState<
-    { id: string; image_url: string; thumbnail_url: string | null; status: string; taken_at: string; attraction_name: string }[]
-  >([]);
+  const [recentPhotos, setRecentPhotos] = useState<RecentPhotoItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [parkId]);
 
   async function loadData() {
     setLoading(true);
-    const { data, error: invokeError } = await invokeEdgeFunction('external-photos');
+    const { data, error: invokeError } = await invokeEdgeFunction('external-photos', {
+      query: { park_id: parkId || undefined },
+    });
 
     if (invokeError) {
       console.error('Failed to fetch external photos:', invokeError);
@@ -68,18 +104,46 @@ export default function Photos() {
     });
     setAttractionStats(Array.from(attrMap.values()).sort((a, b) => b.total - a.total));
 
+    const recentItems: RecentPhotoItem[] = (recent || []).map((p: Record<string, unknown>) => {
+      const attraction = p.attraction as Record<string, unknown> | null;
+      return {
+        id: p.id as string,
+        image_url: p.image_url as string,
+        thumbnail_url: p.thumbnail_url as string | null,
+        status: p.status as string,
+        taken_at: p.taken_at as string,
+        attraction_name: (attraction?.name as string) || 'Unknown',
+        overlayLayers: [],
+      };
+    });
+
+    const overlayLayersByPhoto = new Map<string, ResolvedOverlayLayer[]>();
+    if (parkId && recentItems.length > 0) {
+      const { data: overlayData, error: overlayError } = await invokeEdgeFunction<{
+        matches: ResolvedPhotoOverlays[];
+      }>('resolve-overlays', {
+        method: 'POST',
+        body: {
+          park_id: parkId,
+          photos: recentItems.map((item) => ({ id: item.id, taken_at: item.taken_at })),
+        },
+      });
+
+      if (overlayError) {
+        console.warn('resolve-overlays failed, rendering photos without overlays', overlayError);
+      } else {
+        for (const match of overlayData?.matches || []) {
+          const sorted = [...(match.overlays || [])].sort((a, b) => a.z_index - b.z_index);
+          overlayLayersByPhoto.set(match.photo_id, sorted);
+        }
+      }
+    }
+
     setRecentPhotos(
-      (recent || []).map((p: Record<string, unknown>) => {
-        const attraction = p.attraction as Record<string, unknown> | null;
-        return {
-          id: p.id as string,
-          image_url: p.image_url as string,
-          thumbnail_url: p.thumbnail_url as string | null,
-          status: p.status as string,
-          taken_at: p.taken_at as string,
-          attraction_name: (attraction?.name as string) || 'Unknown',
-        };
-      })
+      recentItems.map((item) => ({
+        ...item,
+        overlayLayers: overlayLayersByPhoto.get(item.id) || [],
+      }))
     );
     setError(null);
     setLoading(false);
@@ -198,13 +262,33 @@ export default function Photos() {
         <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
           {recentPhotos.map((p) => (
             <div key={p.id} className="group overflow-hidden rounded-xl bg-white/30 transition-all hover:bg-white/50 hover:shadow-md">
-              <div className="aspect-[4/3] overflow-hidden">
+              <div className="relative aspect-[4/3] overflow-hidden">
                 <img
                   src={p.thumbnail_url || p.image_url}
                   alt="Photo"
                   className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                   loading="lazy"
                 />
+                {p.overlayLayers.map((layer, idx) => {
+                  const style: CSSProperties = {
+                    zIndex: layer.z_index,
+                    opacity: Number.isFinite(layer.opacity) ? Math.min(1, Math.max(0, layer.opacity)) : 1,
+                    mixBlendMode: layer.blend_mode as CSSProperties['mixBlendMode'],
+                    objectFit: layer.fit === 'fill' ? 'fill' : layer.fit,
+                    objectPosition: overlayAnchorToPosition(layer.anchor),
+                    transform: `scale(${Number.isFinite(layer.scale) ? Math.max(0.01, layer.scale) : 1})`,
+                  };
+                  return (
+                    <img
+                      key={`${p.id}-${layer.asset_id}-${idx}`}
+                      src={layer.signed_url}
+                      alt="Overlay"
+                      className="pointer-events-none absolute inset-0 h-full w-full"
+                      style={style}
+                      loading="lazy"
+                    />
+                  );
+                })}
               </div>
               <div className="p-3">
                 <p className="truncate text-xs font-medium text-slate-700">{p.attraction_name}</p>

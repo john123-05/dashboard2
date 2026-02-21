@@ -4,6 +4,7 @@ import { invokeEdgeFunction } from '../lib/edgeFunctions';
 import { formatRelative, severityColor, formatNumber } from '../lib/utils';
 import GlassCard from '../components/ui/GlassCard';
 import { useI18n } from '../lib/i18n';
+import { usePark } from '../contexts/ParkContext';
 
 interface ServiceStatus {
   name: string;
@@ -14,6 +15,7 @@ interface ServiceStatus {
 
 export default function SystemHealth() {
   const { t } = useI18n();
+  const { parkId } = usePark();
   const [events, setEvents] = useState<
     { id: string; event_type: string; severity: 'info' | 'warning' | 'error' | 'critical'; message: string; created_at: string }[]
   >([]);
@@ -27,7 +29,9 @@ export default function SystemHealth() {
   }, []);
 
   async function loadHealth() {
-    const { data, error } = await invokeEdgeFunction('system-health');
+    const { data, error } = await invokeEdgeFunction('system-health', {
+      query: { park_id: parkId || undefined },
+    });
     if (error) {
       setEvents([
         {

@@ -4,10 +4,12 @@ import { useAuth } from '../../contexts/AuthContext';
 import Sidebar from './Sidebar';
 import { Loader2, Mountain, ArrowRight } from 'lucide-react';
 import { useI18n } from '../../lib/i18n';
+import { usePark } from '../../contexts/ParkContext';
 
 export default function DashboardLayout() {
   const { user, loading, hasOrg, joinDemoOrg } = useAuth();
   const { t } = useI18n();
+  const { parkId } = usePark();
   const [joining, setJoining] = useState(false);
 
   if (loading) {
@@ -57,6 +59,10 @@ export default function DashboardLayout() {
         </div>
       </div>
     );
+  }
+
+  if (user && !parkId) {
+    return <Navigate to="/login" replace />;
   }
 
   return (

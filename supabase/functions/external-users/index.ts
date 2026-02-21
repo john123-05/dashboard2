@@ -49,9 +49,15 @@ Deno.serve(async (req: Request) => {
   if (envError) return envError;
 
   try {
+    const url = new URL(req.url);
+    const parkId = url.searchParams.get("park_id");
+    const parkFilter = parkId ? `&park_id=eq.${parkId}` : "";
+
     const [usersRes, purchasesRes] = await Promise.all([
-      fetchExternal("users?select=id,email,vorname,nachname,created_at"),
-      fetchExternal("purchases?select=user_id,amount_cents,total_amount_cents,status,paid_at"),
+      fetchExternal(`users?select=id,email,vorname,nachname,created_at${parkFilter}`),
+      fetchExternal(
+        `purchases?select=id,user_id,amount_cents,total_amount_cents,currency,status,paid_at,created_at,park_id${parkFilter}`
+      ),
     ]);
 
     if (!usersRes.ok) {
@@ -78,9 +84,13 @@ Deno.serve(async (req: Request) => {
     }));
 
     const purchases = (purchasesRes.data as Record<string, unknown>[]).map((p) => ({
+      id: p.id,
       customer_id: p.user_id,
       amount_cents: p.total_amount_cents ?? p.amount_cents ?? 0,
       status: p.status ?? (p.paid_at ? "completed" : "pending"),
+      purchased_at: p.paid_at ?? null,
+      created_at: p.paid_at ?? p.created_at ?? null,
+      currency: p.currency ?? "EUR",
     }));
 
     return new Response(

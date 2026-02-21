@@ -4,6 +4,7 @@ import { invokeEdgeFunction } from '../lib/edgeFunctions';
 import { formatDate, formatCurrency } from '../lib/utils';
 import GlassCard from '../components/ui/GlassCard';
 import { useI18n } from '../lib/i18n';
+import { usePark } from '../contexts/ParkContext';
 
 interface CustomerRow {
   id: string;
@@ -18,6 +19,7 @@ interface CustomerRow {
 
 export default function Users() {
   const { t } = useI18n();
+  const { parkId } = usePark();
   const [customers, setCustomers] = useState<CustomerRow[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -29,7 +31,9 @@ export default function Users() {
 
   async function loadData() {
     setLoading(true);
-    const { data, error: invokeError } = await invokeEdgeFunction('external-users');
+    const { data, error: invokeError } = await invokeEdgeFunction('external-users', {
+      query: { park_id: parkId || undefined },
+    });
 
     if (invokeError) {
       console.error('Failed to fetch external users:', invokeError);

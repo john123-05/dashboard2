@@ -17,6 +17,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { useState } from 'react';
 import { useI18n } from '../../lib/i18n';
+import { usePark } from '../../contexts/ParkContext';
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, labelKey: 'nav.overview' },
@@ -36,6 +37,7 @@ export default function Sidebar() {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const { t } = useI18n();
+  const { parkName, setPark } = usePark();
 
   return (
     <aside
@@ -56,7 +58,7 @@ export default function Sidebar() {
           <div className="animate-fade-in overflow-hidden">
             <h1 className="text-sm font-bold tracking-tight text-white">Liftpictures</h1>
             <p className="truncate text-[11px] text-slate-400">
-              {currentOrg?.name || t('nav.operator_dashboard')}
+              {parkName || currentOrg?.name || t('nav.operator_dashboard')}
             </p>
           </div>
         )}
@@ -105,7 +107,10 @@ export default function Sidebar() {
 
         <div className={`flex ${collapsed ? 'flex-col' : ''} gap-1`}>
           <button
-            onClick={signOut}
+            onClick={async () => {
+              setPark(null, null);
+              await signOut();
+            }}
             className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-slate-500 transition-colors hover:bg-white/[0.06] hover:text-rose-400 ${
               collapsed ? 'justify-center' : 'flex-1'
             }`}
