@@ -13,6 +13,8 @@ import Personalization from './pages/Personalization';
 import Support from './pages/Support';
 import SystemHealth from './pages/SystemHealth';
 import Settings from './pages/Settings';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import LegalSupport from './pages/LegalSupport';
 import { I18nProvider } from './lib/i18n';
 import { ParkProvider } from './contexts/ParkContext';
 
@@ -25,6 +27,8 @@ export default function App() {
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+              <Route path="/support" element={<LegalSupport />} />
               <Route element={<DashboardLayout />}>
                 <Route path="/" element={<Overview />} />
                 <Route path="/revenue" element={<Revenue />} />
