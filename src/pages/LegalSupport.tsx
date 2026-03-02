@@ -1,4 +1,4 @@
-import { Mail, Phone, Clock, AlertCircle, RefreshCw, Bell, LogIn, Zap, ExternalLink } from 'lucide-react';
+import { Mail, Phone, Clock, AlertCircle, RefreshCw, Bell, LogIn, Zap, ExternalLink, MapPin } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useState } from 'react';
 
@@ -254,8 +254,4 @@ export default function LegalSupport() {
       </div>
     </div>
   );
-}
-
-function MapPin(props: any) {
-  return <MapPin {...props} />;
 }
