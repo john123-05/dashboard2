@@ -37,7 +37,7 @@ export default function App() {
                 <Route path="/photos" element={<Photos />} />
                 <Route path="/leads" element={<Leads />} />
                 <Route path="/personalization" element={<Personalization />} />
-                <Route path="/support" element={<Support />} />
+                <Route path="/tickets" element={<Support />} />
                 <Route path="/health" element={<SystemHealth />} />
                 <Route path="/settings" element={<Settings />} />
               </Route>

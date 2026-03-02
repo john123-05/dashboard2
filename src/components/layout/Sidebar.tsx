@@ -27,7 +27,7 @@ const navItems = [
   { to: '/photos', icon: Camera, labelKey: 'nav.photos' },
   { to: '/leads', icon: Mail, labelKey: 'nav.leads' },
   { to: '/personalization', icon: Wand2, labelKey: 'nav.personalization' },
-  { to: '/support', icon: LifeBuoy, labelKey: 'nav.support' },
+  { to: '/tickets', icon: LifeBuoy, labelKey: 'nav.support' },
   { to: '/health', icon: Activity, labelKey: 'nav.system_health' },
   { to: '/settings', icon: Settings, labelKey: 'nav.settings' },
 ];
