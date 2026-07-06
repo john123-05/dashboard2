@@ -22,7 +22,7 @@ export default function StaffLoginPage() {
   };
 
   return (
-    <div className="staff-app container" style={{ maxWidth: 460 }}>
+    <div className="staff-app staff-container" style={{ maxWidth: 460 }}>
       <div className="card">
         <h1>Operator Login</h1>
         <p className="note">Login mit bestehendem Supabase-Account. Zugriff nur mit Eintrag in `admin_users`.</p>

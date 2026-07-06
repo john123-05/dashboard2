@@ -88,7 +88,7 @@ export default function AdminLayout() {
 
   if (loading) {
     return (
-      <div className="staff-app container">
+      <div className="staff-app staff-container">
         <p>Lade Admin-Sitzung...</p>
       </div>
     );
@@ -96,7 +96,7 @@ export default function AdminLayout() {
 
   if (!authorized) {
     return (
-      <div className="staff-app container">
+      <div className="staff-app staff-container">
         <h1>Admin-Zugriff verweigert</h1>
         {error && <p className="error">{error}</p>}
         <NavLink to="/staff/login" className="note">
@@ -107,7 +107,7 @@ export default function AdminLayout() {
   }
 
   return (
-    <div className="staff-app container">
+    <div className="staff-app staff-container">
       <div className="topbar card">
         <div className="brand">
           <h1>Operator</h1>
