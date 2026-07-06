@@ -13,8 +13,6 @@ import Personalization from './pages/Personalization';
 import Support from './pages/Support';
 import SystemHealth from './pages/SystemHealth';
 import Settings from './pages/Settings';
-import Operations from './pages/Operations';
-import Errors from './pages/Errors';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import LegalSupport from './pages/LegalSupport';
 import { I18nProvider } from './lib/i18n';
@@ -52,8 +50,6 @@ export default function App() {
                 <Route path="/personalization" element={<Personalization />} />
                 <Route path="/tickets" element={<Support />} />
                 <Route path="/health" element={<SystemHealth />} />
-                <Route path="/operations" element={<Operations />} />
-                <Route path="/errors" element={<Errors />} />
                 <Route path="/settings" element={<Settings />} />
               </Route>
 
