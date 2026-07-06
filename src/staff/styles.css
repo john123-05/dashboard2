@@ -50,7 +50,7 @@
   font-family: "SF Pro Text", "Avenir Next", "Segoe UI", sans-serif;
   min-height: 100vh;
   overflow-x: hidden;
-}.staff-app a { color: inherit; text-decoration: none; }.staff-app .staff-container { max-width: 1200px; margin: 0 auto; padding: 24px; }.staff-app .card {
+}.staff-app a { color: inherit; text-decoration: none; }.staff-app.staff-container { max-width: 1200px; margin: 0 auto; padding: 24px; }.staff-app .card {
   background: linear-gradient(145deg, var(--panel-strong), var(--panel));
   border: 1px solid var(--border);
   box-shadow:
@@ -587,7 +587,7 @@
   }
 }
 
-@media (max-width: 640px) {.staff-app .staff-container {
+@media (max-width: 640px) {.staff-app.staff-container {
     padding: 12px;
   }.staff-app .card {
     border-radius: 14px;
