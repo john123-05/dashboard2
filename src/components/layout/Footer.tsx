@@ -27,6 +27,12 @@ export default function Footer() {
             >
               Website
             </a>
+            <Link
+              to="/staff/login"
+              className="hover:text-slate-700 transition-colors"
+            >
+              Liftpictures Mitarbeiter?
+            </Link>
           </div>
         </div>
       </div>
