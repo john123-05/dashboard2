@@ -1,20 +1,11 @@
-import { supabaseBrowser } from './supabase';
+import { supabaseBrowser, STAFF_SUPABASE_URL, STAFF_SUPABASE_ANON_KEY } from './supabase';
 
-const supabaseUrl =
-  (import.meta.env.NEXT_PUBLIC_SUPABASE_URL as string | undefined) ??
-  (import.meta.env.VITE_SUPABASE_URL as string | undefined);
-const anonKey =
-  (import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string | undefined) ??
-  (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined);
-
-if (!supabaseUrl || !anonKey) {
-  throw new Error(
-    'Missing NEXT_PUBLIC_SUPABASE_URL|VITE_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY|VITE_SUPABASE_ANON_KEY',
-  );
-}
-
-const resolvedSupabaseUrl = supabaseUrl;
-const resolvedAnonKey = anonKey;
+// Deliberately uses the staff-specific Supabase project (see ./supabase.ts), not the
+// generic VITE_SUPABASE_URL/NEXT_PUBLIC_SUPABASE_URL names — those are already claimed
+// by the main dashboard's client (../../lib/supabase.ts) and point at a different
+// Supabase project, which has none of the admin-* edge functions deployed.
+const resolvedSupabaseUrl = STAFF_SUPABASE_URL;
+const resolvedAnonKey = STAFF_SUPABASE_ANON_KEY;
 
 const routeMap: Record<string, string> = {
   '/api/admin/parks': 'admin-parks',
