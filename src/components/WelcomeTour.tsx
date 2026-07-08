@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowRight, ArrowLeft, X } from 'lucide-react';
-import { TOUR_SESSION_KEY, isTourDisabled, setTourDisabled } from '../lib/dashboardTourSettings';
+import { useAuth } from '../contexts/AuthContext';
+import { isTourDisabled, setTourDisabled, hasAccountSeenTour, markAccountSeenTour } from '../lib/dashboardTourSettings';
 
 type TourStep = {
   id: string;
@@ -32,6 +33,7 @@ const steps: TourStep[] = [
 ];
 
 export default function WelcomeTour() {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [visible, setVisible] = useState(false);
@@ -41,14 +43,12 @@ export default function WelcomeTour() {
   const isLast = index === steps.length - 1;
 
   useEffect(() => {
-    const disabled = isTourDisabled();
-    const shownInSession = window.sessionStorage.getItem(TOUR_SESSION_KEY) === 'true';
-    if (disabled || shownInSession) return;
+    if (!user) return;
+    if (isTourDisabled() || hasAccountSeenTour(user.id)) return;
 
     setVisible(true);
-    window.sessionStorage.setItem(TOUR_SESSION_KEY, 'true');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    markAccountSeenTour(user.id);
+  }, [user]);
 
   useEffect(() => {
     if (!visible) return;
