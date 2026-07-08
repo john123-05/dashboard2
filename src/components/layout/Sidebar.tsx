@@ -21,7 +21,7 @@ import { usePark } from '../../contexts/ParkContext';
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, labelKey: 'nav.overview', comingSoon: true },
-  { to: '/revenue', icon: DollarSign, labelKey: 'nav.revenue' },
+  { to: '/revenue', icon: DollarSign, labelKey: 'nav.revenue', comingSoon: true },
   { to: '/purchases', icon: ShoppingCart, labelKey: 'nav.purchases', comingSoon: true },
   { to: '/users', icon: Users, labelKey: 'nav.users', comingSoon: true },
   { to: '/photos', icon: Camera, labelKey: 'nav.photos' },

@@ -50,7 +50,14 @@ export default function App() {
                     </ComingSoonOverlay>
                   }
                 />
-                <Route path="/revenue" element={<Revenue />} />
+                <Route
+                  path="/revenue"
+                  element={
+                    <ComingSoonOverlay description="Hier siehst du deinen Umsatz im Detail — zum Beispiel wie viel du pro Tag oder pro Attraktion eingenommen hast.">
+                      <Revenue />
+                    </ComingSoonOverlay>
+                  }
+                />
                 <Route
                   path="/purchases"
                   element={
