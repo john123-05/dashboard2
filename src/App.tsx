@@ -17,6 +17,7 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import LegalSupport from './pages/LegalSupport';
 import { I18nProvider } from './lib/i18n';
 import { ParkProvider } from './contexts/ParkContext';
+import ComingSoonOverlay from './components/ComingSoonOverlay';
 import StaffAdminLayout from './staff/components/AdminLayout';
 import StaffLoginPage from './staff/pages/StaffLoginPage';
 import StaffParksPage from './staff/pages/ParksPage';
@@ -41,15 +42,57 @@ export default function App() {
               <Route path="/privacy-policy" element={<PrivacyPolicy />} />
               <Route path="/support" element={<LegalSupport />} />
               <Route element={<DashboardLayout />}>
-                <Route path="/" element={<Overview />} />
+                <Route
+                  path="/"
+                  element={
+                    <ComingSoonOverlay description="Die Übersicht zeigt dir auf einen Blick die wichtigsten Zahlen deines Parks — zum Beispiel wie viele Fotos verkauft wurden und wie sich der Umsatz entwickelt.">
+                      <Overview />
+                    </ComingSoonOverlay>
+                  }
+                />
                 <Route path="/revenue" element={<Revenue />} />
-                <Route path="/purchases" element={<Purchases />} />
-                <Route path="/users" element={<Users />} />
+                <Route
+                  path="/purchases"
+                  element={
+                    <ComingSoonOverlay description="Hier siehst du alle Käufe deiner Gäste im Überblick — wer wann was gekauft und wie viel bezahlt hat.">
+                      <Purchases />
+                    </ComingSoonOverlay>
+                  }
+                />
+                <Route
+                  path="/users"
+                  element={
+                    <ComingSoonOverlay description="Hier findest du alle registrierten Nutzer-Accounts deines Parks — also Gäste, die sich für den Foto-Shop angemeldet haben.">
+                      <Users />
+                    </ComingSoonOverlay>
+                  }
+                />
                 <Route path="/photos" element={<Photos />} />
                 <Route path="/leads" element={<Leads />} />
-                <Route path="/personalization" element={<Personalization />} />
-                <Route path="/tickets" element={<Support />} />
-                <Route path="/health" element={<SystemHealth />} />
+                <Route
+                  path="/personalization"
+                  element={
+                    <ComingSoonOverlay description="Hier kannst du das Aussehen und die Texte deines Foto-Shops anpassen — zum Beispiel Farben, Logo oder Begrüßungstexte.">
+                      <Personalization />
+                    </ComingSoonOverlay>
+                  }
+                />
+                <Route
+                  path="/tickets"
+                  element={
+                    <ComingSoonOverlay description="Hier landen Anfragen und Support-Tickets von Gästen, die Hilfe brauchen — zum Beispiel bei Problemen mit einem Kauf.">
+                      <Support />
+                    </ComingSoonOverlay>
+                  }
+                />
+                <Route
+                  path="/health"
+                  element={
+                    <ComingSoonOverlay description="Hier siehst du, ob technisch alles rund läuft — zum Beispiel ob die Kamera-Anbindung und die Bezahlung fehlerfrei funktionieren.">
+                      <SystemHealth />
+                    </ComingSoonOverlay>
+                  }
+                />
                 <Route path="/settings" element={<Settings />} />
               </Route>
 

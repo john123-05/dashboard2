@@ -53,9 +53,14 @@ Deno.serve(async (req: Request) => {
     const parkId = url.searchParams.get("park_id");
     const parkFilter = parkId ? `&park_id=eq.${parkId}` : "";
 
-    const [usersRes, purchasesRes] = await Promise.all([
+    const [usersRes, purchasesRes, parksRes, photoClaimsRes] = await Promise.all([
       fetchExternal(`users?select=id,email,vorname,nachname,created_at,park_id&order=created_at.desc${parkFilter}`),
       fetchExternal(`purchases?select=user_id,amount_cents,total_amount_cents,status,paid_at,park_id${parkFilter}`),
+      fetchExternal(`parks?select=id,name`),
+      // Imst (and any future shop-less park) doesn't create a `users` row at all —
+      // claiming a photo there only ever writes to `photo_claims` (service-role
+      // only table, by design). Without this, those leads never show up here.
+      fetchExternal(`photo_claims?select=id,full_name,email,park_id,marketing_opt_in,claimed_at,created_at&order=created_at.desc${parkFilter}`),
     ]);
 
     if (!usersRes.ok) {
@@ -70,6 +75,19 @@ Deno.serve(async (req: Request) => {
         JSON.stringify({ error: "Failed to fetch purchases", details: purchasesRes.details }),
         { status: purchasesRes.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    if (!parksRes.ok) {
+      return new Response(
+        JSON.stringify({ error: "Failed to fetch parks", details: parksRes.details }),
+        { status: parksRes.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Best-effort: if photo_claims is unreachable for some reason, still show the
+    // users-based leads rather than failing the whole page.
+    if (!photoClaimsRes.ok) {
+      console.warn("Failed to fetch photo_claims leads:", photoClaimsRes.details);
     }
 
     const purchasesByUser = new Map<string, { count: number; total: number }>();
@@ -89,8 +107,17 @@ Deno.serve(async (req: Request) => {
       purchasesByUser.set(userId, entry);
     });
 
-    const leads = (usersRes.data as Record<string, unknown>[]).map((u) => {
+    const parkNames = new Map<string, string>();
+    (parksRes.data as Record<string, unknown>[]).forEach((park) => {
+      if (typeof park.id === "string" && typeof park.name === "string") {
+        parkNames.set(park.id, park.name);
+      }
+    });
+
+    const userLeads = (usersRes.data as Record<string, unknown>[]).map((u) => {
       const stats = purchasesByUser.get(u.id as string);
+      const parkId = u.park_id as string | undefined;
+      const parkName = parkId ? parkNames.get(parkId) || "Unknown" : "Unknown";
       return {
         id: u.id,
         email: u.email,
@@ -98,9 +125,31 @@ Deno.serve(async (req: Request) => {
         source: stats && stats.count > 0 ? "purchase" : "unknown",
         opted_in: false,
         created_at: u.created_at,
-        park_name: "Unknown",
+        park_name: parkName,
+        park: { name: parkName },
       };
     });
+
+    const photoClaimLeads = photoClaimsRes.ok
+      ? (photoClaimsRes.data as Record<string, unknown>[]).map((c) => {
+          const parkId = c.park_id as string | undefined;
+          const parkName = parkId ? parkNames.get(parkId) || "Unknown" : "Unknown";
+          return {
+            id: c.id,
+            email: c.email,
+            full_name: c.full_name,
+            source: "photo_claim",
+            opted_in: Boolean(c.marketing_opt_in),
+            created_at: (c.claimed_at ?? c.created_at) as string,
+            park_name: parkName,
+            park: { name: parkName },
+          };
+        })
+      : [];
+
+    const leads = [...userLeads, ...photoClaimLeads].sort(
+      (a, b) => new Date(b.created_at as string).getTime() - new Date(a.created_at as string).getTime()
+    );
 
     return new Response(
       JSON.stringify({ leads }),

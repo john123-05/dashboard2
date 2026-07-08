@@ -31,11 +31,12 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.purchases': 'Käufe',
     'nav.users': 'Benutzer',
     'nav.photos': 'Fotos',
-    'nav.leads': 'Leads',
+    'nav.leads': 'E-Mail-Liste',
     'nav.personalization': 'Personalisierung',
     'nav.support': 'Support',
     'nav.system_health': 'Systemzustand',
     'nav.settings': 'Einstellungen',
+    'nav.coming_soon': 'Bald verfügbar',
     'nav.sign_out': 'Abmelden',
     'nav.operator_dashboard': 'Operator Dashboard',
     'dashboard.loading': 'Dashboard lädt…',
@@ -102,8 +103,9 @@ const translations: Record<Language, Record<string, string>> = {
     'photos.by_attraction': 'Nach Attraktion',
     'photos.recent': 'Aktuelle Fotos',
     // Leads
-    'leads.title': 'Leads & Marketing',
-    'leads.subtitle': 'E‑Mail‑Listen und Opt‑in‑Management',
+    'leads.title': 'E-Mail-Liste',
+    'leads.subtitle': 'Kontakte aus Käufen und kostenlosen Foto-Freischaltungen',
+    'leads.explainer': 'Diese Liste zeigt alle Personen, die beim Kauf oder bei einer kostenlosen Foto-Freischaltung ihre E-Mail-Adresse angegeben haben. „Opt-in“ bedeutet: Die Person hat zugestimmt, gelegentlich Neuigkeiten (Marketing, Angebote) per E-Mail zu erhalten. Ohne Opt-in darf die Adresse nicht für Marketing verwendet werden — nur für die Foto-Freischaltung selbst.',
     'leads.total': 'Gesamt‑Leads',
     'leads.optins': 'Marketing‑Opt‑ins',
     'leads.by_source': 'Leads nach Quelle',
@@ -203,11 +205,12 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.purchases': 'Purchases',
     'nav.users': 'Users',
     'nav.photos': 'Photos',
-    'nav.leads': 'Leads',
+    'nav.leads': 'Email List',
     'nav.personalization': 'Personalization',
     'nav.support': 'Support',
     'nav.system_health': 'System Health',
     'nav.settings': 'Settings',
+    'nav.coming_soon': 'Coming Soon',
     'nav.sign_out': 'Sign out',
     'nav.operator_dashboard': 'Operator Dashboard',
     'dashboard.loading': 'Loading dashboard…',
@@ -268,8 +271,9 @@ const translations: Record<Language, Record<string, string>> = {
     'photos.status_distribution': 'Status Distribution',
     'photos.by_attraction': 'By Attraction',
     'photos.recent': 'Recent Photos',
-    'leads.title': 'Leads & Marketing',
-    'leads.subtitle': 'Email lists and opt-in management',
+    'leads.title': 'Email List',
+    'leads.subtitle': 'Contacts from purchases and free photo unlocks',
+    'leads.explainer': 'This list shows everyone who provided their email address when purchasing or unlocking a free photo. “Opted in” means the person agreed to occasionally receive news (marketing, offers) by email. Without opt-in, the address may not be used for marketing — only for the photo unlock itself.',
     'leads.total': 'Total Leads',
     'leads.optins': 'Marketing Opt-ins',
     'leads.by_source': 'Leads by Source',
@@ -364,11 +368,12 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.purchases': 'Compras',
     'nav.users': 'Usuarios',
     'nav.photos': 'Fotos',
-    'nav.leads': 'Leads',
+    'nav.leads': 'Lista de email',
     'nav.personalization': 'Personalización',
     'nav.support': 'Soporte',
     'nav.system_health': 'Salud del sistema',
     'nav.settings': 'Ajustes',
+    'nav.coming_soon': 'Próximamente',
     'nav.sign_out': 'Cerrar sesión',
     'nav.operator_dashboard': 'Panel de operador',
     'dashboard.loading': 'Cargando dashboard…',
@@ -429,8 +434,9 @@ const translations: Record<Language, Record<string, string>> = {
     'photos.status_distribution': 'Distribución de estado',
     'photos.by_attraction': 'Por atracción',
     'photos.recent': 'Fotos recientes',
-    'leads.title': 'Leads y marketing',
-    'leads.subtitle': 'Listas de email y opt‑in',
+    'leads.title': 'Lista de email',
+    'leads.subtitle': 'Contactos de compras y desbloqueos gratuitos de fotos',
+    'leads.explainer': 'Esta lista muestra a todas las personas que indicaron su dirección de email al comprar o desbloquear una foto gratis. «Opt-in» significa que la persona aceptó recibir ocasionalmente novedades (marketing, ofertas) por email. Sin opt-in, la dirección no puede usarse para marketing, solo para el desbloqueo de la foto.',
     'leads.total': 'Leads totales',
     'leads.optins': 'Opt‑ins de marketing',
     'leads.by_source': 'Leads por fuente',
@@ -525,11 +531,12 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.purchases': 'Achats',
     'nav.users': 'Utilisateurs',
     'nav.photos': 'Photos',
-    'nav.leads': 'Leads',
+    'nav.leads': 'Liste email',
     'nav.personalization': 'Personnalisation',
     'nav.support': 'Support',
     'nav.system_health': 'Santé du système',
     'nav.settings': 'Paramètres',
+    'nav.coming_soon': 'Bientôt disponible',
     'nav.sign_out': 'Se déconnecter',
     'nav.operator_dashboard': 'Tableau opérateur',
     'dashboard.loading': 'Chargement du dashboard…',
@@ -590,8 +597,9 @@ const translations: Record<Language, Record<string, string>> = {
     'photos.status_distribution': 'Répartition des statuts',
     'photos.by_attraction': 'Par attraction',
     'photos.recent': 'Photos récentes',
-    'leads.title': 'Leads & marketing',
-    'leads.subtitle': 'Listes email et opt‑in',
+    'leads.title': 'Liste email',
+    'leads.subtitle': 'Contacts issus des achats et déblocages de photos gratuits',
+    'leads.explainer': 'Cette liste affiche toutes les personnes ayant indiqué leur adresse email lors d’un achat ou du déblocage gratuit d’une photo. « Opt-in » signifie que la personne a accepté de recevoir occasionnellement des nouvelles (marketing, offres) par email. Sans opt-in, l’adresse ne peut pas être utilisée à des fins marketing — uniquement pour le déblocage de la photo.',
     'leads.total': 'Leads totaux',
     'leads.optins': 'Opt‑ins marketing',
     'leads.by_source': 'Leads par source',
@@ -686,11 +694,12 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.purchases': 'Acquisti',
     'nav.users': 'Utenti',
     'nav.photos': 'Foto',
-    'nav.leads': 'Leads',
+    'nav.leads': 'Lista email',
     'nav.personalization': 'Personalizzazione',
     'nav.support': 'Supporto',
     'nav.system_health': 'Salute del sistema',
     'nav.settings': 'Impostazioni',
+    'nav.coming_soon': 'Prossimamente',
     'nav.sign_out': 'Esci',
     'nav.operator_dashboard': 'Dashboard operatore',
     'dashboard.loading': 'Caricamento dashboard…',
@@ -751,8 +760,9 @@ const translations: Record<Language, Record<string, string>> = {
     'photos.status_distribution': 'Distribuzione stato',
     'photos.by_attraction': 'Per attrazione',
     'photos.recent': 'Foto recenti',
-    'leads.title': 'Leads e marketing',
-    'leads.subtitle': 'Liste email e opt‑in',
+    'leads.title': 'Lista email',
+    'leads.subtitle': 'Contatti da acquisti e sblocchi gratuiti di foto',
+    'leads.explainer': 'Questo elenco mostra tutte le persone che hanno fornito il proprio indirizzo email durante un acquisto o lo sblocco gratuito di una foto. “Opt-in” significa che la persona ha accettato di ricevere occasionalmente novità (marketing, offerte) via email. Senza opt-in, l’indirizzo non può essere usato per il marketing, solo per lo sblocco della foto.',
     'leads.total': 'Leads totali',
     'leads.optins': 'Opt‑in marketing',
     'leads.by_source': 'Leads per fonte',
@@ -847,11 +857,12 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.purchases': 'Aankopen',
     'nav.users': 'Gebruikers',
     'nav.photos': 'Foto’s',
-    'nav.leads': 'Leads',
+    'nav.leads': 'E-maillijst',
     'nav.personalization': 'Personalisatie',
     'nav.support': 'Support',
     'nav.system_health': 'Systeemstatus',
     'nav.settings': 'Instellingen',
+    'nav.coming_soon': 'Binnenkort beschikbaar',
     'nav.sign_out': 'Uitloggen',
     'nav.operator_dashboard': 'Operator‑dashboard',
     'dashboard.loading': 'Dashboard laden…',
@@ -912,8 +923,9 @@ const translations: Record<Language, Record<string, string>> = {
     'photos.status_distribution': 'Statusverdeling',
     'photos.by_attraction': 'Per attractie',
     'photos.recent': 'Recente foto’s',
-    'leads.title': 'Leads & marketing',
-    'leads.subtitle': 'E‑maillijsten en opt‑in',
+    'leads.title': 'E-maillijst',
+    'leads.subtitle': 'Contacten uit aankopen en gratis foto-vrijgaves',
+    'leads.explainer': 'Deze lijst toont iedereen die zijn e-mailadres heeft opgegeven bij een aankoop of het gratis vrijgeven van een foto. “Opt-in” betekent dat de persoon heeft ingestemd om af en toe nieuws (marketing, aanbiedingen) per e-mail te ontvangen. Zonder opt-in mag het adres niet voor marketing worden gebruikt — alleen voor het vrijgeven van de foto zelf.',
     'leads.total': 'Totaal leads',
     'leads.optins': 'Marketing‑opt‑ins',
     'leads.by_source': 'Leads per bron',
@@ -996,11 +1008,29 @@ interface I18nContextValue {
 
 const I18nContext = createContext<I18nContextValue | null>(null);
 
+const SUPPORTED_LANGUAGES: Language[] = ['de', 'en', 'es', 'fr', 'it', 'nl'];
+const defaultLanguage: Language = 'de';
+
+function isSupportedLanguage(value: string | null): value is Language {
+  return !!value && (SUPPORTED_LANGUAGES as string[]).includes(value);
+}
+
+// No stored preference yet: use the browser's language if we support it,
+// otherwise fall back to German (this app's primary audience).
+function detectInitialLanguage(): Language {
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (isSupportedLanguage(stored)) return stored;
+
+  const browserLanguages = navigator.languages?.length ? navigator.languages : [navigator.language];
+  for (const lang of browserLanguages) {
+    const base = lang?.slice(0, 2).toLowerCase() ?? '';
+    if (isSupportedLanguage(base)) return base;
+  }
+  return defaultLanguage;
+}
+
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguageState] = useState<Language>(() => {
-    const stored = localStorage.getItem(STORAGE_KEY) as Language | null;
-    return stored || 'en';
-  });
+  const [language, setLanguageState] = useState<Language>(detectInitialLanguage);
 
   const setLanguage = (lang: Language) => {
     localStorage.setItem(STORAGE_KEY, lang);

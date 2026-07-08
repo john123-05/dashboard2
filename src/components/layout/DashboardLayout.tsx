@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Outlet, Navigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import Sidebar from './Sidebar';
+import WelcomeTour from '../WelcomeTour';
 import { Loader2, Mountain, ArrowRight } from 'lucide-react';
 import { useI18n } from '../../lib/i18n';
 import { usePark } from '../../contexts/ParkContext';
@@ -73,6 +74,7 @@ export default function DashboardLayout() {
           <Outlet />
         </div>
       </main>
+      <WelcomeTour />
     </div>
   );
 }

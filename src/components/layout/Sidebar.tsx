@@ -20,15 +20,15 @@ import { useI18n } from '../../lib/i18n';
 import { usePark } from '../../contexts/ParkContext';
 
 const navItems = [
-  { to: '/', icon: LayoutDashboard, labelKey: 'nav.overview' },
+  { to: '/', icon: LayoutDashboard, labelKey: 'nav.overview', comingSoon: true },
   { to: '/revenue', icon: DollarSign, labelKey: 'nav.revenue' },
-  { to: '/purchases', icon: ShoppingCart, labelKey: 'nav.purchases' },
-  { to: '/users', icon: Users, labelKey: 'nav.users' },
+  { to: '/purchases', icon: ShoppingCart, labelKey: 'nav.purchases', comingSoon: true },
+  { to: '/users', icon: Users, labelKey: 'nav.users', comingSoon: true },
   { to: '/photos', icon: Camera, labelKey: 'nav.photos' },
   { to: '/leads', icon: Mail, labelKey: 'nav.leads' },
-  { to: '/personalization', icon: Wand2, labelKey: 'nav.personalization' },
-  { to: '/tickets', icon: LifeBuoy, labelKey: 'nav.support' },
-  { to: '/health', icon: Activity, labelKey: 'nav.system_health' },
+  { to: '/personalization', icon: Wand2, labelKey: 'nav.personalization', comingSoon: true },
+  { to: '/tickets', icon: LifeBuoy, labelKey: 'nav.support', comingSoon: true },
+  { to: '/health', icon: Activity, labelKey: 'nav.system_health', comingSoon: true },
   { to: '/settings', icon: Settings, labelKey: 'nav.settings' },
 ];
 
@@ -81,14 +81,25 @@ export default function Sidebar() {
                     ? 'bg-white/[0.12] text-white shadow-sm shadow-black/10'
                     : 'text-slate-400 hover:bg-white/[0.06] hover:text-slate-200'
                 } ${collapsed ? 'justify-center' : ''}`}
-                title={collapsed ? item.label : undefined}
+                title={
+                  collapsed
+                    ? `${t(item.labelKey)}${item.comingSoon ? ` (${t('nav.coming_soon')})` : ''}`
+                    : undefined
+                }
               >
                 <item.icon
                   className={`h-[18px] w-[18px] shrink-0 transition-colors ${
                     isActive ? 'text-brand-400' : 'text-slate-500 group-hover:text-slate-300'
                   }`}
                 />
-                {!collapsed && <span className="animate-fade-in">{t(item.labelKey)}</span>}
+                {!collapsed && (
+                  <span className="animate-fade-in truncate">
+                    {t(item.labelKey)}
+                    {item.comingSoon && (
+                      <span className="ml-1 text-xs text-slate-500">({t('nav.coming_soon')})</span>
+                    )}
+                  </span>
+                )}
               </NavLink>
             );
           })}

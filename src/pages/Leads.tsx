@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Download, Mail, UserPlus, Filter } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { invokeEdgeFunction } from '../lib/edgeFunctions';
+import { getOptionalSourceWarning, invokeEdgeFunction, isEdgeSourceUnavailable } from '../lib/edgeFunctions';
 import { formatDate, formatNumber, exportToCSV } from '../lib/utils';
 import GlassCard from '../components/ui/GlassCard';
 import DataTable from '../components/ui/DataTable';
@@ -18,10 +18,11 @@ export default function Leads() {
   const [filterOptIn, setFilterOptIn] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [parkId]);
 
   async function loadData() {
     setLoading(true);
@@ -31,6 +32,15 @@ export default function Leads() {
 
     if (invokeError) {
       console.error('Failed to fetch external leads:', invokeError);
+      if (isEdgeSourceUnavailable(invokeError)) {
+        setLeads([]);
+        setStats({ total: 0, optedIn: 0 });
+        setSourceData([]);
+        setNotice(getOptionalSourceWarning('Lead feed', invokeError));
+        setError(null);
+        setLoading(false);
+        return;
+      }
       setError(invokeError);
       setLoading(false);
       return;
@@ -42,7 +52,7 @@ export default function Leads() {
       const park = l.park as Record<string, unknown> | null;
       return {
         ...l,
-        park_name: (park?.name as string) || 'Unknown',
+        park_name: (park?.name as string) || (l.park_name as string) || 'Unknown',
       };
     });
 
@@ -64,6 +74,7 @@ export default function Leads() {
     );
 
     setError(null);
+    setNotice(null);
     setLoading(false);
   }
 
@@ -176,6 +187,17 @@ export default function Leads() {
         </button>
       </div>
 
+      <div className="rounded-2xl border border-sky-200 bg-sky-50 p-4">
+        <p className="text-sm text-sky-900">{t('leads.explainer')}</p>
+      </div>
+
+      {notice && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+          <p className="text-sm font-medium text-amber-900">Lead data is currently unavailable.</p>
+          <p className="mt-1 text-sm text-amber-700">{notice}</p>
+        </div>
+      )}
+
       <div className="grid gap-6 sm:grid-cols-2">
         <KPICard title={t('leads.total')} value={formatNumber(stats.total)} icon={UserPlus} iconColor="text-sky-600" iconBg="bg-sky-50" />
         <KPICard title={t('leads.optins')} value={formatNumber(stats.optedIn)} icon={Mail} iconColor="text-emerald-600" iconBg="bg-emerald-50" />
@@ -200,7 +222,7 @@ export default function Leads() {
       <DataTable
         data={filtered}
         columns={columns}
-        title="Lead List"
+        title={t('leads.title')}
         searchable
         searchKeys={['email', 'full_name', 'source', 'park_name']}
         pageSize={10}
