@@ -88,3 +88,22 @@ export async function invokeEdgeFunction<T = any>(
     };
   }
 }
+
+export function isEdgeSourceUnavailable(error: string | null): boolean {
+  if (!error) return false;
+  const lower = error.toLowerCase();
+  return (
+    lower.includes('failed to fetch') ||
+    lower.includes('networkerror') ||
+    lower.includes('network error') ||
+    lower.includes('502') ||
+    lower.includes('503') ||
+    lower.includes('504') ||
+    lower.includes('edge function') ||
+    lower.includes('function not found')
+  );
+}
+
+export function getOptionalSourceWarning(sourceName: string, error: string | null): string {
+  return `${sourceName} is temporarily unavailable. ${error ? `Details: ${error}` : 'Please try again later.'}`;
+}
