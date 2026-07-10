@@ -29,7 +29,7 @@ export default function Footer() {
             </a>
             <Link
               to="/staff/login"
-              className="hover:text-slate-700 transition-colors"
+              className="rounded-full bg-slate-100 px-3 py-1 text-slate-600 transition-colors hover:bg-slate-200 hover:text-slate-800"
             >
               Liftpictures Mitarbeiter?
             </Link>
