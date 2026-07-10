@@ -88,26 +88,31 @@ export default function AdminLayout() {
 
   if (loading) {
     return (
-      <div className="staff-app staff-container">
-        <p>Lade Admin-Sitzung...</p>
+      <div className="staff-app">
+        <div className="staff-container">
+          <p>Lade Admin-Sitzung...</p>
+        </div>
       </div>
     );
   }
 
   if (!authorized) {
     return (
-      <div className="staff-app staff-container">
-        <h1>Admin-Zugriff verweigert</h1>
-        {error && <p className="error">{error}</p>}
-        <NavLink to="/staff/login" className="note">
-          Zum Login
-        </NavLink>
+      <div className="staff-app">
+        <div className="staff-container">
+          <h1>Admin-Zugriff verweigert</h1>
+          {error && <p className="error">{error}</p>}
+          <NavLink to="/staff/login" className="note">
+            Zum Login
+          </NavLink>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="staff-app staff-container">
+    <div className="staff-app">
+    <div className="staff-container">
       <div className="topbar card">
         <div className="brand">
           <h1>Operator</h1>
@@ -160,6 +165,7 @@ export default function AdminLayout() {
       </div>
       <Outlet />
       <OnboardingTour />
+    </div>
     </div>
   );
 }

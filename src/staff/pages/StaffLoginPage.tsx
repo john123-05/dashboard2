@@ -22,22 +22,24 @@ export default function StaffLoginPage() {
   };
 
   return (
-    <div className="staff-app staff-container" style={{ maxWidth: 460 }}>
-      <div className="card">
-        <h1>Operator Login</h1>
-        <p className="note">Login mit bestehendem Supabase-Account. Zugriff nur mit Eintrag in `admin_users`.</p>
-        <form onSubmit={onSubmit} className="grid">
-          <div>
-            <label>E-Mail</label>
-            <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" required />
-          </div>
-          <div>
-            <label>Passwort</label>
-            <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" required />
-          </div>
-          <button type="submit">Einloggen</button>
-          {error && <p className="error">{error}</p>}
-        </form>
+    <div className="staff-app">
+      <div className="staff-container" style={{ maxWidth: 460 }}>
+        <div className="card">
+          <h1>Operator Login</h1>
+          <p className="note">Login mit bestehendem Supabase-Account. Zugriff nur mit Eintrag in `admin_users`.</p>
+          <form onSubmit={onSubmit} className="grid">
+            <div>
+              <label>E-Mail</label>
+              <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" required />
+            </div>
+            <div>
+              <label>Passwort</label>
+              <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" required />
+            </div>
+            <button type="submit">Einloggen</button>
+            {error && <p className="error">{error}</p>}
+          </form>
+        </div>
       </div>
     </div>
   );
