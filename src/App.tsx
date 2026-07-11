@@ -21,14 +21,16 @@ import ComingSoonOverlay from './components/ComingSoonOverlay';
 import StaffAdminLayout from './staff/components/AdminLayout';
 import StaffLoginPage from './staff/pages/StaffLoginPage';
 import StaffParksPage from './staff/pages/ParksPage';
-import StaffAttractionsPage from './staff/pages/AttractionsPage';
 import StaffCamerasPage from './staff/pages/CamerasPage';
 import StaffSupportTicketKundenPage from './staff/pages/SupportTicketKundenPage';
-import StaffIngestionCheckPage from './staff/pages/IngestionCheckPage';
 import StaffWebsiteAnfragenPage from './staff/pages/WebsiteAnfragenPage';
 import StaffSystemHealthPage from './staff/pages/StaffSystemHealthPage';
 import StaffSettingsPage from './staff/pages/StaffSettingsPage';
 import StaffHelpPage from './staff/pages/HelpPage';
+import StaffMarketingMaterialsPage from './staff/pages/MarketingMaterialsPage';
+import StaffUploaderInstallPage from './staff/pages/UploaderInstallPage';
+import StaffPasswordsPage from './staff/pages/PasswordsPage';
+import StaffMediaLibraryPage from './staff/pages/MediaLibraryPage';
 
 export default function App() {
   return (
@@ -110,14 +112,16 @@ export default function App() {
               <Route element={<StaffAdminLayout />}>
                 <Route path="/staff" element={<Navigate to="/staff/parks" replace />} />
                 <Route path="/staff/parks" element={<StaffParksPage />} />
-                <Route path="/staff/attractions" element={<StaffAttractionsPage />} />
                 <Route path="/staff/cameras" element={<StaffCamerasPage />} />
                 <Route path="/staff/support-ticket-kunden" element={<StaffSupportTicketKundenPage />} />
-                <Route path="/staff/ingestion-check" element={<StaffIngestionCheckPage />} />
                 <Route path="/staff/website-anfragen" element={<StaffWebsiteAnfragenPage />} />
                 <Route path="/staff/system-health" element={<StaffSystemHealthPage />} />
                 <Route path="/staff/einstellungen" element={<StaffSettingsPage />} />
                 <Route path="/staff/hilfe" element={<StaffHelpPage />} />
+                <Route path="/staff/werbematerialien" element={<StaffMarketingMaterialsPage />} />
+                <Route path="/staff/werbematerialien/uploader-installation" element={<StaffUploaderInstallPage />} />
+                <Route path="/staff/passwoerter" element={<StaffPasswordsPage />} />
+                <Route path="/staff/medien" element={<StaffMediaLibraryPage />} />
               </Route>
             </Routes>
           </ParkProvider>

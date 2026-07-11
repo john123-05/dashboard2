@@ -386,7 +386,7 @@ export default function WebsiteAnfragenPage() {
   return (
     <div className="grid" style={{ gap: 16 }}>
       <div className="card">
-        <h2>Website Anfragen</h2>
+        <h2>Interessenten und Anfragen</h2>
         <p className="note">CSV importieren und persistent in der Datenbank speichern.</p>
 
         <div className="upload-row">

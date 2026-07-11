@@ -47,15 +47,15 @@ const faqItems: FaqItem[] = [
     id: 'attractions',
     question: 'Wie ordne ich Attraktionen zu?',
     answer:
-      'In Attraktionen zuerst Attraktion pro Park anlegen. Danach in Kameras kann die Attraktion für einen Kamera-Code ausgewählt werden.',
+      'Unter Parks anlegen zuerst die Attraktion für den jeweiligen Park anlegen. Danach kann sie in Kameras für einen Kamera-Code ausgewählt werden.',
     tags: ['attraktion', 'zuordnung', 'kamera'],
   },
   {
     id: 'ingestion-check',
     question: 'Was macht der Ingestion Check?',
     answer:
-      'Er zeigt Prefix-Routing, Parsing und Kamera/Attraktions-Match für einen Dateipfad. So kann man Parsing-Probleme schnell debuggen.',
-    tags: ['ingestion', 'parser', 'debug', 'dateiname'],
+      'Unter Health zeigt er Prefix-Routing, Parsing und Kamera/Attraktions-Match für einen Dateipfad. So kann man Parsing-Probleme schnell debuggen.',
+    tags: ['ingestion', 'parser', 'debug', 'dateiname', 'health'],
   },
   {
     id: 'support-sync',

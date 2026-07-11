@@ -49,8 +49,12 @@
   color: var(--text);
   font-family: "SF Pro Text", "Avenir Next", "Segoe UI", sans-serif;
   min-height: 100vh;
-  overflow-x: hidden;
-}.staff-app a { color: inherit; text-decoration: none; }.staff-app .staff-container { max-width: 1200px; margin: 0 auto; padding: 24px; }.staff-app .card {
+  /* No overflow-x:hidden here: setting only one axis forces the browser to compute
+     the other as auto regardless of what it's explicitly set to, turning this
+     element into a scroll container and breaking position:sticky on .topbar.
+     Horizontal overflow on wide content (tables etc.) is handled locally via
+     .widget-scroll-x instead. */
+}.staff-app a:not(.glass-sidebar *) { color: inherit; text-decoration: none; }.staff-app .staff-container { max-width: 1200px; margin: 0 auto; padding: 24px; }.staff-app .card {
   background: linear-gradient(145deg, var(--panel-strong), var(--panel));
   border: 1px solid var(--border);
   box-shadow:
@@ -60,7 +64,7 @@
   -webkit-backdrop-filter: blur(16px) saturate(140%);
   border-radius: 18px;
   padding: 18px;
-}.staff-app .grid { display: grid; gap: 14px; }.staff-app .grid > * { min-width: 0; }.staff-app .grid.two { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }.staff-app .grid.three { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }.staff-app label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; font-weight: 600; }.staff-app input, .staff-app select, .staff-app button {
+}.staff-app .grid { display: grid; gap: 14px; }.staff-app .grid > * { min-width: 0; }.staff-app .grid.two { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }.staff-app .grid.three { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }.staff-app label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; font-weight: 600; }.staff-app input, .staff-app select, .staff-app button:not(.glass-sidebar *) {
   width: 100%;
   border-radius: 12px;
   border: 1px solid var(--hairline);
@@ -71,16 +75,16 @@
   outline: none;
   border-color: color-mix(in srgb, var(--accent) 55%, transparent);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
-}.staff-app button {
+}.staff-app button:not(.glass-sidebar *) {
   background: var(--accent);
   border-color: color-mix(in srgb, var(--accent) 75%, #000 25%);
   color: #fff;
   font-weight: 700;
   cursor: pointer;
   transition: transform 120ms ease, filter 120ms ease, box-shadow 120ms ease;
-}.staff-app button:hover:not(:disabled) {
+}.staff-app button:not(.glass-sidebar *):hover:not(:disabled) {
   filter: brightness(1.03);
-}.staff-app button:active:not(:disabled) {
+}.staff-app button:not(.glass-sidebar *):active:not(:disabled) {
   transform: translateY(1px) scale(0.995);
   filter: brightness(0.97);
   box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.18);
@@ -95,23 +99,9 @@
   width: auto;
   padding: 6px 10px;
   font-weight: 600;
-}.staff-app button:disabled {
+}.staff-app button:not(.glass-sidebar *):disabled {
   opacity: 0.6;
   cursor: not-allowed;
-}.staff-app .topbar {
-  position: sticky;
-  top: 14px;
-  z-index: 30;
-  margin-bottom: 18px;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-}.staff-app .brand h1 {
-  margin: 0;
-  font-size: 22px;
-  line-height: 1.2;
 }.staff-app .eyebrow {
   margin: 0 0 2px;
   font-size: 11px;
@@ -119,49 +109,6 @@
   text-transform: uppercase;
   color: var(--muted);
   font-weight: 700;
-}.staff-app .nav-links {
-  display: flex;
-  flex-wrap: nowrap;
-  gap: 6px;
-  justify-content: flex-start;
-  overflow-x: auto;
-  padding-bottom: 2px;
-  scrollbar-width: thin;
-}.staff-app .nav-links-single a {
-  white-space: nowrap;
-}.staff-app .nav-links a {
-  padding: 8px 14px;
-  border: 1px solid var(--hairline);
-  border-radius: 999px;
-  color: color-mix(in srgb, var(--text) 86%, transparent);
-  background: var(--surface-soft);
-  font-size: 14px;
-  font-weight: 600;
-}.staff-app .nav-links a.active {
-  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
-  color: color-mix(in srgb, var(--accent) 75%, white 25%);
-  background: var(--accent-soft);
-}.staff-app .logout-btn {
-  width: auto;
-}.staff-app .topbar-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  justify-self: end;
-  white-space: nowrap;
-}.staff-app .hamburger-btn {
-  display: none;
-  width: auto;
-  padding: 6px 10px;
-  font-size: 13px;
-  justify-self: end;
-}.staff-app .theme-toggle-btn {
-  width: auto;
-  padding: 6px 10px;
-  font-size: 13px;
-}.staff-app .logout-btn {
-  padding: 6px 10px;
-  font-size: 13px;
 }.staff-app .table { width: 100%; border-collapse: collapse; }.staff-app .table th, .staff-app .table td { text-align: left; padding: 10px; border-bottom: 1px solid var(--hairline); font-size: 14px; }.staff-app .table th { color: var(--muted); font-weight: 600; }.staff-app .table-wrap {
   width: 100%;
   max-width: 100%;
@@ -219,7 +166,7 @@
   padding: 0;
   display: grid;
   gap: 10px;
-}.staff-app .ticket-item-btn {
+}.staff-app button.ticket-item-btn {
   width: 100%;
   text-align: left;
   background: color-mix(in srgb, var(--surface-elevated) 70%, var(--panel-strong) 30%);
@@ -227,9 +174,10 @@
   border-radius: 12px;
   padding: 12px;
   color: var(--text);
-}.staff-app .ticket-item-btn:hover {
+  font-weight: 400;
+}.staff-app button.ticket-item-btn:hover {
   border-color: color-mix(in srgb, var(--accent) 40%, transparent);
-}.staff-app .ticket-item-btn.active {
+}.staff-app button.ticket-item-btn.active {
   border-color: color-mix(in srgb, var(--accent) 55%, transparent);
   background: color-mix(in srgb, var(--accent) 16%, transparent);
 }.staff-app .ticket-item-top {
@@ -376,7 +324,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-}.staff-app .activity-dismiss-btn {
+}.staff-app button.activity-dismiss-btn {
   width: 24px;
   min-width: 24px;
   height: 24px;
@@ -388,7 +336,7 @@
   background: transparent;
   color: var(--muted);
   border: 1px solid var(--hairline);
-}.staff-app .activity-dismiss-btn:hover:not(:disabled) {
+}.staff-app button.activity-dismiss-btn:hover:not(:disabled) {
   color: var(--status-error);
   border-color: color-mix(in srgb, var(--status-error) 48%, transparent);
   background: color-mix(in srgb, var(--status-error) 20%, transparent);
@@ -497,7 +445,7 @@
   justify-content: flex-end;
 }.staff-app .tour-actions button {
   width: auto;
-}.staff-app .tour-optout-btn {
+}.staff-app button.tour-optout-btn {
   background: color-mix(in srgb, var(--status-error) 22%, transparent);
   border-color: color-mix(in srgb, var(--status-error) 42%, transparent);
   color: var(--status-error);
@@ -510,7 +458,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-}.staff-app .help-suggestion-btn, .staff-app .help-tag-btn {
+}.staff-app button.help-suggestion-btn, .staff-app button.help-tag-btn {
   width: auto;
   padding: 6px 10px;
   border-radius: 999px;
@@ -554,31 +502,280 @@
   gap: 8px;
 }
 
-@media (max-width: 900px) {.staff-app .topbar {
-    grid-template-columns: 1fr auto;
-    gap: 10px;
-  }.staff-app .hamburger-btn {
-    display: inline-flex;
-  }.staff-app .nav-links {
-    display: none;
-    grid-column: 1 / -1;
-    overflow-x: visible;
-    flex-direction: column;
-    gap: 8px;
-    padding-bottom: 0;
-  }.staff-app .nav-links.mobile-open {
-    display: flex;
-  }.staff-app .nav-links a {
-    width: 100%;
-    text-align: left;
-  }.staff-app .topbar-actions {
-    grid-column: 1 / -1;
-    justify-self: stretch;
-    justify-content: flex-start;
-    flex-wrap: wrap;
-  }.staff-app .theme-toggle-btn, .staff-app .logout-btn {
-    width: auto;
-  }.staff-app .support-layout {
+.staff-app a.btn-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: auto;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 75%, #000 25%);
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  transition: transform 120ms ease, filter 120ms ease;
+}
+.staff-app a.btn-link:hover {
+  filter: brightness(1.03);
+}
+.staff-app a.btn-link:active {
+  transform: translateY(1px) scale(0.995);
+}
+.staff-app .material-lang-badge {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.staff-app .material-lang-badge.lang-de {
+  background: color-mix(in srgb, var(--status-success) 20%, transparent);
+  color: var(--status-success);
+}
+.staff-app .material-lang-badge.lang-en {
+  background: var(--accent-soft);
+  color: color-mix(in srgb, var(--accent) 78%, white 22%);
+}
+.staff-app .material-card, .staff-app .attraction-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border: 1px solid var(--hairline);
+  border-radius: 14px;
+  padding: 14px;
+  background: color-mix(in srgb, var(--surface-elevated) 68%, var(--panel-strong) 32%);
+}
+.staff-app .material-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+.staff-app .material-card-head h4, .staff-app .attraction-group h4 {
+  margin: 0;
+  font-size: 15px;
+}
+.staff-app .material-desc {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.staff-app .material-actions, .staff-app .attraction-group-variants {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: auto;
+}
+.staff-app .social-list, .staff-app .link-list {
+  display: grid;
+  gap: 10px;
+}
+.staff-app .social-item, .staff-app .link-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: color-mix(in srgb, var(--surface-elevated) 68%, var(--panel-strong) 32%);
+}
+.staff-app .social-item-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.staff-app .social-item-platform {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.staff-app .social-item-actions, .staff-app .link-item-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+.staff-app .link-item-body {
+  min-width: 200px;
+}
+.staff-app .link-item-label {
+  font-weight: 700;
+  font-size: 14px;
+  word-break: break-word;
+}
+.staff-app .link-item-desc {
+  margin: 3px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.staff-app .marketing-hero p {
+  margin: 8px 0 0;
+}
+.staff-app .marketing-section-title h3 {
+  margin: 0 0 4px;
+}
+.staff-app .media-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 12px;
+  margin-top: 8px;
+}
+.staff-app .media-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+}
+.staff-app .media-tile:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+}
+.staff-app .media-tile.selected {
+  border-color: var(--accent);
+}
+.staff-app .media-tile-checkbox {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  z-index: 2;
+  display: flex;
+  padding: 4px;
+  border-radius: 6px;
+  background: rgba(20, 22, 26, 0.55);
+  cursor: pointer;
+}
+.staff-app .media-tile-checkbox input {
+  margin: 0;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: none;
+  background: none;
+}
+.staff-app button.media-tile-body {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: color-mix(in srgb, var(--surface-elevated) 68%, var(--panel-strong) 32%);
+  overflow: hidden;
+  cursor: pointer;
+  text-align: left;
+  font-weight: 400;
+  color: var(--text);
+  transition: none;
+}
+.staff-app button.media-tile-body:hover,
+.staff-app button.media-tile-body:active {
+  filter: none;
+  transform: none;
+  box-shadow: none;
+}
+.staff-app .media-tile-body img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  display: block;
+}
+.staff-app .media-tile-video {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--text) 85%, transparent);
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+}
+.staff-app .media-tile-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+}
+.staff-app .media-tile-title {
+  font-size: 12px;
+  font-weight: 600;
+  word-break: break-word;
+}
+.staff-app .media-select-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+.staff-app .media-select-all {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.staff-app .media-select-all input {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: none;
+  background: none;
+  margin: 0;
+}
+.staff-app .media-select-toolbar button.danger.inline {
+  width: auto;
+}
+.staff-app .media-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 1300;
+  background: rgba(8, 10, 14, 0.78);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.staff-app .media-lightbox-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: min(900px, 92vw);
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--surface-contrast);
+  border-radius: 16px;
+  padding: 16px;
+}
+.staff-app .media-lightbox-content img,
+.staff-app .media-lightbox-content video {
+  max-width: 100%;
+  max-height: 60vh;
+  border-radius: 10px;
+  object-fit: contain;
+  align-self: center;
+}
+.staff-app .media-lightbox-meta h4 {
+  margin: 0 0 2px;
+}
+
+@media (max-width: 900px) {.staff-app .support-layout {
     grid-template-columns: 1fr;
   }.staff-app .tour-panel {
     right: 12px;
@@ -592,8 +789,6 @@
   }.staff-app .card {
     border-radius: 14px;
     padding: 14px;
-  }.staff-app .brand h1 {
-    font-size: 20px;
   }.staff-app .table th, .staff-app .table td {
     padding: 8px;
     font-size: 13px;

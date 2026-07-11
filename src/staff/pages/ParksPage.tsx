@@ -1,47 +1,33 @@
 
 import { Link } from 'react-router-dom';
-import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { supabaseBrowser } from '../lib/supabase';
 import { edgeFetch } from '../lib/edge-fetch';
 import { getApiErrorMessage } from '../lib/api-error';
 import { appendActivityEvent } from '../lib/activity-feed';
-import ActivityFeedWidget from '../components/ActivityFeedWidget';
-import type { Park, ParkPathPrefix, SupportTicket, SupportTicketPriority, SupportTicketStatus } from '../lib/types';
-
-const statusLabelMap: Record<SupportTicketStatus, string> = {
-  open: 'Offen',
-  in_progress: 'In Bearbeitung',
-  resolved: 'Erledigt',
-  closed: 'Geschlossen',
-};
-
-const priorityLabelMap: Record<SupportTicketPriority, string> = {
-  low: 'Niedrig',
-  medium: 'Mittel',
-  high: 'Hoch',
-  critical: 'Kritisch',
-};
-
-const formatDateTime = (value: string) =>
-  new Intl.DateTimeFormat('de-DE', {
-    dateStyle: 'short',
-    timeStyle: 'short',
-  }).format(new Date(value));
+import type { Attraction, Park, ParkPathPrefix } from '../lib/types';
 
 export default function ParksPage() {
   const [parks, setParks] = useState<Park[]>([]);
   const [prefixes, setPrefixes] = useState<ParkPathPrefix[]>([]);
-  const [supportPreview, setSupportPreview] = useState<SupportTicket[]>([]);
+  const [attractions, setAttractions] = useState<Attraction[]>([]);
+  const [openTicketCount, setOpenTicketCount] = useState<number | null>(null);
+
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
+
   const [parkForPrefix, setParkForPrefix] = useState('');
   const [pathPrefix, setPathPrefix] = useState('');
+
+  const [parkForAttraction, setParkForAttraction] = useState('');
+  const [attractionName, setAttractionName] = useState('');
+  const [attractionSlug, setAttractionSlug] = useState('');
+
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [supportLoading, setSupportLoading] = useState(true);
-  const [supportError, setSupportError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const latestSupportTicketIdRef = useRef<string | null>(null);
+
+  const parkNameById = (parkId: string) => parks.find((p) => p.id === parkId)?.name ?? parkId;
 
   const load = async () => {
     const { data: parksData, error: parksError } = await supabaseBrowser
@@ -63,70 +49,52 @@ export default function ParksPage() {
       return;
     }
 
-    setParks((parksData || []) as Park[]);
-    setPrefixes((prefixData || []) as ParkPathPrefix[]);
-    if ((parksData || []).length && !parkForPrefix) {
-      setParkForPrefix(parksData![0].id);
-    }
-  };
+    const { data: attractionsData, error: attractionsError } = await supabaseBrowser
+      .from('attractions')
+      .select('id, park_id, slug, name, is_active')
+      .order('name', { ascending: true });
 
-  const loadSupportPreview = useCallback(async () => {
-    setSupportLoading(true);
-    const { data, error: supportLoadError } = await supabaseBrowser
-      .from('support_tickets')
-      .select('id, organization_id, created_by, subject, description, status, priority, created_at, updated_at')
-      .order('created_at', { ascending: false })
-      .limit(5);
-
-    if (supportLoadError) {
-      setSupportError(supportLoadError.message);
-      setSupportLoading(false);
+    if (attractionsError) {
+      setError(attractionsError.message);
       return;
     }
 
-    setSupportPreview((data || []) as SupportTicket[]);
-    setSupportError(null);
-    setSupportLoading(false);
+    const list = (parksData || []) as Park[];
+    setParks(list);
+    setPrefixes((prefixData || []) as ParkPathPrefix[]);
+    setAttractions((attractionsData || []) as Attraction[]);
+    if (list.length) {
+      if (!parkForPrefix) setParkForPrefix(list[0].id);
+      if (!parkForAttraction) setParkForAttraction(list[0].id);
+    }
+  };
+
+  const loadOpenTicketCount = useCallback(async () => {
+    const { count, error: countError } = await supabaseBrowser
+      .from('support_tickets')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'open');
+
+    if (!countError) setOpenTicketCount(count ?? 0);
   }, []);
 
   useEffect(() => {
     void load();
-    void loadSupportPreview();
-  }, [loadSupportPreview]);
-
-  useEffect(() => {
-    const latest = supportPreview[0];
-    if (!latest) return;
-    if (!latestSupportTicketIdRef.current) {
-      latestSupportTicketIdRef.current = latest.id;
-      return;
-    }
-    if (latest.id !== latestSupportTicketIdRef.current) {
-      latestSupportTicketIdRef.current = latest.id;
-      appendActivityEvent({
-        title: 'Neues Support Ticket',
-        details: latest.subject,
-        level: 'info',
-      });
-    }
-  }, [supportPreview]);
+    void loadOpenTicketCount();
+  }, [loadOpenTicketCount]);
 
   useEffect(() => {
     const channel = supabaseBrowser
-      .channel('support-ticket-preview-live')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'support_tickets' }, async () => {
-        await loadSupportPreview();
+      .channel('support-ticket-count-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'support_tickets' }, () => {
+        void loadOpenTicketCount();
       })
-      .subscribe((channelStatus) => {
-        if (channelStatus === 'CHANNEL_ERROR') {
-          setSupportError('Realtime-Verbindung fehlgeschlagen. Bitte Seite neu laden.');
-        }
-      });
+      .subscribe();
 
     return () => {
       void supabaseBrowser.removeChannel(channel);
     };
-  }, [loadSupportPreview]);
+  }, [loadOpenTicketCount]);
 
   const createPark = async (e: FormEvent) => {
     e.preventDefault();
@@ -146,11 +114,7 @@ export default function ParksPage() {
     }
 
     setStatus('Park gespeichert');
-    appendActivityEvent({
-      title: 'Park gespeichert',
-      details: `${name} (${slug})`,
-      level: 'success',
-    });
+    appendActivityEvent({ title: 'Park gespeichert', details: `${name} (${slug})`, level: 'success' });
     setName('');
     setSlug('');
     await load();
@@ -169,30 +133,71 @@ export default function ParksPage() {
     const body = await res.json();
 
     if (!res.ok) {
-      setError(getApiErrorMessage(body, 'Prefix konnte nicht gespeichert werden'));
+      setError(getApiErrorMessage(body, 'Kürzel konnte nicht gespeichert werden'));
       return;
     }
 
-    setStatus('Prefix gespeichert');
-    appendActivityEvent({
-      title: 'Prefix gespeichert',
-      details: pathPrefix,
-      level: 'success',
-    });
+    setStatus('Kürzel gespeichert');
+    appendActivityEvent({ title: 'Foto-Kürzel gespeichert', details: pathPrefix, level: 'success' });
     setPathPrefix('');
     await load();
   };
 
-  const deletePark = async (parkId: string, parkName: string) => {
-    if (!confirm(`Park "${parkName}" wirklich löschen?`)) return;
+  const createAttraction = async (e: FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setStatus(null);
+
+    const res = await edgeFetch('/api/admin/attractions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ park_id: parkForAttraction, name: attractionName, slug: attractionSlug, is_active: true }),
+    });
+    const body = await res.json();
+
+    if (!res.ok) {
+      setError(getApiErrorMessage(body, 'Attraktion konnte nicht gespeichert werden'));
+      return;
+    }
+
+    setStatus('Attraktion gespeichert');
+    appendActivityEvent({ title: 'Attraktion gespeichert', details: attractionName, level: 'success' });
+    setAttractionName('');
+    setAttractionSlug('');
+    await load();
+  };
+
+  const deleteAttraction = async (attractionId: string, attractionNameValue: string) => {
+    if (!confirm(`Attraktion "${attractionNameValue}" wirklich löschen?`)) return;
+    setError(null);
+    setStatus(null);
+    setDeletingId(attractionId);
+
+    try {
+      const res = await edgeFetch(`/api/admin/attractions?id=${encodeURIComponent(attractionId)}`, { method: 'DELETE' });
+      const body = await res.json();
+
+      if (!res.ok) {
+        setError(getApiErrorMessage(body, 'Attraktion konnte nicht gelöscht werden'));
+        return;
+      }
+
+      setStatus('Attraktion gelöscht');
+      appendActivityEvent({ title: 'Attraktion gelöscht', details: attractionNameValue, level: 'warning' });
+      await load();
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const deletePark = async (parkId: string, parkNameValue: string) => {
+    if (!confirm(`Park "${parkNameValue}" wirklich löschen?`)) return;
     setError(null);
     setStatus(null);
     setDeletingId(parkId);
 
     try {
-      const res = await edgeFetch(`/api/admin/parks?id=${encodeURIComponent(parkId)}`, {
-        method: 'DELETE',
-      });
+      const res = await edgeFetch(`/api/admin/parks?id=${encodeURIComponent(parkId)}`, { method: 'DELETE' });
       const body = await res.json();
 
       if (!res.ok) {
@@ -201,12 +206,9 @@ export default function ParksPage() {
       }
 
       if (parkForPrefix === parkId) setParkForPrefix('');
+      if (parkForAttraction === parkId) setParkForAttraction('');
       setStatus('Park gelöscht');
-      appendActivityEvent({
-        title: 'Park gelöscht',
-        details: parkName,
-        level: 'warning',
-      });
+      appendActivityEvent({ title: 'Park gelöscht', details: parkNameValue, level: 'warning' });
       await load();
     } finally {
       setDeletingId(null);
@@ -214,28 +216,22 @@ export default function ParksPage() {
   };
 
   const deletePrefix = async (prefixId: string, prefix: string) => {
-    if (!confirm(`Prefix "${prefix}" wirklich löschen?`)) return;
+    if (!confirm(`Kürzel "${prefix}" wirklich löschen?`)) return;
     setError(null);
     setStatus(null);
     setDeletingId(prefixId);
 
     try {
-      const res = await edgeFetch(`/api/admin/park-prefixes?id=${encodeURIComponent(prefixId)}`, {
-        method: 'DELETE',
-      });
+      const res = await edgeFetch(`/api/admin/park-prefixes?id=${encodeURIComponent(prefixId)}`, { method: 'DELETE' });
       const body = await res.json();
 
       if (!res.ok) {
-        setError(getApiErrorMessage(body, 'Prefix konnte nicht gelöscht werden'));
+        setError(getApiErrorMessage(body, 'Kürzel konnte nicht gelöscht werden'));
         return;
       }
 
-      setStatus('Prefix gelöscht');
-      appendActivityEvent({
-        title: 'Prefix gelöscht',
-        details: prefix,
-        level: 'warning',
-      });
+      setStatus('Kürzel gelöscht');
+      appendActivityEvent({ title: 'Foto-Kürzel gelöscht', details: prefix, level: 'warning' });
       await load();
     } finally {
       setDeletingId(null);
@@ -259,9 +255,36 @@ export default function ParksPage() {
         </form>
       </div>
 
+      <div className="card" id="tour-attraction-create">
+        <h2>Attraktion anlegen</h2>
+        <p className="note">Zum Beispiel eine Sommerrodelbahn oder Achterbahn innerhalb eines Parks.</p>
+        <form className="grid" onSubmit={createAttraction}>
+          <div>
+            <label>Park</label>
+            <select value={parkForAttraction} onChange={(e) => setParkForAttraction(e.target.value)}>
+              {parks.map((park) => (
+                <option key={park.id} value={park.id}>{park.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label>Name</label>
+            <input value={attractionName} onChange={(e) => setAttractionName(e.target.value)} required />
+          </div>
+          <div>
+            <label>Slug</label>
+            <input value={attractionSlug} onChange={(e) => setAttractionSlug(e.target.value.toLowerCase())} required />
+          </div>
+          <button type="submit">Speichern</button>
+        </form>
+      </div>
+
       <div className="card" id="tour-prefix-map">
-        <h2>Path Prefix mappen</h2>
-        <p className="note">Upload-Pfad muss mit Prefix starten: `prefix/dateiname.jpg`</p>
+        <h2>Fotos automatisch zuordnen</h2>
+        <p className="note">
+          Jeder Park bekommt ein Kürzel. Fotos, deren Dateiname mit diesem Kürzel beginnt, werden automatisch
+          diesem Park zugeordnet.
+        </p>
         <form className="grid" onSubmit={createPrefix}>
           <div>
             <label>Park</label>
@@ -272,40 +295,21 @@ export default function ParksPage() {
             </select>
           </div>
           <div>
-            <label>Prefix</label>
+            <label>Park-Kürzel</label>
             <input value={pathPrefix} onChange={(e) => setPathPrefix(e.target.value.trim())} placeholder="plose-plosebob" required />
           </div>
-          <button type="submit">Prefix speichern</button>
+          <button type="submit">Kürzel speichern</button>
         </form>
       </div>
 
       <div className="card" id="tour-support-preview">
-        <h2>Support Ticket Kunden</h2>
-        <p className="note">Live-Vorschau der neuesten synchronisierten Tickets.</p>
-        {supportLoading && <p className="support-loading">Tickets werden geladen...</p>}
-        {!supportLoading && supportError && <p className="support-error">{supportError}</p>}
-        {!supportLoading && !supportError && supportPreview.length === 0 && (
-          <p className="support-empty">Keine Tickets vorhanden.</p>
-        )}
-        {!supportLoading && !supportError && supportPreview.length > 0 && (
-          <ul className="ticket-preview-list ticket-preview-list-scroll">
-            {supportPreview.map((ticket) => (
-              <li key={ticket.id} className="ticket-preview-item">
-                <p className="ticket-preview-subject">{ticket.subject}</p>
-                <div className="ticket-preview-meta">
-                  <span className={`badge status-${ticket.status}`}>{statusLabelMap[ticket.status]}</span>
-                  <span className={`badge priority-${ticket.priority}`}>{priorityLabelMap[ticket.priority]}</span>
-                  <span className="note">{formatDateTime(ticket.created_at)}</span>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-        <Link to="/staff/support-ticket-kunden" className="support-link">Zur Support-Ansicht</Link>
-      </div>
-
-      <div id="tour-news-feed">
-        <ActivityFeedWidget />
+        <h2>Support-Tickets</h2>
+        <p className="note">
+          {openTicketCount === null ? 'Lädt...' : `${openTicketCount} offene Anfrage${openTicketCount === 1 ? '' : 'n'} von Kunden.`}
+        </p>
+        <Link to="/staff/support-ticket-kunden" className="btn-link">
+          Support-Tickets öffnen
+        </Link>
       </div>
 
       <div className="card" style={{ gridColumn: '1 / -1' }}>
@@ -335,14 +339,14 @@ export default function ParksPage() {
       </div>
 
       <div className="card" style={{ gridColumn: '1 / -1' }}>
-        <h2>Prefix-Mappings</h2>
+        <h2>Foto-Zuordnungen</h2>
         <table className="table">
-          <thead><tr><th>Prefix</th><th>Park ID</th><th>Status</th><th>Aktionen</th></tr></thead>
+          <thead><tr><th>Kürzel</th><th>Park</th><th>Status</th><th>Aktionen</th></tr></thead>
           <tbody>
             {prefixes.map((prefix) => (
               <tr key={prefix.id}>
                 <td>{prefix.path_prefix}</td>
-                <td>{prefix.park_id}</td>
+                <td>{parkNameById(prefix.park_id)}</td>
                 <td><span className={`badge ${prefix.is_active ? 'ok' : 'warn'}`}>{prefix.is_active ? 'Aktiv' : 'Inaktiv'}</span></td>
                 <td>
                   <button
@@ -350,6 +354,33 @@ export default function ParksPage() {
                     className="danger inline"
                     onClick={() => deletePrefix(prefix.id, prefix.path_prefix)}
                     disabled={deletingId === prefix.id}
+                  >
+                    Löschen
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="card" style={{ gridColumn: '1 / -1' }}>
+        <h2>Attraktionen</h2>
+        <table className="table">
+          <thead><tr><th>Name</th><th>Park</th><th>Slug</th><th>Status</th><th>Aktionen</th></tr></thead>
+          <tbody>
+            {attractions.map((attraction) => (
+              <tr key={attraction.id}>
+                <td>{attraction.name}</td>
+                <td>{parkNameById(attraction.park_id)}</td>
+                <td>{attraction.slug}</td>
+                <td><span className={`badge ${attraction.is_active ? 'ok' : 'warn'}`}>{attraction.is_active ? 'Aktiv' : 'Inaktiv'}</span></td>
+                <td>
+                  <button
+                    type="button"
+                    className="danger inline"
+                    onClick={() => deleteAttraction(attraction.id, attraction.name)}
+                    disabled={deletingId === attraction.id}
                   >
                     Löschen
                   </button>

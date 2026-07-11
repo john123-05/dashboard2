@@ -366,7 +366,7 @@ export default function CamerasPage() {
 
   return (
     <div className="grid two">
-      <div className="card" style={{ gridColumn: '1 / -1' }} id="tour-cam-park-select">
+      <div className="card" id="tour-cam-park-select">
         <h2>Kamera-Mapping</h2>
         <div className="row">
           <div>

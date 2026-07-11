@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { supabaseBrowser } from '../lib/supabase';
 import OnboardingTour from './OnboardingTour';
+import StaffSidebar from './StaffSidebar';
 import '../styles.css';
 
 type ThemeMode = 'light' | 'dark';
@@ -10,13 +11,13 @@ export default function AdminLayout() {
   const [loading, setLoading] = useState(true);
   const [authorized, setAuthorized] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [adminEmail, setAdminEmail] = useState<string | null>(null);
   const [theme, setTheme] = useState<ThemeMode>(() => {
     const current = document.documentElement.getAttribute('data-theme');
     return current === 'dark' ? 'dark' : 'light';
   });
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const navigate = useNavigate();
-  const location = useLocation();
 
   useEffect(() => {
     let cancelled = false;
@@ -56,6 +57,7 @@ export default function AdminLayout() {
         return;
       }
 
+      setAdminEmail(userData.user.email ?? null);
       setAuthorized(true);
       setLoading(false);
     })();
@@ -69,22 +71,6 @@ export default function AdminLayout() {
     document.documentElement.setAttribute('data-theme', theme);
     window.localStorage.setItem('lp-theme', theme);
   }, [theme]);
-
-  useEffect(() => {
-    setMobileMenuOpen(false);
-  }, [location.pathname]);
-
-  const tabs = [
-    { href: '/staff/parks', label: 'Parks' },
-    { href: '/staff/attractions', label: 'Attraktionen' },
-    { href: '/staff/cameras', label: 'Kameras' },
-    { href: '/staff/website-anfragen', label: 'Website' },
-    { href: '/staff/support-ticket-kunden', label: 'Support' },
-    { href: '/staff/ingestion-check', label: 'Ingestion' },
-    { href: '/staff/system-health', label: 'Health' },
-    { href: '/staff/hilfe', label: 'Hilfe' },
-    { href: '/staff/einstellungen', label: 'Einstellungen' },
-  ];
 
   if (loading) {
     return (
@@ -111,61 +97,27 @@ export default function AdminLayout() {
   }
 
   return (
-    <div className="staff-app">
-    <div className="staff-container">
-      <div className="topbar card">
-        <div className="brand">
-          <h1>Operator</h1>
+    <div className="staff-app flex min-h-screen">
+      <StaffSidebar
+        collapsed={collapsed}
+        onToggleCollapsed={() => setCollapsed((prev) => !prev)}
+        theme={theme}
+        onToggleTheme={() => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))}
+        adminEmail={adminEmail}
+        onSignOut={async () => {
+          await supabaseBrowser.auth.signOut();
+          window.location.href = '/staff/login';
+        }}
+      />
+      <main
+        className="flex-1 transition-all duration-300"
+        style={{ paddingLeft: collapsed ? 72 : 256 }}
+      >
+        <div className="staff-container">
+          <Outlet />
         </div>
-        <button
-          type="button"
-          className="secondary hamburger-btn"
-          aria-label="Navigation umschalten"
-          aria-expanded={mobileMenuOpen}
-          aria-controls="main-navigation"
-          onClick={() => setMobileMenuOpen((prev) => !prev)}
-        >
-          {mobileMenuOpen ? 'Schliessen' : 'Menue'}
-        </button>
-        <div
-          id="main-navigation"
-          className={`nav-links nav-links-single ${mobileMenuOpen ? 'mobile-open' : ''}`}
-        >
-          {tabs.map((tab) => (
-            <NavLink
-              key={tab.href}
-              to={tab.href}
-              data-tour={tab.href === '/staff/hilfe' ? 'nav-help' : undefined}
-              className={location.pathname === tab.href ? 'active' : ''}
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              {tab.label}
-            </NavLink>
-          ))}
-        </div>
-        <div className="topbar-actions">
-          <button
-            type="button"
-            className="secondary theme-toggle-btn"
-            onClick={() => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))}
-            aria-label={theme === 'dark' ? 'Hellen Modus aktivieren' : 'Dunklen Modus aktivieren'}
-          >
-            {theme === 'dark' ? 'Hellmodus' : 'Dunkelmodus'}
-          </button>
-          <button
-            className="secondary logout-btn"
-            onClick={async () => {
-              await supabaseBrowser.auth.signOut();
-              window.location.href = '/staff/login';
-            }}
-          >
-            Logout
-          </button>
-        </div>
-      </div>
-      <Outlet />
+      </main>
       <OnboardingTour />
-    </div>
     </div>
   );
 }
