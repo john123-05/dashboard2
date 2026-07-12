@@ -1,168 +1,191 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { Camera, Globe, Images, KeyRound, Megaphone, Mountain, Search, X } from 'lucide-react';
+import GlobalSearchResults from '../components/GlobalSearchResults';
+import { fetchSearchSources, searchSources, type SearchResult, type SearchSources } from '../lib/globalSearch';
+import { FAQ_CATEGORIES, faqItems, matchesFaqQuery, type FaqCategory } from '../lib/faq';
 
-type FaqItem = {
-  id: string;
-  question: string;
-  answer: string;
-  tags: string[];
-};
-
-const faqItems: FaqItem[] = [
-  {
-    id: 'login-admin',
-    question: 'Wer kann sich einloggen?',
-    answer:
-      'Nur User, die in public.admin_users stehen. Falls Login geht, aber kein Zugriff da ist, muss die user_id in admin_users eingetragen werden.',
-    tags: ['login', 'admin', 'zugriff', 'admin_users'],
-  },
-  {
-    id: 'parks-create',
-    question: 'Wie lege ich einen neuen Park an?',
-    answer:
-      'Unter Parks: Name und Slug eintragen, dann Speichern. Der Slug wird für Prefix-Mapping und Ingestion-Routing genutzt.',
-    tags: ['park', 'slug', 'prefix', 'anlegen'],
-  },
-  {
-    id: 'prefix-map',
-    question: 'Wofür ist Path Prefix Mapping?',
-    answer:
-      'Der Prefix entscheidet, welchem Park ein Upload zugeordnet wird. Beispiel: plose-plosebob/dateiname.jpg wird Park Plose zugewiesen.',
-    tags: ['prefix', 'mapping', 'ingestion', 'park_id'],
-  },
-  {
-    id: 'camera-multi-park',
-    question: 'Kann derselbe Kamera-Code in mehreren Parks existieren?',
-    answer:
-      'Ja. Beim Speichern gibt es eine Warnung, wenn der Code schon in anderen Parks verwendet wird. Speicherung ist trotzdem möglich.',
-    tags: ['kamera', 'customer code', 'mehrere parks', 'warnung'],
-  },
-  {
-    id: 'camera-images',
-    question: 'Warum sehe ich manchmal 0 Bilder bei einer Kamera?',
-    answer:
-      'Erst wird im ausgewählten Park gesucht. Wenn dort nichts gefunden wird, nutzt das Dashboard parkübergreifenden Fallback über customer_code.',
-    tags: ['kamera-bilder', 'fallback', '0 bilder', 'photos'],
-  },
-  {
-    id: 'attractions',
-    question: 'Wie ordne ich Attraktionen zu?',
-    answer:
-      'Unter Parks anlegen zuerst die Attraktion für den jeweiligen Park anlegen. Danach kann sie in Kameras für einen Kamera-Code ausgewählt werden.',
-    tags: ['attraktion', 'zuordnung', 'kamera'],
-  },
-  {
-    id: 'ingestion-check',
-    question: 'Was macht der Ingestion Check?',
-    answer:
-      'Unter Health zeigt er Prefix-Routing, Parsing und Kamera/Attraktions-Match für einen Dateipfad. So kann man Parsing-Probleme schnell debuggen.',
-    tags: ['ingestion', 'parser', 'debug', 'dateiname', 'health'],
-  },
-  {
-    id: 'support-sync',
-    question: 'Wie funktioniert Support Ticket Kunden?',
-    answer:
-      'Die Seite zeigt synchronisierte Tickets. Die Einspeisung läuft über die Edge Function support-sync mit SUPPORT_SYNC_SECRET.',
-    tags: ['support', 'tickets', 'sync', 'webhook'],
-  },
-  {
-    id: 'darkmode',
-    question: 'Wie aktiviere ich Dark Mode?',
-    answer:
-      'Im Header auf Dunkelmodus/Hellmodus klicken. Die Auswahl wird gespeichert und bleibt nach dem Neuladen erhalten.',
-    tags: ['dark mode', 'theme', 'anzeige'],
-  },
-];
-
-const capabilityList = [
-  'Parks, Prefixes, Attraktionen und Kamera-Zuordnungen verwalten',
-  'Kamera-Bildvorschau mit Park-Fallback und schneller Aktualisierung',
-  'Ingestion-Pfade und Parser-Ergebnisse live prüfen',
-  'Support-Tickets aus externem Projekt anzeigen',
-  'Admin-Zugriff mit Supabase Auth + admin_users',
-];
-
-function matchesQuery(item: FaqItem, query: string): boolean {
-  if (!query) return true;
-  const q = query.toLowerCase();
-  return (
-    item.question.toLowerCase().includes(q) ||
-    item.answer.toLowerCase().includes(q) ||
-    item.tags.some((tag) => tag.toLowerCase().includes(q))
-  );
-}
+const QUICK_LINKS = [
+  { to: '/staff/passwoerter', icon: KeyRound, label: 'Passwörter', description: 'Zugangsdaten für Kunden, Tools & Social Media' },
+  { to: '/staff/medien', icon: Images, label: 'Medien', description: 'Bilder & Videos durchsuchen' },
+  { to: '/staff/werbematerialien', icon: Megaphone, label: 'Werbematerialien', description: 'Kataloge, PDFs & Links' },
+  { to: '/staff/website-anfragen', icon: Globe, label: 'Interessenten und Anfragen', description: 'Leads aus allen Kanälen' },
+  { to: '/staff/cameras', icon: Camera, label: 'Kameras', description: 'Kamera-Zuordnungen verwalten' },
+  { to: '/staff/parks', icon: Mountain, label: 'Parks anlegen', description: 'Parks, Prefixes & Attraktionen' },
+] as const;
 
 export default function HelpPage() {
-  const [query, setQuery] = useState('');
+  const [searchParams] = useSearchParams();
+  // Initial value only (deep link, e.g. from the floating quick-search widget) — freely editable after.
+  const [query, setQuery] = useState(() => searchParams.get('q') ?? '');
   const [openItems, setOpenItems] = useState<Record<string, boolean>>({});
+  const [activeCategory, setActiveCategory] = useState<FaqCategory | null>(null);
+  const [sources, setSources] = useState<SearchSources | null>(null);
+  const [sourcesLoading, setSourcesLoading] = useState(true);
 
-  const filtered = useMemo(() => faqItems.filter((item) => matchesQuery(item, query)), [query]);
-
-  const suggestions = useMemo(() => {
-    if (!query.trim()) return [] as string[];
-    const q = query.toLowerCase();
-    const set = new Set<string>();
-    faqItems.forEach((item) => {
-      if (item.question.toLowerCase().includes(q)) set.add(item.question);
-      item.tags.forEach((tag) => {
-        if (tag.toLowerCase().includes(q)) set.add(tag);
-      });
+  useEffect(() => {
+    let cancelled = false;
+    fetchSearchSources().then((result) => {
+      if (cancelled) return;
+      setSources(result);
+      setSourcesLoading(false);
     });
-    return Array.from(set).slice(0, 8);
-  }, [query]);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const trimmedQuery = query.trim();
+  const normalizedQuery = trimmedQuery.toLowerCase();
+
+  const dataResults = useMemo(
+    () => (sources ? searchSources(sources, trimmedQuery) : []),
+    [sources, trimmedQuery],
+  );
+
+  const faqResults: SearchResult[] = useMemo(() => {
+    if (!normalizedQuery) return [];
+    return faqItems
+      .filter((item) => matchesFaqQuery(item, normalizedQuery))
+      .map((item) => ({
+        id: `faq-${item.id}`,
+        category: 'faq' as const,
+        title: item.question,
+        subtitle: item.answer,
+        onSelect: () => {
+          setActiveCategory(null);
+          setOpenItems((prev) => ({ ...prev, [item.id]: true }));
+          requestAnimationFrame(() => {
+            document.getElementById(`faq-${item.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          });
+        },
+      }));
+  }, [normalizedQuery]);
+
+  const combinedResults = useMemo(() => [...dataResults, ...faqResults], [dataResults, faqResults]);
+
+  const filteredFaq = useMemo(() => {
+    return faqItems.filter((item) => {
+      if (activeCategory && item.category !== activeCategory) return false;
+      if (normalizedQuery && !matchesFaqQuery(item, normalizedQuery)) return false;
+      return true;
+    });
+  }, [activeCategory, normalizedQuery]);
+
+  const allOpen = filteredFaq.length > 0 && filteredFaq.every((item) => openItems[item.id]);
+
+  function toggleAllFaq() {
+    setOpenItems((prev) => {
+      const next = { ...prev };
+      filteredFaq.forEach((item) => {
+        next[item.id] = !allOpen;
+      });
+      return next;
+    });
+  }
 
   return (
     <div className="grid" style={{ gap: 16 }}>
       <div className="card help-hero">
-        <h2>Hilfe & FAQ</h2>
-        <p className="note">Suche nach Begriffen wie: Kamera, Prefix, Ingestion, Admin, Support, Dark Mode.</p>
+        <h2>Hilfe & Suche</h2>
+        <p className="note">
+          Finde alles an einem Ort: Passwörter, Medien, Dokumente, Kontakte/Anfragen, Links und Antworten auf häufige
+          Fragen.
+        </p>
         <div className="help-search-wrap">
+          <Search className="help-search-icon" size={18} />
           <input
             type="search"
-            placeholder="Begriff suchen..."
+            className="help-search-input"
+            placeholder='Suche z. B. "LinkedIn", "Alpine Coaster", "Kamera", "dark mode" ...'
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            autoFocus
           />
-          {suggestions.length > 0 && (
-            <div className="help-suggestions">
-              {suggestions.map((suggestion) => (
-                <button
-                  key={suggestion}
-                  type="button"
-                  className="help-suggestion-btn"
-                  onClick={() => setQuery(suggestion)}
-                >
-                  {suggestion}
-                </button>
-              ))}
-            </div>
+          {query && (
+            <button type="button" className="help-search-clear" onClick={() => setQuery('')} aria-label="Suche leeren">
+              <X size={14} />
+            </button>
           )}
         </div>
+        {sources && sources.errors.length > 0 && (
+          <p className="error" style={{ marginTop: 8 }}>
+            Konnte nicht vollständig geladen werden: {sources.errors.join(', ')}. Die übrigen Bereiche sind trotzdem
+            durchsuchbar.
+          </p>
+        )}
       </div>
 
-      <div className="card">
-        <h3>Was das Dashboard kann</h3>
-        <ul className="help-list">
-          {capabilityList.map((item) => (
-            <li key={item}>{item}</li>
-          ))}
-        </ul>
-      </div>
+      {trimmedQuery ? (
+        <div className="card">
+          <div className="support-panel-header">
+            <h3>Suchergebnisse</h3>
+            <span className="note">{combinedResults.length} Treffer</span>
+          </div>
+          <GlobalSearchResults results={combinedResults} loading={sourcesLoading} />
+        </div>
+      ) : (
+        <div className="card">
+          <h3>Schnellzugriff</h3>
+          <p className="note" style={{ marginTop: 0 }}>
+            Direkt zu einem Bereich springen, oder oben etwas Konkretes suchen.
+          </p>
+          <div className="help-quicklinks">
+            {QUICK_LINKS.map((item) => (
+              <Link key={item.to} to={item.to} className="help-quicklink-card">
+                <item.icon size={20} />
+                <span className="help-quicklink-label">{item.label}</span>
+                <span className="help-quicklink-desc">{item.description}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="card">
         <div className="support-panel-header">
           <h3>FAQ</h3>
-          <span className="note">{filtered.length} Treffer</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span className="note">{filteredFaq.length} Treffer</span>
+            {filteredFaq.length > 0 && (
+              <button type="button" className="secondary inline" onClick={toggleAllFaq}>
+                {allOpen ? 'Alles zuklappen' : 'Alles aufklappen'}
+              </button>
+            )}
+          </div>
         </div>
 
-        {filtered.length === 0 && (
-          <div className="support-empty">Kein Treffer. Versuch es mit Begriffen wie `kamera`, `prefix` oder `support`.</div>
+        <div className="help-category-chips">
+          <button
+            type="button"
+            className={`help-category-chip ${activeCategory === null ? 'active' : ''}`}
+            onClick={() => setActiveCategory(null)}
+          >
+            Alle
+          </button>
+          {FAQ_CATEGORIES.map((cat) => (
+            <button
+              key={cat}
+              type="button"
+              className={`help-category-chip ${activeCategory === cat ? 'active' : ''}`}
+              onClick={() => setActiveCategory((prev) => (prev === cat ? null : cat))}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+
+        {filteredFaq.length === 0 && (
+          <div className="support-empty" style={{ marginTop: 10 }}>
+            Kein Treffer. Versuch es mit einem anderen Begriff oder wähle „Alle“.
+          </div>
         )}
 
         <div className="help-faq-grid">
-          {filtered.map((item) => {
+          {filteredFaq.map((item) => {
             const isOpen = !!openItems[item.id];
             return (
-              <article key={item.id} className="help-faq-item">
+              <article key={item.id} id={`faq-${item.id}`} className="help-faq-item">
                 <button
                   type="button"
                   className={`help-faq-question ${isOpen ? 'open' : ''}`}

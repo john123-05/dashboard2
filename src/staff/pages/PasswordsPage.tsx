@@ -1,4 +1,5 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   createStaffCredential,
   deleteStaffCredential,
@@ -19,6 +20,9 @@ const emptyForm = {
 };
 
 export default function PasswordsPage() {
+  const [searchParams] = useSearchParams();
+  // Initial value only (deep link from the Hilfe search) — freely editable after.
+  const [query, setQuery] = useState(() => searchParams.get('q') ?? '');
   const [credentials, setCredentials] = useState<StaffCredential[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,6 +31,14 @@ export default function PasswordsPage() {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const { copiedId, copy } = useCopyToClipboard();
+
+  const filteredCredentials = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return credentials;
+    return credentials.filter((c) =>
+      [c.label, c.category, c.person_name, c.login, c.notes].some((field) => field?.toLowerCase().includes(q)),
+    );
+  }, [credentials, query]);
 
   async function load() {
     setLoading(true);
@@ -164,17 +176,32 @@ export default function PasswordsPage() {
       <div className="card">
         <div className="marketing-section-title">
           <h3>Gespeicherte Passwörter</h3>
-          <span className="note">{credentials.length} Einträge</span>
+          <span className="note">
+            {query.trim() ? `${filteredCredentials.length} von ${credentials.length}` : credentials.length} Einträge
+          </span>
         </div>
+
+        {credentials.length > 0 && (
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Suche nach Bezeichnung, Kategorie, Name, Login oder Notiz ..."
+            style={{ marginBottom: 10 }}
+          />
+        )}
 
         {loading && <p className="note">Lädt...</p>}
         {error && <p className="error">{error}</p>}
         {!loading && !error && credentials.length === 0 && (
           <p className="note">Noch keine Passwörter gespeichert. Leg oben das erste an.</p>
         )}
+        {!loading && !error && credentials.length > 0 && filteredCredentials.length === 0 && (
+          <p className="note">Kein Treffer für „{query}“.</p>
+        )}
 
         <div className="grid" style={{ gap: 10, marginTop: 8 }}>
-          {credentials.map((cred) => (
+          {filteredCredentials.map((cred) => (
             <div key={cred.id} className="material-card">
               <div className="material-card-head">
                 <div>

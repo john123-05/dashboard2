@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { supabaseBrowser } from '../lib/supabase';
+import GlobalSearchWidget from './GlobalSearchWidget';
 import OnboardingTour from './OnboardingTour';
 import StaffSidebar from './StaffSidebar';
 import '../styles.css';
@@ -118,6 +119,7 @@ export default function AdminLayout() {
         </div>
       </main>
       <OnboardingTour />
+      <GlobalSearchWidget />
     </div>
   );
 }

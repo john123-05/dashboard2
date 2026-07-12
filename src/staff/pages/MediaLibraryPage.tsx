@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { deleteMediaAsset, fetchCategories, mediaAssetUrl, searchMediaAssets, type MediaAsset } from '../lib/mediaAssets';
 import UploadMediaModal from '../components/UploadMediaModal';
 import MediaDetailModal from '../components/MediaDetailModal';
 
 export default function MediaLibraryPage() {
-  const [query, setQuery] = useState('');
+  const [searchParams] = useSearchParams();
+  // Initial value only (deep link from the Hilfe search) — freely editable after.
+  const [query, setQuery] = useState(() => searchParams.get('q') ?? '');
   const [category, setCategory] = useState<string>('');
   const [categories, setCategories] = useState<string[]>([]);
   const [assets, setAssets] = useState<MediaAsset[]>([]);

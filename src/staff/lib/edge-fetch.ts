@@ -15,6 +15,9 @@ const routeMap: Record<string, string> = {
   '/api/admin/preview-parse': 'admin-preview-parse',
   '/api/admin/support': 'admin-support',
   '/api/admin/website-requests': 'admin-website-requests',
+  '/api/admin/german-website-requests': 'admin-german-website-requests',
+  '/api/admin/product-finder': 'admin-product-finder',
+  '/api/admin/lead-contacts': 'admin-lead-contacts',
   '/api/admin/email-leads': 'admin-email-leads',
   '/api/support-sync': 'support-sync',
 };

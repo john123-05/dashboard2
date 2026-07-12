@@ -1,0 +1,9 @@
+# This project has no local dev stack (no `supabase start` workflow) — this
+# file exists solely to make per-function deploy settings durable across
+# redeploys, since `supabase functions deploy` flags like --no-verify-jwt
+# otherwise leave no trace in version control.
+
+[functions.email-lead-intake]
+# Called by Make.com (no Supabase session), authenticated via its own
+# X-Intake-Secret header instead of a platform JWT.
+verify_jwt = false
