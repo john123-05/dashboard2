@@ -1,90 +1,176 @@
-import { useEffect, useState } from 'react';
-import { Download } from 'lucide-react';
-import { invokeEdgeFunction } from '../lib/edgeFunctions';
+import { useEffect, useMemo, useState } from 'react';
+import { Download, Filter } from 'lucide-react';
+import { getOptionalSourceWarning, invokeEdgeFunction } from '../lib/edgeFunctions';
+import {
+  createEmptyParkDashboardData,
+  loadParkDashboardData,
+  type ParkDashboardData,
+  type ParkDashboardEvent,
+} from '../lib/parkDashboard';
 import { formatCurrency, formatDateTime, statusColor, exportToCSV } from '../lib/utils';
-import DataTable from '../components/ui/DataTable';
+import DataTable, { type DataTableColumn } from '../components/ui/DataTable';
 import { useI18n } from '../lib/i18n';
+import { usePark } from '../contexts/ParkContext';
 
 interface PurchaseRow {
   id: string;
-  amount_cents: number;
+  source: 'online' | 'local';
+  amount_cents: number | null;
+  amount_kind: 'confirmed' | 'detected' | 'unknown';
   currency: string;
   status: string;
-  stripe_payment_id: string | null;
+  payment_method: string;
+  reference: string;
   purchased_at: string;
+  customer_or_device: string;
+  description: string;
+}
+
+interface StripePayment {
+  id: string;
+  amount: number;
+  currency: string;
+  status: string;
+  created_at: string;
   customer_email: string | null;
-  attraction_name: string;
+  customer_name?: string | null;
+  description: string | null;
 }
 
 export default function Purchases() {
   const { t } = useI18n();
+  const { parkId } = usePark();
+  const [parkData, setParkData] = useState<ParkDashboardData | null>(null);
   const [purchases, setPurchases] = useState<PurchaseRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [sourceFilter, setSourceFilter] = useState<'all' | 'online' | 'local'>('all');
+  const [issues, setIssues] = useState<string[]>([]);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [parkId]);
 
   async function loadData() {
+    if (!parkId) {
+      setError('No park selected');
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setIssues([]);
+
     try {
-      const { data, error: invokeError } = await invokeEdgeFunction('stripe-payments');
+      const [parkDashboardResult, paymentsResult] = await Promise.all([
+        loadParkDashboardData(parkId),
+        invokeEdgeFunction<{ payments: StripePayment[] }>('stripe-payments'),
+      ]);
 
-      if (invokeError) {
-        console.error('Failed to fetch Stripe payments:', invokeError);
-        setError(invokeError);
-        setPurchases([]);
-        setLoading(false);
-        return;
-      }
+      const nextIssues: string[] = [];
+      const localWarning = getOptionalSourceWarning(
+        'Local sales feed',
+        parkDashboardResult.error,
+      );
+      if (localWarning) nextIssues.push(localWarning);
+      const stripeWarning = getOptionalSourceWarning('Stripe data', paymentsResult.error);
+      if (stripeWarning) nextIssues.push(stripeWarning);
 
-      console.log('Stripe payments response:', data);
+      const dashboardBase =
+        parkDashboardResult.data ?? createEmptyParkDashboardData(parkId);
+      const dashboard: ParkDashboardData = {
+        ...dashboardBase,
+        features: {
+          ...dashboardBase.features,
+          stripe: !stripeWarning && (dashboardBase.features.stripe || !paymentsResult.error),
+          local_sales: Boolean(parkDashboardResult.data && dashboardBase.features.local_sales),
+          operations: Boolean(parkDashboardResult.data && dashboardBase.features.operations),
+          health: Boolean(parkDashboardResult.data && dashboardBase.features.health),
+          errors: Boolean(parkDashboardResult.data && dashboardBase.features.errors),
+          printer: Boolean(parkDashboardResult.data && dashboardBase.features.printer),
+          cash: Boolean(parkDashboardResult.data && dashboardBase.features.cash),
+          terminal: Boolean(parkDashboardResult.data && dashboardBase.features.terminal),
+        },
+      };
+      setParkData(dashboard);
+      setIssues(Array.from(new Set(nextIssues)));
 
-      const payments = data.payments || [];
+      const localRows: PurchaseRow[] = dashboard.sales.recent_transactions
+        .filter((event) =>
+          event.purchase_signal === 'confirmed_sale' ||
+          event.purchase_signal === 'unconfirmed_sale' ||
+          event.purchase_signal === 'manual_print',
+        )
+        .map((event) => mapLocalEventToRow(event));
+      const onlineRows: PurchaseRow[] = (paymentsResult.error ? [] : paymentsResult.data?.payments || [])
+        .map((payment) => ({
+          id: payment.id,
+          source: 'online' as const,
+          amount_cents: Math.round(payment.amount * 100),
+          amount_kind: 'confirmed' as const,
+          currency: payment.currency,
+          status: payment.status,
+          payment_method: 'stripe',
+          reference: payment.id,
+          purchased_at: payment.created_at,
+          customer_or_device: payment.customer_email || payment.customer_name || 'Stripe customer',
+          description: payment.description || 'Stripe payment',
+        }))
+        .sort((left, right) => new Date(right.purchased_at).getTime() - new Date(left.purchased_at).getTime());
 
-      const rows: PurchaseRow[] = payments.map((p: {
-        id: string;
-        amount: number;
-        currency: string;
-        status: string;
-        created_at: string;
-        customer_email: string | null;
-        description: string | null;
-      }) => ({
-        id: p.id,
-        amount_cents: Math.round(p.amount * 100),
-        currency: p.currency,
-        status: p.status,
-        stripe_payment_id: p.id,
-        purchased_at: p.created_at,
-        customer_email: p.customer_email,
-        attraction_name: p.description || 'Photo Purchase',
-      }));
+      const merged = [...localRows, ...onlineRows]
+        .sort((left, right) => new Date(right.purchased_at).getTime() - new Date(left.purchased_at).getTime());
 
-      setPurchases(rows);
+      setPurchases(merged);
       setError(null);
       setLoading(false);
-    } catch (error) {
-      console.error('Error loading purchases:', error);
-      setError(error instanceof Error ? error.message : 'Unknown error');
-      setPurchases([]);
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : 'Unknown error');
       setLoading(false);
     }
   }
 
+  function mapLocalEventToRow(event: ParkDashboardEvent): PurchaseRow {
+    return {
+      id: event.id,
+      source: 'local',
+      amount_cents: event.amount_cents,
+      amount_kind: event.amount_kind,
+      currency: 'EUR',
+      status: event.purchase_signal === 'manual_print' ? 'manual' : event.status || 'completed',
+      payment_method:
+        event.payment_method ||
+        (event.purchase_signal === 'manual_print' ? 'local_unknown' : 'local'),
+      reference: event.source_file,
+      purchased_at: event.occurred_at,
+      customer_or_device: event.device || 'Local device',
+      description: event.description,
+    };
+  }
+
+  const filtered = useMemo(() => {
+    if (sourceFilter === 'all') return purchases;
+    return purchases.filter((item) => item.source === sourceFilter);
+  }, [purchases, sourceFilter]);
+
   function handleExport() {
     exportToCSV(
-      purchases.map((p) => ({
-        id: p.id,
-        amount: (p.amount_cents / 100).toFixed(2),
-        currency: p.currency,
-        status: p.status,
-        stripe_id: p.stripe_payment_id || '',
-        customer: p.customer_email || '',
-        attraction: p.attraction_name,
-        date: p.purchased_at,
+      filtered.map((purchase) => ({
+        source: purchase.source,
+        amount:
+          purchase.amount_cents === null
+            ? 'unknown'
+            : (purchase.amount_cents / 100).toFixed(2),
+        amount_kind: purchase.amount_kind,
+        currency: purchase.currency,
+        status: purchase.status,
+        payment_method: purchase.payment_method,
+        reference: purchase.reference,
+        customer_or_device: purchase.customer_or_device,
+        description: purchase.description,
+        date: purchase.purchased_at,
       })),
-      'purchases-export'
+      'purchases-export',
     );
   }
 
@@ -97,13 +183,13 @@ export default function Purchases() {
     );
   }
 
-  if (error) {
+  if (error || !parkData) {
     return (
       <div className="space-y-6">
         <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('purchases.title')}</h2>
-        <div className="rounded-2xl bg-red-50 border border-red-200 p-6">
-          <h3 className="text-lg font-semibold text-red-800 mb-2">{t('overview.error_title')}</h3>
-          <p className="text-sm text-red-600 mb-4">{error}</p>
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-6">
+          <h3 className="mb-2 text-lg font-semibold text-red-800">{t('overview.error_title')}</h3>
+          <p className="mb-4 text-sm text-red-600">{error || 'Unknown error'}</p>
           <button onClick={loadData} className="glass-button-secondary">
             {t('app.retry')}
           </button>
@@ -112,7 +198,7 @@ export default function Purchases() {
     );
   }
 
-  const columns = [
+  const columns: DataTableColumn<PurchaseRow>[] = [
     {
       key: 'purchased_at',
       label: t('purchases.table.date'),
@@ -121,21 +207,51 @@ export default function Purchases() {
       ),
     },
     {
-      key: 'customer_email',
-      label: t('purchases.table.customer'),
+      key: 'source',
+      label: 'Source',
       render: (item: PurchaseRow) => (
-        <span className="font-medium text-slate-700">{item.customer_email || 'Anonymous'}</span>
+        <span
+          className={`status-badge ${
+            item.source === 'online'
+              ? 'bg-sky-50 text-sky-700 ring-sky-200'
+              : 'bg-emerald-50 text-emerald-700 ring-emerald-200'
+          }`}
+        >
+          {item.source === 'online' ? 'Online' : 'Local'}
+        </span>
       ),
     },
     {
-      key: 'attraction_name',
-      label: t('purchases.table.attraction'),
+      key: 'customer_or_device',
+      label: 'Customer / Device',
+      render: (item: PurchaseRow) => (
+        <span className="font-medium text-slate-700">{item.customer_or_device}</span>
+      ),
+    },
+    {
+      key: 'payment_method',
+      label: 'Payment',
+      render: (item: PurchaseRow) => (
+        <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
+          {item.payment_method}
+        </span>
+      ),
     },
     {
       key: 'amount_cents',
       label: t('purchases.table.amount'),
       render: (item: PurchaseRow) => (
-        <span className="font-semibold text-slate-800">{formatCurrency(item.amount_cents)}</span>
+        <div>
+          <span className="font-semibold text-slate-800">
+            {item.amount_cents === null ? 'Unknown' : formatCurrency(item.amount_cents, item.currency)}
+          </span>
+          {item.amount_cents !== null && item.amount_kind === 'detected' && (
+            <p className="mt-0.5 text-xs text-amber-600">Detected, not confirmed</p>
+          )}
+          {item.amount_cents === null && (
+            <p className="mt-0.5 text-xs text-slate-500">No confirmed amount</p>
+          )}
+        </div>
       ),
     },
     {
@@ -146,12 +262,10 @@ export default function Purchases() {
       ),
     },
     {
-      key: 'stripe_payment_id',
-      label: t('purchases.table.stripe_id'),
+      key: 'description',
+      label: 'Description',
       render: (item: PurchaseRow) => (
-        <span className="font-mono text-xs text-slate-400">
-          {item.stripe_payment_id ? item.stripe_payment_id.slice(0, 16) + '...' : '-'}
-        </span>
+        <span className="text-slate-600">{item.description}</span>
       ),
     },
   ];
@@ -161,7 +275,9 @@ export default function Purchases() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('purchases.title')}</h2>
-          <p className="mt-1 text-sm text-slate-500">{t('purchases.subtitle')}</p>
+          <p className="mt-1 text-sm text-slate-500">
+            Unified transaction log for Stripe and on-site sales
+          </p>
         </div>
         <button onClick={handleExport} className="glass-button-secondary">
           <Download className="h-4 w-4" />
@@ -169,12 +285,35 @@ export default function Purchases() {
         </button>
       </div>
 
+      {issues.length > 0 && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+          <p className="text-sm font-medium text-amber-900">Transaction data is partially available.</p>
+          <p className="mt-1 text-sm text-amber-700">{issues.join(' ')}</p>
+        </div>
+      )}
+
       <DataTable
-        data={purchases as unknown as Record<string, unknown>[]}
-        columns={columns as { key: string; label: string; render?: (item: Record<string, unknown>) => React.ReactNode }[]}
+        data={filtered}
+        columns={columns}
         searchable
-        searchKeys={['customer_email', 'attraction_name', 'stripe_payment_id']}
+        searchKeys={['customer_or_device', 'payment_method', 'description', 'reference']}
         pageSize={12}
+        actions={
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-slate-400" />
+            <select
+              value={sourceFilter}
+              onChange={(event) => {
+                setSourceFilter(event.target.value as 'all' | 'online' | 'local');
+              }}
+              className="rounded-lg border border-slate-200/60 bg-white/60 px-3 py-1.5 text-sm text-slate-700"
+            >
+              <option value="all">All sources</option>
+              <option value="online">Online only</option>
+              <option value="local">Local only</option>
+            </select>
+          </div>
+        }
       />
     </div>
   );

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Users as UsersIcon, Search } from 'lucide-react';
-import { invokeEdgeFunction } from '../lib/edgeFunctions';
+import { getOptionalSourceWarning, invokeEdgeFunction, isEdgeSourceUnavailable } from '../lib/edgeFunctions';
 import { formatDate, formatCurrency } from '../lib/utils';
 import GlassCard from '../components/ui/GlassCard';
 import { useI18n } from '../lib/i18n';
@@ -24,10 +24,11 @@ export default function Users() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [parkId]);
 
   async function loadData() {
     setLoading(true);
@@ -37,6 +38,13 @@ export default function Users() {
 
     if (invokeError) {
       console.error('Failed to fetch external users:', invokeError);
+      if (isEdgeSourceUnavailable(invokeError)) {
+        setCustomers([]);
+        setNotice(getOptionalSourceWarning('User feed', invokeError));
+        setError(null);
+        setLoading(false);
+        return;
+      }
       setError(invokeError);
       setLoading(false);
       return;
@@ -66,6 +74,7 @@ export default function Users() {
 
     rows.sort((a, b) => b.total_spent - a.total_spent);
     setCustomers(rows);
+    setNotice(null);
     setError(null);
     setLoading(false);
   }
@@ -112,6 +121,13 @@ export default function Users() {
           {t('users.subtitle')}
         </p>
       </div>
+
+      {notice && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+          <p className="text-sm font-medium text-amber-900">User data is currently unavailable.</p>
+          <p className="mt-1 text-sm text-amber-700">{notice}</p>
+        </div>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-3">
         <GlassCard className="p-5">

@@ -1,81 +1,213 @@
-import { useEffect, useState } from 'react';
-import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { Download, DollarSign, RefreshCw } from 'lucide-react';
-import { invokeEdgeFunction } from '../lib/edgeFunctions';
-import { formatCurrency, formatNumber, exportToCSV } from '../lib/utils';
+import { useEffect, useMemo, useState } from 'react';
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { CreditCard, Download, Receipt, Wallet } from 'lucide-react';
+import { getOptionalSourceWarning, invokeEdgeFunction } from '../lib/edgeFunctions';
+import {
+  createEmptyParkDashboardData,
+  loadParkDashboardData,
+  type ParkDashboardData,
+} from '../lib/parkDashboard';
+import { formatCurrency, formatNumber, formatPercent, exportToCSV } from '../lib/utils';
 import GlassCard from '../components/ui/GlassCard';
 import KPICard from '../components/ui/KPICard';
 import { useI18n } from '../lib/i18n';
+import { usePark } from '../contexts/ParkContext';
 
-interface AttractionRevenue {
-  name: string;
-  revenue: number;
-  purchases: number;
+interface StripeRevenuePoint {
+  date: string;
+  amount: number;
+}
+
+interface StripePayment {
+  id: string;
+  status: string;
+}
+
+interface RevenueSeriesRow {
+  date: string;
+  label: string;
+  online: number;
+  local: number;
+  total: number;
+  cash: number;
+  terminal: number;
 }
 
 export default function Revenue() {
   const { t } = useI18n();
-  const [dailyRevenue, setDailyRevenue] = useState<{ date: string; amount: number }[]>([]);
-  const [attractionRevenue, setAttractionRevenue] = useState<AttractionRevenue[]>([]);
-  const [totals, setTotals] = useState({ revenue: 0, refunds: 0, pending: 0 });
+  const { parkId } = usePark();
+  const [parkData, setParkData] = useState<ParkDashboardData | null>(null);
+  const [dailyRevenue, setDailyRevenue] = useState<RevenueSeriesRow[]>([]);
+  const [onlinePaymentCount, setOnlinePaymentCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [issues, setIssues] = useState<string[]>([]);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [parkId]);
 
   async function loadData() {
+    if (!parkId) {
+      setError('No park selected');
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setIssues([]);
+
     try {
-      const { data, error: invokeError } = await invokeEdgeFunction('stripe-revenue');
+      const [parkDashboardResult, stripeRevenueResult, stripePaymentsResult] = await Promise.all([
+        loadParkDashboardData(parkId),
+        invokeEdgeFunction<{
+          total_revenue: number;
+          revenue_by_day: StripeRevenuePoint[];
+        }>('stripe-revenue'),
+        invokeEdgeFunction<{ payments: StripePayment[] }>('stripe-payments'),
+      ]);
 
-      if (invokeError) {
-        console.error('Failed to fetch Stripe revenue:', invokeError);
-        setError(invokeError);
-        setLoading(false);
-        return;
+      const nextIssues: string[] = [];
+      const operationsWarning = getOptionalSourceWarning(
+        'Local sales feed',
+        parkDashboardResult.error,
+      );
+      if (operationsWarning) nextIssues.push(operationsWarning);
+      const stripeWarning =
+        stripeRevenueResult.error && stripePaymentsResult.error
+          ? getOptionalSourceWarning('Stripe data', stripeRevenueResult.error || stripePaymentsResult.error)
+          : null;
+      if (stripeWarning) nextIssues.push(stripeWarning);
+
+      const dashboardBase =
+        parkDashboardResult.data ?? createEmptyParkDashboardData(parkId);
+      const dashboard: ParkDashboardData = {
+        ...dashboardBase,
+        features: {
+          ...dashboardBase.features,
+          stripe:
+            !stripeWarning &&
+            (dashboardBase.features.stripe || !stripeRevenueResult.error || !stripePaymentsResult.error),
+          local_sales: Boolean(parkDashboardResult.data && dashboardBase.features.local_sales),
+          operations: Boolean(parkDashboardResult.data && dashboardBase.features.operations),
+          health: Boolean(parkDashboardResult.data && dashboardBase.features.health),
+          errors: Boolean(parkDashboardResult.data && dashboardBase.features.errors),
+          printer: Boolean(parkDashboardResult.data && dashboardBase.features.printer),
+          cash: Boolean(parkDashboardResult.data && dashboardBase.features.cash),
+          terminal: Boolean(parkDashboardResult.data && dashboardBase.features.terminal),
+        },
+      };
+      setParkData(dashboard);
+      setIssues(Array.from(new Set(nextIssues)));
+
+      const stripeRevenue = stripeRevenueResult.error ? [] : stripeRevenueResult.data?.revenue_by_day || [];
+      const stripeSucceededCount = stripePaymentsResult.error
+        ? 0
+        : (stripePaymentsResult.data?.payments || []).filter((payment) => payment.status === 'succeeded').length;
+      setOnlinePaymentCount(stripeSucceededCount);
+      const days = new Map<string, RevenueSeriesRow>();
+
+      for (let i = 29; i >= 0; i -= 1) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        const key = date.toISOString().slice(0, 10);
+        days.set(key, {
+          date: key,
+          label: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          online: 0,
+          local: 0,
+          total: 0,
+          cash: 0,
+          terminal: 0,
+        });
       }
 
-      const result = data;
-
-      setTotals({
-        revenue: Math.round(result.total_revenue * 100),
-        refunds: 0,
-        pending: 0,
-      });
-
-      const byDay = new Map<string, number>();
-      for (let i = 29; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        byDay.set(d.toISOString().split('T')[0], 0);
+      for (const point of dashboard.sales.daily || []) {
+        const entry = days.get(point.date) || {
+          date: point.date,
+          label: new Date(point.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          online: 0,
+          local: 0,
+          total: 0,
+          cash: 0,
+          terminal: 0,
+        };
+        entry.local = point.local_cents / 100;
+        entry.cash = point.cash_cents / 100;
+        entry.terminal = point.terminal_cents / 100;
+        days.set(point.date, entry);
       }
 
-      (result.revenue_by_day || []).forEach((item: { date: string; amount: number }) => {
-        byDay.set(item.date, item.amount);
-      });
+      for (const point of stripeRevenue) {
+        const entry = days.get(point.date) || {
+          date: point.date,
+          label: new Date(point.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          online: 0,
+          local: 0,
+          total: 0,
+          cash: 0,
+          terminal: 0,
+        };
+        entry.online = point.amount;
+        days.set(point.date, entry);
+      }
 
       setDailyRevenue(
-        Array.from(byDay.entries()).map(([date, amount]) => ({
-          date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-          amount,
-        }))
+        Array.from(days.values())
+          .map((entry) => ({
+            ...entry,
+            total: entry.online + entry.local,
+          }))
+          .sort((left, right) => left.date.localeCompare(right.date)),
       );
 
-      setAttractionRevenue([]);
       setError(null);
       setLoading(false);
-    } catch (error) {
-      console.error('Error loading revenue:', error);
-      setError(error instanceof Error ? error.message : 'Unknown error');
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : 'Unknown error');
       setLoading(false);
     }
   }
 
+  const totals = useMemo(() => {
+    return dailyRevenue.reduce(
+      (sum, row) => ({
+        online: sum.online + row.online,
+        local: sum.local + row.local,
+        total: sum.total + row.total,
+        cash: sum.cash + row.cash,
+        terminal: sum.terminal + row.terminal,
+      }),
+      { online: 0, local: 0, total: 0, cash: 0, terminal: 0 },
+    );
+  }, [dailyRevenue]);
+  const totalConfirmedRevenueCents = useMemo(
+    () => Math.round((totals.online + totals.local) * 100),
+    [totals.local, totals.online],
+  );
+  const confirmedLocalRevenueCents = parkData?.summary.local_sales_cents ?? 0;
+  const detectedLocalRevenueCents = parkData?.summary.local_unconfirmed_terminal_cents ?? 0;
+  const unknownLocalAmountCount = parkData?.summary.local_unknown_amount_transaction_count ?? 0;
+  const localRevenueDisplay =
+    confirmedLocalRevenueCents > 0
+      ? formatCurrency(confirmedLocalRevenueCents)
+      : detectedLocalRevenueCents > 0
+        ? `${formatCurrency(detectedLocalRevenueCents)} detected`
+        : unknownLocalAmountCount > 0
+          ? 'Unknown'
+          : formatCurrency(0);
+
   function handleExport() {
     exportToCSV(
-      dailyRevenue.map((d) => ({ date: d.date, revenue_usd: d.amount })),
-      'revenue-report'
+      dailyRevenue.map((row) => ({
+        date: row.date,
+        online_revenue: row.online.toFixed(2),
+        local_revenue: row.local.toFixed(2),
+        cash_revenue: row.cash.toFixed(2),
+        terminal_revenue: row.terminal.toFixed(2),
+        total_revenue: row.total.toFixed(2),
+      })),
+      'revenue-report',
     );
   }
 
@@ -83,22 +215,22 @@ export default function Revenue() {
     return (
       <div className="space-y-6">
         <div className="h-8 w-32 animate-pulse rounded-lg bg-white/40" />
-        <div className="grid gap-6 sm:grid-cols-3">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-32 animate-pulse rounded-2xl bg-white/30" />
+        <div className="grid gap-6 sm:grid-cols-4">
+          {[...Array(4)].map((_, index) => (
+            <div key={index} className="h-32 animate-pulse rounded-2xl bg-white/30" />
           ))}
         </div>
       </div>
     );
   }
 
-  if (error) {
+  if (error || !parkData) {
     return (
       <div className="space-y-6">
         <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('revenue.title')}</h2>
-        <div className="rounded-2xl bg-red-50 border border-red-200 p-6">
-          <h3 className="text-lg font-semibold text-red-800 mb-2">{t('overview.error_title')}</h3>
-          <p className="text-sm text-red-600 mb-4">{error}</p>
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-6">
+          <h3 className="mb-2 text-lg font-semibold text-red-800">{t('overview.error_title')}</h3>
+          <p className="mb-4 text-sm text-red-600">{error || 'Unknown error'}</p>
           <button onClick={loadData} className="glass-button-secondary">
             {t('app.retry')}
           </button>
@@ -112,7 +244,9 @@ export default function Revenue() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('revenue.title')}</h2>
-          <p className="mt-1 text-sm text-slate-500">{t('revenue.subtitle')}</p>
+          <p className="mt-1 text-sm text-slate-500">
+            Unified revenue view for online and local sales
+          </p>
         </div>
         <button onClick={handleExport} className="glass-button-secondary">
           <Download className="h-4 w-4" />
@@ -120,80 +254,225 @@ export default function Revenue() {
         </button>
       </div>
 
-      <div className="grid gap-6 sm:grid-cols-3">
+      {issues.length > 0 && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+          <p className="text-sm font-medium text-amber-900">Revenue is partially available.</p>
+          <p className="mt-1 text-sm text-amber-700">{issues.join(' ')}</p>
+        </div>
+      )}
+
+      {!parkData.features.stripe && !parkData.features.local_sales && (
+        <GlassCard className="p-6">
+          <h3 className="text-base font-semibold text-slate-800">No active revenue feed</h3>
+          <p className="mt-2 text-sm text-slate-500">
+            This park currently has no reachable Stripe or local sales source. The page will populate automatically as soon as one of the feeds is available.
+          </p>
+        </GlassCard>
+      )}
+
+      <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+        {parkData.features.stripe && (
+          <KPICard
+            title="Online Revenue"
+            value={formatCurrency(Math.round(totals.online * 100))}
+            icon={CreditCard}
+            iconColor="text-sky-600"
+            iconBg="bg-sky-50"
+          />
+        )}
+        {parkData.features.local_sales && (
+          <KPICard
+            title="Local Revenue"
+            value={localRevenueDisplay}
+            icon={Wallet}
+            iconColor="text-emerald-600"
+            iconBg="bg-emerald-50"
+          />
+        )}
         <KPICard
-          title={t('revenue.total')}
-          value={formatCurrency(totals.revenue)}
-          icon={DollarSign}
-          iconColor="text-emerald-600"
-          iconBg="bg-emerald-50"
+          title="Total Revenue"
+          value={formatCurrency(totalConfirmedRevenueCents)}
+          icon={Receipt}
+          iconColor="text-slate-700"
+          iconBg="bg-slate-100"
         />
         <KPICard
-          title={t('revenue.refunds')}
-          value={formatCurrency(totals.refunds)}
-          icon={RefreshCw}
-          iconColor="text-rose-600"
-          iconBg="bg-rose-50"
-        />
-        <KPICard
-          title={t('revenue.pending')}
-          value={formatCurrency(totals.pending)}
-          icon={DollarSign}
-          iconColor="text-amber-600"
-          iconBg="bg-amber-50"
+          title="Total Transactions"
+          value={formatNumber(parkData.summary.local_transaction_count + onlinePaymentCount)}
+          icon={Receipt}
+          iconColor="text-cyan-600"
+          iconBg="bg-cyan-50"
         />
       </div>
 
       <GlassCard className="p-6">
-        <h3 className="mb-4 text-base font-semibold text-slate-800">{t('revenue.daily')}</h3>
-        <div className="h-72">
+        <div className="grid gap-4 xl:grid-cols-2">
+          <div>
+            <h3 className="text-base font-semibold text-slate-800">Online Commerce Domain</h3>
+            <p className="mt-2 text-sm text-slate-500">
+              Stripe revenue and online purchase counts stay separate from machine-side telemetry.
+            </p>
+            <div className="mt-4 space-y-2 rounded-2xl bg-white/30 p-4 text-sm text-slate-600">
+              <p>Confirmed online revenue: {formatCurrency(Math.round(totals.online * 100))}</p>
+              <p>Online successful payments: {formatNumber(onlinePaymentCount)}</p>
+            </div>
+          </div>
+          <div>
+            <h3 className="text-base font-semibold text-slate-800">Local Operations Domain</h3>
+            <p className="mt-2 text-sm text-slate-500">
+              Only confirmed local amounts count as revenue. Detected or unknown amounts stay outside totals.
+            </p>
+            <div className="mt-4 space-y-2 rounded-2xl bg-white/30 p-4 text-sm text-slate-600">
+              <p>Confirmed local revenue: {formatCurrency(parkData.summary.local_sales_cents)}</p>
+              <p>
+                Detected but unconfirmed local amount:{' '}
+                {(parkData.summary.local_unconfirmed_amount_cents ?? 0) > 0
+                  ? formatCurrency(parkData.summary.local_unconfirmed_amount_cents)
+                  : '-'}
+              </p>
+              <p>
+                Unknown local amount signals:{' '}
+                {formatNumber(parkData.summary.local_unknown_amount_transaction_count)}
+              </p>
+            </div>
+          </div>
+        </div>
+      </GlassCard>
+
+      <GlassCard className="p-6">
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h3 className="text-base font-semibold text-slate-800">Revenue Trend</h3>
+            <p className="text-sm text-slate-500">
+              Last 30 days, confirmed online and confirmed local revenue only
+            </p>
+          </div>
+          <div className="text-right text-xs text-slate-500">
+            <p>Cash: {formatCurrency(Math.round(totals.cash * 100))}</p>
+            <p>Terminal: {formatCurrency(Math.round(totals.terminal * 100))}</p>
+            {(parkData.summary.local_unconfirmed_amount_cents ?? 0) > 0 && (
+              <p>Detected, unconfirmed: {formatCurrency(parkData.summary.local_unconfirmed_amount_cents)}</p>
+            )}
+          </div>
+        </div>
+        <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={dailyRevenue}>
               <defs>
-                <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#0ea5e9" stopOpacity={0.3} />
+                <linearGradient id="revOnline" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#0ea5e9" stopOpacity={0.22} />
                   <stop offset="100%" stopColor="#0ea5e9" stopOpacity={0} />
                 </linearGradient>
+                <linearGradient id="revLocal" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#10b981" stopOpacity={0.22} />
+                  <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
+                </linearGradient>
               </defs>
-              <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} interval="preserveStartEnd" />
-              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} tickFormatter={(v) => `$${v}`} />
+              <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#e2e8f0" />
+              <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} tickFormatter={(value) => `$${value}`} />
               <Tooltip
-                contentStyle={{ background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.08)' }}
-                formatter={(value) => [`$${Number(value ?? 0).toFixed(2)}`, 'Revenue']}
+                contentStyle={{
+                  background: 'rgba(255,255,255,0.94)',
+                  backdropFilter: 'blur(12px)',
+                  border: '1px solid rgba(255,255,255,0.5)',
+                  borderRadius: '12px',
+                  boxShadow: '0 8px 32px rgba(15,23,42,0.08)',
+                }}
+                formatter={(value, name) => [`$${Number(value ?? 0).toFixed(2)}`, name === 'online' ? 'Online' : 'Local']}
               />
-              <Area type="monotone" dataKey="amount" stroke="#0ea5e9" strokeWidth={2} fill="url(#revGrad)" />
+              {parkData.features.stripe && (
+                <Area type="monotone" dataKey="online" stroke="#0ea5e9" strokeWidth={2} fill="url(#revOnline)" />
+              )}
+              {parkData.features.local_sales && (
+                <Area type="monotone" dataKey="local" stroke="#10b981" strokeWidth={2} fill="url(#revLocal)" />
+              )}
             </AreaChart>
           </ResponsiveContainer>
         </div>
       </GlassCard>
 
-      <GlassCard className="p-6">
-        <h3 className="mb-4 text-base font-semibold text-slate-800">{t('revenue.by_attraction')}</h3>
-        <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={attractionRevenue} layout="vertical">
-              <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} tickFormatter={(v) => `$${v}`} />
-              <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#475569' }} width={140} />
-              <Tooltip
-                contentStyle={{ background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.08)' }}
-                formatter={(value) => [`$${Number(value ?? 0).toFixed(2)}`, 'Revenue']}
-              />
-              <Bar dataKey="revenue" fill="#0ea5e9" radius={[0, 6, 6, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-        <div className="mt-4 space-y-2">
-          {attractionRevenue.map((a) => (
-            <div key={a.name} className="flex items-center justify-between rounded-lg px-3 py-2 text-sm hover:bg-white/30">
-              <span className="text-slate-700">{a.name}</span>
-              <div className="flex items-center gap-4">
-                <span className="text-slate-400">{formatNumber(a.purchases)} sales</span>
-                <span className="font-semibold text-slate-800">${a.revenue.toFixed(2)}</span>
-              </div>
+      <div className="grid gap-6 xl:grid-cols-[1.3fr_1fr]">
+        <GlassCard className="p-6">
+          <h3 className="mb-4 text-base font-semibold text-slate-800">Local Sales Breakdown</h3>
+          <p className="mb-4 text-sm text-slate-500">
+            Only confirmed local cash and terminal amounts are charted here.
+          </p>
+          <div className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={dailyRevenue}>
+                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} tickFormatter={(value) => `$${value}`} />
+                <Tooltip
+                  contentStyle={{
+                    background: 'rgba(255,255,255,0.94)',
+                    backdropFilter: 'blur(12px)',
+                    border: '1px solid rgba(255,255,255,0.5)',
+                    borderRadius: '12px',
+                    boxShadow: '0 8px 32px rgba(15,23,42,0.08)',
+                  }}
+                  formatter={(value, name) => [`$${Number(value ?? 0).toFixed(2)}`, name === 'cash' ? 'Cash / Coin' : 'Terminal']}
+                />
+                <Bar dataKey="cash" stackId="local" fill="#14b8a6" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="terminal" stackId="local" fill="#22c55e" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </GlassCard>
+
+        <GlassCard className="p-6">
+          <h3 className="mb-4 text-base font-semibold text-slate-800">Sales Signals</h3>
+          <div className="space-y-3">
+            <div className="rounded-xl bg-white/30 p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-400">Payment attempts</p>
+              <p className="mt-1 text-sm font-semibold text-slate-800">
+                {formatNumber(parkData.summary.payment_attempt_count)}
+              </p>
             </div>
-          ))}
-        </div>
-      </GlassCard>
+            <div className="rounded-xl bg-white/30 p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-400">Success rate</p>
+              <p className="mt-1 text-sm font-semibold text-slate-800">
+                {parkData.summary.success_rate !== null
+                  ? formatPercent(parkData.summary.success_rate)
+                  : '-'}
+              </p>
+            </div>
+            <div className="rounded-xl bg-white/30 p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-400">Cancel rate</p>
+              <p className="mt-1 text-sm font-semibold text-slate-800">
+                {parkData.summary.cancel_rate !== null
+                  ? formatPercent(parkData.summary.cancel_rate)
+                  : '-'}
+              </p>
+            </div>
+            <div className="rounded-xl bg-white/30 p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-400">Cash / Coin transactions</p>
+              <p className="mt-1 text-sm font-semibold text-slate-800">
+                {formatNumber(parkData.summary.cash_transaction_count)}
+              </p>
+            </div>
+            <div className="rounded-xl bg-white/30 p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-400">Terminal transactions</p>
+              <p className="mt-1 text-sm font-semibold text-slate-800">
+                {formatNumber(parkData.summary.terminal_transaction_count)}
+              </p>
+            </div>
+            <div className="rounded-xl bg-white/30 p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-400">Unconfirmed local sales</p>
+              <p className="mt-1 text-sm font-semibold text-slate-800">
+                {formatNumber(parkData.summary.local_unconfirmed_transaction_count)}
+              </p>
+            </div>
+            <div className="rounded-xl bg-white/30 p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-400">Unknown local amounts</p>
+              <p className="mt-1 text-sm font-semibold text-slate-800">
+                {formatNumber(parkData.summary.local_unknown_amount_transaction_count)}
+              </p>
+            </div>
+          </div>
+        </GlassCard>
+      </div>
     </div>
   );
 }

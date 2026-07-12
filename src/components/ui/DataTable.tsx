@@ -10,9 +10,11 @@ interface Column<T> {
   className?: string;
 }
 
-interface DataTableProps<T> {
+export type DataTableColumn<T extends object> = Column<T>;
+
+interface DataTableProps<T extends object> {
   data: T[];
-  columns: Column<T>[];
+  columns: DataTableColumn<T>[];
   title?: string;
   searchable?: boolean;
   searchKeys?: string[];
@@ -20,7 +22,7 @@ interface DataTableProps<T> {
   actions?: React.ReactNode;
 }
 
-export default function DataTable<T extends Record<string, unknown>>({
+export default function DataTable<T extends object>({
   data,
   columns,
   title,
@@ -36,7 +38,7 @@ export default function DataTable<T extends Record<string, unknown>>({
   const filtered = searchable
     ? data.filter((item) =>
         searchKeys.some((key) => {
-          const val = item[key];
+          const val = item[key as keyof T];
           return val && String(val).toLowerCase().includes(search.toLowerCase());
         })
       )
@@ -100,7 +102,7 @@ export default function DataTable<T extends Record<string, unknown>>({
                 >
                   {columns.map((col) => (
                     <td key={col.key} className={`px-6 py-3.5 text-sm text-slate-700 ${col.className || ''}`}>
-                      {col.render ? col.render(item) : String(item[col.key] ?? '')}
+                      {col.render ? col.render(item) : String(item[col.key as keyof T] ?? '')}
                     </td>
                   ))}
                 </tr>

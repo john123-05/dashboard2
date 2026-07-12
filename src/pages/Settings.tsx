@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Save, Loader2, Building2, MapPin, Mountain, Package } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { invokeEdgeFunction } from '../lib/edgeFunctions';
+import { getOptionalSourceWarning, invokeEdgeFunction, isEdgeSourceUnavailable } from '../lib/edgeFunctions';
 import { useAuth } from '../contexts/AuthContext';
 import { usePark } from '../contexts/ParkContext';
 import GlassCard from '../components/ui/GlassCard';
@@ -109,7 +109,11 @@ export default function Settings() {
 
       if (error) {
         console.error('Error loading Stripe products:', error);
-        setProductsError(error);
+        setProductsError(
+          isEdgeSourceUnavailable(error)
+            ? getOptionalSourceWarning('Stripe products', error)
+            : error,
+        );
         setProducts([]);
         setProductsLoading(false);
         return;
@@ -123,7 +127,12 @@ export default function Settings() {
       setProductsLoading(false);
     } catch (err) {
       console.error('Exception loading products:', err);
-      setProductsError(err instanceof Error ? err.message : 'Unknown error');
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      setProductsError(
+        isEdgeSourceUnavailable(message)
+          ? getOptionalSourceWarning('Stripe products', message)
+          : message,
+      );
       setProducts([]);
       setProductsLoading(false);
     }
@@ -364,9 +373,9 @@ export default function Settings() {
               )}
 
               {productsError && (
-                <div className="rounded-xl bg-red-50 border border-red-200 p-6">
-                  <h4 className="text-lg font-semibold text-red-800 mb-2">Error Loading Products</h4>
-                  <p className="text-sm text-red-600 mb-4">{productsError}</p>
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-6">
+                  <h4 className="mb-2 text-lg font-semibold text-amber-900">Stripe products unavailable</h4>
+                  <p className="mb-4 text-sm text-amber-700">{productsError}</p>
                   <button onClick={loadProducts} className="glass-button-secondary">
                     Retry
                   </button>

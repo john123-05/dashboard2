@@ -1,8 +1,20 @@
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from './supabase';
+import { SUPABASE_URL, SUPABASE_ANON_KEY, supabase } from './supabase';
 
 interface EdgeFunctionResponse<T = any> {
   data: T | null;
   error: string | null;
+}
+
+async function parseEdgeErrorResponse(response: Response): Promise<string> {
+  const errorText = await response.text();
+  let errorData;
+  try {
+    errorData = JSON.parse(errorText);
+  } catch {
+    errorData = { error: errorText };
+  }
+
+  return errorData.error || `HTTP ${response.status}: ${response.statusText}`;
 }
 
 export async function invokeEdgeFunction<T = any>(
@@ -11,9 +23,10 @@ export async function invokeEdgeFunction<T = any>(
     method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
     body?: any;
     query?: Record<string, string | number | boolean | null | undefined>;
+    useSessionAuth?: boolean;
   } = {}
 ): Promise<EdgeFunctionResponse<T>> {
-  const { method = 'GET', body, query } = options;
+  const { method = 'GET', body, query, useSessionAuth = false } = options;
 
   try {
     const qs =
@@ -26,15 +39,23 @@ export async function invokeEdgeFunction<T = any>(
         : '';
     const url = `${SUPABASE_URL}/functions/v1/${functionName}${qs}`;
 
-    const headers: Record<string, string> = {
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+    let accessToken = SUPABASE_ANON_KEY;
+    if (useSessionAuth) {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      accessToken = session?.access_token ?? SUPABASE_ANON_KEY;
+    }
+
+    const createHeaders = (token: string): Record<string, string> => ({
+      Authorization: `Bearer ${token}`,
       apikey: SUPABASE_ANON_KEY,
       'Content-Type': 'application/json',
-    };
+    });
 
     const fetchOptions: RequestInit = {
       method,
-      headers,
+      headers: createHeaders(accessToken),
     };
 
     if (body && method !== 'GET') {
@@ -43,26 +64,28 @@ export async function invokeEdgeFunction<T = any>(
 
     console.log(`Invoking Edge Function: ${functionName}`, { url, method });
 
-    const response = await fetch(url, fetchOptions);
+    let response = await fetch(url, fetchOptions);
+
+    if (response.status === 401 && useSessionAuth && accessToken !== SUPABASE_ANON_KEY) {
+      console.warn(`Edge Function ${functionName} returned 401 with session token, retrying with anon token.`);
+      response = await fetch(url, {
+        ...fetchOptions,
+        headers: createHeaders(SUPABASE_ANON_KEY),
+      });
+    }
 
     if (!response.ok) {
-      const errorText = await response.text();
-      let errorData;
-      try {
-        errorData = JSON.parse(errorText);
-      } catch {
-        errorData = { error: errorText };
-      }
+      const parsedError = await parseEdgeErrorResponse(response);
 
       console.error(`Edge Function ${functionName} failed:`, {
         status: response.status,
         statusText: response.statusText,
-        error: errorData,
+        error: parsedError,
       });
 
       return {
         data: null,
-        error: errorData.error || `HTTP ${response.status}: ${response.statusText}`,
+        error: parsedError,
       };
     }
 

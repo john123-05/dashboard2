@@ -20,6 +20,10 @@ type OverlayCampaignWithLayers = OverlayCampaign & {
   layers: OverlayLayerWithAsset[];
 };
 
+type OverlayCampaignRow = OverlayCampaign & {
+  layers: Array<OverlayCampaignLayer & { asset: OverlayAsset[] | OverlayAsset | null }>;
+};
+
 function pathBasename(path: string) {
   const parts = path.split('/');
   return parts[parts.length - 1] || path;
@@ -198,9 +202,12 @@ export default function Personalization() {
       return;
     }
 
-    const parsedCampaigns = ((campaignRows || []) as OverlayCampaignWithLayers[]).map((campaign) => ({
+    const parsedCampaigns = ((campaignRows || []) as unknown as OverlayCampaignRow[]).map((campaign) => ({
       ...campaign,
-      layers: (campaign.layers || []) as OverlayLayerWithAsset[],
+      layers: (campaign.layers || []).map((layer) => ({
+        ...layer,
+        asset: Array.isArray(layer.asset) ? layer.asset[0] || null : layer.asset,
+      })) as OverlayLayerWithAsset[],
     }));
 
     setCampaigns(parsedCampaigns);

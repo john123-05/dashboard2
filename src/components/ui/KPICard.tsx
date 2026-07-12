@@ -5,6 +5,7 @@ import GlassCard from './GlassCard';
 interface KPICardProps {
   title: string;
   value: string;
+  subtitle?: string;
   change?: number;
   icon: LucideIcon;
   iconColor?: string;
@@ -14,6 +15,7 @@ interface KPICardProps {
 export default function KPICard({
   title,
   value,
+  subtitle,
   change,
   icon: Icon,
   iconColor = 'text-brand-600',
@@ -27,6 +29,9 @@ export default function KPICard({
         <div className="space-y-3">
           <p className="text-sm font-medium text-slate-500">{title}</p>
           <p className="text-2xl font-bold tracking-tight text-slate-800">{value}</p>
+          {subtitle && (
+            <p className="max-w-[12rem] text-xs leading-5 text-slate-500">{subtitle}</p>
+          )}
           {change !== undefined && (
             <div
               className={`flex items-center gap-1 text-xs font-semibold ${

@@ -53,12 +53,15 @@ Deno.serve(async (req: Request) => {
     const parkId = url.searchParams.get("park_id");
     const parkFilter = parkId ? `&park_id=eq.${parkId}` : "";
 
-    const [photosRes, recentRes] = await Promise.all([
+    const [photosRes, recentRes, attractionsRes] = await Promise.all([
       fetchExternal(
         `photos?select=id,is_paid,created_at,captured_at,storage_bucket,storage_path,owner_user_id,park_id${parkFilter}`
       ),
       fetchExternal(
         `photos?select=id,is_paid,created_at,captured_at,storage_bucket,storage_path,owner_user_id,park_id${parkFilter}&order=captured_at.desc&limit=12`
+      ),
+      fetchExternal(
+        `attractions?select=id,park_id,name&order=name.asc${parkFilter}`
       ),
     ]);
 
@@ -73,6 +76,13 @@ Deno.serve(async (req: Request) => {
       return new Response(
         JSON.stringify({ error: "Failed to fetch recent photos", details: recentRes.details }),
         { status: recentRes.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!attractionsRes.ok) {
+      return new Response(
+        JSON.stringify({ error: "Failed to fetch attractions", details: attractionsRes.details }),
+        { status: attractionsRes.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -92,6 +102,12 @@ Deno.serve(async (req: Request) => {
       attraction_id: p.owner_user_id ?? null,
     }));
 
+    const attractions = (attractionsRes.data as Record<string, unknown>[]).map((attraction) => ({
+      id: attraction.id,
+      park_id: attraction.park_id,
+      name: attraction.name,
+    }));
+
     const recent = (recentRes.data as Record<string, unknown>[]).map((p) => ({
       id: p.id,
       image_url: toImageUrl(p),
@@ -104,7 +120,7 @@ Deno.serve(async (req: Request) => {
     return new Response(
       JSON.stringify({
         photos,
-        attractions: [],
+        attractions,
         recent,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
