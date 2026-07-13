@@ -314,81 +314,87 @@ export default function ParksPage() {
 
       <div className="card" style={{ gridColumn: '1 / -1' }}>
         <h2>Parks</h2>
-        <table className="table">
-          <thead><tr><th>Name</th><th>Slug</th><th>Status</th><th>Aktionen</th></tr></thead>
-          <tbody>
-            {parks.map((park) => (
-              <tr key={park.id}>
-                <td>{park.name}</td>
-                <td>{park.slug}</td>
-                <td><span className={`badge ${park.is_active ? 'ok' : 'warn'}`}>{park.is_active ? 'Aktiv' : 'Inaktiv'}</span></td>
-                <td>
-                  <button
-                    type="button"
-                    className="danger inline"
-                    onClick={() => deletePark(park.id, park.name)}
-                    disabled={deletingId === park.id}
-                  >
-                    Löschen
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="table-wrap">
+          <table className="table">
+            <thead><tr><th>Name</th><th>Slug</th><th>Status</th><th>Aktionen</th></tr></thead>
+            <tbody>
+              {parks.map((park) => (
+                <tr key={park.id}>
+                  <td>{park.name}</td>
+                  <td>{park.slug}</td>
+                  <td><span className={`badge ${park.is_active ? 'ok' : 'warn'}`}>{park.is_active ? 'Aktiv' : 'Inaktiv'}</span></td>
+                  <td>
+                    <button
+                      type="button"
+                      className="danger inline"
+                      onClick={() => deletePark(park.id, park.name)}
+                      disabled={deletingId === park.id}
+                    >
+                      Löschen
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <div className="card" style={{ gridColumn: '1 / -1' }}>
         <h2>Foto-Zuordnungen</h2>
-        <table className="table">
-          <thead><tr><th>Kürzel</th><th>Park</th><th>Status</th><th>Aktionen</th></tr></thead>
-          <tbody>
-            {prefixes.map((prefix) => (
-              <tr key={prefix.id}>
-                <td>{prefix.path_prefix}</td>
-                <td>{parkNameById(prefix.park_id)}</td>
-                <td><span className={`badge ${prefix.is_active ? 'ok' : 'warn'}`}>{prefix.is_active ? 'Aktiv' : 'Inaktiv'}</span></td>
-                <td>
-                  <button
-                    type="button"
-                    className="danger inline"
-                    onClick={() => deletePrefix(prefix.id, prefix.path_prefix)}
-                    disabled={deletingId === prefix.id}
-                  >
-                    Löschen
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="table-wrap">
+          <table className="table">
+            <thead><tr><th>Kürzel</th><th>Park</th><th>Status</th><th>Aktionen</th></tr></thead>
+            <tbody>
+              {prefixes.map((prefix) => (
+                <tr key={prefix.id}>
+                  <td>{prefix.path_prefix}</td>
+                  <td>{parkNameById(prefix.park_id)}</td>
+                  <td><span className={`badge ${prefix.is_active ? 'ok' : 'warn'}`}>{prefix.is_active ? 'Aktiv' : 'Inaktiv'}</span></td>
+                  <td>
+                    <button
+                      type="button"
+                      className="danger inline"
+                      onClick={() => deletePrefix(prefix.id, prefix.path_prefix)}
+                      disabled={deletingId === prefix.id}
+                    >
+                      Löschen
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <div className="card" style={{ gridColumn: '1 / -1' }}>
         <h2>Attraktionen</h2>
-        <table className="table">
-          <thead><tr><th>Name</th><th>Park</th><th>Slug</th><th>Status</th><th>Aktionen</th></tr></thead>
-          <tbody>
-            {attractions.map((attraction) => (
-              <tr key={attraction.id}>
-                <td>{attraction.name}</td>
-                <td>{parkNameById(attraction.park_id)}</td>
-                <td>{attraction.slug}</td>
-                <td><span className={`badge ${attraction.is_active ? 'ok' : 'warn'}`}>{attraction.is_active ? 'Aktiv' : 'Inaktiv'}</span></td>
-                <td>
-                  <button
-                    type="button"
-                    className="danger inline"
-                    onClick={() => deleteAttraction(attraction.id, attraction.name)}
-                    disabled={deletingId === attraction.id}
-                  >
-                    Löschen
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="table-wrap">
+          <table className="table">
+            <thead><tr><th>Name</th><th>Park</th><th>Slug</th><th>Status</th><th>Aktionen</th></tr></thead>
+            <tbody>
+              {attractions.map((attraction) => (
+                <tr key={attraction.id}>
+                  <td>{attraction.name}</td>
+                  <td>{parkNameById(attraction.park_id)}</td>
+                  <td>{attraction.slug}</td>
+                  <td><span className={`badge ${attraction.is_active ? 'ok' : 'warn'}`}>{attraction.is_active ? 'Aktiv' : 'Inaktiv'}</span></td>
+                  <td>
+                    <button
+                      type="button"
+                      className="danger inline"
+                      onClick={() => deleteAttraction(attraction.id, attraction.name)}
+                      disabled={deletingId === attraction.id}
+                    >
+                      Löschen
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {status && <p className="success">{status}</p>}

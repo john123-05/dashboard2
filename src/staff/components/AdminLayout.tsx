@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { Menu } from 'lucide-react';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { supabaseBrowser } from '../lib/supabase';
 import GlobalSearchWidget from './GlobalSearchWidget';
 import OnboardingTour from './OnboardingTour';
@@ -18,7 +19,13 @@ export default function AdminLayout() {
     return current === 'dark' ? 'dark' : 'light';
   });
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    setMobileNavOpen(false);
+  }, [location.pathname]);
 
   useEffect(() => {
     let cancelled = false;
@@ -99,9 +106,14 @@ export default function AdminLayout() {
 
   return (
     <div className="staff-app flex min-h-screen">
+      {mobileNavOpen && (
+        <div className="mobile-nav-backdrop" onClick={() => setMobileNavOpen(false)} />
+      )}
       <StaffSidebar
         collapsed={collapsed}
         onToggleCollapsed={() => setCollapsed((prev) => !prev)}
+        mobileOpen={mobileNavOpen}
+        onCloseMobile={() => setMobileNavOpen(false)}
         theme={theme}
         onToggleTheme={() => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))}
         adminEmail={adminEmail}
@@ -110,8 +122,18 @@ export default function AdminLayout() {
           window.location.href = '/staff/login';
         }}
       />
+      {!mobileNavOpen && (
+        <button
+          type="button"
+          className="mobile-nav-toggle"
+          aria-label="Navigation oeffnen"
+          onClick={() => setMobileNavOpen(true)}
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+      )}
       <main
-        className="flex-1 transition-all duration-300"
+        className="staff-main flex-1 transition-all duration-300"
         style={{ paddingLeft: collapsed ? 72 : 256 }}
       >
         <div className="staff-container">

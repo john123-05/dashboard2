@@ -49,11 +49,12 @@
   color: var(--text);
   font-family: "SF Pro Text", "Avenir Next", "Segoe UI", sans-serif;
   min-height: 100vh;
-  /* No overflow-x:hidden here: setting only one axis forces the browser to compute
-     the other as auto regardless of what it's explicitly set to, turning this
-     element into a scroll container and breaking position:sticky on .topbar.
-     Horizontal overflow on wide content (tables etc.) is handled locally via
-     .widget-scroll-x instead. */
+  /* overflow-x: hidden is safe here — nothing in this codebase uses
+     position: sticky (that was the historical reason to avoid it), and it
+     stops any stray wide element from making the whole page pan sideways.
+     Deliberately wide content (tables etc.) still scrolls locally via its
+     own .table-wrap/.widget-scroll-x container, unaffected by this. */
+  overflow-x: hidden;
 }.staff-app a:not(.glass-sidebar *) { color: inherit; text-decoration: none; }.staff-app .staff-container { max-width: 1800px; margin: 0 auto; padding: 24px 32px; }.staff-app .card {
   background: linear-gradient(145deg, var(--panel-strong), var(--panel));
   border: 1px solid var(--border);
@@ -948,6 +949,11 @@
   }.staff-app .upload-btn-col {
     flex: 1 1 100%;
     max-width: 100%;
+  }.staff-app .row {
+    flex-wrap: wrap;
+  }.staff-app .row > * {
+    flex: 1 1 auto;
+    min-width: 0;
   }
 }
 
@@ -1467,5 +1473,96 @@
   }
   to {
     transform: rotate(360deg);
+  }
+}
+
+.staff-app button.mobile-nav-toggle,
+.staff-app .mobile-nav-backdrop,
+.staff-app button.mobile-nav-close {
+  display: none;
+}
+
+/* Below this width the persistent push-sidebar (fixed + main's paddingLeft)
+   stops working — there isn't enough room for both, and it's what made the
+   page feel "shiftable": content got squeezed until something inside it
+   overflowed sideways. Below the breakpoint the sidebar becomes a hidden,
+   full-height overlay drawer instead: off-screen by default, slides in over
+   the content (not pushing it) when opened via the floating toggle button. */
+@media (max-width: 900px) {
+  .staff-app main.staff-main {
+    padding-left: 0 !important;
+  }
+
+  .staff-app .glass-sidebar {
+    width: 280px !important;
+    max-width: 84vw;
+    transform: translateX(-100%);
+    transition: transform 220ms ease;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+  }
+
+  .staff-app .glass-sidebar.mobile-open {
+    transform: translateX(0);
+  }
+
+  .staff-app button.mobile-nav-toggle {
+    display: flex;
+    position: fixed;
+    left: 16px;
+    bottom: 16px;
+    z-index: 250;
+    width: 52px;
+    height: 52px;
+    padding: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: var(--accent);
+    color: #fff;
+    border: 1px solid color-mix(in srgb, var(--accent) 75%, #000 25%);
+    box-shadow: 0 8px 24px color-mix(in srgb, var(--accent) 38%, transparent), 0 2px 6px rgba(0, 0, 0, 0.16);
+  }
+
+  .staff-app .mobile-nav-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 240;
+    background: rgba(8, 10, 14, 0.5);
+    animation: mobileNavBackdropIn 160ms ease-out;
+  }
+
+  .staff-app button.mobile-nav-close {
+    display: flex;
+    margin-left: auto;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: transparent;
+    color: #94a3b8;
+    flex-shrink: 0;
+  }
+
+  .staff-app button.mobile-nav-close:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #e2e8f0;
+  }
+
+  /* The desktop icon-only collapse toggle is meaningless in an always-full
+     overlay drawer, and redundant with the X close button above. */
+  .staff-app button.mobile-nav-hide-collapse-btn {
+    display: none;
+  }
+}
+
+@keyframes mobileNavBackdropIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
