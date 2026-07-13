@@ -216,7 +216,7 @@ export default function PasswordsPage() {
                   <span className="note" style={{ flex: '0 0 110px' }}>
                     Anmeldename
                   </span>
-                  <code style={{ flex: 1, minWidth: 0, wordBreak: 'break-all' }}>{cred.login}</code>
+                  <code style={{ flex: '1 1 80px', minWidth: 80, wordBreak: 'break-all' }}>{cred.login}</code>
                   <button
                     type="button"
                     className="secondary inline"
@@ -232,7 +232,7 @@ export default function PasswordsPage() {
                 <span className="note" style={{ flex: '0 0 110px' }}>
                   Passwort
                 </span>
-                <code style={{ flex: 1, minWidth: 0, wordBreak: 'break-all' }}>
+                <code style={{ flex: '1 1 80px', minWidth: 80, wordBreak: 'break-all' }}>
                   {visible[cred.id] ? cred.password : '••••••••••••'}
                 </code>
                 <button
