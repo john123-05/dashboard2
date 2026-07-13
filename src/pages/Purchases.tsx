@@ -7,6 +7,7 @@ import {
   type ParkDashboardData,
   type ParkDashboardEvent,
 } from '../lib/parkDashboard';
+import { fetchKioskSales } from '../lib/kioskSales';
 import { formatCurrency, formatDateTime, statusColor, exportToCSV } from '../lib/utils';
 import DataTable, { type DataTableColumn } from '../components/ui/DataTable';
 import { useI18n } from '../lib/i18n';
@@ -14,7 +15,7 @@ import { usePark } from '../contexts/ParkContext';
 
 interface PurchaseRow {
   id: string;
-  source: 'online' | 'local';
+  source: 'online' | 'local' | 'kiosk';
   amount_cents: number | null;
   amount_kind: 'confirmed' | 'detected' | 'unknown';
   currency: string;
@@ -44,7 +45,7 @@ export default function Purchases() {
   const [purchases, setPurchases] = useState<PurchaseRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [sourceFilter, setSourceFilter] = useState<'all' | 'online' | 'local'>('all');
+  const [sourceFilter, setSourceFilter] = useState<'all' | 'online' | 'local' | 'kiosk'>('all');
   const [issues, setIssues] = useState<string[]>([]);
 
   useEffect(() => {
@@ -62,9 +63,10 @@ export default function Purchases() {
     setIssues([]);
 
     try {
-      const [parkDashboardResult, paymentsResult] = await Promise.all([
+      const [parkDashboardResult, paymentsResult, kioskResult] = await Promise.all([
         loadParkDashboardData(parkId),
         invokeEdgeFunction<{ payments: StripePayment[] }>('stripe-payments'),
+        fetchKioskSales(parkId).catch(() => null),
       ]);
 
       const nextIssues: string[] = [];
@@ -118,7 +120,24 @@ export default function Purchases() {
         }))
         .sort((left, right) => new Date(right.purchased_at).getTime() - new Date(left.purchased_at).getTime());
 
-      const merged = [...localRows, ...onlineRows]
+      const kioskRows: PurchaseRow[] =
+        kioskResult?.isKioskPark && kioskResult.priceCents
+          ? kioskResult.days.map((day) => ({
+              id: `kiosk-${day.business_date}-${day.camera_code}`,
+              source: 'kiosk' as const,
+              amount_cents: day.photos_sold_count * (kioskResult.priceCents as number),
+              amount_kind: 'confirmed' as const,
+              currency: 'EUR',
+              status: 'completed',
+              payment_method: 'kiosk',
+              reference: day.camera_code,
+              purchased_at: day.business_date,
+              customer_or_device: `Kamera ${day.camera_code}`,
+              description: `${day.photos_sold_count} Foto${day.photos_sold_count === 1 ? '' : 's'} am Automaten verkauft`,
+            }))
+          : [];
+
+      const merged = [...localRows, ...onlineRows, ...kioskRows]
         .sort((left, right) => new Date(right.purchased_at).getTime() - new Date(left.purchased_at).getTime());
 
       setPurchases(merged);
@@ -214,10 +233,12 @@ export default function Purchases() {
           className={`status-badge ${
             item.source === 'online'
               ? 'bg-sky-50 text-sky-700 ring-sky-200'
-              : 'bg-emerald-50 text-emerald-700 ring-emerald-200'
+              : item.source === 'kiosk'
+                ? 'bg-brand-50 text-brand-700 ring-brand-200'
+                : 'bg-emerald-50 text-emerald-700 ring-emerald-200'
           }`}
         >
-          {item.source === 'online' ? 'Online' : 'Local'}
+          {item.source === 'online' ? 'Online' : item.source === 'kiosk' ? 'Automat' : 'Local'}
         </span>
       ),
     },
@@ -304,13 +325,14 @@ export default function Purchases() {
             <select
               value={sourceFilter}
               onChange={(event) => {
-                setSourceFilter(event.target.value as 'all' | 'online' | 'local');
+                setSourceFilter(event.target.value as 'all' | 'online' | 'local' | 'kiosk');
               }}
               className="rounded-lg border border-slate-200/60 bg-white/60 px-3 py-1.5 text-sm text-slate-700"
             >
               <option value="all">All sources</option>
               <option value="online">Online only</option>
               <option value="local">Local only</option>
+              <option value="kiosk">Automat only</option>
             </select>
           </div>
         }

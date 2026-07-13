@@ -1,17 +1,36 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { CreditCard, Download, Receipt, Wallet } from 'lucide-react';
+import { Camera, CreditCard, Download, Receipt, Ticket, Wallet } from 'lucide-react';
 import { getOptionalSourceWarning, invokeEdgeFunction } from '../lib/edgeFunctions';
 import {
   createEmptyParkDashboardData,
   loadParkDashboardData,
   type ParkDashboardData,
 } from '../lib/parkDashboard';
+import {
+  aggregateByDate,
+  daysAgoInTimezone,
+  fetchKioskSales,
+  sumDays,
+  todayInTimezone,
+  type AggregatedDay,
+} from '../lib/kioskSales';
 import { formatCurrency, formatNumber, formatPercent, exportToCSV } from '../lib/utils';
 import GlassCard from '../components/ui/GlassCard';
 import KPICard from '../components/ui/KPICard';
 import { useI18n } from '../lib/i18n';
 import { usePark } from '../contexts/ParkContext';
+
+function formatDateLabel(iso: string): string {
+  const date = new Date(`${iso}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return iso;
+  return new Intl.DateTimeFormat('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' }).format(date);
+}
+
+function formatConversion(rate: number | null): string {
+  if (rate === null) return '–';
+  return new Intl.NumberFormat('de-DE', { style: 'percent', maximumFractionDigits: 0 }).format(rate);
+}
 
 interface StripeRevenuePoint {
   date: string;
@@ -42,6 +61,10 @@ export default function Revenue() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [issues, setIssues] = useState<string[]>([]);
+  const [isKioskPark, setIsKioskPark] = useState(false);
+  const [kioskPriceCents, setKioskPriceCents] = useState(0);
+  const [kioskTimezone, setKioskTimezone] = useState('Europe/Vienna');
+  const [kioskDays, setKioskDays] = useState<AggregatedDay[]>([]);
 
   useEffect(() => {
     loadData();
@@ -58,14 +81,25 @@ export default function Revenue() {
     setIssues([]);
 
     try {
-      const [parkDashboardResult, stripeRevenueResult, stripePaymentsResult] = await Promise.all([
+      const [parkDashboardResult, stripeRevenueResult, stripePaymentsResult, kioskResult] = await Promise.all([
         loadParkDashboardData(parkId),
         invokeEdgeFunction<{
           total_revenue: number;
           revenue_by_day: StripeRevenuePoint[];
         }>('stripe-revenue'),
         invokeEdgeFunction<{ payments: StripePayment[] }>('stripe-payments'),
+        fetchKioskSales(parkId).catch(() => null),
       ]);
+
+      if (kioskResult?.isKioskPark) {
+        setIsKioskPark(true);
+        setKioskPriceCents(kioskResult.priceCents ?? 0);
+        setKioskTimezone(kioskResult.timezone ?? 'Europe/Vienna');
+        setKioskDays(aggregateByDate(kioskResult.days, kioskResult.priceCents ?? 0));
+      } else {
+        setIsKioskPark(false);
+        setKioskDays([]);
+      }
 
       const nextIssues: string[] = [];
       const operationsWarning = getOptionalSourceWarning(
@@ -169,6 +203,20 @@ export default function Revenue() {
     }
   }
 
+  const kioskKpis = useMemo(() => {
+    if (!isKioskPark) return null;
+    const today = todayInTimezone(kioskTimezone);
+    const weekStart = daysAgoInTimezone(kioskTimezone, 6);
+    const monthPrefix = today.slice(0, 7);
+
+    return {
+      today: sumDays(kioskDays.filter((d) => d.businessDate === today)),
+      week: sumDays(kioskDays.filter((d) => d.businessDate >= weekStart)),
+      month: sumDays(kioskDays.filter((d) => d.businessDate.startsWith(monthPrefix))),
+      total: sumDays(kioskDays),
+    };
+  }, [isKioskPark, kioskDays, kioskTimezone]);
+
   const totals = useMemo(() => {
     return dailyRevenue.reduce(
       (sum, row) => ({
@@ -261,7 +309,7 @@ export default function Revenue() {
         </div>
       )}
 
-      {!parkData.features.stripe && !parkData.features.local_sales && (
+      {!parkData.features.stripe && !parkData.features.local_sales && !isKioskPark && (
         <GlassCard className="p-6">
           <h3 className="text-base font-semibold text-slate-800">No active revenue feed</h3>
           <p className="mt-2 text-sm text-slate-500">
@@ -270,6 +318,97 @@ export default function Revenue() {
         </GlassCard>
       )}
 
+      {isKioskPark && kioskKpis && (
+        <>
+          <GlassCard className="p-6">
+            <h3 className="text-base font-semibold text-slate-800">Selbstbedienungs-Automat</h3>
+            <p className="mt-2 text-sm text-slate-500">
+              Kein eigener Webshop hier — jedes gespeicherte Foto ist bereits ein bezahlter Kauf am Automaten
+              ({formatCurrency(kioskPriceCents, 'eur')} pro Foto). Die Kamera nummeriert jede Aufnahme
+              durchgehend; Lücken in dieser Nummerierung (Fahrten ohne Kauf) ergeben die geschätzte
+              Conversion-Rate unten.
+            </p>
+          </GlassCard>
+
+          <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+            <KPICard
+              title="Heute"
+              value={formatCurrency(kioskKpis.today.revenueCents, 'eur')}
+              subtitle={`${kioskKpis.today.sold} verkauft · ${formatConversion(
+                kioskKpis.today.expected ? kioskKpis.today.sold / kioskKpis.today.expected : null,
+              )} Conversion`}
+              icon={Ticket}
+              iconColor="text-brand-600"
+              iconBg="bg-brand-50"
+            />
+            <KPICard
+              title="Letzte 7 Tage"
+              value={formatCurrency(kioskKpis.week.revenueCents, 'eur')}
+              subtitle={`${kioskKpis.week.sold} verkauft · ${formatConversion(
+                kioskKpis.week.expected ? kioskKpis.week.sold / kioskKpis.week.expected : null,
+              )} Conversion`}
+              icon={Camera}
+              iconColor="text-sky-600"
+              iconBg="bg-sky-50"
+            />
+            <KPICard
+              title="Dieser Monat"
+              value={formatCurrency(kioskKpis.month.revenueCents, 'eur')}
+              subtitle={`${kioskKpis.month.sold} verkauft · ${formatConversion(
+                kioskKpis.month.expected ? kioskKpis.month.sold / kioskKpis.month.expected : null,
+              )} Conversion`}
+              icon={Receipt}
+              iconColor="text-emerald-600"
+              iconBg="bg-emerald-50"
+            />
+            <KPICard
+              title="Gesamt (seit Aufzeichnung)"
+              value={formatCurrency(kioskKpis.total.revenueCents, 'eur')}
+              subtitle={`${kioskKpis.total.sold} verkauft · ${formatConversion(
+                kioskKpis.total.expected ? kioskKpis.total.sold / kioskKpis.total.expected : null,
+              )} Conversion`}
+              icon={Wallet}
+              iconColor="text-slate-700"
+              iconBg="bg-slate-100"
+            />
+          </div>
+
+          <GlassCard className="p-6">
+            <h3 className="mb-4 text-base font-semibold text-slate-800">Tagesübersicht</h3>
+            {kioskDays.length === 0 ? (
+              <p className="text-sm text-slate-500">Noch keine Verkaufsdaten erfasst.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-400">
+                      <th className="py-2 pr-4">Tag</th>
+                      <th className="py-2 pr-4">Verkauft</th>
+                      <th className="py-2 pr-4">Geschätzte Fahrten</th>
+                      <th className="py-2 pr-4">Conversion</th>
+                      <th className="py-2">Umsatz</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {kioskDays.map((day) => (
+                      <tr key={day.businessDate} className="border-b border-slate-100 last:border-0">
+                        <td className="py-2 pr-4 text-slate-700">{formatDateLabel(day.businessDate)}</td>
+                        <td className="py-2 pr-4 text-slate-700">{day.soldCount}</td>
+                        <td className="py-2 pr-4 text-slate-700">{day.expectedCount ?? '–'}</td>
+                        <td className="py-2 pr-4 text-slate-700">{formatConversion(day.conversionRate)}</td>
+                        <td className="py-2 font-medium text-slate-800">{formatCurrency(day.revenueCents, 'eur')}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </GlassCard>
+        </>
+      )}
+
+      {(parkData.features.stripe || parkData.features.local_sales) && (
+      <>
       <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
         {parkData.features.stripe && (
           <KPICard
@@ -473,6 +612,8 @@ export default function Revenue() {
           </div>
         </GlassCard>
       </div>
+      </>
+      )}
     </div>
   );
 }

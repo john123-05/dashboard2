@@ -18,6 +18,7 @@ import LegalSupport from './pages/LegalSupport';
 import { I18nProvider } from './lib/i18n';
 import { ParkProvider } from './contexts/ParkContext';
 import ComingSoonOverlay from './components/ComingSoonOverlay';
+import KioskAwareOverlay from './components/KioskAwareOverlay';
 import StaffAdminLayout from './staff/components/AdminLayout';
 import StaffLoginPage from './staff/pages/StaffLoginPage';
 import StaffParksPage from './staff/pages/ParksPage';
@@ -55,17 +56,17 @@ export default function App() {
                 <Route
                   path="/revenue"
                   element={
-                    <ComingSoonOverlay description="Hier siehst du deinen Umsatz im Detail — zum Beispiel wie viel du pro Tag oder pro Attraktion eingenommen hast.">
+                    <KioskAwareOverlay description="Hier siehst du deinen Umsatz im Detail — zum Beispiel wie viel du pro Tag oder pro Attraktion eingenommen hast.">
                       <Revenue />
-                    </ComingSoonOverlay>
+                    </KioskAwareOverlay>
                   }
                 />
                 <Route
                   path="/purchases"
                   element={
-                    <ComingSoonOverlay description="Hier siehst du alle Käufe deiner Gäste im Überblick — wer wann was gekauft und wie viel bezahlt hat.">
+                    <KioskAwareOverlay description="Hier siehst du alle Käufe deiner Gäste im Überblick — wer wann was gekauft und wie viel bezahlt hat.">
                       <Purchases />
-                    </ComingSoonOverlay>
+                    </KioskAwareOverlay>
                   }
                 />
                 <Route
