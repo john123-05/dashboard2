@@ -103,6 +103,35 @@ export function daysAgoInTimezone(timezone: string, daysAgo: number): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(d);
 }
 
+export interface KioskChartPoint {
+  date: string;
+  label: string;
+  revenueEur: number;
+  soldCount: number;
+  expectedCount: number | null;
+}
+
+// Chronological (oldest-first) view of the same days aggregateByDate
+// returns newest-first for tables — the trend chart reads left-to-right.
+export function toChartSeries(days: AggregatedDay[], limitDays = 30): KioskChartPoint[] {
+  return [...days]
+    .sort((a, b) => a.businessDate.localeCompare(b.businessDate))
+    .slice(-limitDays)
+    .map((day) => {
+      const date = new Date(`${day.businessDate}T00:00:00`);
+      const label = Number.isNaN(date.getTime())
+        ? day.businessDate
+        : new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit' }).format(date);
+      return {
+        date: day.businessDate,
+        label,
+        revenueEur: day.revenueCents / 100,
+        soldCount: day.soldCount,
+        expectedCount: day.expectedCount,
+      };
+    });
+}
+
 export function sumDays(days: AggregatedDay[]): { sold: number; expected: number | null; revenueCents: number } {
   let sold = 0;
   let expected = 0;

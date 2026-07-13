@@ -13,6 +13,7 @@ import {
   fetchKioskSales,
   sumDays,
   todayInTimezone,
+  toChartSeries,
   type AggregatedDay,
 } from '../lib/kioskSales';
 import { formatCurrency, formatNumber, formatPercent, exportToCSV } from '../lib/utils';
@@ -219,6 +220,8 @@ export default function Revenue() {
     };
   }, [isKioskPark, kioskDays, kioskTimezone]);
 
+  const kioskChartData = useMemo(() => toChartSeries(kioskDays), [kioskDays]);
+
   const totals = useMemo(() => {
     return dailyRevenue.reduce(
       (sum, row) => ({
@@ -374,6 +377,96 @@ export default function Revenue() {
               iconBg="bg-slate-100"
             />
           </div>
+
+          <GlassCard className="p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-semibold text-slate-800">Umsatz &amp; Conversion</h3>
+                <p className="text-sm text-slate-500">
+                  Umsatz (links) sowie verkaufte Fotos und geschätzte Fahrten (rechts) — die Lücke zwischen
+                  den beiden rechten Linien ist die Conversion.
+                </p>
+              </div>
+            </div>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={kioskChartData}>
+                  <defs>
+                    <linearGradient id="kioskRevenue" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#0ea5e9" stopOpacity={0.22} />
+                      <stop offset="100%" stopColor="#0ea5e9" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} />
+                  <YAxis
+                    yAxisId="revenue"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 11, fill: '#94a3b8' }}
+                    tickFormatter={(value) => `€${value}`}
+                  />
+                  <YAxis
+                    yAxisId="count"
+                    orientation="right"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 11, fill: '#94a3b8' }}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      background: 'rgba(255,255,255,0.94)',
+                      backdropFilter: 'blur(12px)',
+                      border: '1px solid rgba(255,255,255,0.5)',
+                      borderRadius: '12px',
+                      boxShadow: '0 8px 32px rgba(15,23,42,0.08)',
+                    }}
+                    formatter={(value, name) => {
+                      if (name === 'revenueEur') return [`€${Number(value ?? 0).toFixed(2)}`, 'Umsatz'];
+                      if (name === 'soldCount') return [value, 'Verkauft'];
+                      return [value ?? '–', 'Geschätzte Fahrten'];
+                    }}
+                  />
+                  <Area
+                    yAxisId="revenue"
+                    type="monotone"
+                    dataKey="revenueEur"
+                    stroke="#0ea5e9"
+                    strokeWidth={2}
+                    fill="url(#kioskRevenue)"
+                  />
+                  <Area
+                    yAxisId="count"
+                    type="monotone"
+                    dataKey="soldCount"
+                    stroke="#10b981"
+                    strokeWidth={2}
+                    fill="none"
+                  />
+                  <Area
+                    yAxisId="count"
+                    type="monotone"
+                    dataKey="expectedCount"
+                    stroke="#f59e0b"
+                    strokeWidth={2}
+                    strokeDasharray="4 3"
+                    fill="none"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-4 text-xs text-slate-500">
+              <span className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-sky-500" /> Umsatz
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-emerald-500" /> Verkaufte Fotos
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-amber-500" /> Geschätzte Fahrten
+              </span>
+            </div>
+          </GlassCard>
 
           <GlassCard className="p-6">
             <h3 className="mb-4 text-base font-semibold text-slate-800">Tagesübersicht</h3>
