@@ -4,6 +4,7 @@ import { isTourDisabled, resetTourSessionFlag, setTourDisabled } from '../lib/on
 import {
   getCurrentSubscription,
   isPushSupported,
+  sendTestPush,
   subscribeToPush,
   unsubscribeFromPush,
 } from '../lib/pushNotifications';
@@ -20,6 +21,8 @@ export default function SettingsPage() {
   const [pushBusy, setPushBusy] = useState(false);
   const [pushError, setPushError] = useState<string | null>(null);
   const [pushChecked, setPushChecked] = useState(false);
+  const [testBusy, setTestBusy] = useState(false);
+  const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
 
   useEffect(() => {
     if (!pushSupported) {
@@ -34,6 +37,7 @@ export default function SettingsPage() {
   async function onTogglePush(enabled: boolean) {
     setPushBusy(true);
     setPushError(null);
+    setTestResult(null);
     try {
       if (enabled) {
         await subscribeToPush();
@@ -46,6 +50,19 @@ export default function SettingsPage() {
       setPushError(err instanceof Error ? err.message : 'Unbekannter Fehler');
     } finally {
       setPushBusy(false);
+    }
+  }
+
+  async function onSendTestPush() {
+    setTestBusy(true);
+    setTestResult(null);
+    try {
+      await sendTestPush();
+      setTestResult({ ok: true, message: 'Test-Benachrichtigung gesendet — sollte gleich ankommen.' });
+    } catch (err) {
+      setTestResult({ ok: false, message: err instanceof Error ? err.message : 'Unbekannter Fehler' });
+    } finally {
+      setTestBusy(false);
     }
   }
 
@@ -138,6 +155,18 @@ export default function SettingsPage() {
         )}
 
         {pushError && <p className="error">{pushError}</p>}
+
+        {pushSubscribed && (
+          <div className="setting-actions">
+            <button type="button" className="secondary" disabled={testBusy} onClick={onSendTestPush}>
+              {testBusy ? 'Sende...' : 'Test-Benachrichtigung senden'}
+            </button>
+          </div>
+        )}
+
+        {testResult && (
+          <p className={testResult.ok ? 'note' : 'error'}>{testResult.message}</p>
+        )}
       </div>
     </div>
   );

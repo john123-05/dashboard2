@@ -39,6 +39,18 @@ export async function subscribeToPush(): Promise<void> {
   const registration = await navigator.serviceWorker.register('/sw.js');
   await navigator.serviceWorker.ready;
 
+  // A browser refuses to subscribe with a new applicationServerKey while an
+  // old subscription (e.g. from a previous VAPID key rotation) is still
+  // active for this registration — it throws instead of prompting again, and
+  // since Notification.requestPermission() above already resolved without a
+  // popup (permission was decided earlier), that failure can look like
+  // nothing happened at all. Clearing any stale subscription first makes
+  // this idempotent regardless of what the browser already had stored.
+  const existing = await registration.pushManager.getSubscription();
+  if (existing) {
+    await existing.unsubscribe();
+  }
+
   const subscription = await registration.pushManager.subscribe({
     userVisibleOnly: true,
     applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
@@ -58,6 +70,14 @@ export async function subscribeToPush(): Promise<void> {
   if (!res.ok) {
     const body = await res.json().catch(() => null);
     throw new Error(getApiErrorMessage(body, 'Abonnement konnte nicht gespeichert werden'));
+  }
+}
+
+export async function sendTestPush(): Promise<void> {
+  const res = await edgeFetch('/api/admin/test-push', { method: 'POST' });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(getApiErrorMessage(body, 'Test-Benachrichtigung konnte nicht gesendet werden'));
   }
 }
 
