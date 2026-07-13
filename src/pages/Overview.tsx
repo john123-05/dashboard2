@@ -8,6 +8,7 @@ import {
   CreditCard,
   FileWarning,
   Receipt,
+  Ticket,
   Users,
   Wallet,
   X,
@@ -20,6 +21,15 @@ import {
   loadParkDashboardData,
   type ParkDashboardData,
 } from '../lib/parkDashboard';
+import {
+  aggregateByDate,
+  daysAgoInTimezone,
+  fetchKioskPurchases,
+  fetchKioskSales,
+  sumDays,
+  todayInTimezone,
+  type AggregatedDay,
+} from '../lib/kioskSales';
 import { useAuth } from '../contexts/AuthContext';
 import { usePark } from '../contexts/ParkContext';
 import { useI18n } from '../lib/i18n';
@@ -33,6 +43,11 @@ import {
 } from '../lib/utils';
 import KPICard from '../components/ui/KPICard';
 import GlassCard from '../components/ui/GlassCard';
+
+function formatConversion(rate: number | null): string {
+  if (rate === null) return '–';
+  return new Intl.NumberFormat('de-DE', { style: 'percent', maximumFractionDigits: 0 }).format(rate);
+}
 
 interface StripeRevenuePoint {
   date: string;
@@ -60,7 +75,7 @@ interface CombinedDailyPoint {
 
 interface ActivityItem {
   id: string;
-  source: 'ops' | 'support' | 'stripe';
+  source: 'ops' | 'support' | 'stripe' | 'kiosk';
   title: string;
   description: string;
   created_at: string;
@@ -71,8 +86,9 @@ interface ActivityItem {
 export default function Overview() {
   const navigate = useNavigate();
   const { profile } = useAuth();
-  const { parkId, parkName } = usePark();
+  const { parkId, parkName, isKioskPark, kioskTimezone, kioskCheckLoading } = usePark();
   const { t } = useI18n();
+  const [kioskDays, setKioskDays] = useState<AggregatedDay[]>([]);
   const [parkData, setParkData] = useState<ParkDashboardData | null>(null);
   const [combinedDaily, setCombinedDaily] = useState<CombinedDailyPoint[]>([]);
   const [recentTransactions, setRecentTransactions] = useState<ActivityItem[]>([]);
@@ -86,8 +102,10 @@ export default function Overview() {
   const [dismissedActivityIds, setDismissedActivityIds] = useState<string[]>([]);
 
   useEffect(() => {
+    if (kioskCheckLoading) return;
     loadData();
-  }, [parkId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [parkId, kioskCheckLoading]);
 
   useEffect(() => {
     if (!parkId) {
@@ -122,6 +140,66 @@ export default function Overview() {
     setIssues([]);
 
     try {
+      // Kiosk parks (no webshop) have no Stripe/local-sales data to speak
+      // of — skip those fetches entirely instead of surfacing "temporarily
+      // unavailable" warnings for feeds that were never going to apply.
+      // Photo/attraction/user counts and real support tickets still apply
+      // regardless of the sales model, so those are kept.
+      if (isKioskPark) {
+        const [kioskResult, kioskPurchasesResult, externalUsersResult, externalPhotosResult, attractionsResult, supportTicketsResult] =
+          await Promise.all([
+            fetchKioskSales(parkId),
+            fetchKioskPurchases(parkId).catch(() => null),
+            invokeEdgeFunction<{ customers: { id: string }[] }>('external-users', { query: { park_id: parkId } }),
+            invokeEdgeFunction<{ photos: { id: string }[] }>('external-photos', { query: { park_id: parkId } }),
+            invokeEdgeFunction<{ attractions: { is_active?: boolean }[] }>('external-attractions', { query: { park_id: parkId } }),
+            supabase
+              .from('support_tickets')
+              .select('id, subject, status, created_at, updated_at')
+              .order('updated_at', { ascending: false })
+              .limit(8),
+          ]);
+
+        setKioskDays(aggregateByDate(kioskResult.days, kioskResult.priceCents ?? 0));
+        setParkData(createEmptyParkDashboardData(parkId, parkName || 'Selected park'));
+        setTotalUsers(externalUsersResult.error ? null : externalUsersResult.data?.customers?.length ?? null);
+        setTotalPhotos(externalPhotosResult.error ? null : externalPhotosResult.data?.photos?.length ?? null);
+        setActiveAttractions(
+          attractionsResult.error
+            ? null
+            : (attractionsResult.data?.attractions || []).filter((item) => item.is_active !== false).length,
+        );
+        setCombinedDaily([]);
+
+        const kioskActivity: ActivityItem[] = (kioskPurchasesResult?.purchases ?? [])
+          .slice(0, 10)
+          .map((purchase) => ({
+            id: `kiosk-${purchase.id}`,
+            source: 'kiosk' as const,
+            title: 'Foto am Automaten verkauft',
+            description: purchase.email ? `Später abgeholt: ${purchase.email}` : 'Kein Abholstatus bekannt',
+            created_at: purchase.capturedAt,
+          }));
+        setRecentTransactions(kioskActivity);
+
+        const activities: ActivityItem[] = (supportTicketsResult.data || [])
+          .map((ticket) => ({
+            id: `support-${ticket.id}`,
+            source: 'support' as const,
+            title: 'Support ticket',
+            description: `${ticket.subject} · ${ticket.status.replace('_', ' ')}`,
+            created_at: ticket.updated_at || ticket.created_at,
+            status: ticket.status,
+          }))
+          .sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime())
+          .slice(0, 12);
+        setActivityItems(activities);
+
+        setError(null);
+        setLoading(false);
+        return;
+      }
+
       const [
         parkDashboardResult,
         revenueResult,
@@ -322,6 +400,19 @@ export default function Overview() {
     }
   }
 
+  const kioskKpis = useMemo(() => {
+    if (!isKioskPark) return null;
+    const today = todayInTimezone(kioskTimezone);
+    const weekStart = daysAgoInTimezone(kioskTimezone, 6);
+    const monthPrefix = today.slice(0, 7);
+
+    return {
+      today: sumDays(kioskDays.filter((d) => d.businessDate === today)),
+      week: sumDays(kioskDays.filter((d) => d.businessDate >= weekStart)),
+      month: sumDays(kioskDays.filter((d) => d.businessDate.startsWith(monthPrefix))),
+    };
+  }, [isKioskPark, kioskDays, kioskTimezone]);
+
   const onlineRevenueCents = useMemo(
     () => Math.round(
       combinedDaily.reduce((sum, item) => sum + item.onlineRevenue, 0) * 100,
@@ -404,38 +495,42 @@ export default function Overview() {
         : 'bg-amber-50 text-amber-700 ring-amber-200';
 
   const liveStatusWidgets = [
-    {
-      id: 'last-activity',
-      label: 'Last activity',
-      value: parkData.summary.last_activity_at
-        ? formatRelative(parkData.summary.last_activity_at)
-        : '-',
-      helper: 'Open system health',
-      route: '/health',
-      icon: Activity,
-      iconColor: 'text-emerald-600',
-      iconBg: 'bg-emerald-50',
-    },
-    {
-      id: 'data-files',
-      label: 'Data files scanned',
-      value: formatNumber(parkData.sources.files_scanned || 0),
-      helper: 'Open operations',
-      route: '/operations',
-      icon: Receipt,
-      iconColor: 'text-sky-600',
-      iconBg: 'bg-sky-50',
-    },
-    {
-      id: 'recognized-ops',
-      label: 'Recognized ops files',
-      value: formatNumber(parkData.sources.recognized_files || 0),
-      helper: 'Open operations',
-      route: '/operations',
-      icon: FileWarning,
-      iconColor: 'text-amber-600',
-      iconBg: 'bg-amber-50',
-    },
+    ...(isKioskPark
+      ? []
+      : [
+          {
+            id: 'last-activity',
+            label: 'Last activity',
+            value: parkData.summary.last_activity_at
+              ? formatRelative(parkData.summary.last_activity_at)
+              : '-',
+            helper: 'Open system health',
+            route: '/health',
+            icon: Activity,
+            iconColor: 'text-emerald-600',
+            iconBg: 'bg-emerald-50',
+          },
+          {
+            id: 'data-files',
+            label: 'Data files scanned',
+            value: formatNumber(parkData.sources.files_scanned || 0),
+            helper: 'Open operations',
+            route: '/operations',
+            icon: Receipt,
+            iconColor: 'text-sky-600',
+            iconBg: 'bg-sky-50',
+          },
+          {
+            id: 'recognized-ops',
+            label: 'Recognized ops files',
+            value: formatNumber(parkData.sources.recognized_files || 0),
+            helper: 'Open operations',
+            route: '/operations',
+            icon: FileWarning,
+            iconColor: 'text-amber-600',
+            iconBg: 'bg-amber-50',
+          },
+        ]),
     ...(totalUsers !== null
       ? [
           {
@@ -505,14 +600,17 @@ export default function Overview() {
             <h2 className="text-2xl font-bold tracking-tight text-slate-800">
               {t('overview.title')}
             </h2>
-            <span className={`status-badge ${statusTone}`}>{systemStatusLabel}</span>
+            {!isKioskPark && <span className={`status-badge ${statusTone}`}>{systemStatusLabel}</span>}
           </div>
           <p className="mt-1 text-sm text-slate-500">
             {parkName || parkData.park_name}
             {profile ? ` · ${profile.full_name}` : ''}
-            {parkData.summary.last_data_at ? ` · Last data ${formatRelative(parkData.summary.last_data_at)}` : ''}
+            {!isKioskPark && parkData.summary.last_data_at
+              ? ` · Last data ${formatRelative(parkData.summary.last_data_at)}`
+              : ''}
           </p>
         </div>
+        {!isKioskPark && (
         <div className="flex flex-wrap gap-2">
           {parkData.features.stripe && (
             <span className="rounded-full bg-sky-50 px-3 py-1 text-xs font-medium text-sky-700">
@@ -530,6 +628,7 @@ export default function Overview() {
             </span>
           )}
         </div>
+        )}
       </div>
 
       {issues.length > 0 && (
@@ -539,6 +638,51 @@ export default function Overview() {
         </div>
       )}
 
+      {isKioskPark && kioskKpis && (
+        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+          <KPICard
+            title="Heute"
+            value={formatCurrency(kioskKpis.today.revenueCents, 'eur')}
+            subtitle={`${kioskKpis.today.sold} verkauft · ${formatConversion(
+              kioskKpis.today.expected ? kioskKpis.today.sold / kioskKpis.today.expected : null,
+            )} Conversion`}
+            icon={Ticket}
+            iconColor="text-brand-600"
+            iconBg="bg-brand-50"
+          />
+          <KPICard
+            title="Letzte 7 Tage"
+            value={formatCurrency(kioskKpis.week.revenueCents, 'eur')}
+            subtitle={`${kioskKpis.week.sold} verkauft · ${formatConversion(
+              kioskKpis.week.expected ? kioskKpis.week.sold / kioskKpis.week.expected : null,
+            )} Conversion`}
+            icon={Camera}
+            iconColor="text-sky-600"
+            iconBg="bg-sky-50"
+          />
+          <KPICard
+            title="Dieser Monat"
+            value={formatCurrency(kioskKpis.month.revenueCents, 'eur')}
+            subtitle={`${kioskKpis.month.sold} verkauft · ${formatConversion(
+              kioskKpis.month.expected ? kioskKpis.month.sold / kioskKpis.month.expected : null,
+            )} Conversion`}
+            icon={Receipt}
+            iconColor="text-emerald-600"
+            iconBg="bg-emerald-50"
+          />
+          {totalPhotos !== null && (
+            <KPICard
+              title="Fotos gesamt"
+              value={formatNumber(totalPhotos)}
+              icon={Camera}
+              iconColor="text-violet-600"
+              iconBg="bg-violet-50"
+            />
+          )}
+        </div>
+      )}
+
+      {!isKioskPark && (
       <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-6">
         {parkData.features.stripe && (
           <KPICard
@@ -596,6 +740,7 @@ export default function Overview() {
           iconBg="bg-cyan-50"
         />
       </div>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
         {liveStatusWidgets.map((widget) => (
@@ -618,7 +763,8 @@ export default function Overview() {
         ))}
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1.8fr_1fr]">
+      <div className={`grid gap-6 ${isKioskPark ? '' : 'xl:grid-cols-[1.8fr_1fr]'}`}>
+        {!isKioskPark && (
         <GlassCard className="p-6">
           <div className="mb-4 flex items-center justify-between">
             <div>
@@ -684,6 +830,7 @@ export default function Overview() {
             </ResponsiveContainer>
           </div>
         </GlassCard>
+        )}
 
         <GlassCard className="p-6">
           <div className="mb-4 flex items-center justify-between gap-3">
@@ -763,10 +910,12 @@ export default function Overview() {
                         className={`status-badge ${
                           item.source === 'stripe'
                             ? 'bg-sky-50 text-sky-700 ring-sky-200'
-                            : 'bg-emerald-50 text-emerald-700 ring-emerald-200'
+                            : item.source === 'kiosk'
+                              ? 'bg-brand-50 text-brand-700 ring-brand-200'
+                              : 'bg-emerald-50 text-emerald-700 ring-emerald-200'
                         }`}
                       >
-                        {item.source === 'stripe' ? 'Online' : 'Local'}
+                        {item.source === 'stripe' ? 'Online' : item.source === 'kiosk' ? 'Automat' : 'Local'}
                       </span>
                       {item.status && (
                         <span className={`status-badge ${statusColor(item.status)}`}>{item.status}</span>

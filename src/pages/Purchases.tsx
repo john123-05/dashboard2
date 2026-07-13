@@ -7,7 +7,7 @@ import {
   type ParkDashboardData,
   type ParkDashboardEvent,
 } from '../lib/parkDashboard';
-import { fetchKioskSales } from '../lib/kioskSales';
+import { fetchKioskPurchases } from '../lib/kioskSales';
 import { formatCurrency, formatDateTime, statusColor, exportToCSV } from '../lib/utils';
 import DataTable, { type DataTableColumn } from '../components/ui/DataTable';
 import { useI18n } from '../lib/i18n';
@@ -40,7 +40,7 @@ interface StripePayment {
 
 export default function Purchases() {
   const { t } = useI18n();
-  const { parkId } = usePark();
+  const { parkId, isKioskPark, kioskCheckLoading } = usePark();
   const [parkData, setParkData] = useState<ParkDashboardData | null>(null);
   const [purchases, setPurchases] = useState<PurchaseRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,8 +49,10 @@ export default function Purchases() {
   const [issues, setIssues] = useState<string[]>([]);
 
   useEffect(() => {
+    if (kioskCheckLoading) return;
     loadData();
-  }, [parkId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [parkId, kioskCheckLoading]);
 
   async function loadData() {
     if (!parkId) {
@@ -63,10 +65,40 @@ export default function Purchases() {
     setIssues([]);
 
     try {
-      const [parkDashboardResult, paymentsResult, kioskResult] = await Promise.all([
+      // Kiosk parks (no webshop) have no Stripe/local-sales data — skip
+      // those fetches entirely instead of surfacing "temporarily
+      // unavailable" warnings for feeds that were never going to apply.
+      // Each row here is one actual photo taken, not a daily aggregate —
+      // this only covers the last ~30 days (photos are hard-deleted after
+      // that), which is the right tradeoff for a recent-activity log.
+      if (isKioskPark) {
+        const kioskResult = await fetchKioskPurchases(parkId);
+        const priceCents = kioskResult.priceCents ?? 0;
+        const kioskRows: PurchaseRow[] = kioskResult.purchases.map((purchase) => ({
+          id: purchase.id,
+          source: 'kiosk' as const,
+          amount_cents: priceCents,
+          amount_kind: 'confirmed' as const,
+          currency: 'EUR',
+          status: purchase.email ? 'claimed' : 'unknown',
+          payment_method: 'kiosk',
+          reference: purchase.cameraCode,
+          purchased_at: purchase.capturedAt,
+          customer_or_device: purchase.email || purchase.fullName || 'Unbekannt',
+          description: purchase.email
+            ? `Foto am Automaten gekauft, später per QR-Code abgeholt (${purchase.email})`
+            : 'Foto am Automaten gekauft',
+        }));
+        setPurchases(kioskRows);
+        setParkData(createEmptyParkDashboardData(parkId));
+        setError(null);
+        setLoading(false);
+        return;
+      }
+
+      const [parkDashboardResult, paymentsResult] = await Promise.all([
         loadParkDashboardData(parkId),
         invokeEdgeFunction<{ payments: StripePayment[] }>('stripe-payments'),
-        fetchKioskSales(parkId).catch(() => null),
       ]);
 
       const nextIssues: string[] = [];
@@ -120,24 +152,7 @@ export default function Purchases() {
         }))
         .sort((left, right) => new Date(right.purchased_at).getTime() - new Date(left.purchased_at).getTime());
 
-      const kioskRows: PurchaseRow[] =
-        kioskResult?.isKioskPark && kioskResult.priceCents
-          ? kioskResult.days.map((day) => ({
-              id: `kiosk-${day.business_date}-${day.camera_code}`,
-              source: 'kiosk' as const,
-              amount_cents: day.photos_sold_count * (kioskResult.priceCents as number),
-              amount_kind: 'confirmed' as const,
-              currency: 'EUR',
-              status: 'completed',
-              payment_method: 'kiosk',
-              reference: day.camera_code,
-              purchased_at: day.business_date,
-              customer_or_device: `Kamera ${day.camera_code}`,
-              description: `${day.photos_sold_count} Foto${day.photos_sold_count === 1 ? '' : 's'} am Automaten verkauft`,
-            }))
-          : [];
-
-      const merged = [...localRows, ...onlineRows, ...kioskRows]
+      const merged = [...localRows, ...onlineRows]
         .sort((left, right) => new Date(right.purchased_at).getTime() - new Date(left.purchased_at).getTime());
 
       setPurchases(merged);
@@ -297,7 +312,9 @@ export default function Purchases() {
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('purchases.title')}</h2>
           <p className="mt-1 text-sm text-slate-500">
-            Unified transaction log for Stripe and on-site sales
+            {isKioskPark
+              ? 'Jedes Foto der letzten ~30 Tage, das am Automaten gekauft wurde'
+              : 'Unified transaction log for Stripe and on-site sales'}
           </p>
         </div>
         <button onClick={handleExport} className="glass-button-secondary">
@@ -320,21 +337,22 @@ export default function Purchases() {
         searchKeys={['customer_or_device', 'payment_method', 'description', 'reference']}
         pageSize={12}
         actions={
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-slate-400" />
-            <select
-              value={sourceFilter}
-              onChange={(event) => {
-                setSourceFilter(event.target.value as 'all' | 'online' | 'local' | 'kiosk');
-              }}
-              className="rounded-lg border border-slate-200/60 bg-white/60 px-3 py-1.5 text-sm text-slate-700"
-            >
-              <option value="all">All sources</option>
-              <option value="online">Online only</option>
-              <option value="local">Local only</option>
-              <option value="kiosk">Automat only</option>
-            </select>
-          </div>
+          isKioskPark ? undefined : (
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-slate-400" />
+              <select
+                value={sourceFilter}
+                onChange={(event) => {
+                  setSourceFilter(event.target.value as 'all' | 'online' | 'local' | 'kiosk');
+                }}
+                className="rounded-lg border border-slate-200/60 bg-white/60 px-3 py-1.5 text-sm text-slate-700"
+              >
+                <option value="all">All sources</option>
+                <option value="online">Online only</option>
+                <option value="local">Local only</option>
+              </select>
+            </div>
+          )
         }
       />
     </div>

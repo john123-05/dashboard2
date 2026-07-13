@@ -20,9 +20,9 @@ import { useI18n } from '../../lib/i18n';
 import { usePark } from '../../contexts/ParkContext';
 
 const navItems = [
-  { to: '/', icon: LayoutDashboard, labelKey: 'nav.overview', comingSoon: true },
-  { to: '/revenue', icon: DollarSign, labelKey: 'nav.revenue', comingSoon: true },
-  { to: '/purchases', icon: ShoppingCart, labelKey: 'nav.purchases', comingSoon: true },
+  { to: '/', icon: LayoutDashboard, labelKey: 'nav.overview', comingSoon: true, kioskUnlocks: true },
+  { to: '/revenue', icon: DollarSign, labelKey: 'nav.revenue', comingSoon: true, kioskUnlocks: true },
+  { to: '/purchases', icon: ShoppingCart, labelKey: 'nav.purchases', comingSoon: true, kioskUnlocks: true },
   { to: '/users', icon: Users, labelKey: 'nav.users', comingSoon: true },
   { to: '/photos', icon: Camera, labelKey: 'nav.photos' },
   { to: '/leads', icon: Mail, labelKey: 'nav.leads' },
@@ -37,7 +37,7 @@ export default function Sidebar() {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const { t } = useI18n();
-  const { parkName, setPark } = usePark();
+  const { parkName, setPark, isKioskPark } = usePark();
 
   return (
     <aside
@@ -71,6 +71,7 @@ export default function Sidebar() {
               item.to === '/'
                 ? location.pathname === '/'
                 : location.pathname.startsWith(item.to);
+            const showComingSoon = item.comingSoon && !(item.kioskUnlocks && isKioskPark);
 
             return (
               <NavLink
@@ -83,7 +84,7 @@ export default function Sidebar() {
                 } ${collapsed ? 'justify-center' : ''}`}
                 title={
                   collapsed
-                    ? `${t(item.labelKey)}${item.comingSoon ? ` (${t('nav.coming_soon')})` : ''}`
+                    ? `${t(item.labelKey)}${showComingSoon ? ` (${t('nav.coming_soon')})` : ''}`
                     : undefined
                 }
               >
@@ -95,7 +96,7 @@ export default function Sidebar() {
                 {!collapsed && (
                   <span className="animate-fade-in truncate">
                     {t(item.labelKey)}
-                    {item.comingSoon && (
+                    {showComingSoon && (
                       <span className="ml-1 text-xs text-slate-500">({t('nav.coming_soon')})</span>
                     )}
                   </span>

@@ -36,6 +36,36 @@ export async function fetchKioskSales(parkId: string): Promise<KioskSalesRespons
   return data;
 }
 
+export interface KioskPurchaseRow {
+  id: string;
+  capturedAt: string;
+  cameraCode: string;
+  email: string | null;
+  fullName: string | null;
+}
+
+export interface KioskPurchasesResponse {
+  isKioskPark: boolean;
+  priceCents: number | null;
+  purchases: KioskPurchaseRow[];
+}
+
+// Individual, recent purchases (last ~30 days — photos are hard-deleted
+// after that) for the Käufe/Purchases page, as opposed to fetchKioskSales'
+// permanent daily rollup used for long-term revenue trends.
+export async function fetchKioskPurchases(parkId: string): Promise<KioskPurchasesResponse> {
+  const { data, error } = await invokeEdgeFunction<KioskPurchasesResponse>('kiosk-photo-purchases', {
+    useSessionAuth: true,
+    query: { park_id: parkId },
+  });
+
+  if (error || !data) {
+    throw new Error(error || 'Keine Antwort von kiosk-photo-purchases');
+  }
+
+  return data;
+}
+
 // Multiple cameras at one park have independent, non-overlapping sequence
 // counters, so their per-day expected-ride-count (max-min+1) is summed
 // across cameras rather than compared against each other.

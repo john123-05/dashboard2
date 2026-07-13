@@ -48,9 +48,9 @@ export default function App() {
                 <Route
                   path="/"
                   element={
-                    <ComingSoonOverlay description="Die Übersicht zeigt dir auf einen Blick die wichtigsten Zahlen deines Parks — zum Beispiel wie viele Fotos verkauft wurden und wie sich der Umsatz entwickelt.">
+                    <KioskAwareOverlay description="Die Übersicht zeigt dir auf einen Blick die wichtigsten Zahlen deines Parks — zum Beispiel wie viele Fotos verkauft wurden und wie sich der Umsatz entwickelt.">
                       <Overview />
-                    </ComingSoonOverlay>
+                    </KioskAwareOverlay>
                   }
                 />
                 <Route

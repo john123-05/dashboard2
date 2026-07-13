@@ -54,21 +54,20 @@ interface RevenueSeriesRow {
 
 export default function Revenue() {
   const { t } = useI18n();
-  const { parkId } = usePark();
+  const { parkId, isKioskPark, kioskPriceCents, kioskTimezone, kioskCheckLoading } = usePark();
   const [parkData, setParkData] = useState<ParkDashboardData | null>(null);
   const [dailyRevenue, setDailyRevenue] = useState<RevenueSeriesRow[]>([]);
   const [onlinePaymentCount, setOnlinePaymentCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [issues, setIssues] = useState<string[]>([]);
-  const [isKioskPark, setIsKioskPark] = useState(false);
-  const [kioskPriceCents, setKioskPriceCents] = useState(0);
-  const [kioskTimezone, setKioskTimezone] = useState('Europe/Vienna');
   const [kioskDays, setKioskDays] = useState<AggregatedDay[]>([]);
 
   useEffect(() => {
+    if (kioskCheckLoading) return;
     loadData();
-  }, [parkId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [parkId, kioskCheckLoading]);
 
   async function loadData() {
     if (!parkId) {
@@ -81,25 +80,28 @@ export default function Revenue() {
     setIssues([]);
 
     try {
-      const [parkDashboardResult, stripeRevenueResult, stripePaymentsResult, kioskResult] = await Promise.all([
+      // Kiosk parks (no webshop) have no Stripe/local-sales data to speak
+      // of — skip those fetches entirely instead of surfacing "temporarily
+      // unavailable" warnings for feeds that were never going to apply.
+      if (isKioskPark) {
+        const kioskResult = await fetchKioskSales(parkId);
+        setKioskDays(aggregateByDate(kioskResult.days, kioskResult.priceCents ?? 0));
+        setParkData(createEmptyParkDashboardData(parkId));
+        setError(null);
+        setLoading(false);
+        return;
+      }
+
+      const [parkDashboardResult, stripeRevenueResult, stripePaymentsResult] = await Promise.all([
         loadParkDashboardData(parkId),
         invokeEdgeFunction<{
           total_revenue: number;
           revenue_by_day: StripeRevenuePoint[];
         }>('stripe-revenue'),
         invokeEdgeFunction<{ payments: StripePayment[] }>('stripe-payments'),
-        fetchKioskSales(parkId).catch(() => null),
       ]);
 
-      if (kioskResult?.isKioskPark) {
-        setIsKioskPark(true);
-        setKioskPriceCents(kioskResult.priceCents ?? 0);
-        setKioskTimezone(kioskResult.timezone ?? 'Europe/Vienna');
-        setKioskDays(aggregateByDate(kioskResult.days, kioskResult.priceCents ?? 0));
-      } else {
-        setIsKioskPark(false);
-        setKioskDays([]);
-      }
+      setKioskDays([]);
 
       const nextIssues: string[] = [];
       const operationsWarning = getOptionalSourceWarning(
@@ -324,7 +326,7 @@ export default function Revenue() {
             <h3 className="text-base font-semibold text-slate-800">Selbstbedienungs-Automat</h3>
             <p className="mt-2 text-sm text-slate-500">
               Kein eigener Webshop hier — jedes gespeicherte Foto ist bereits ein bezahlter Kauf am Automaten
-              ({formatCurrency(kioskPriceCents, 'eur')} pro Foto). Die Kamera nummeriert jede Aufnahme
+              ({formatCurrency(kioskPriceCents ?? 0, 'eur')} pro Foto). Die Kamera nummeriert jede Aufnahme
               durchgehend; Lücken in dieser Nummerierung (Fahrten ohne Kauf) ergeben die geschätzte
               Conversion-Rate unten.
             </p>

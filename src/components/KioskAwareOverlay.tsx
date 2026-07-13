@@ -1,6 +1,5 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { usePark } from '../contexts/ParkContext';
-import { fetchKioskSales } from '../lib/kioskSales';
 import ComingSoonOverlay from './ComingSoonOverlay';
 
 // Self-service/kiosk parks (price_per_photo_cents set on the shared parks
@@ -14,26 +13,11 @@ export default function KioskAwareOverlay({
   description: string;
   children: ReactNode;
 }) {
-  const { parkId } = usePark();
-  const [isKioskPark, setIsKioskPark] = useState<boolean | null>(null);
+  const { isKioskPark, kioskCheckLoading } = usePark();
 
-  useEffect(() => {
-    let cancelled = false;
-    setIsKioskPark(null);
-    if (!parkId) return;
-
-    fetchKioskSales(parkId)
-      .then((result) => {
-        if (!cancelled) setIsKioskPark(result.isKioskPark);
-      })
-      .catch(() => {
-        if (!cancelled) setIsKioskPark(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [parkId]);
+  if (kioskCheckLoading) {
+    return <div className="h-96 animate-pulse rounded-2xl bg-white/30" />;
+  }
 
   if (isKioskPark) {
     return <>{children}</>;
