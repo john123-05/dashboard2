@@ -7,3 +7,20 @@
 # Called by Make.com (no Supabase session), authenticated via its own
 # X-Intake-Secret header instead of a platform JWT.
 verify_jwt = false
+
+[functions.product-finder-intake]
+# Same as email-lead-intake above, for the product_finder_submissions table.
+verify_jwt = false
+
+[functions.website-requests-intake]
+# Same as email-lead-intake above, for the website_requests table.
+verify_jwt = false
+
+[functions.german-website-requests-intake]
+# Same as email-lead-intake above, for the german_website_requests table.
+verify_jwt = false
+
+[functions.dispatch-lead-push]
+# Called by a Postgres trigger (pg_net), not by a browser session — gated by
+# its own X-Dispatch-Secret header instead of a platform JWT.
+verify_jwt = false

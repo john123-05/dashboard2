@@ -1,0 +1,62 @@
+{
+  "version": "5",
+  "specifiers": {
+    "jsr:@negrel/http-ece@0.7.0": "0.7.0",
+    "jsr:@negrel/webpush@0.5.0": "0.5.0",
+    "jsr:@std/bytes@1": "1.0.6",
+    "jsr:@std/encoding@1": "1.0.11"
+  },
+  "jsr": {
+    "@negrel/http-ece@0.7.0": {
+      "integrity": "068e61ba6f52da5454051a283cc19621607f8dd6e74d55c01bb365b8c6644076",
+      "dependencies": [
+        "jsr:@std/bytes",
+        "jsr:@std/encoding"
+      ]
+    },
+    "@negrel/webpush@0.5.0": {
+      "integrity": "919ed5bf4d676923667c5278093f36ffb2efe7fe2f155b6d32723ea3b73fa693",
+      "dependencies": [
+        "jsr:@negrel/http-ece",
+        "jsr:@std/bytes",
+        "jsr:@std/encoding"
+      ]
+    },
+    "@std/bytes@1.0.6": {
+      "integrity": "f6ac6adbd8ccd99314045f5703e23af0a68d7f7e58364b47d2c7f408aeb5820a"
+    },
+    "@std/encoding@1.0.11": {
+      "integrity": "e7cef2f0b3153bccc17431e7c864a1de03a4b6d9647389c43e08aaa775d37385"
+    }
+  },
+  "remote": {
+    "https://esm.sh/@supabase/supabase-js@2.57.4": "05a369085eb4a4c99d85ccece97f0cf1e05357122e0e74373da1f0e91b014902"
+  },
+  "workspace": {
+    "packageJson": {
+      "dependencies": [
+        "npm:@eslint/js@^9.9.1",
+        "npm:@supabase/supabase-js@^2.57.4",
+        "npm:@types/react-dom@^18.3.0",
+        "npm:@types/react@^18.3.5",
+        "npm:@vitejs/plugin-react@^4.3.1",
+        "npm:autoprefixer@^10.4.18",
+        "npm:date-fns@^4.1.0",
+        "npm:eslint-plugin-react-hooks@^5.1.0-rc.0",
+        "npm:eslint-plugin-react-refresh@~0.4.11",
+        "npm:eslint@^9.9.1",
+        "npm:globals@^15.9.0",
+        "npm:lucide-react@0.344",
+        "npm:postcss@^8.4.35",
+        "npm:react-dom@^18.3.1",
+        "npm:react-router-dom@^7.13.0",
+        "npm:react@^18.3.1",
+        "npm:recharts@^3.7.0",
+        "npm:tailwindcss@^3.4.1",
+        "npm:typescript-eslint@^8.3.0",
+        "npm:typescript@^5.5.3",
+        "npm:vite@^5.4.2"
+      ]
+    }
+  }
+}

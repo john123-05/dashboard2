@@ -20,6 +20,7 @@ const routeMap: Record<string, string> = {
   '/api/admin/lead-contacts': 'admin-lead-contacts',
   '/api/admin/email-leads': 'admin-email-leads',
   '/api/support-sync': 'support-sync',
+  '/api/admin/push-subscription': 'save-push-subscription',
 };
 
 function isLikelyJwt(token: string): boolean {

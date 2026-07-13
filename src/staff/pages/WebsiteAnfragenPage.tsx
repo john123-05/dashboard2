@@ -1,5 +1,6 @@
 import { ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { RefreshCw } from 'lucide-react';
 import { edgeFetch } from '../lib/edge-fetch';
 import { getApiErrorMessage } from '../lib/api-error';
 import { appendActivityEvent } from '../lib/activity-feed';
@@ -1008,9 +1009,21 @@ export default function WebsiteAnfragenPage() {
       <div className="card">
         <div className="marketing-section-title">
           <h3>PDF E-Mails ({leadLoading ? '...' : filteredLeadRows.length})</h3>
-          <button type="button" className="secondary inline" onClick={() => setShowLeadImport((v) => !v)}>
-            {showLeadImport ? 'Import ausblenden' : 'CSV importieren'}
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button
+              type="button"
+              className="secondary inline"
+              onClick={() => loadLeadRows()}
+              disabled={leadLoading}
+              title="Aktualisieren"
+              style={{ width: 'auto' }}
+            >
+              <RefreshCw size={14} className={leadLoading ? 'spin' : ''} />
+            </button>
+            <button type="button" className="secondary inline" onClick={() => setShowLeadImport((v) => !v)}>
+              {showLeadImport ? 'Import ausblenden' : 'CSV importieren'}
+            </button>
+          </div>
         </div>
 
         {showLeadImport && (
@@ -1110,9 +1123,21 @@ export default function WebsiteAnfragenPage() {
       <div className="card">
         <div className="marketing-section-title">
           <h3>Website-Anfragen ({websiteLoading ? '...' : filteredWebsiteRows.length})</h3>
-          <button type="button" className="secondary inline" onClick={() => setShowWebsiteImport((v) => !v)}>
-            {showWebsiteImport ? 'Import ausblenden' : 'CSV importieren'}
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button
+              type="button"
+              className="secondary inline"
+              onClick={() => loadWebsiteRows()}
+              disabled={websiteLoading}
+              title="Aktualisieren"
+              style={{ width: 'auto' }}
+            >
+              <RefreshCw size={14} className={websiteLoading ? 'spin' : ''} />
+            </button>
+            <button type="button" className="secondary inline" onClick={() => setShowWebsiteImport((v) => !v)}>
+              {showWebsiteImport ? 'Import ausblenden' : 'CSV importieren'}
+            </button>
+          </div>
         </div>
 
         {showWebsiteImport && (
@@ -1212,9 +1237,21 @@ export default function WebsiteAnfragenPage() {
       <div className="card">
         <div className="marketing-section-title">
           <h3>Website (Deutschland) ({germanLoading ? '...' : filteredGermanRows.length})</h3>
-          <button type="button" className="secondary inline" onClick={() => setShowGermanImport((v) => !v)}>
-            {showGermanImport ? 'Import ausblenden' : 'CSV importieren'}
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button
+              type="button"
+              className="secondary inline"
+              onClick={() => loadGermanRows()}
+              disabled={germanLoading}
+              title="Aktualisieren"
+              style={{ width: 'auto' }}
+            >
+              <RefreshCw size={14} className={germanLoading ? 'spin' : ''} />
+            </button>
+            <button type="button" className="secondary inline" onClick={() => setShowGermanImport((v) => !v)}>
+              {showGermanImport ? 'Import ausblenden' : 'CSV importieren'}
+            </button>
+          </div>
         </div>
 
         {showGermanImport && (
@@ -1306,9 +1343,21 @@ export default function WebsiteAnfragenPage() {
       <div className="card">
         <div className="marketing-section-title">
           <h3>Produktfinder ({productFinderLoading ? '...' : filteredProductFinderRows.length})</h3>
-          <button type="button" className="secondary inline" onClick={() => setShowProductFinderImport((v) => !v)}>
-            {showProductFinderImport ? 'Import ausblenden' : 'CSV importieren'}
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button
+              type="button"
+              className="secondary inline"
+              onClick={() => loadProductFinderRows()}
+              disabled={productFinderLoading}
+              title="Aktualisieren"
+              style={{ width: 'auto' }}
+            >
+              <RefreshCw size={14} className={productFinderLoading ? 'spin' : ''} />
+            </button>
+            <button type="button" className="secondary inline" onClick={() => setShowProductFinderImport((v) => !v)}>
+              {showProductFinderImport ? 'Import ausblenden' : 'CSV importieren'}
+            </button>
+          </div>
         </div>
 
         {showProductFinderImport && (
