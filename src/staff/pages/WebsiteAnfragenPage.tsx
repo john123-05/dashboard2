@@ -962,7 +962,7 @@ export default function WebsiteAnfragenPage() {
       </div>
 
       <div className="lead-toolbar">
-        <div className="lead-tabbar">
+        <div className="lead-tabbar widget-scroll-x">
           <button
             type="button"
             className={`lead-tab ${activeTab === 'leads' ? 'active' : ''}`}

@@ -1163,13 +1163,30 @@
     display: none;
   }
   .staff-app .lead-card-actions {
+    /* A single unwrapped row (temperature select + the date/+Kontakt pair +
+       delete button) doesn't fit on a phone - each child's own width:100%
+       fought the others for space and lost, getting clipped at the edge.
+       Wrapping lets whichever doesn't fit drop to its own line instead. */
     flex-direction: row;
+    flex-wrap: wrap;
     align-items: center;
     width: 100%;
-    justify-content: space-between;
+    gap: 8px;
+  }
+  .staff-app .lead-card-actions > * {
+    min-width: 0;
+  }
+  .staff-app .lead-card-actions .contact-quick-add {
+    flex: 1 1 100%;
   }
   .staff-app select.lead-temp-select {
     width: auto;
+    flex: 0 0 auto;
+  }
+  .staff-app .lead-card-actions button.lead-delete-btn {
+    width: auto;
+    flex: 0 0 auto;
+    margin-top: 0;
   }
 }
 
@@ -1218,11 +1235,18 @@
 
 @media (max-width: 640px) {
   .staff-app .lead-tabbar {
+    /* Squeezing 4 tabs to equal width doesn't work below ~640px - the
+       labels ("Website (Deutschland)" etc.) can't shrink below their own
+       content width, so they overflowed and got clipped instead. Scrolling
+       at natural width is what actually fits everything. */
     width: 100%;
+    max-width: 100%;
+    display: flex;
+    overflow-x: auto;
+    scrollbar-width: thin;
   }
   .staff-app button.lead-tab {
-    flex: 1;
-    justify-content: center;
+    flex: 0 0 auto;
   }
 }
 
@@ -1271,6 +1295,7 @@
 
 .staff-app .contact-quick-add {
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
   width: 100%;
 }
