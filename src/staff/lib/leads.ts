@@ -183,11 +183,25 @@ export async function fetchEmailLeads(): Promise<EmailLead[]> {
   return Array.isArray(body?.data) ? body.data : [];
 }
 
+// Answers is expected to be an array of {id, title, answer}, but it's
+// possible for it to arrive malformed (e.g. a plain string) if it was
+// written by something other than admin-product-finder/product-finder-intake
+// — a bad shape here must never crash rendering for every row on the page,
+// so anything that isn't a well-formed answer array is dropped rather than
+// trusted as-is.
+function normalizeProductFinderAnswers(value: unknown): ProductFinderAnswer[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(
+    (a): a is ProductFinderAnswer => !!a && typeof a === 'object' && 'answer' in a,
+  );
+}
+
 export async function fetchProductFinderSubmissions(): Promise<ProductFinderSubmission[]> {
   const res = await edgeFetch('/api/admin/product-finder?limit=1000');
   const body = await res.json().catch(() => null);
   if (!res.ok) throw new Error(getApiErrorMessage(body, 'Einträge konnten nicht geladen werden'));
-  return Array.isArray(body?.data) ? body.data : [];
+  const rows: ProductFinderSubmission[] = Array.isArray(body?.data) ? body.data : [];
+  return rows.map((row) => ({ ...row, answers: normalizeProductFinderAnswers(row.answers) }));
 }
 
 async function patchLead<T>(

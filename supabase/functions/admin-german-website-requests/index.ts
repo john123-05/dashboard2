@@ -5,9 +5,14 @@ import {
   supabaseService,
   isValidTemperature,
 } from '../_shared/sameProjectAdminAuth.ts';
+import {
+  asText,
+  buildGermanWebsiteRequestImportKey,
+  GERMAN_WEBSITE_REQUEST_COLUMNS,
+  toTimestamp,
+} from '../_shared/germanWebsiteRequestImport.ts';
 
-const columns =
-  'id, name, company, attraction_type, interest, email, phone, referral_source, comment, submitted_at, source, temperature, contacted_at, created_at, updated_at';
+const columns = GERMAN_WEBSITE_REQUEST_COLUMNS;
 
 type IncomingRow = {
   name?: unknown;
@@ -20,24 +25,6 @@ type IncomingRow = {
   comment?: unknown;
   timestamp?: unknown;
 };
-
-function asText(value: unknown): string {
-  return typeof value === 'string' ? value.trim() : '';
-}
-
-function toTimestamp(value: unknown): string {
-  if (typeof value !== 'string' || !value.trim()) return new Date().toISOString();
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return new Date().toISOString();
-  return parsed.toISOString();
-}
-
-function buildImportKey(payload: { email: string; timestamp: string; name: string; company: string }): string {
-  const normalize = (input: string) => input.trim().toLowerCase();
-  return [normalize(payload.email), normalize(payload.timestamp), normalize(payload.name), normalize(payload.company)].join(
-    '|',
-  );
-}
 
 Deno.serve(async (req) => {
   const preflight = handleOptions(req);
@@ -86,7 +73,7 @@ Deno.serve(async (req) => {
         referral_source: asText(row.referral_source),
         comment: asText(row.comment),
         submitted_at: submittedAt,
-        import_key: buildImportKey({ email: asText(row.email), timestamp: submittedAt, name, company }),
+        import_key: buildGermanWebsiteRequestImportKey({ email: asText(row.email), timestamp: submittedAt, name, company }),
       };
     });
 

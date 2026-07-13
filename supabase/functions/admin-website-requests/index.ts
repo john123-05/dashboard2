@@ -5,9 +5,14 @@ import {
   supabaseService,
   isValidTemperature,
 } from '../_shared/sameProjectAdminAuth.ts';
+import {
+  asText,
+  buildWebsiteRequestImportKey,
+  toTimestamp,
+  WEBSITE_REQUEST_COLUMNS,
+} from '../_shared/websiteRequestImport.ts';
 
-const columns =
-  'id, name, email, company, country, project_type, referral_source, message, submitted_at, source, user_agent, url, temperature, contacted_at, created_at, updated_at';
+const columns = WEBSITE_REQUEST_COLUMNS;
 
 type IncomingRow = {
   name?: unknown;
@@ -22,34 +27,6 @@ type IncomingRow = {
   useragent?: unknown;
   url?: unknown;
 };
-
-function asText(value: unknown): string {
-  return typeof value === 'string' ? value.trim() : '';
-}
-
-function toTimestamp(value: unknown): string {
-  if (typeof value !== 'string' || !value.trim()) return new Date().toISOString();
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return new Date().toISOString();
-  return parsed.toISOString();
-}
-
-function buildImportKey(payload: {
-  email: string;
-  timestamp: string;
-  url: string;
-  name: string;
-  message: string;
-}): string {
-  const normalize = (input: string) => input.trim().toLowerCase();
-  return [
-    normalize(payload.email),
-    normalize(payload.timestamp),
-    normalize(payload.url),
-    normalize(payload.name),
-    normalize(payload.message),
-  ].join('|');
-}
 
 Deno.serve(async (req) => {
   const preflight = handleOptions(req);
@@ -108,7 +85,7 @@ Deno.serve(async (req) => {
         source,
         user_agent: userAgent,
         url,
-        import_key: buildImportKey({ email, timestamp: submittedAt, url, name, message }),
+        import_key: buildWebsiteRequestImportKey({ email, timestamp: submittedAt, url, name, message }),
       };
     });
 

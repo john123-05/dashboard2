@@ -5,11 +5,14 @@ import {
   supabaseService,
   isValidTemperature,
 } from '../_shared/sameProjectAdminAuth.ts';
+import {
+  asAnswers,
+  asText,
+  buildProductFinderImportKey,
+  PRODUCT_FINDER_COLUMNS,
+} from '../_shared/productFinderImport.ts';
 
-const columns =
-  'id, name, email, company, language, target_country, attraction_type, answers, submitted_at, source, temperature, contacted_at, created_at, updated_at';
-
-type IncomingAnswer = { id?: unknown; title?: unknown; answer?: unknown };
+const columns = PRODUCT_FINDER_COLUMNS;
 
 type IncomingRow = {
   name?: unknown;
@@ -20,30 +23,6 @@ type IncomingRow = {
   attraction_type?: unknown;
   answers?: unknown;
 };
-
-function asText(value: unknown): string {
-  return typeof value === 'string' ? value.trim() : '';
-}
-
-function asAnswers(value: unknown): IncomingAnswer[] {
-  if (!Array.isArray(value)) return [];
-  return value
-    .filter((a) => a && typeof a === 'object')
-    .map((a) => {
-      const entry = a as IncomingAnswer;
-      return { id: asText(entry.id), title: asText(entry.title), answer: asText(entry.answer) };
-    });
-}
-
-function buildImportKey(payload: { email: string; company: string; attractionType: string; answers: IncomingAnswer[] }): string {
-  const normalize = (input: string) => input.trim().toLowerCase();
-  return [
-    normalize(payload.email),
-    normalize(payload.company),
-    normalize(payload.attractionType),
-    normalize(JSON.stringify(payload.answers)),
-  ].join('|');
-}
 
 Deno.serve(async (req) => {
   const preflight = handleOptions(req);
@@ -91,7 +70,7 @@ Deno.serve(async (req) => {
         target_country: asText(row.target_country),
         attraction_type: attractionType,
         answers,
-        import_key: buildImportKey({ email, company, attractionType, answers }),
+        import_key: buildProductFinderImportKey({ email, company, attractionType, answers }),
       };
     });
 
