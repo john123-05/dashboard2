@@ -67,9 +67,9 @@ export default function DashboardLayout() {
   }
 
   return (
-    <div className="mesh-gradient flex min-h-screen overflow-x-hidden">
+    <div className="mesh-gradient flex min-h-screen overflow-x-clip">
       <Sidebar />
-      <main className="flex-1 pl-64 transition-all duration-300 overflow-x-hidden">
+      <main className="flex-1 pl-64 transition-all duration-300 overflow-x-clip">
         <div className="min-h-screen p-6 lg:p-8 w-full">
           <Outlet />
         </div>
