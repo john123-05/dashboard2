@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Camera, ChevronLeft, ChevronRight, CreditCard, Download, Receipt, Ticket, Wallet } from 'lucide-react';
 import { getOptionalSourceWarning, invokeEdgeFunction } from '../lib/edgeFunctions';
@@ -72,6 +72,27 @@ export default function Revenue() {
   const [dayPurchases, setDayPurchases] = useState<KioskPurchaseRow[]>([]);
   const [dayLoading, setDayLoading] = useState(false);
   const [dayError, setDayError] = useState<string | null>(null);
+  const dateInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Clicking "Anderer Tag" should open the calendar immediately rather than
+  // just revealing an inert input - showPicker() needs the input actually
+  // mounted first, which only happens after this state change re-renders,
+  // so it's triggered here instead of directly in the button's onClick.
+  useEffect(() => {
+    if (chartMode !== 'day' || dayTab !== 'other') return;
+    const raf = window.requestAnimationFrame(() => {
+      const input = dateInputRef.current;
+      if (input && typeof input.showPicker === 'function') {
+        try {
+          input.showPicker();
+        } catch {
+          // Browsers that refuse this outside a stricter gesture window
+          // still leave a perfectly usable, visible date input behind.
+        }
+      }
+    });
+    return () => window.cancelAnimationFrame(raf);
+  }, [chartMode, dayTab]);
 
   useEffect(() => {
     if (kioskCheckLoading) return;
@@ -557,23 +578,28 @@ export default function Revenue() {
               </div>
             ) : (
               <>
-                <div className="mb-4 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-white/30 p-4">
-                  <div className="flex items-end gap-2">
-                    <button
-                      type="button"
-                      onClick={() => stepDay(-1)}
-                      disabled={selectedDate <= minSelectableDate}
-                      className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-white/60 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
-                      aria-label="Vorheriger Tag"
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </button>
-                    <div>
-                      <label className="mb-1 block text-xs uppercase tracking-wide text-slate-400">
-                        {dayTab === 'other' ? 'Tag auswählen' : 'Tag'}
-                      </label>
-                      {dayTab === 'other' ? (
+                <div
+                  className={`mb-4 flex flex-wrap items-center gap-4 rounded-2xl bg-white/30 p-4 ${
+                    dayTab === 'other' ? 'justify-between' : 'justify-end'
+                  }`}
+                >
+                  {dayTab === 'other' && (
+                    <div className="flex items-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => stepDay(-1)}
+                        disabled={selectedDate <= minSelectableDate}
+                        className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-white/60 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
+                        aria-label="Vorheriger Tag"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </button>
+                      <div>
+                        <label className="mb-1 block text-xs uppercase tracking-wide text-slate-400">
+                          Tag auswählen
+                        </label>
                         <input
+                          ref={dateInputRef}
                           type="date"
                           value={selectedDate}
                           min={minSelectableDate}
@@ -581,20 +607,18 @@ export default function Revenue() {
                           onChange={(event) => selectDay(event.target.value)}
                           className="glass-input"
                         />
-                      ) : (
-                        <p className="py-3 text-sm font-semibold text-slate-800">{selectedDateLabel}</p>
-                      )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => stepDay(1)}
+                        disabled={selectedDate >= maxSelectableDate}
+                        className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-white/60 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
+                        aria-label="Nächster Tag"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => stepDay(1)}
-                      disabled={selectedDate >= maxSelectableDate}
-                      className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-white/60 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
-                      aria-label="Nächster Tag"
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </button>
-                  </div>
+                  )}
                   <div className="text-right">
                     <p className="text-xs uppercase tracking-wide text-slate-400">
                       Am {selectedDateLabel} eingenommen
