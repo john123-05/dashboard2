@@ -5,6 +5,8 @@ import {
   AlertTriangle,
   ArrowUpRight,
   Camera,
+  ChevronDown,
+  ChevronUp,
   CreditCard,
   FileWarning,
   Receipt,
@@ -96,6 +98,7 @@ export default function Overview() {
   const [parkData, setParkData] = useState<ParkDashboardData | null>(null);
   const [combinedDaily, setCombinedDaily] = useState<CombinedDailyPoint[]>([]);
   const [recentTransactions, setRecentTransactions] = useState<ActivityItem[]>([]);
+  const [showAllTransactions, setShowAllTransactions] = useState(false);
   const [activityItems, setActivityItems] = useState<ActivityItem[]>([]);
   const [totalUsers, setTotalUsers] = useState<number | null>(null);
   const [totalPhotos, setTotalPhotos] = useState<number | null>(null);
@@ -947,7 +950,7 @@ export default function Overview() {
           {recentTransactions.length === 0 ? (
             <p className="text-sm text-slate-500">No recent transactions available.</p>
           ) : (
-            recentTransactions.map((item) => (
+            (showAllTransactions ? recentTransactions : recentTransactions.slice(0, 3)).map((item) => (
               <div key={item.id} className="rounded-xl bg-white/30 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
@@ -978,6 +981,23 @@ export default function Overview() {
             ))
           )}
         </div>
+        {recentTransactions.length > 3 && (
+          <button
+            type="button"
+            onClick={() => setShowAllTransactions((current) => !current)}
+            className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-xl py-2 text-sm font-medium text-slate-500 transition-colors hover:bg-white/40 hover:text-slate-700"
+          >
+            {showAllTransactions ? (
+              <>
+                Show less <ChevronUp className="h-4 w-4" />
+              </>
+            ) : (
+              <>
+                Show all {recentTransactions.length} <ChevronDown className="h-4 w-4" />
+              </>
+            )}
+          </button>
+        )}
       </GlassCard>
     </div>
   );
