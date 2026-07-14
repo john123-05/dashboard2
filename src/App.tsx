@@ -32,6 +32,7 @@ import StaffMarketingMaterialsPage from './staff/pages/MarketingMaterialsPage';
 import StaffUploaderInstallPage from './staff/pages/UploaderInstallPage';
 import StaffPasswordsPage from './staff/pages/PasswordsPage';
 import StaffMediaLibraryPage from './staff/pages/MediaLibraryPage';
+import StaffCostsPage from './staff/pages/CostsPage';
 
 export default function App() {
   return (
@@ -116,6 +117,7 @@ export default function App() {
                 <Route path="/staff/werbematerialien/uploader-installation" element={<StaffUploaderInstallPage />} />
                 <Route path="/staff/passwoerter" element={<StaffPasswordsPage />} />
                 <Route path="/staff/medien" element={<StaffMediaLibraryPage />} />
+                <Route path="/staff/kosten" element={<StaffCostsPage />} />
               </Route>
             </Routes>
           </ParkProvider>

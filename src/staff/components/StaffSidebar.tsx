@@ -16,11 +16,13 @@ import {
   Sun,
   Moon,
   X,
+  Euro,
 } from 'lucide-react';
 
 const navItems = [
   { to: '/staff/parks', icon: Mountain, label: 'Parks anlegen' },
   { to: '/staff/werbematerialien', icon: Megaphone, label: 'Werbematerialien', tourTag: undefined },
+  { to: '/staff/kosten', icon: Euro, label: 'Kosten' },
   { to: '/staff/passwoerter', icon: KeyRound, label: 'Passwörter' },
   { to: '/staff/medien', icon: Images, label: 'Medien' },
   { to: '/staff/cameras', icon: Camera, label: 'Kameras' },

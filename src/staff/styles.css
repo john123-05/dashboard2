@@ -136,7 +136,7 @@
 }.staff-app .actions-cell {
   text-align: right;
   white-space: nowrap;
-}.staff-app .badge { display: inline-block; padding: 4px 8px; border-radius: 999px; font-size: 12px; }.staff-app .badge.ok { background: color-mix(in srgb, var(--status-success) 22%, transparent); color: var(--status-success); }.staff-app .badge.warn { background: color-mix(in srgb, var(--accent) 22%, transparent); color: color-mix(in srgb, var(--accent) 88%, var(--text)); }.staff-app .row { display: flex; gap: 10px; }.staff-app .row > * { flex: 1; }.staff-app .upload-row {
+}.staff-app .badge { display: inline-block; padding: 4px 8px; border-radius: 999px; font-size: 12px; }.staff-app .badge.ok { background: color-mix(in srgb, var(--status-success) 22%, transparent); color: var(--status-success); }.staff-app .badge.warn { background: color-mix(in srgb, var(--accent) 22%, transparent); color: color-mix(in srgb, var(--accent) 88%, var(--text)); }.staff-app .badge:not(.ok):not(.warn) { background: color-mix(in srgb, var(--muted) 20%, transparent); color: var(--text); }.staff-app .stat-value { margin: 6px 0 2px; font-size: 26px; font-weight: 800; }.staff-app .row { display: flex; gap: 10px; }.staff-app .row > * { flex: 1; }.staff-app .upload-row {
   display: flex;
   gap: 10px;
   align-items: end;
