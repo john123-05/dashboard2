@@ -136,7 +136,33 @@
 }.staff-app .actions-cell {
   text-align: right;
   white-space: nowrap;
-}.staff-app .badge { display: inline-block; padding: 4px 8px; border-radius: 999px; font-size: 12px; }.staff-app .badge.ok { background: color-mix(in srgb, var(--status-success) 22%, transparent); color: var(--status-success); }.staff-app .badge.warn { background: color-mix(in srgb, var(--accent) 22%, transparent); color: color-mix(in srgb, var(--accent) 88%, var(--text)); }.staff-app .badge:not(.ok):not(.warn) { background: color-mix(in srgb, var(--muted) 20%, transparent); color: var(--text); }.staff-app .stat-value { margin: 6px 0 2px; font-size: 26px; font-weight: 800; }.staff-app .row { display: flex; gap: 10px; }.staff-app .row > * { flex: 1; }.staff-app .upload-row {
+}.staff-app .badge { display: inline-block; padding: 4px 8px; border-radius: 999px; font-size: 12px; }.staff-app .badge.ok { background: color-mix(in srgb, var(--status-success) 22%, transparent); color: var(--status-success); }.staff-app .badge.warn { background: color-mix(in srgb, var(--accent) 22%, transparent); color: color-mix(in srgb, var(--accent) 88%, var(--text)); }.staff-app .badge:not(.ok):not(.warn) { background: color-mix(in srgb, var(--muted) 20%, transparent); color: var(--text); }.staff-app .stat-value { margin: 6px 0 2px; font-size: 26px; font-weight: 800; }.staff-app .cost-highlight {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  border-left: 4px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface-elevated) 90%);
+}.staff-app .cost-highlight-icon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  color: var(--accent);
+}.staff-app .cost-highlight-title {
+  margin: 2px 0 4px;
+  font-size: 18px;
+  font-weight: 700;
+}.staff-app .cost-payer-card {
+  border-top: 3px solid transparent;
+}.staff-app .cost-payer-tom {
+  border-top-color: #2f9ed8;
+}.staff-app .cost-payer-john {
+  border-top-color: var(--status-success);
+}.staff-app .row { display: flex; gap: 10px; }.staff-app .row > * { flex: 1; }.staff-app .upload-row {
   display: flex;
   gap: 10px;
   align-items: end;

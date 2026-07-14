@@ -99,6 +99,30 @@ function buildParkInactivityNotification(record: Record<string, unknown>): { tit
   };
 }
 
+interface CostReminderItem {
+  item_name: string;
+  amount: number;
+  currency: string;
+  payer: string;
+}
+
+function buildCostReminderNotification(record: Record<string, unknown>): { title: string; body: string } {
+  const items = (Array.isArray(record.items) ? record.items : []) as CostReminderItem[];
+
+  if (items.length === 1) {
+    const item = items[0];
+    return {
+      title: 'Zahlung morgen fällig',
+      body: `${item.item_name} · ${Number(item.amount).toFixed(2)} ${item.currency} · zahlt ${item.payer}`,
+    };
+  }
+
+  return {
+    title: `${items.length} Zahlungen morgen fällig`,
+    body: 'Details in der Kosten-Übersicht',
+  };
+}
+
 async function buildSupportTicketMessageNotification(
   record: Record<string, unknown>,
 ): Promise<{ title: string; body: string; url: string }> {
@@ -175,6 +199,9 @@ Deno.serve(async (req: Request) => {
   } else if (table === 'park_inactivity') {
     const { title, body: notifBody } = buildParkInactivityNotification(record as Record<string, unknown>);
     payload = JSON.stringify({ title, body: notifBody, url: '/staff/cameras' });
+  } else if (table === 'cost_reminder') {
+    const { title, body: notifBody } = buildCostReminderNotification(record as Record<string, unknown>);
+    payload = JSON.stringify({ title, body: notifBody, url: '/staff/kosten' });
   } else if (isLeadTable(table)) {
     const meta = TABLE_META[table];
     payload = JSON.stringify({
