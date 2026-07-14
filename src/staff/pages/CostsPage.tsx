@@ -74,9 +74,9 @@ const VENDORS: CostVendor[] = [
   },
   {
     name: 'Canva',
-    payer: null,
+    payer: 'John',
     purpose: 'Design-Tool für Kataloge, PDFs etc.',
-    items: [],
+    items: [{ name: 'Monatliches Abo', amount: 12.0, currency: 'EUR', cycle: 'monthly' }],
   },
   {
     name: 'Domain Factory',
@@ -205,12 +205,6 @@ export default function CostsPage() {
                   </td>
                 </tr>
               ))}
-              <tr>
-                <td>Canva</td>
-                <td colSpan={2} className="note">
-                  Noch ungeklärt – siehe Hinweise unten
-                </td>
-              </tr>
             </tbody>
           </table>
         </div>
@@ -276,7 +270,6 @@ export default function CostsPage() {
             kostenlosen Testzeitraum. Die $19,99/Jahr fallen erst ab dem jeweiligen Testzeitraum-Ende an
             (25.09.2026 bzw. 24.08.2026).
           </li>
-          <li className="note">Canva: Preis und Zahler sind noch nicht angegeben — bitte ergänzen.</li>
           <li className="note">
             Domain Factory: einige Domainnamen (noltingtom.de, tomsvilla.de, yvonnenolting.de, abi83.de, alfom.de,
             sharesmile.de) klingen nach privaten/persönlichen Projekten statt nach Liftpictures-Geschäft — sie sind
