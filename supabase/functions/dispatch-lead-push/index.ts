@@ -50,6 +50,23 @@ function buildNotificationBody(record: Record<string, unknown>): string {
   return parts.length > 0 ? parts.join(' · ') : 'Neuer Eintrag eingegangen';
 }
 
+const PRIORITY_LABELS: Record<string, string> = {
+  low: 'Niedrig',
+  medium: 'Mittel',
+  high: 'Hoch',
+  critical: 'Kritisch',
+};
+
+function buildSupportTicketNotification(record: Record<string, unknown>): { title: string; body: string } {
+  const priority = asText(record.priority);
+  const subject = asText(record.subject) || 'Neues Support-Ticket';
+  const priorityLabel = PRIORITY_LABELS[priority] ?? priority;
+  return {
+    title: priorityLabel ? `Neues Support-Ticket (${priorityLabel})` : 'Neues Support-Ticket',
+    body: subject,
+  };
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -76,16 +93,24 @@ Deno.serve(async (req: Request) => {
   const table = (body as Record<string, unknown>).table;
   const record = (body as Record<string, unknown>).record;
 
-  if (!isLeadTable(table) || !record || typeof record !== 'object') {
+  if (!record || typeof record !== 'object') {
     return json({ error: 'Missing or unknown table/record' }, 400);
   }
 
-  const meta = TABLE_META[table];
-  const payload = JSON.stringify({
-    title: meta.title,
-    body: buildNotificationBody(record as Record<string, unknown>),
-    url: `/staff/website-anfragen?tab=${meta.tab}`,
-  });
+  let payload: string;
+  if (table === 'support_tickets') {
+    const { title, body: notifBody } = buildSupportTicketNotification(record as Record<string, unknown>);
+    payload = JSON.stringify({ title, body: notifBody, url: '/staff/support-ticket-kunden' });
+  } else if (isLeadTable(table)) {
+    const meta = TABLE_META[table];
+    payload = JSON.stringify({
+      title: meta.title,
+      body: buildNotificationBody(record as Record<string, unknown>),
+      url: `/staff/website-anfragen?tab=${meta.tab}`,
+    });
+  } else {
+    return json({ error: 'Missing or unknown table/record' }, 400);
+  }
 
   const { data: subscriptions, error: fetchError } = await supabaseService
     .from('push_subscriptions')

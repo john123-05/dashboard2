@@ -33,6 +33,7 @@ export default function SupportTicketKundenPage() {
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [messages, setMessages] = useState<SupportTicketMessage[]>([]);
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
+  const [parkNameById, setParkNameById] = useState<Record<string, string>>({});
 
   const [ticketsLoading, setTicketsLoading] = useState(true);
   const [messagesLoading, setMessagesLoading] = useState(false);
@@ -104,6 +105,17 @@ export default function SupportTicketKundenPage() {
   useEffect(() => {
     void loadTickets();
   }, [loadTickets]);
+
+  useEffect(() => {
+    // organization_id on support_tickets is actually the shared project's
+    // real park_id (see support-tickets edge function in dashboard2) —
+    // resolve it to a name instead of showing a raw UUID.
+    void (async () => {
+      const { data } = await supabaseBrowser.from('parks').select('id, name');
+      if (!data) return;
+      setParkNameById(Object.fromEntries(data.map((park: { id: string; name: string }) => [park.id, park.name])));
+    })();
+  }, []);
 
   useEffect(() => {
     setActionError(null);
@@ -220,6 +232,7 @@ export default function SupportTicketKundenPage() {
                     <div className="ticket-item-meta">
                       <span className={`badge status-${ticket.status}`}>{statusLabelMap[ticket.status]}</span>
                       <span className={`badge priority-${ticket.priority}`}>{priorityLabelMap[ticket.priority]}</span>
+                      <span className="note">{parkNameById[ticket.organization_id] || '–'}</span>
                       <span className="note">{formatDateTime(ticket.created_at)}</span>
                     </div>
                   </button>
@@ -245,7 +258,9 @@ export default function SupportTicketKundenPage() {
                   <span className={`badge priority-${selectedTicket.priority}`}>{priorityLabelMap[selectedTicket.priority]}</span>
                 </div>
               </div>
-              <p className="note">Organisation: {selectedTicket.organization_id}</p>
+              <p className="note">
+                Park: {parkNameById[selectedTicket.organization_id] || selectedTicket.organization_id}
+              </p>
               <p className="ticket-description">{selectedTicket.description}</p>
 
               <div className="support-actions-row">

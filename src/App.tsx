@@ -87,14 +87,7 @@ export default function App() {
                     </ComingSoonOverlay>
                   }
                 />
-                <Route
-                  path="/tickets"
-                  element={
-                    <ComingSoonOverlay description="Hier landen Anfragen und Support-Tickets von Gästen, die Hilfe brauchen — zum Beispiel bei Problemen mit einem Kauf.">
-                      <Support />
-                    </ComingSoonOverlay>
-                  }
-                />
+                <Route path="/tickets" element={<Support />} />
                 <Route
                   path="/health"
                   element={

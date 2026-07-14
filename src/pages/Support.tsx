@@ -1,47 +1,77 @@
 import { useEffect, useState } from 'react';
 import { Plus, X, Loader2, MessageSquare, Send, ExternalLink } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { invokeEdgeFunction } from '../lib/edgeFunctions';
 import { useAuth } from '../contexts/AuthContext';
+import { usePark } from '../contexts/ParkContext';
 import { formatRelative, statusColor } from '../lib/utils';
 import GlassCard from '../components/ui/GlassCard';
 import type { SupportTicket } from '../lib/types';
 import { useI18n } from '../lib/i18n';
 
 export default function Support() {
-  const { currentOrg, user } = useAuth();
+  const { profile, user } = useAuth();
+  const { parkId } = usePark();
   const { t } = useI18n();
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [showCreate, setShowCreate] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
   const [form, setForm] = useState({ subject: '', description: '', priority: 'medium' });
 
   useEffect(() => {
     loadTickets();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [parkId]);
 
   async function loadTickets() {
-    const { data } = await supabase
-      .from('support_tickets')
-      .select('*')
-      .order('created_at', { ascending: false });
+    if (!parkId) {
+      setLoading(false);
+      return;
+    }
 
-    setTickets((data || []) as SupportTicket[]);
+    setLoading(true);
+    const { data, error } = await invokeEdgeFunction<{ tickets: SupportTicket[] }>('support-tickets', {
+      useSessionAuth: true,
+      query: { park_id: parkId },
+    });
+
+    if (error) {
+      setLoadError(error);
+      setLoading(false);
+      return;
+    }
+
+    setTickets(data?.tickets ?? []);
+    setLoadError(null);
     setLoading(false);
   }
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
-    if (!currentOrg || !user) return;
+    if (!parkId) return;
     setCreating(true);
+    setCreateError(null);
 
-    await supabase.from('support_tickets').insert({
-      organization_id: currentOrg.id,
-      created_by: user.id,
-      subject: form.subject,
-      description: form.description,
-      priority: form.priority,
+    const { error } = await invokeEdgeFunction('support-tickets', {
+      method: 'POST',
+      useSessionAuth: true,
+      body: {
+        park_id: parkId,
+        subject: form.subject,
+        description: form.description,
+        priority: form.priority,
+        reporter_email: profile?.email || user?.email || '',
+        reporter_name: profile?.full_name || '',
+      },
     });
+
+    if (error) {
+      setCreateError(error);
+      setCreating(false);
+      return;
+    }
 
     setForm({ subject: '', description: '', priority: 'medium' });
     setShowCreate(false);
@@ -70,6 +100,12 @@ export default function Support() {
           {t('support.new_ticket')}
         </button>
       </div>
+
+      {loadError && (
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-4">
+          <p className="text-sm text-red-700">{loadError}</p>
+        </div>
+      )}
 
       <div className="grid gap-6 xl:grid-cols-3">
         <div className="space-y-4 xl:col-span-2">
@@ -103,7 +139,7 @@ export default function Support() {
                       </span>
                     </div>
                     <h4 className="text-sm font-semibold text-slate-800">{ticket.subject}</h4>
-                    <p className="mt-1 text-sm text-slate-500 line-clamp-2">{ticket.description}</p>
+                    <p className="mt-1 whitespace-pre-line text-sm text-slate-500 line-clamp-2">{ticket.description}</p>
                   </div>
                   <span className="shrink-0 text-xs text-slate-400">
                     {formatRelative(ticket.created_at)}
@@ -208,6 +244,8 @@ export default function Support() {
                   <option value="critical">Critical</option>
                 </select>
               </div>
+
+              {createError && <p className="text-sm text-red-600">{createError}</p>}
 
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowCreate(false)} className="glass-button-secondary flex-1">
