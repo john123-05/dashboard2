@@ -45,6 +45,10 @@ export default function SupportTicketKundenPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionStatus, setActionStatus] = useState<string | null>(null);
 
+  const [replyMessage, setReplyMessage] = useState('');
+  const [replySending, setReplySending] = useState(false);
+  const [replyError, setReplyError] = useState<string | null>(null);
+
   const selectedTicketIdRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -120,6 +124,8 @@ export default function SupportTicketKundenPage() {
   useEffect(() => {
     setActionError(null);
     setActionStatus(null);
+    setReplyMessage('');
+    setReplyError(null);
 
     if (!selectedTicketId) {
       setMessages([]);
@@ -194,6 +200,35 @@ export default function SupportTicketKundenPage() {
       await loadMessagesForTicket(selectedTicket.id);
     } finally {
       setUpdatingStatus(false);
+    }
+  };
+
+  const submitReply = async () => {
+    if (!selectedTicket) return;
+    const trimmed = replyMessage.trim();
+    if (!trimmed) return;
+
+    setReplyError(null);
+    setReplySending(true);
+
+    try {
+      const res = await edgeFetch('/api/admin/support', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticket_id: selectedTicket.id, message: trimmed }),
+      });
+      const body = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        setReplyError(getApiErrorMessage(body, 'Antwort konnte nicht gesendet werden'));
+        return;
+      }
+
+      setReplyMessage('');
+      await loadMessagesForTicket(selectedTicket.id);
+      await loadTickets();
+    } finally {
+      setReplySending(false);
     }
   };
 
@@ -278,14 +313,6 @@ export default function SupportTicketKundenPage() {
                 </button>
               </div>
 
-              <div className="setting-row">
-                <div>
-                  <p className="setting-title">Antworten im Thread</p>
-                  <p className="note">Diese Funktion kommt bald.</p>
-                </div>
-                <span className="coming-soon-pill">Coming soon</span>
-              </div>
-
               {actionStatus && <p className="success">{actionStatus}</p>}
               {actionError && <p className="support-error">{actionError}</p>}
 
@@ -311,6 +338,28 @@ export default function SupportTicketKundenPage() {
                   ))}
                 </div>
               )}
+
+              <div className="support-reply-form">
+                <label htmlFor="support-reply-textarea">Antworten im Thread</label>
+                <textarea
+                  id="support-reply-textarea"
+                  value={replyMessage}
+                  onChange={(event) => setReplyMessage(event.target.value)}
+                  placeholder="Antwort schreiben..."
+                  rows={3}
+                  disabled={replySending}
+                />
+                {replyError && <p className="support-error">{replyError}</p>}
+                <div className="support-actions-row">
+                  <button
+                    type="button"
+                    onClick={() => void submitReply()}
+                    disabled={replySending || !replyMessage.trim()}
+                  >
+                    {replySending ? 'Wird gesendet...' : 'Antwort senden'}
+                  </button>
+                </div>
+              </div>
             </>
           )}
         </div>

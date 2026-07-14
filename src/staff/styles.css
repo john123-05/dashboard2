@@ -209,6 +209,7 @@
 }.staff-app .ticket-description {
   margin-top: 10px;
   margin-bottom: 12px;
+  white-space: pre-wrap;
   color: color-mix(in srgb, var(--text) 74%, transparent);
 }.staff-app .message-thread {
   display: grid;

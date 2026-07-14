@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Plus, X, Loader2, MessageSquare, Send, ExternalLink } from 'lucide-react';
+import { Plus, X, Loader2, MessageSquare, Send, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react';
 import { invokeEdgeFunction } from '../lib/edgeFunctions';
 import { useAuth } from '../contexts/AuthContext';
 import { usePark } from '../contexts/ParkContext';
-import { formatRelative, statusColor } from '../lib/utils';
+import { formatRelative, formatDateTime, statusColor } from '../lib/utils';
 import GlassCard from '../components/ui/GlassCard';
-import type { SupportTicket } from '../lib/types';
+import type { SupportTicket, SupportTicketMessage } from '../lib/types';
 import { useI18n } from '../lib/i18n';
 
 export default function Support() {
@@ -19,6 +19,11 @@ export default function Support() {
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [form, setForm] = useState({ subject: '', description: '', priority: 'medium' });
+
+  const [expandedTicketId, setExpandedTicketId] = useState<string | null>(null);
+  const [messagesByTicket, setMessagesByTicket] = useState<Record<string, SupportTicketMessage[]>>({});
+  const [messagesLoadingId, setMessagesLoadingId] = useState<string | null>(null);
+  const [messagesError, setMessagesError] = useState<string | null>(null);
 
   useEffect(() => {
     loadTickets();
@@ -46,6 +51,36 @@ export default function Support() {
     setTickets(data?.tickets ?? []);
     setLoadError(null);
     setLoading(false);
+  }
+
+  async function loadMessages(ticketId: string) {
+    setMessagesLoadingId(ticketId);
+    setMessagesError(null);
+
+    const { data, error } = await invokeEdgeFunction<{ messages: SupportTicketMessage[] }>('support-tickets', {
+      useSessionAuth: true,
+      query: { ticket_id: ticketId },
+    });
+
+    if (error) {
+      setMessagesError(error);
+      setMessagesLoadingId(null);
+      return;
+    }
+
+    setMessagesByTicket((prev) => ({ ...prev, [ticketId]: data?.messages ?? [] }));
+    setMessagesLoadingId(null);
+  }
+
+  function toggleExpand(ticketId: string) {
+    if (expandedTicketId === ticketId) {
+      setExpandedTicketId(null);
+      return;
+    }
+    setExpandedTicketId(ticketId);
+    if (!messagesByTicket[ticketId]) {
+      void loadMessages(ticketId);
+    }
   }
 
   async function handleCreate(e: React.FormEvent) {
@@ -116,37 +151,96 @@ export default function Support() {
               <p className="mt-1 text-xs text-slate-400">{t('support.none_desc')}</p>
             </GlassCard>
           ) : (
-            tickets.map((ticket) => (
-              <GlassCard key={ticket.id} className="p-5 transition-all hover:shadow-md">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="mb-2 flex items-center gap-2">
-                      <span className={`status-badge ${statusColor(ticket.status)}`}>
-                        {ticket.status.replace('_', ' ')}
-                      </span>
-                      <span
-                        className={`status-badge ${
-                          ticket.priority === 'critical'
-                            ? 'bg-rose-50 text-rose-700 ring-rose-200'
-                            : ticket.priority === 'high'
-                              ? 'bg-orange-50 text-orange-700 ring-orange-200'
-                              : ticket.priority === 'medium'
-                                ? 'bg-amber-50 text-amber-700 ring-amber-200'
-                                : 'bg-slate-50 text-slate-600 ring-slate-200'
+            tickets.map((ticket) => {
+              const isExpanded = expandedTicketId === ticket.id;
+              const messages = messagesByTicket[ticket.id] ?? [];
+
+              return (
+                <GlassCard key={ticket.id} className="p-5 transition-all hover:shadow-md">
+                  <button
+                    type="button"
+                    onClick={() => toggleExpand(ticket.id)}
+                    className="flex w-full items-start justify-between gap-4 text-left"
+                  >
+                    <div className="flex-1">
+                      <div className="mb-2 flex items-center gap-2">
+                        <span className={`status-badge ${statusColor(ticket.status)}`}>
+                          {ticket.status.replace('_', ' ')}
+                        </span>
+                        <span
+                          className={`status-badge ${
+                            ticket.priority === 'critical'
+                              ? 'bg-rose-50 text-rose-700 ring-rose-200'
+                              : ticket.priority === 'high'
+                                ? 'bg-orange-50 text-orange-700 ring-orange-200'
+                                : ticket.priority === 'medium'
+                                  ? 'bg-amber-50 text-amber-700 ring-amber-200'
+                                  : 'bg-slate-50 text-slate-600 ring-slate-200'
+                          }`}
+                        >
+                          {ticket.priority}
+                        </span>
+                      </div>
+                      <h4 className="text-sm font-semibold text-slate-800">{ticket.subject}</h4>
+                      <p
+                        className={`mt-1 whitespace-pre-line text-sm text-slate-500 ${
+                          isExpanded ? '' : 'line-clamp-2'
                         }`}
                       >
-                        {ticket.priority}
-                      </span>
+                        {ticket.description}
+                      </p>
                     </div>
-                    <h4 className="text-sm font-semibold text-slate-800">{ticket.subject}</h4>
-                    <p className="mt-1 whitespace-pre-line text-sm text-slate-500 line-clamp-2">{ticket.description}</p>
-                  </div>
-                  <span className="shrink-0 text-xs text-slate-400">
-                    {formatRelative(ticket.created_at)}
-                  </span>
-                </div>
-              </GlassCard>
-            ))
+                    <div className="flex shrink-0 flex-col items-end gap-2">
+                      <span className="text-xs text-slate-400">{formatRelative(ticket.created_at)}</span>
+                      {isExpanded ? (
+                        <ChevronUp className="h-4 w-4 text-slate-400" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4 text-slate-400" />
+                      )}
+                    </div>
+                  </button>
+
+                  {isExpanded && (
+                    <div className="mt-4 border-t border-white/40 pt-4">
+                      <h5 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                        Antworten
+                      </h5>
+                      {messagesLoadingId === ticket.id && (
+                        <p className="text-sm text-slate-500">Lädt...</p>
+                      )}
+                      {messagesLoadingId !== ticket.id && messagesError && (
+                        <p className="text-sm text-red-600">{messagesError}</p>
+                      )}
+                      {messagesLoadingId !== ticket.id && !messagesError && messages.length === 0 && (
+                        <p className="text-sm text-slate-500">Noch keine Antworten.</p>
+                      )}
+                      {messagesLoadingId !== ticket.id && messages.length > 0 && (
+                        <div className="space-y-3">
+                          {messages.map((message) => (
+                            <div
+                              key={message.id}
+                              className={`rounded-xl p-3 text-sm ${
+                                message.author_role === 'support'
+                                  ? 'bg-brand-50/60 text-slate-700'
+                                  : 'bg-white/30 text-slate-700'
+                              }`}
+                            >
+                              <div className="mb-1 flex items-center justify-between gap-2">
+                                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                  {message.author_role === 'support' ? 'Liftpictures Support' : 'Du'}
+                                </span>
+                                <span className="text-xs text-slate-400">{formatDateTime(message.created_at)}</span>
+                              </div>
+                              <p className="whitespace-pre-line">{message.message}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </GlassCard>
+              );
+            })
           )}
         </div>
 

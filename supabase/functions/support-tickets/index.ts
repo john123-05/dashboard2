@@ -58,9 +58,69 @@ Deno.serve(async (req: Request) => {
   if (req.method === "GET") {
     const url = new URL(req.url);
     const parkId = url.searchParams.get("park_id");
+    const ticketId = url.searchParams.get("ticket_id");
+    const recentMessages = url.searchParams.get("recent_messages");
+
+    // Thread for one ticket (operator-side detail view).
+    if (ticketId) {
+      const messagesRes = await fetchExternal(
+        `support_ticket_messages?select=id,ticket_id,organization_id,author_id,author_role,message,created_at,updated_at&ticket_id=eq.${ticketId}&order=created_at.asc`
+      );
+      if (!messagesRes.ok) {
+        return new Response(
+          JSON.stringify({ error: "Failed to fetch messages", details: messagesRes.details }),
+          { status: messagesRes.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      return new Response(JSON.stringify({ messages: messagesRes.data }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (!parkId) {
       return new Response(JSON.stringify({ error: "park_id is required" }), {
         status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Recent support replies across all of this park's tickets, for the
+    // operator dashboard's Alerts & Activity feed.
+    if (recentMessages) {
+      const ticketsForParkRes = await fetchExternal(
+        `support_tickets?select=id,subject&organization_id=eq.${parkId}`
+      );
+      if (!ticketsForParkRes.ok) {
+        return new Response(
+          JSON.stringify({ error: "Failed to fetch tickets", details: ticketsForParkRes.details }),
+          { status: ticketsForParkRes.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const ticketRows = ticketsForParkRes.data as { id: string; subject: string }[];
+      if (ticketRows.length === 0) {
+        return new Response(JSON.stringify({ messages: [] }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const subjectByTicketId = Object.fromEntries(ticketRows.map((t) => [t.id, t.subject]));
+      const idsList = ticketRows.map((t) => t.id).join(",");
+      const recentRes = await fetchExternal(
+        `support_ticket_messages?select=id,ticket_id,author_role,message,created_at&ticket_id=in.(${idsList})&author_role=eq.support&order=created_at.desc&limit=10`
+      );
+      if (!recentRes.ok) {
+        return new Response(
+          JSON.stringify({ error: "Failed to fetch recent messages", details: recentRes.details }),
+          { status: recentRes.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const messages = (recentRes.data as { ticket_id: string; [key: string]: unknown }[]).map((m) => ({
+        ...m,
+        ticket_subject: subjectByTicketId[m.ticket_id] ?? null,
+      }));
+      return new Response(JSON.stringify({ messages }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

@@ -14,7 +14,6 @@ import {
   X,
 } from 'lucide-react';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { supabase } from '../lib/supabase';
 import { getOptionalSourceWarning, invokeEdgeFunction } from '../lib/edgeFunctions';
 import {
   createEmptyParkDashboardData,
@@ -77,6 +76,15 @@ interface ActivityItem {
   created_at: string;
   severity?: 'info' | 'warning' | 'error' | 'critical';
   status?: string;
+}
+
+interface RecentSupportMessage {
+  id: string;
+  ticket_id: string;
+  author_role: 'operator' | 'support';
+  message: string;
+  created_at: string;
+  ticket_subject: string | null;
 }
 
 export default function Overview() {
@@ -142,18 +150,17 @@ export default function Overview() {
       // Photo/attraction/user counts and real support tickets still apply
       // regardless of the sales model, so those are kept.
       if (isKioskPark) {
-        const [kioskResult, kioskPurchasesResult, externalUsersResult, externalPhotosResult, attractionsResult, supportTicketsResult] =
+        const [kioskResult, kioskPurchasesResult, externalUsersResult, externalPhotosResult, attractionsResult, supportRepliesResult] =
           await Promise.all([
             fetchKioskSales(parkId),
             fetchKioskPurchases(parkId).catch(() => null),
             invokeEdgeFunction<{ customers: { id: string }[] }>('external-users', { query: { park_id: parkId } }),
             invokeEdgeFunction<{ photos: { id: string }[] }>('external-photos', { query: { park_id: parkId } }),
             invokeEdgeFunction<{ attractions: { is_active?: boolean }[] }>('external-attractions', { query: { park_id: parkId } }),
-            supabase
-              .from('support_tickets')
-              .select('id, subject, status, created_at, updated_at')
-              .order('updated_at', { ascending: false })
-              .limit(8),
+            invokeEdgeFunction<{ messages: RecentSupportMessage[] }>('support-tickets', {
+              useSessionAuth: true,
+              query: { park_id: parkId, recent_messages: '1' },
+            }),
           ]);
 
         setKioskDays(aggregateByDate(kioskResult.days, kioskResult.priceCents ?? 0));
@@ -178,14 +185,13 @@ export default function Overview() {
           }));
         setRecentTransactions(kioskActivity);
 
-        const activities: ActivityItem[] = (supportTicketsResult.data || [])
-          .map((ticket) => ({
-            id: `support-${ticket.id}`,
+        const activities: ActivityItem[] = (supportRepliesResult.error ? [] : supportRepliesResult.data?.messages || [])
+          .map((reply) => ({
+            id: `support-reply-${reply.id}`,
             source: 'support' as const,
-            title: 'Support ticket',
-            description: `${ticket.subject} · ${ticket.status.replace('_', ' ')}`,
-            created_at: ticket.updated_at || ticket.created_at,
-            status: ticket.status,
+            title: reply.ticket_subject ? `Support-Antwort: ${reply.ticket_subject}` : 'Support-Antwort',
+            description: reply.message,
+            created_at: reply.created_at,
           }))
           .sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime())
           .slice(0, 12);
@@ -203,7 +209,7 @@ export default function Overview() {
         externalUsersResult,
         externalPhotosResult,
         attractionsResult,
-        supportTicketsResult,
+        supportRepliesResult,
       ] = await Promise.all([
         loadParkDashboardData(parkId),
         invokeEdgeFunction<{
@@ -220,11 +226,10 @@ export default function Overview() {
         invokeEdgeFunction<{ attractions: { is_active?: boolean }[] }>('external-attractions', {
           query: { park_id: parkId },
         }),
-        supabase
-          .from('support_tickets')
-          .select('id, subject, status, created_at, updated_at')
-          .order('updated_at', { ascending: false })
-          .limit(8),
+        invokeEdgeFunction<{ messages: RecentSupportMessage[] }>('support-tickets', {
+          useSessionAuth: true,
+          query: { park_id: parkId, recent_messages: '1' },
+        }),
       ]);
 
       const nextIssues: string[] = [];
@@ -375,13 +380,12 @@ export default function Overview() {
           severity: event.severity,
           status: event.status,
         })),
-        ...(supportTicketsResult.data || []).map((ticket) => ({
-          id: `support-${ticket.id}`,
+        ...(supportRepliesResult.error ? [] : supportRepliesResult.data?.messages || []).map((reply) => ({
+          id: `support-reply-${reply.id}`,
           source: 'support' as const,
-          title: 'Support ticket',
-          description: `${ticket.subject} · ${ticket.status.replace('_', ' ')}`,
-          created_at: ticket.updated_at || ticket.created_at,
-          status: ticket.status,
+          title: reply.ticket_subject ? `Support-Antwort: ${reply.ticket_subject}` : 'Support-Antwort',
+          description: reply.message,
+          created_at: reply.created_at,
         })),
       ]
         .sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime())

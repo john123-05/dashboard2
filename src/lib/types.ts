@@ -98,6 +98,17 @@ export interface SupportTicket {
   updated_at: string;
 }
 
+export interface SupportTicketMessage {
+  id: string;
+  ticket_id: string;
+  organization_id: string;
+  author_id: string | null;
+  author_role: 'operator' | 'support';
+  message: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface SystemHealthEvent {
   id: string;
   park_id: string | null;
