@@ -94,6 +94,7 @@ export interface SupportTicket {
   description: string;
   status: 'open' | 'in_progress' | 'resolved' | 'closed';
   priority: 'low' | 'medium' | 'high' | 'critical';
+  archived_at: string | null;
   created_at: string;
   updated_at: string;
 }
