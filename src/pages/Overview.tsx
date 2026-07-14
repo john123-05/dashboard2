@@ -590,10 +590,6 @@ export default function Overview() {
     );
   }
 
-  function restoreActivityItems() {
-    setDismissedActivityIds([]);
-  }
-
   return (
     <div className="space-y-6 overflow-x-hidden">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -897,18 +893,11 @@ export default function Overview() {
                 Live warnings, support updates and recent operational signals
               </p>
             </div>
-            {dismissedActivityIds.length > 0 && (
-              <button onClick={restoreActivityItems} className="glass-button-secondary">
-                Show hidden
-              </button>
-            )}
           </div>
-          <div className="space-y-3">
+          <div className="max-h-[360px] space-y-3 overflow-y-auto pr-1">
             {visibleActivityItems.length === 0 ? (
               <p className="text-sm text-slate-500">
-                {activityItems.length === 0
-                  ? 'No alerts or activity found.'
-                  : 'All current alerts are hidden in this overview.'}
+                {activityItems.length === 0 ? 'No alerts or activity found.' : 'All alerts have been cleared.'}
               </p>
             ) : (
               visibleActivityItems.map((item) => (
@@ -938,8 +927,8 @@ export default function Overview() {
                         type="button"
                         onClick={() => dismissActivityItem(item.id)}
                         className="rounded-lg p-1 text-slate-300 transition-colors hover:bg-white/60 hover:text-slate-500"
-                        aria-label={`Hide ${item.title}`}
-                        title="Hide from overview"
+                        aria-label={`Clear ${item.title}`}
+                        title="Clear"
                       >
                         <X className="h-4 w-4" />
                       </button>
