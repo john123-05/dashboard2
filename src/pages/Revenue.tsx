@@ -28,11 +28,6 @@ function formatDateLabel(iso: string): string {
   return new Intl.DateTimeFormat('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' }).format(date);
 }
 
-function formatConversion(rate: number | null): string {
-  if (rate === null) return '–';
-  return new Intl.NumberFormat('de-DE', { style: 'percent', maximumFractionDigits: 0 }).format(rate);
-}
-
 interface StripeRevenuePoint {
   date: string;
   amount: number;
@@ -329,9 +324,7 @@ export default function Revenue() {
             <h3 className="text-base font-semibold text-slate-800">Selbstbedienungs-Automat</h3>
             <p className="mt-2 text-sm text-slate-500">
               Kein eigener Webshop hier — jedes gespeicherte Foto ist bereits ein bezahlter Kauf am Automaten
-              ({formatCurrency(kioskPriceCents ?? 0, 'eur')} pro Foto). Die Kamera nummeriert jede Aufnahme
-              durchgehend; Lücken in dieser Nummerierung (Fahrten ohne Kauf) ergeben die geschätzte
-              Conversion-Rate unten.
+              ({formatCurrency(kioskPriceCents ?? 0, 'eur')} pro Foto).
             </p>
           </GlassCard>
 
@@ -339,9 +332,7 @@ export default function Revenue() {
             <KPICard
               title="Heute"
               value={formatCurrency(kioskKpis.today.revenueCents, 'eur')}
-              subtitle={`${kioskKpis.today.sold} verkauft · ${formatConversion(
-                kioskKpis.today.expected ? kioskKpis.today.sold / kioskKpis.today.expected : null,
-              )} Conversion`}
+              subtitle={`${kioskKpis.today.sold} Foto${kioskKpis.today.sold === 1 ? '' : 's'} verkauft`}
               icon={Ticket}
               iconColor="text-brand-600"
               iconBg="bg-brand-50"
@@ -349,9 +340,7 @@ export default function Revenue() {
             <KPICard
               title="Letzte 7 Tage"
               value={formatCurrency(kioskKpis.week.revenueCents, 'eur')}
-              subtitle={`${kioskKpis.week.sold} verkauft · ${formatConversion(
-                kioskKpis.week.expected ? kioskKpis.week.sold / kioskKpis.week.expected : null,
-              )} Conversion`}
+              subtitle={`${kioskKpis.week.sold} Fotos verkauft`}
               icon={Camera}
               iconColor="text-sky-600"
               iconBg="bg-sky-50"
@@ -359,9 +348,7 @@ export default function Revenue() {
             <KPICard
               title="Dieser Monat"
               value={formatCurrency(kioskKpis.month.revenueCents, 'eur')}
-              subtitle={`${kioskKpis.month.sold} verkauft · ${formatConversion(
-                kioskKpis.month.expected ? kioskKpis.month.sold / kioskKpis.month.expected : null,
-              )} Conversion`}
+              subtitle={`${kioskKpis.month.sold} Fotos verkauft`}
               icon={Receipt}
               iconColor="text-emerald-600"
               iconBg="bg-emerald-50"
@@ -369,9 +356,7 @@ export default function Revenue() {
             <KPICard
               title="Gesamt (seit Aufzeichnung)"
               value={formatCurrency(kioskKpis.total.revenueCents, 'eur')}
-              subtitle={`${kioskKpis.total.sold} verkauft · ${formatConversion(
-                kioskKpis.total.expected ? kioskKpis.total.sold / kioskKpis.total.expected : null,
-              )} Conversion`}
+              subtitle={`${kioskKpis.total.sold} Fotos verkauft`}
               icon={Wallet}
               iconColor="text-slate-700"
               iconBg="bg-slate-100"
@@ -381,11 +366,8 @@ export default function Revenue() {
           <GlassCard className="p-6">
             <div className="mb-4 flex items-center justify-between">
               <div>
-                <h3 className="text-base font-semibold text-slate-800">Umsatz &amp; Conversion</h3>
-                <p className="text-sm text-slate-500">
-                  Umsatz (links) sowie verkaufte Fotos und geschätzte Fahrten (rechts) — die Lücke zwischen
-                  den beiden rechten Linien ist die Conversion.
-                </p>
+                <h3 className="text-base font-semibold text-slate-800">Umsatz</h3>
+                <p className="text-sm text-slate-500">Tägliche Einnahmen am Automaten</p>
               </div>
             </div>
             <div className="h-80">
@@ -400,18 +382,10 @@ export default function Revenue() {
                   <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#e2e8f0" />
                   <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} />
                   <YAxis
-                    yAxisId="revenue"
                     axisLine={false}
                     tickLine={false}
                     tick={{ fontSize: 11, fill: '#94a3b8' }}
                     tickFormatter={(value) => `€${value}`}
-                  />
-                  <YAxis
-                    yAxisId="count"
-                    orientation="right"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 11, fill: '#94a3b8' }}
                   />
                   <Tooltip
                     contentStyle={{
@@ -421,50 +395,17 @@ export default function Revenue() {
                       borderRadius: '12px',
                       boxShadow: '0 8px 32px rgba(15,23,42,0.08)',
                     }}
-                    formatter={(value, name) => {
-                      if (name === 'revenueEur') return [`€${Number(value ?? 0).toFixed(2)}`, 'Umsatz'];
-                      if (name === 'soldCount') return [value, 'Verkauft'];
-                      return [value ?? '–', 'Geschätzte Fahrten'];
-                    }}
+                    formatter={(value) => [`€${Number(value ?? 0).toFixed(2)}`, 'Umsatz']}
                   />
                   <Area
-                    yAxisId="revenue"
                     type="monotone"
                     dataKey="revenueEur"
                     stroke="#0ea5e9"
                     strokeWidth={2}
                     fill="url(#kioskRevenue)"
                   />
-                  <Area
-                    yAxisId="count"
-                    type="monotone"
-                    dataKey="soldCount"
-                    stroke="#10b981"
-                    strokeWidth={2}
-                    fill="none"
-                  />
-                  <Area
-                    yAxisId="count"
-                    type="monotone"
-                    dataKey="expectedCount"
-                    stroke="#f59e0b"
-                    strokeWidth={2}
-                    strokeDasharray="4 3"
-                    fill="none"
-                  />
                 </AreaChart>
               </ResponsiveContainer>
-            </div>
-            <div className="mt-3 flex flex-wrap gap-4 text-xs text-slate-500">
-              <span className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-sky-500" /> Umsatz
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-emerald-500" /> Verkaufte Fotos
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-amber-500" /> Geschätzte Fahrten
-              </span>
             </div>
           </GlassCard>
 
@@ -479,8 +420,6 @@ export default function Revenue() {
                     <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-400">
                       <th className="py-2 pr-4">Tag</th>
                       <th className="py-2 pr-4">Verkauft</th>
-                      <th className="py-2 pr-4">Geschätzte Fahrten</th>
-                      <th className="py-2 pr-4">Conversion</th>
                       <th className="py-2">Umsatz</th>
                     </tr>
                   </thead>
@@ -489,8 +428,6 @@ export default function Revenue() {
                       <tr key={day.businessDate} className="border-b border-slate-100 last:border-0">
                         <td className="py-2 pr-4 text-slate-700">{formatDateLabel(day.businessDate)}</td>
                         <td className="py-2 pr-4 text-slate-700">{day.soldCount}</td>
-                        <td className="py-2 pr-4 text-slate-700">{day.expectedCount ?? '–'}</td>
-                        <td className="py-2 pr-4 text-slate-700">{formatConversion(day.conversionRate)}</td>
                         <td className="py-2 font-medium text-slate-800">{formatCurrency(day.revenueCents, 'eur')}</td>
                       </tr>
                     ))}

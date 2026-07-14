@@ -45,11 +45,6 @@ import {
 import KPICard from '../components/ui/KPICard';
 import GlassCard from '../components/ui/GlassCard';
 
-function formatConversion(rate: number | null): string {
-  if (rate === null) return '–';
-  return new Intl.NumberFormat('de-DE', { style: 'percent', maximumFractionDigits: 0 }).format(rate);
-}
-
 interface StripeRevenuePoint {
   date: string;
   amount: number;
@@ -651,8 +646,8 @@ export default function Overview() {
             iconBg="bg-sky-50"
           />
           <KPICard
-            title="Geschätzte Fahrten heute"
-            value={kioskKpis.today.expected !== null ? formatNumber(kioskKpis.today.expected) : '–'}
+            title="Fotos verkauft heute"
+            value={formatNumber(kioskKpis.today.sold)}
             icon={Ticket}
             iconColor="text-amber-600"
             iconBg="bg-amber-50"
@@ -665,11 +660,9 @@ export default function Overview() {
             iconBg="bg-slate-100"
           />
           <KPICard
-            title="Conversion heute"
-            value={formatConversion(
-              kioskKpis.today.expected ? kioskKpis.today.sold / kioskKpis.today.expected : null,
-            )}
-            icon={AlertTriangle}
+            title="Umsatz (Monat)"
+            value={formatCurrency(kioskKpis.month.revenueCents, 'eur')}
+            icon={Wallet}
             iconColor="text-emerald-600"
             iconBg="bg-emerald-50"
           />
@@ -780,11 +773,8 @@ export default function Overview() {
         <GlassCard className="p-6">
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <h3 className="text-base font-semibold text-slate-800">Umsatz &amp; Conversion</h3>
-              <p className="text-sm text-slate-500">
-                Umsatz (links) sowie verkaufte Fotos und geschätzte Fahrten (rechts) — die Lücke zwischen
-                den beiden rechten Linien ist die Conversion
-              </p>
+              <h3 className="text-base font-semibold text-slate-800">Umsatz</h3>
+              <p className="text-sm text-slate-500">Tägliche Einnahmen am Automaten</p>
             </div>
           </div>
           <div className="h-80">
@@ -799,18 +789,10 @@ export default function Overview() {
                 <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} />
                 <YAxis
-                  yAxisId="revenue"
                   axisLine={false}
                   tickLine={false}
                   tick={{ fontSize: 11, fill: '#94a3b8' }}
                   tickFormatter={(value) => `€${value}`}
-                />
-                <YAxis
-                  yAxisId="count"
-                  orientation="right"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 11, fill: '#94a3b8' }}
                 />
                 <Tooltip
                   contentStyle={{
@@ -820,43 +802,17 @@ export default function Overview() {
                     borderRadius: '12px',
                     boxShadow: '0 8px 32px rgba(15,23,42,0.08)',
                   }}
-                  formatter={(value, name) => {
-                    if (name === 'revenueEur') return [`€${Number(value ?? 0).toFixed(2)}`, 'Umsatz'];
-                    if (name === 'soldCount') return [value, 'Verkauft'];
-                    return [value ?? '–', 'Geschätzte Fahrten'];
-                  }}
+                  formatter={(value) => [`€${Number(value ?? 0).toFixed(2)}`, 'Umsatz']}
                 />
                 <Area
-                  yAxisId="revenue"
                   type="monotone"
                   dataKey="revenueEur"
                   stroke="#0ea5e9"
                   strokeWidth={2}
                   fill="url(#kioskRevenueOverview)"
                 />
-                <Area yAxisId="count" type="monotone" dataKey="soldCount" stroke="#10b981" strokeWidth={2} fill="none" />
-                <Area
-                  yAxisId="count"
-                  type="monotone"
-                  dataKey="expectedCount"
-                  stroke="#f59e0b"
-                  strokeWidth={2}
-                  strokeDasharray="4 3"
-                  fill="none"
-                />
               </AreaChart>
             </ResponsiveContainer>
-          </div>
-          <div className="mt-3 flex flex-wrap gap-4 text-xs text-slate-500">
-            <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-sky-500" /> Umsatz
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-emerald-500" /> Verkaufte Fotos
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-amber-500" /> Geschätzte Fahrten
-            </span>
           </div>
         </GlassCard>
         )}
