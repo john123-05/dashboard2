@@ -66,6 +66,66 @@ export async function fetchKioskPurchases(parkId: string): Promise<KioskPurchase
   return data;
 }
 
+// Every photo for one specific local calendar day (park timezone) — not
+// recency-capped like fetchKioskPurchases, since a single busy day can
+// exceed that endpoint's 300-row "last N" limit. Powers the Umsatz page's
+// per-day hourly breakdown. Still only reaches back ~30 days (photos are
+// hard-deleted after that).
+export async function fetchKioskPhotosForDay(parkId: string, businessDate: string): Promise<KioskPurchasesResponse> {
+  const { data, error } = await invokeEdgeFunction<KioskPurchasesResponse>('kiosk-photo-purchases', {
+    useSessionAuth: true,
+    query: { park_id: parkId, date: businessDate },
+  });
+
+  if (error || !data) {
+    throw new Error(error || 'Keine Antwort von kiosk-photo-purchases');
+  }
+
+  return data;
+}
+
+export interface HourlyBucket {
+  hour: number;
+  label: string;
+  soldCount: number;
+  revenueCents: number;
+  revenueEur: number;
+}
+
+function localHour(isoString: string, timezone: string): number {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    hour: 'numeric',
+    hourCycle: 'h23',
+  }).formatToParts(new Date(isoString));
+  const hourPart = parts.find((part) => part.type === 'hour');
+  return hourPart ? Number(hourPart.value) : new Date(isoString).getHours();
+}
+
+// 24 buckets (00:00-23:00), always all present so the chart shows the full
+// day's shape (including silent hours) rather than only the hours with
+// activity.
+export function bucketPurchasesByHour(
+  purchases: KioskPurchaseRow[],
+  priceCents: number,
+  timezone: string,
+): HourlyBucket[] {
+  const counts = new Array(24).fill(0) as number[];
+
+  for (const purchase of purchases) {
+    const hour = localHour(purchase.capturedAt, timezone);
+    if (hour >= 0 && hour < 24) counts[hour] += 1;
+  }
+
+  return counts.map((soldCount, hour) => ({
+    hour,
+    label: `${String(hour).padStart(2, '0')}:00`,
+    soldCount,
+    revenueCents: soldCount * priceCents,
+    revenueEur: (soldCount * priceCents) / 100,
+  }));
+}
+
 // Multiple cameras at one park have independent, non-overlapping sequence
 // counters, so their per-day expected-ride-count (max-min+1) is summed
 // across cameras rather than compared against each other.

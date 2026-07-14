@@ -19,12 +19,14 @@ function requireEnv() {
   return null;
 }
 
-async function fetchExternal(path: string) {
+async function fetchExternal(path: string, init: RequestInit = {}) {
   const res = await fetch(`${APP_SUPABASE_URL}/rest/v1/${path}`, {
+    ...init,
     headers: {
       apikey: APP_SUPABASE_SERVICE_KEY as string,
       Authorization: `Bearer ${APP_SUPABASE_SERVICE_KEY}`,
       "Content-Type": "application/json",
+      ...(init.headers as Record<string, string> | undefined),
     },
   });
 
@@ -55,6 +57,7 @@ Deno.serve(async (req: Request) => {
     const url = new URL(req.url);
     const parkId = url.searchParams.get("park_id");
     const limit = Math.min(Number(url.searchParams.get("limit")) || 100, 300);
+    const businessDate = url.searchParams.get("date"); // YYYY-MM-DD, park-local calendar date
     if (!parkId) {
       return new Response(JSON.stringify({ error: "park_id is required" }), {
         status: 400,
@@ -82,9 +85,17 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const photosRes = await fetchExternal(
-      `photos?select=id,captured_at,created_at,camera_code&park_id=eq.${parkId}&order=captured_at.desc&limit=${limit}`
-    );
+    // A single busy day can exceed the recency limit above (Imst has hit
+    // ~400 photos/day), so an explicit date asks for that whole day instead
+    // via a timezone-correct SQL function rather than "last N overall".
+    const photosRes = businessDate
+      ? await fetchExternal("rpc/get_kiosk_photos_for_day", {
+          method: "POST",
+          body: JSON.stringify({ p_park_id: parkId, p_business_date: businessDate }),
+        })
+      : await fetchExternal(
+          `photos?select=id,captured_at,created_at,camera_code&park_id=eq.${parkId}&order=captured_at.desc&limit=${limit}`
+        );
     if (!photosRes.ok) {
       return new Response(
         JSON.stringify({ error: "Failed to fetch photos", details: photosRes.details }),

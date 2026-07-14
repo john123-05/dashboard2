@@ -9,12 +9,15 @@ import {
 } from '../lib/parkDashboard';
 import {
   aggregateByDate,
+  bucketPurchasesByHour,
   daysAgoInTimezone,
+  fetchKioskPhotosForDay,
   fetchKioskSales,
   sumDays,
   todayInTimezone,
   toChartSeries,
   type AggregatedDay,
+  type KioskPurchaseRow,
 } from '../lib/kioskSales';
 import { formatCurrency, formatNumber, formatPercent, exportToCSV } from '../lib/utils';
 import GlassCard from '../components/ui/GlassCard';
@@ -58,6 +61,12 @@ export default function Revenue() {
   const [error, setError] = useState<string | null>(null);
   const [issues, setIssues] = useState<string[]>([]);
   const [kioskDays, setKioskDays] = useState<AggregatedDay[]>([]);
+
+  const [chartMode, setChartMode] = useState<'trend' | 'day'>('trend');
+  const [selectedDate, setSelectedDate] = useState('');
+  const [dayPurchases, setDayPurchases] = useState<KioskPurchaseRow[]>([]);
+  const [dayLoading, setDayLoading] = useState(false);
+  const [dayError, setDayError] = useState<string | null>(null);
 
   useEffect(() => {
     if (kioskCheckLoading) return;
@@ -217,6 +226,54 @@ export default function Revenue() {
 
   const kioskChartData = useMemo(() => toChartSeries(kioskDays), [kioskDays]);
 
+  // photos (and therefore the hourly breakdown) only reach back ~30 days -
+  // bound the date picker to that window instead of letting someone pick an
+  // older date that will always come back empty.
+  const maxSelectableDate = useMemo(
+    () => (isKioskPark ? todayInTimezone(kioskTimezone) : ''),
+    [isKioskPark, kioskTimezone],
+  );
+  const minSelectableDate = useMemo(
+    () => (isKioskPark ? daysAgoInTimezone(kioskTimezone, 29) : ''),
+    [isKioskPark, kioskTimezone],
+  );
+
+  useEffect(() => {
+    if (!isKioskPark || selectedDate) return;
+    setSelectedDate(todayInTimezone(kioskTimezone));
+  }, [isKioskPark, kioskTimezone, selectedDate]);
+
+  useEffect(() => {
+    if (chartMode !== 'day' || !parkId || !selectedDate) return;
+
+    let cancelled = false;
+    setDayLoading(true);
+    setDayError(null);
+
+    fetchKioskPhotosForDay(parkId, selectedDate)
+      .then((result) => {
+        if (cancelled) return;
+        setDayPurchases(result.purchases);
+        setDayLoading(false);
+      })
+      .catch((loadError) => {
+        if (cancelled) return;
+        setDayError(loadError instanceof Error ? loadError.message : 'Unknown error');
+        setDayLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [chartMode, parkId, selectedDate]);
+
+  const hourlyBuckets = useMemo(
+    () => bucketPurchasesByHour(dayPurchases, kioskPriceCents ?? 0, kioskTimezone),
+    [dayPurchases, kioskPriceCents, kioskTimezone],
+  );
+  const dayTotalRevenueCents = dayPurchases.length * (kioskPriceCents ?? 0);
+  const selectedDateLabel = selectedDate ? formatDateLabel(selectedDate) : '';
+
   const totals = useMemo(() => {
     return dailyRevenue.reduce(
       (sum, row) => ({
@@ -364,49 +421,137 @@ export default function Revenue() {
           </div>
 
           <GlassCard className="p-6">
-            <div className="mb-4 flex items-center justify-between">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h3 className="text-base font-semibold text-slate-800">Umsatz</h3>
-                <p className="text-sm text-slate-500">Tägliche Einnahmen am Automaten</p>
+                <p className="text-sm text-slate-500">
+                  {chartMode === 'trend' ? 'Tägliche Einnahmen am Automaten' : 'Einnahmen nach Uhrzeit'}
+                </p>
+              </div>
+              <div className="flex rounded-xl bg-white/40 p-1">
+                <button
+                  type="button"
+                  onClick={() => setChartMode('trend')}
+                  className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                    chartMode === 'trend' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  Verlauf
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setChartMode('day')}
+                  className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                    chartMode === 'day' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  Nach Tag
+                </button>
               </div>
             </div>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={kioskChartData}>
-                  <defs>
-                    <linearGradient id="kioskRevenue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#0ea5e9" stopOpacity={0.22} />
-                      <stop offset="100%" stopColor="#0ea5e9" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#e2e8f0" />
-                  <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 11, fill: '#94a3b8' }}
-                    tickFormatter={(value) => `€${value}`}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      background: 'rgba(255,255,255,0.94)',
-                      backdropFilter: 'blur(12px)',
-                      border: '1px solid rgba(255,255,255,0.5)',
-                      borderRadius: '12px',
-                      boxShadow: '0 8px 32px rgba(15,23,42,0.08)',
-                    }}
-                    formatter={(value) => [`€${Number(value ?? 0).toFixed(2)}`, 'Umsatz']}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="revenueEur"
-                    stroke="#0ea5e9"
-                    strokeWidth={2}
-                    fill="url(#kioskRevenue)"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
+
+            {chartMode === 'trend' ? (
+              <div className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={kioskChartData}>
+                    <defs>
+                      <linearGradient id="kioskRevenue" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#0ea5e9" stopOpacity={0.22} />
+                        <stop offset="100%" stopColor="#0ea5e9" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} />
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 11, fill: '#94a3b8' }}
+                      tickFormatter={(value) => `€${value}`}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        background: 'rgba(255,255,255,0.94)',
+                        backdropFilter: 'blur(12px)',
+                        border: '1px solid rgba(255,255,255,0.5)',
+                        borderRadius: '12px',
+                        boxShadow: '0 8px 32px rgba(15,23,42,0.08)',
+                      }}
+                      formatter={(value) => [`€${Number(value ?? 0).toFixed(2)}`, 'Umsatz']}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="revenueEur"
+                      stroke="#0ea5e9"
+                      strokeWidth={2}
+                      fill="url(#kioskRevenue)"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <>
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-white/30 p-4">
+                  <div>
+                    <label className="mb-1 block text-xs uppercase tracking-wide text-slate-400">Tag auswählen</label>
+                    <input
+                      type="date"
+                      value={selectedDate}
+                      min={minSelectableDate}
+                      max={maxSelectableDate}
+                      onChange={(event) => setSelectedDate(event.target.value)}
+                      className="glass-input"
+                    />
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs uppercase tracking-wide text-slate-400">
+                      Am {selectedDateLabel} eingenommen
+                    </p>
+                    <p className="text-2xl font-bold text-slate-800">
+                      {formatCurrency(dayTotalRevenueCents, 'eur')}
+                    </p>
+                    <p className="text-xs text-slate-500">{dayPurchases.length} Fotos verkauft</p>
+                  </div>
+                </div>
+
+                {dayError && <p className="mb-3 text-sm text-red-600">{dayError}</p>}
+
+                <div className="h-80">
+                  {dayLoading ? (
+                    <div className="flex h-full items-center justify-center text-sm text-slate-500">
+                      Lädt...
+                    </div>
+                  ) : dayPurchases.length === 0 && !dayError ? (
+                    <div className="flex h-full items-center justify-center text-sm text-slate-500">
+                      Keine Verkäufe an diesem Tag.
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={hourlyBuckets}>
+                        <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#e2e8f0" />
+                        <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} />
+                        <YAxis
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 11, fill: '#94a3b8' }}
+                          tickFormatter={(value) => `€${value}`}
+                        />
+                        <Tooltip
+                          contentStyle={{
+                            background: 'rgba(255,255,255,0.94)',
+                            backdropFilter: 'blur(12px)',
+                            border: '1px solid rgba(255,255,255,0.5)',
+                            borderRadius: '12px',
+                            boxShadow: '0 8px 32px rgba(15,23,42,0.08)',
+                          }}
+                          formatter={(value) => [`€${Number(value ?? 0).toFixed(2)}`, 'Umsatz']}
+                        />
+                        <Bar dataKey="revenueEur" fill="#0ea5e9" radius={[6, 6, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
+                </div>
+              </>
+            )}
           </GlassCard>
 
           <GlassCard className="p-6">
@@ -425,7 +570,14 @@ export default function Revenue() {
                   </thead>
                   <tbody>
                     {kioskDays.map((day) => (
-                      <tr key={day.businessDate} className="border-b border-slate-100 last:border-0">
+                      <tr
+                        key={day.businessDate}
+                        onClick={() => {
+                          setSelectedDate(day.businessDate);
+                          setChartMode('day');
+                        }}
+                        className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-white/40"
+                      >
                         <td className="py-2 pr-4 text-slate-700">{formatDateLabel(day.businessDate)}</td>
                         <td className="py-2 pr-4 text-slate-700">{day.soldCount}</td>
                         <td className="py-2 font-medium text-slate-800">{formatCurrency(day.revenueCents, 'eur')}</td>
