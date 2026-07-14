@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { Camera, CreditCard, Download, Receipt, Ticket, Wallet } from 'lucide-react';
+import { Camera, ChevronLeft, ChevronRight, CreditCard, Download, Receipt, Ticket, Wallet } from 'lucide-react';
 import { getOptionalSourceWarning, invokeEdgeFunction } from '../lib/edgeFunctions';
 import {
   createEmptyParkDashboardData,
@@ -274,6 +274,31 @@ export default function Revenue() {
   const dayTotalRevenueCents = dayPurchases.length * (kioskPriceCents ?? 0);
   const selectedDateLabel = selectedDate ? formatDateLabel(selectedDate) : '';
 
+  const todayStr = useMemo(() => (isKioskPark ? todayInTimezone(kioskTimezone) : ''), [isKioskPark, kioskTimezone]);
+  const yesterdayStr = useMemo(
+    () => (isKioskPark ? daysAgoInTimezone(kioskTimezone, 1) : ''),
+    [isKioskPark, kioskTimezone],
+  );
+  // "Heute"/"Gestern" are just shortcuts for setting selectedDate - which
+  // one reads as active is derived from the date itself, so picking a date
+  // via the arrows or the input always keeps the right tab highlighted.
+  const dayQuickPick: 'heute' | 'gestern' | 'other' =
+    selectedDate === todayStr ? 'heute' : selectedDate === yesterdayStr ? 'gestern' : 'other';
+
+  function stepDay(delta: number) {
+    if (!selectedDate) return;
+    // Pure calendar-date arithmetic on the YYYY-MM-DD string, done entirely
+    // in UTC so it can't shift by a day depending on the browser's own
+    // timezone (mixing local-time construction with toISOString(), which is
+    // always UTC, would do exactly that for anyone browsing from a
+    // timezone ahead of UTC).
+    const next = new Date(`${selectedDate}T00:00:00Z`);
+    next.setUTCDate(next.getUTCDate() + delta);
+    const nextStr = next.toISOString().slice(0, 10);
+    if (nextStr < minSelectableDate || nextStr > maxSelectableDate) return;
+    setSelectedDate(nextStr);
+  }
+
   const totals = useMemo(() => {
     return dailyRevenue.reduce(
       (sum, row) => ({
@@ -428,7 +453,7 @@ export default function Revenue() {
                   {chartMode === 'trend' ? 'Tägliche Einnahmen am Automaten' : 'Einnahmen nach Uhrzeit'}
                 </p>
               </div>
-              <div className="flex rounded-xl bg-white/40 p-1">
+              <div className="flex flex-wrap rounded-xl bg-white/40 p-1">
                 <button
                   type="button"
                   onClick={() => setChartMode('trend')}
@@ -436,16 +461,46 @@ export default function Revenue() {
                     chartMode === 'trend' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
                   }`}
                 >
-                  Verlauf
+                  Gesamt
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setChartMode('day');
+                    setSelectedDate(todayStr);
+                  }}
+                  className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                    chartMode === 'day' && dayQuickPick === 'heute'
+                      ? 'bg-white text-slate-800 shadow-sm'
+                      : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  Heute
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setChartMode('day');
+                    setSelectedDate(yesterdayStr);
+                  }}
+                  className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                    chartMode === 'day' && dayQuickPick === 'gestern'
+                      ? 'bg-white text-slate-800 shadow-sm'
+                      : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  Gestern
                 </button>
                 <button
                   type="button"
                   onClick={() => setChartMode('day')}
                   className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-                    chartMode === 'day' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                    chartMode === 'day' && dayQuickPick === 'other'
+                      ? 'bg-white text-slate-800 shadow-sm'
+                      : 'text-slate-500 hover:text-slate-700'
                   }`}
                 >
-                  Nach Tag
+                  Anderer Tag
                 </button>
               </div>
             </div>
@@ -491,16 +546,36 @@ export default function Revenue() {
             ) : (
               <>
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-white/30 p-4">
-                  <div>
-                    <label className="mb-1 block text-xs uppercase tracking-wide text-slate-400">Tag auswählen</label>
-                    <input
-                      type="date"
-                      value={selectedDate}
-                      min={minSelectableDate}
-                      max={maxSelectableDate}
-                      onChange={(event) => setSelectedDate(event.target.value)}
-                      className="glass-input"
-                    />
+                  <div className="flex items-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => stepDay(-1)}
+                      disabled={selectedDate <= minSelectableDate}
+                      className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-white/60 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
+                      aria-label="Vorheriger Tag"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+                    <div>
+                      <label className="mb-1 block text-xs uppercase tracking-wide text-slate-400">Tag auswählen</label>
+                      <input
+                        type="date"
+                        value={selectedDate}
+                        min={minSelectableDate}
+                        max={maxSelectableDate}
+                        onChange={(event) => setSelectedDate(event.target.value)}
+                        className="glass-input"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => stepDay(1)}
+                      disabled={selectedDate >= maxSelectableDate}
+                      className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-white/60 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
+                      aria-label="Nächster Tag"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
                   </div>
                   <div className="text-right">
                     <p className="text-xs uppercase tracking-wide text-slate-400">
@@ -526,7 +601,13 @@ export default function Revenue() {
                     </div>
                   ) : (
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={hourlyBuckets}>
+                      <AreaChart data={hourlyBuckets}>
+                        <defs>
+                          <linearGradient id="kioskRevenueHourly" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#0ea5e9" stopOpacity={0.22} />
+                            <stop offset="100%" stopColor="#0ea5e9" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
                         <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#e2e8f0" />
                         <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} />
                         <YAxis
@@ -545,8 +626,14 @@ export default function Revenue() {
                           }}
                           formatter={(value) => [`€${Number(value ?? 0).toFixed(2)}`, 'Umsatz']}
                         />
-                        <Bar dataKey="revenueEur" fill="#0ea5e9" radius={[6, 6, 0, 0]} />
-                      </BarChart>
+                        <Area
+                          type="monotone"
+                          dataKey="revenueEur"
+                          stroke="#0ea5e9"
+                          strokeWidth={2}
+                          fill="url(#kioskRevenueHourly)"
+                        />
+                      </AreaChart>
                     </ResponsiveContainer>
                   )}
                 </div>
