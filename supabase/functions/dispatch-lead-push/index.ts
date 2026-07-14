@@ -83,6 +83,22 @@ async function buildSupportTicketNotification(
   };
 }
 
+function formatSinceDuration(minutes: number): string {
+  if (minutes < 120) return 'einer Stunde';
+  return `${Math.floor(minutes / 60)} Stunden`;
+}
+
+function buildParkInactivityNotification(record: Record<string, unknown>): { title: string; body: string } {
+  const parkName = asText(record.park_name) || 'Park';
+  const minutesRaw = record.minutes_since_last_photo;
+  const minutes = typeof minutesRaw === 'number' ? minutesRaw : Number(minutesRaw) || 60;
+
+  return {
+    title: `Keine neuen Bilder bei ${parkName}`,
+    body: `Seit ${formatSinceDuration(minutes)} – einen Blick wert.`,
+  };
+}
+
 async function buildSupportTicketMessageNotification(
   record: Record<string, unknown>,
 ): Promise<{ title: string; body: string; url: string }> {
@@ -156,6 +172,9 @@ Deno.serve(async (req: Request) => {
       record as Record<string, unknown>,
     );
     payload = JSON.stringify({ title, body: notifBody, url });
+  } else if (table === 'park_inactivity') {
+    const { title, body: notifBody } = buildParkInactivityNotification(record as Record<string, unknown>);
+    payload = JSON.stringify({ title, body: notifBody, url: '/staff/cameras' });
   } else if (isLeadTable(table)) {
     const meta = TABLE_META[table];
     payload = JSON.stringify({
