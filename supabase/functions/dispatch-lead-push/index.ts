@@ -61,7 +61,6 @@ async function buildSupportTicketNotification(
   record: Record<string, unknown>,
 ): Promise<{ title: string; body: string }> {
   const priority = asText(record.priority);
-  const subject = asText(record.subject) || 'Neues Support-Ticket';
   const priorityLabel = PRIORITY_LABELS[priority] ?? priority;
 
   // organization_id on support_tickets is actually the shared project's
@@ -74,9 +73,13 @@ async function buildSupportTicketNotification(
     parkName = data?.name ?? '';
   }
 
+  const body = [parkName ? `Von ${parkName}` : null, priorityLabel ? `(${priorityLabel})` : null]
+    .filter(Boolean)
+    .join(' ');
+
   return {
-    title: parkName ? `Neues Support-Ticket von ${parkName}` : 'Neues Support-Ticket',
-    body: priorityLabel ? `${subject} · ${priorityLabel}` : subject,
+    title: 'Neues Support-Ticket',
+    body: body || 'Details in der App',
   };
 }
 
