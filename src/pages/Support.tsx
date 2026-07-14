@@ -55,6 +55,7 @@ export default function Support() {
   const [form, setForm] = useState({ subject: '', description: '', priority: 'medium' });
 
   const detailRef = useRef<HTMLDivElement | null>(null);
+  const loadedForParkRef = useRef<string | null>(null);
 
   const visibleTickets = useMemo(
     () => (viewingArchived ? archivedTickets : tickets),
@@ -71,7 +72,11 @@ export default function Support() {
       return;
     }
 
-    setLoading(true);
+    // Only show the full-page skeleton the first time we load a given park -
+    // the 20s background poll below re-runs this and shouldn't yank the
+    // page back to a loading state every time (that read as "this keeps
+    // reloading"). Switching to a different park still shows it once.
+    if (loadedForParkRef.current !== parkId) setLoading(true);
     const [activeRes, archivedRes] = await Promise.all([
       invokeEdgeFunction<{ tickets: SupportTicket[] }>('support-tickets', {
         useSessionAuth: true,
@@ -86,6 +91,7 @@ export default function Support() {
     setTickets(activeRes.data?.tickets ?? []);
     setArchivedTickets(archivedRes.data?.tickets ?? []);
     setLoadError(activeRes.error || archivedRes.error || null);
+    loadedForParkRef.current = parkId;
     setLoading(false);
   }, [parkId]);
 

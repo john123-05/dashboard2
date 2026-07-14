@@ -83,6 +83,33 @@ async function buildSupportTicketNotification(
   };
 }
 
+async function buildSupportTicketMessageNotification(
+  record: Record<string, unknown>,
+): Promise<{ title: string; body: string; url: string }> {
+  const ticketId = asText(record.ticket_id);
+  const parkId = asText(record.organization_id);
+
+  let parkName = '';
+  if (parkId) {
+    const { data } = await supabaseService.from('parks').select('name').eq('id', parkId).maybeSingle();
+    parkName = data?.name ?? '';
+  }
+
+  let subject = '';
+  if (ticketId) {
+    const { data } = await supabaseService.from('support_tickets').select('subject').eq('id', ticketId).maybeSingle();
+    subject = data?.subject ?? '';
+  }
+
+  const body = [parkName ? `Von ${parkName}` : null, subject ? `„${subject}“` : null].filter(Boolean).join(' · ');
+
+  return {
+    title: 'Neue Antwort im Support-Ticket',
+    body: body || 'Details in der App',
+    url: ticketId ? `/staff/support-ticket-kunden?ticket=${ticketId}` : '/staff/support-ticket-kunden',
+  };
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -117,6 +144,18 @@ Deno.serve(async (req: Request) => {
   if (table === 'support_tickets') {
     const { title, body: notifBody } = await buildSupportTicketNotification(record as Record<string, unknown>);
     payload = JSON.stringify({ title, body: notifBody, url: '/staff/support-ticket-kunden' });
+  } else if (table === 'support_ticket_messages') {
+    // The trigger already gates this to author_role = 'operator' (support's
+    // own replies shouldn't notify support) - this check is just defense in
+    // depth in case dispatch-lead-push is ever invoked directly.
+    const authorRole = asText((record as Record<string, unknown>).author_role);
+    if (authorRole !== 'operator') {
+      return json({ ok: true, sent: 0, removed: 0 });
+    }
+    const { title, body: notifBody, url } = await buildSupportTicketMessageNotification(
+      record as Record<string, unknown>,
+    );
+    payload = JSON.stringify({ title, body: notifBody, url });
   } else if (isLeadTable(table)) {
     const meta = TABLE_META[table];
     payload = JSON.stringify({

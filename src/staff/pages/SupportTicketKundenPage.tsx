@@ -23,6 +23,10 @@ const priorityLabelMap: Record<SupportTicketPriority, string> = {
   critical: 'Kritisch',
 };
 
+function isArchivedStatus(status: SupportTicketStatus): boolean {
+  return status === 'resolved' || status === 'closed';
+}
+
 const formatDateTime = (value: string) =>
   new Intl.DateTimeFormat('de-DE', {
     dateStyle: 'short',
@@ -34,6 +38,8 @@ export default function SupportTicketKundenPage() {
   const [messages, setMessages] = useState<SupportTicketMessage[]>([]);
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [parkNameById, setParkNameById] = useState<Record<string, string>>({});
+  const [viewingArchived, setViewingArchived] = useState(false);
+  const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
 
   const [ticketsLoading, setTicketsLoading] = useState(true);
   const [messagesLoading, setMessagesLoading] = useState(false);
@@ -43,17 +49,28 @@ export default function SupportTicketKundenPage() {
 
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [actionStatus, setActionStatus] = useState<string | null>(null);
 
   const [replyMessage, setReplyMessage] = useState('');
   const [replySending, setReplySending] = useState(false);
   const [replyError, setReplyError] = useState<string | null>(null);
 
   const selectedTicketIdRef = useRef<string | null>(null);
+  const [initialTicketParam] = useState(() => new URLSearchParams(window.location.search).get('ticket'));
+  const appliedDeepLinkRef = useRef(false);
 
   useEffect(() => {
     selectedTicketIdRef.current = selectedTicketId;
   }, [selectedTicketId]);
+
+  const activeTickets = useMemo(
+    () => tickets.filter((ticket) => !isArchivedStatus(ticket.status)),
+    [tickets],
+  );
+  const archivedTickets = useMemo(
+    () => tickets.filter((ticket) => isArchivedStatus(ticket.status)),
+    [tickets],
+  );
+  const visibleTickets = viewingArchived ? archivedTickets : activeTickets;
 
   const selectedTicket = useMemo(
     () => tickets.find((ticket) => ticket.id === selectedTicketId) || null,
@@ -74,16 +91,9 @@ export default function SupportTicketKundenPage() {
       return;
     }
 
-    const nextTickets = (data || []) as SupportTicket[];
-    setTickets(nextTickets);
+    setTickets((data || []) as SupportTicket[]);
     setTicketsError(null);
     setTicketsLoading(false);
-
-    setSelectedTicketId((current) => {
-      if (!nextTickets.length) return null;
-      if (current && nextTickets.some((ticket) => ticket.id === current)) return current;
-      return nextTickets[0].id;
-    });
   }, []);
 
   const loadMessagesForTicket = useCallback(async (ticketId: string) => {
@@ -121,9 +131,36 @@ export default function SupportTicketKundenPage() {
     })();
   }, []);
 
+  // Keep the selection valid whenever the visible (active/archived) list
+  // changes — after load, after resolving/reopening a ticket (which moves
+  // it to the other tab), or after switching tabs.
+  useEffect(() => {
+    setSelectedTicketId((current) => {
+      if (current && visibleTickets.some((ticket) => ticket.id === current)) return current;
+      return visibleTickets[0]?.id ?? null;
+    });
+  }, [visibleTickets]);
+
+  // A push notification for a new reply links here with ?ticket=<id> - jump
+  // straight to that ticket (switching tabs if it's archived) the first
+  // time the ticket list loads, then drop the param from the URL.
+  useEffect(() => {
+    if (!initialTicketParam || appliedDeepLinkRef.current) return;
+    const match = tickets.find((ticket) => ticket.id === initialTicketParam);
+    if (!match) return;
+
+    appliedDeepLinkRef.current = true;
+    setViewingArchived(isArchivedStatus(match.status));
+    setSelectedTicketId(match.id);
+    setMobileDetailOpen(true);
+
+    const url = new URL(window.location.href);
+    url.searchParams.delete('ticket');
+    window.history.replaceState({}, '', url.toString());
+  }, [tickets, initialTicketParam]);
+
   useEffect(() => {
     setActionError(null);
-    setActionStatus(null);
     setReplyMessage('');
     setReplyError(null);
 
@@ -175,18 +212,22 @@ export default function SupportTicketKundenPage() {
     };
   }, [loadTickets, loadMessagesForTicket]);
 
-  const markSelectedTicketDone = async () => {
+  function selectTicket(ticketId: string) {
+    setSelectedTicketId(ticketId);
+    setMobileDetailOpen(true);
+  }
+
+  const updateTicketStatus = async (nextStatus: 'open' | 'resolved') => {
     if (!selectedTicket) return;
 
     setActionError(null);
-    setActionStatus(null);
     setUpdatingStatus(true);
 
     try {
       const res = await edgeFetch('/api/admin/support', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ticket_id: selectedTicket.id, status: 'resolved' }),
+        body: JSON.stringify({ ticket_id: selectedTicket.id, status: nextStatus }),
       });
       const body = await res.json().catch(() => null);
 
@@ -195,9 +236,7 @@ export default function SupportTicketKundenPage() {
         return;
       }
 
-      setActionStatus('Ticket als erledigt markiert.');
       await loadTickets();
-      await loadMessagesForTicket(selectedTicket.id);
     } finally {
       setUpdatingStatus(false);
     }
@@ -232,6 +271,17 @@ export default function SupportTicketKundenPage() {
     }
   };
 
+  const threadEntries = useMemo(() => {
+    if (!selectedTicket) return [] as (SupportTicketMessage | { id: string; author_role: 'operator'; message: string; created_at: string })[];
+    const descriptionEntry = {
+      id: `description-${selectedTicket.id}`,
+      author_role: 'operator' as const,
+      message: selectedTicket.description,
+      created_at: selectedTicket.created_at,
+    };
+    return [descriptionEntry, ...messages];
+  }, [selectedTicket, messages]);
+
   return (
     <div className="grid">
       <div className="card">
@@ -239,27 +289,46 @@ export default function SupportTicketKundenPage() {
         <p className="note">Tickets verwalten und als erledigt markieren.</p>
       </div>
 
-      <div className="support-layout">
-        <div className="card">
+      <div className="support-layout" data-mobile-view={mobileDetailOpen ? 'detail' : 'list'}>
+        <div className="card support-list-panel">
           <div className="support-panel-header">
             <h3>Tickets</h3>
-            {!ticketsLoading && <span className="note">{tickets.length}</span>}
+            {!ticketsLoading && <span className="note">{visibleTickets.length}</span>}
+          </div>
+
+          <div className="support-tabs">
+            <button
+              type="button"
+              className={!viewingArchived ? 'active' : ''}
+              onClick={() => setViewingArchived(false)}
+            >
+              Aktiv ({activeTickets.length})
+            </button>
+            <button
+              type="button"
+              className={viewingArchived ? 'active' : ''}
+              onClick={() => setViewingArchived(true)}
+            >
+              Archiviert ({archivedTickets.length})
+            </button>
           </div>
 
           {ticketsLoading && <p className="support-loading">Tickets werden geladen...</p>}
           {!ticketsLoading && ticketsError && <p className="support-error">{ticketsError}</p>}
-          {!ticketsLoading && !ticketsError && tickets.length === 0 && (
-            <p className="support-empty">Keine Tickets vorhanden.</p>
+          {!ticketsLoading && !ticketsError && visibleTickets.length === 0 && (
+            <p className="support-empty">
+              {viewingArchived ? 'Keine archivierten Tickets.' : 'Keine offenen Tickets.'}
+            </p>
           )}
 
-          {!ticketsLoading && !ticketsError && tickets.length > 0 && (
+          {!ticketsLoading && !ticketsError && visibleTickets.length > 0 && (
             <ul className="ticket-list">
-              {tickets.map((ticket) => (
+              {visibleTickets.map((ticket) => (
                 <li key={ticket.id} className="ticket-item">
                   <button
                     type="button"
                     className={`ticket-item-btn ${ticket.id === selectedTicketId ? 'active' : ''}`}
-                    onClick={() => setSelectedTicketId(ticket.id)}
+                    onClick={() => selectTicket(ticket.id)}
                   >
                     <div className="ticket-item-top">
                       <span className="ticket-item-subject">{ticket.subject}</span>
@@ -277,7 +346,10 @@ export default function SupportTicketKundenPage() {
           )}
         </div>
 
-        <div className="card">
+        <div className="card support-detail-panel">
+          <button type="button" className="mobile-back-button" onClick={() => setMobileDetailOpen(false)}>
+            ← Zurück zu Tickets
+          </button>
           <h3>Nachrichten-Thread</h3>
 
           {!selectedTicket && !ticketsLoading && !ticketsError && (
@@ -296,48 +368,43 @@ export default function SupportTicketKundenPage() {
               <p className="note">
                 Park: {parkNameById[selectedTicket.organization_id] || selectedTicket.organization_id}
               </p>
-              <p className="ticket-description">{selectedTicket.description}</p>
 
               <div className="support-actions-row">
                 <button
                   type="button"
                   className="secondary"
-                  onClick={() => void markSelectedTicketDone()}
-                  disabled={updatingStatus || selectedTicket.status === 'resolved' || selectedTicket.status === 'closed'}
+                  onClick={() =>
+                    void updateTicketStatus(isArchivedStatus(selectedTicket.status) ? 'open' : 'resolved')
+                  }
+                  disabled={updatingStatus}
                 >
-                  {selectedTicket.status === 'resolved' || selectedTicket.status === 'closed'
-                    ? 'Bereits erledigt'
-                    : updatingStatus
-                      ? 'Speichern...'
+                  {updatingStatus
+                    ? 'Speichern...'
+                    : isArchivedStatus(selectedTicket.status)
+                      ? 'Ticket wieder öffnen'
                       : 'Als erledigt markieren'}
                 </button>
               </div>
-
-              {actionStatus && <p className="success">{actionStatus}</p>}
               {actionError && <p className="support-error">{actionError}</p>}
 
-              {messagesLoading && <p className="support-loading">Nachrichten werden geladen...</p>}
-              {!messagesLoading && messagesError && <p className="support-error">{messagesError}</p>}
-              {!messagesLoading && !messagesError && messages.length === 0 && (
-                <p className="support-empty">Für dieses Ticket sind noch keine Nachrichten vorhanden.</p>
-              )}
-
-              {!messagesLoading && !messagesError && messages.length > 0 && (
-                <div className="message-thread">
-                  {messages.map((entry) => (
-                    <div
-                      key={entry.id}
-                      className={`message-item ${entry.author_role === 'support' ? 'role-support' : 'role-operator'}`}
-                    >
-                      <div className="message-meta">
-                        <span className="badge">{entry.author_role === 'support' ? 'Support' : 'Operator'}</span>
-                        <span className="note">{formatDateTime(entry.created_at)}</span>
-                      </div>
-                      <p>{entry.message}</p>
+              <div className="chat-thread">
+                {threadEntries.map((entry) => (
+                  <div
+                    key={entry.id}
+                    className={`chat-row ${entry.author_role === 'support' ? 'chat-row-mine' : 'chat-row-theirs'}`}
+                  >
+                    <div className="chat-bubble">
+                      <p className="chat-bubble-author">
+                        {entry.author_role === 'support' ? 'Du' : 'Operator'}
+                      </p>
+                      <p className="chat-bubble-text">{entry.message}</p>
+                      <p className="chat-bubble-time">{formatDateTime(entry.created_at)}</p>
                     </div>
-                  ))}
-                </div>
-              )}
+                  </div>
+                ))}
+                {messagesLoading && <p className="support-loading">Nachrichten werden geladen...</p>}
+                {!messagesLoading && messagesError && <p className="support-error">{messagesError}</p>}
+              </div>
 
               <div className="support-reply-form">
                 <label htmlFor="support-reply-textarea">Antworten im Thread</label>
