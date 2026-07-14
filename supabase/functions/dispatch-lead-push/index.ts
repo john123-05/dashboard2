@@ -57,13 +57,26 @@ const PRIORITY_LABELS: Record<string, string> = {
   critical: 'Kritisch',
 };
 
-function buildSupportTicketNotification(record: Record<string, unknown>): { title: string; body: string } {
+async function buildSupportTicketNotification(
+  record: Record<string, unknown>,
+): Promise<{ title: string; body: string }> {
   const priority = asText(record.priority);
   const subject = asText(record.subject) || 'Neues Support-Ticket';
   const priorityLabel = PRIORITY_LABELS[priority] ?? priority;
+
+  // organization_id on support_tickets is actually the shared project's
+  // real park_id (see support-tickets edge function in dashboard2) — look
+  // up the name so the notification says which park it's from.
+  const parkId = asText(record.organization_id);
+  let parkName = '';
+  if (parkId) {
+    const { data } = await supabaseService.from('parks').select('name').eq('id', parkId).maybeSingle();
+    parkName = data?.name ?? '';
+  }
+
   return {
-    title: priorityLabel ? `Neues Support-Ticket (${priorityLabel})` : 'Neues Support-Ticket',
-    body: subject,
+    title: parkName ? `Neues Support-Ticket von ${parkName}` : 'Neues Support-Ticket',
+    body: priorityLabel ? `${subject} · ${priorityLabel}` : subject,
   };
 }
 
@@ -99,7 +112,7 @@ Deno.serve(async (req: Request) => {
 
   let payload: string;
   if (table === 'support_tickets') {
-    const { title, body: notifBody } = buildSupportTicketNotification(record as Record<string, unknown>);
+    const { title, body: notifBody } = await buildSupportTicketNotification(record as Record<string, unknown>);
     payload = JSON.stringify({ title, body: notifBody, url: '/staff/support-ticket-kunden' });
   } else if (isLeadTable(table)) {
     const meta = TABLE_META[table];
