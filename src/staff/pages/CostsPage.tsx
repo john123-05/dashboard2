@@ -50,20 +50,6 @@ const VENDORS: CostVendor[] = [
     purpose: 'Website-Hosting (onridepictures u. a.)',
     items: [
       { name: 'Pro-Plan', amount: 25.0, currency: 'USD', cycle: 'monthly', note: 'Nächste Abrechnung: 26. Juli 2026' },
-      {
-        name: 'Domain onridepictures.com',
-        amount: 19.99,
-        currency: 'USD',
-        cycle: 'yearly',
-        note: 'Aktuell kostenloser Testzeitraum – erste Abbuchung ab 25.09.2026',
-      },
-      {
-        name: 'Domain liftpictures-contact.com',
-        amount: 19.99,
-        currency: 'USD',
-        cycle: 'yearly',
-        note: 'Aktuell kostenloser Testzeitraum – erste Abbuchung ab 24.08.2026',
-      },
     ],
   },
   {
@@ -123,6 +109,20 @@ const VENDORS: CostVendor[] = [
       { name: 'attraktionsfotos.de', amount: 13.0, currency: 'EUR', cycle: 'yearly', note: 'Verlängerung: 15.11.2026' },
       { name: 'onridefotos.de', amount: 13.0, currency: 'EUR', cycle: 'yearly', note: 'Verlängerung: 15.11.2026' },
       { name: 'onridebilder.de', amount: 13.0, currency: 'EUR', cycle: 'yearly', note: 'Verlängerung: 19.02.2027' },
+      {
+        name: 'onridepictures.com',
+        amount: 19.99,
+        currency: 'USD',
+        cycle: 'yearly',
+        note: 'Bei Bolt.new registriert — aktuell kostenloser Testzeitraum, erste Abbuchung ab 25.09.2026',
+      },
+      {
+        name: 'liftpictures-contact.com',
+        amount: 19.99,
+        currency: 'USD',
+        cycle: 'yearly',
+        note: 'Bei Bolt.new registriert — aktuell kostenloser Testzeitraum, erste Abbuchung ab 24.08.2026',
+      },
     ],
   },
 ];
