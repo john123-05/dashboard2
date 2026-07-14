@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { fetchKioskSales } from '../lib/kioskSales';
+import { fetchKioskSales, type OpeningHours } from '../lib/kioskSales';
 
 interface ParkState {
   parkId: string | null;
@@ -11,6 +11,7 @@ interface ParkState {
   isKioskPark: boolean;
   kioskPriceCents: number | null;
   kioskTimezone: string;
+  kioskOpeningHours: OpeningHours | null;
   kioskCheckLoading: boolean;
 }
 
@@ -23,6 +24,7 @@ export function ParkProvider({ children }: { children: ReactNode }) {
   const [isKioskPark, setIsKioskPark] = useState(false);
   const [kioskPriceCents, setKioskPriceCents] = useState<number | null>(null);
   const [kioskTimezone, setKioskTimezone] = useState('Europe/Vienna');
+  const [kioskOpeningHours, setKioskOpeningHours] = useState<OpeningHours | null>(null);
   const [kioskCheckLoading, setKioskCheckLoading] = useState(true);
 
   useEffect(() => {
@@ -45,6 +47,7 @@ export function ParkProvider({ children }: { children: ReactNode }) {
     if (!parkId) {
       setIsKioskPark(false);
       setKioskPriceCents(null);
+      setKioskOpeningHours(null);
       setKioskCheckLoading(false);
       return;
     }
@@ -55,11 +58,13 @@ export function ParkProvider({ children }: { children: ReactNode }) {
         setIsKioskPark(result.isKioskPark);
         setKioskPriceCents(result.priceCents);
         setKioskTimezone(result.timezone ?? 'Europe/Vienna');
+        setKioskOpeningHours(result.openingHours ?? null);
       })
       .catch(() => {
         if (cancelled) return;
         setIsKioskPark(false);
         setKioskPriceCents(null);
+        setKioskOpeningHours(null);
       })
       .finally(() => {
         if (!cancelled) setKioskCheckLoading(false);
@@ -82,7 +87,16 @@ export function ParkProvider({ children }: { children: ReactNode }) {
 
   return (
     <ParkContext.Provider
-      value={{ parkId, parkName, setPark, isKioskPark, kioskPriceCents, kioskTimezone, kioskCheckLoading }}
+      value={{
+        parkId,
+        parkName,
+        setPark,
+        isKioskPark,
+        kioskPriceCents,
+        kioskTimezone,
+        kioskOpeningHours,
+        kioskCheckLoading,
+      }}
     >
       {children}
     </ParkContext.Provider>

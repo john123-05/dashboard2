@@ -8,10 +8,17 @@ export interface DailySalesRow {
   max_file_code: number | null;
 }
 
+// Keyed by 3-letter weekday (mon..sun); each value is [open, close] as
+// "HH:MM" local time, or null for a closed day. Matches the format written
+// by 20260714090000_kiosk_photo_sales_rollup.sql / set by the
+// set_imst_opening_hours migration.
+export type OpeningHours = Record<string, [string, string] | null>;
+
 export interface KioskSalesResponse {
   isKioskPark: boolean;
   priceCents: number | null;
   timezone: string | null;
+  openingHours: OpeningHours | null;
   days: DailySalesRow[];
 }
 
@@ -102,28 +109,63 @@ function localHour(isoString: string, timezone: string): number {
   return hourPart ? Number(hourPart.value) : new Date(isoString).getHours();
 }
 
-// 24 buckets (00:00-23:00), always all present so the chart shows the full
-// day's shape (including silent hours) rather than only the hours with
-// activity.
+const WEEKDAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']; // index = Date#getUTCDay()
+
+// Which [openHour, closeHour] to chart for a given local business date -
+// looked up by weekday, matching the same opening_hours column the
+// check_park_inactivity() cron job reads. Weekday is derived from the date
+// string's own calendar value (via an explicit UTC construction/extraction,
+// same fix as Revenue.tsx's stepDay) rather than the browser's local time,
+// so it can't shift by a day depending on where the browser happens to be.
+export function getOpeningHourRangeForDate(
+  openingHours: OpeningHours | null,
+  businessDate: string,
+): { startHour: number; endHour: number } | null {
+  if (!openingHours || !businessDate) return null;
+  const dow = new Date(`${businessDate}T00:00:00Z`).getUTCDay();
+  const hours = openingHours[WEEKDAY_KEYS[dow]];
+  if (!Array.isArray(hours) || hours.length < 2) return null;
+
+  const startHour = Number(hours[0].split(':')[0]);
+  const endHour = Number(hours[1].split(':')[0]);
+  if (Number.isNaN(startHour) || Number.isNaN(endHour) || endHour < startHour) return null;
+
+  return { startHour, endHour };
+}
+
+// Hourly buckets across [hourRange.startHour, hourRange.endHour] (inclusive
+// of both ends), or the full 00:00-23:00 day if no range is given (e.g. no
+// opening_hours configured for this park/day) - always all present within
+// that span so the chart shows the full shape, including silent hours, not
+// just the hours with activity. Purchases outside the range (a stray very
+// early/late capture) aren't dropped from the day's total elsewhere, only
+// from this narrowed timeline.
 export function bucketPurchasesByHour(
   purchases: KioskPurchaseRow[],
   priceCents: number,
   timezone: string,
+  hourRange?: { startHour: number; endHour: number } | null,
 ): HourlyBucket[] {
-  const counts = new Array(24).fill(0) as number[];
+  const startHour = hourRange?.startHour ?? 0;
+  const endHour = hourRange?.endHour ?? 23;
+  const hours = Array.from({ length: endHour - startHour + 1 }, (_, i) => startHour + i);
 
+  const counts = new Map<number, number>(hours.map((hour) => [hour, 0]));
   for (const purchase of purchases) {
     const hour = localHour(purchase.capturedAt, timezone);
-    if (hour >= 0 && hour < 24) counts[hour] += 1;
+    if (counts.has(hour)) counts.set(hour, (counts.get(hour) ?? 0) + 1);
   }
 
-  return counts.map((soldCount, hour) => ({
-    hour,
-    label: `${String(hour).padStart(2, '0')}:00`,
-    soldCount,
-    revenueCents: soldCount * priceCents,
-    revenueEur: (soldCount * priceCents) / 100,
-  }));
+  return hours.map((hour) => {
+    const soldCount = counts.get(hour) ?? 0;
+    return {
+      hour,
+      label: `${String(hour).padStart(2, '0')}:00`,
+      soldCount,
+      revenueCents: soldCount * priceCents,
+      revenueEur: (soldCount * priceCents) / 100,
+    };
+  });
 }
 
 // Multiple cameras at one park have independent, non-overlapping sequence

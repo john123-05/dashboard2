@@ -13,6 +13,7 @@ import {
   daysAgoInTimezone,
   fetchKioskPhotosForDay,
   fetchKioskSales,
+  getOpeningHourRangeForDate,
   sumDays,
   todayInTimezone,
   toChartSeries,
@@ -53,7 +54,7 @@ interface RevenueSeriesRow {
 
 export default function Revenue() {
   const { t } = useI18n();
-  const { parkId, isKioskPark, kioskPriceCents, kioskTimezone, kioskCheckLoading } = usePark();
+  const { parkId, isKioskPark, kioskPriceCents, kioskTimezone, kioskOpeningHours, kioskCheckLoading } = usePark();
   const [parkData, setParkData] = useState<ParkDashboardData | null>(null);
   const [dailyRevenue, setDailyRevenue] = useState<RevenueSeriesRow[]>([]);
   const [onlinePaymentCount, setOnlinePaymentCount] = useState(0);
@@ -63,6 +64,10 @@ export default function Revenue() {
   const [kioskDays, setKioskDays] = useState<AggregatedDay[]>([]);
 
   const [chartMode, setChartMode] = useState<'trend' | 'day'>('trend');
+  // Explicit, not purely derived from selectedDate — "Anderer Tag" needs to
+  // be a real, distinctly-clickable state (it's what reveals the date
+  // picker), not just whatever the date happens to currently equal.
+  const [dayTab, setDayTab] = useState<'heute' | 'gestern' | 'other'>('heute');
   const [selectedDate, setSelectedDate] = useState('');
   const [dayPurchases, setDayPurchases] = useState<KioskPurchaseRow[]>([]);
   const [dayLoading, setDayLoading] = useState(false);
@@ -267,9 +272,13 @@ export default function Revenue() {
     };
   }, [chartMode, parkId, selectedDate]);
 
+  const dayHourRange = useMemo(
+    () => getOpeningHourRangeForDate(kioskOpeningHours, selectedDate),
+    [kioskOpeningHours, selectedDate],
+  );
   const hourlyBuckets = useMemo(
-    () => bucketPurchasesByHour(dayPurchases, kioskPriceCents ?? 0, kioskTimezone),
-    [dayPurchases, kioskPriceCents, kioskTimezone],
+    () => bucketPurchasesByHour(dayPurchases, kioskPriceCents ?? 0, kioskTimezone, dayHourRange),
+    [dayPurchases, kioskPriceCents, kioskTimezone, dayHourRange],
   );
   const dayTotalRevenueCents = dayPurchases.length * (kioskPriceCents ?? 0);
   const selectedDateLabel = selectedDate ? formatDateLabel(selectedDate) : '';
@@ -279,11 +288,11 @@ export default function Revenue() {
     () => (isKioskPark ? daysAgoInTimezone(kioskTimezone, 1) : ''),
     [isKioskPark, kioskTimezone],
   );
-  // "Heute"/"Gestern" are just shortcuts for setting selectedDate - which
-  // one reads as active is derived from the date itself, so picking a date
-  // via the arrows or the input always keeps the right tab highlighted.
-  const dayQuickPick: 'heute' | 'gestern' | 'other' =
-    selectedDate === todayStr ? 'heute' : selectedDate === yesterdayStr ? 'gestern' : 'other';
+
+  function selectDay(dateStr: string) {
+    setSelectedDate(dateStr);
+    setDayTab(dateStr === todayStr ? 'heute' : dateStr === yesterdayStr ? 'gestern' : 'other');
+  }
 
   function stepDay(delta: number) {
     if (!selectedDate) return;
@@ -296,7 +305,7 @@ export default function Revenue() {
     next.setUTCDate(next.getUTCDate() + delta);
     const nextStr = next.toISOString().slice(0, 10);
     if (nextStr < minSelectableDate || nextStr > maxSelectableDate) return;
-    setSelectedDate(nextStr);
+    selectDay(nextStr);
   }
 
   const totals = useMemo(() => {
@@ -467,10 +476,10 @@ export default function Revenue() {
                   type="button"
                   onClick={() => {
                     setChartMode('day');
-                    setSelectedDate(todayStr);
+                    selectDay(todayStr);
                   }}
                   className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-                    chartMode === 'day' && dayQuickPick === 'heute'
+                    chartMode === 'day' && dayTab === 'heute'
                       ? 'bg-white text-slate-800 shadow-sm'
                       : 'text-slate-500 hover:text-slate-700'
                   }`}
@@ -481,10 +490,10 @@ export default function Revenue() {
                   type="button"
                   onClick={() => {
                     setChartMode('day');
-                    setSelectedDate(yesterdayStr);
+                    selectDay(yesterdayStr);
                   }}
                   className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-                    chartMode === 'day' && dayQuickPick === 'gestern'
+                    chartMode === 'day' && dayTab === 'gestern'
                       ? 'bg-white text-slate-800 shadow-sm'
                       : 'text-slate-500 hover:text-slate-700'
                   }`}
@@ -493,9 +502,12 @@ export default function Revenue() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setChartMode('day')}
+                  onClick={() => {
+                    setChartMode('day');
+                    setDayTab('other');
+                  }}
                   className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-                    chartMode === 'day' && dayQuickPick === 'other'
+                    chartMode === 'day' && dayTab === 'other'
                       ? 'bg-white text-slate-800 shadow-sm'
                       : 'text-slate-500 hover:text-slate-700'
                   }`}
@@ -557,15 +569,21 @@ export default function Revenue() {
                       <ChevronLeft className="h-4 w-4" />
                     </button>
                     <div>
-                      <label className="mb-1 block text-xs uppercase tracking-wide text-slate-400">Tag auswählen</label>
-                      <input
-                        type="date"
-                        value={selectedDate}
-                        min={minSelectableDate}
-                        max={maxSelectableDate}
-                        onChange={(event) => setSelectedDate(event.target.value)}
-                        className="glass-input"
-                      />
+                      <label className="mb-1 block text-xs uppercase tracking-wide text-slate-400">
+                        {dayTab === 'other' ? 'Tag auswählen' : 'Tag'}
+                      </label>
+                      {dayTab === 'other' ? (
+                        <input
+                          type="date"
+                          value={selectedDate}
+                          min={minSelectableDate}
+                          max={maxSelectableDate}
+                          onChange={(event) => selectDay(event.target.value)}
+                          className="glass-input"
+                        />
+                      ) : (
+                        <p className="py-3 text-sm font-semibold text-slate-800">{selectedDateLabel}</p>
+                      )}
                     </div>
                     <button
                       type="button"
@@ -660,7 +678,7 @@ export default function Revenue() {
                       <tr
                         key={day.businessDate}
                         onClick={() => {
-                          setSelectedDate(day.businessDate);
+                          selectDay(day.businessDate);
                           setChartMode('day');
                         }}
                         className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-white/40"
