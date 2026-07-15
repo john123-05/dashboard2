@@ -1474,6 +1474,12 @@
 
 .staff-app .contact-quick-add {
   display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+.staff-app .contact-quick-add-row {
+  display: flex;
   flex-wrap: wrap;
   gap: 4px;
   width: 100%;
@@ -1484,11 +1490,50 @@
   padding: 5px 4px;
   font-size: 11px;
 }
-.staff-app .contact-quick-add button {
+.staff-app .contact-quick-add-row button {
   flex: none;
   padding: 5px 8px;
   font-size: 11px;
   white-space: nowrap;
+}
+.staff-app button.contact-quick-add-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-start;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+}
+.staff-app button.contact-quick-add-toggle:hover {
+  color: var(--text);
+}
+.staff-app .contact-quick-add-details {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+.staff-app .contact-quick-add-note {
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--hairline);
+  background: var(--surface-soft);
+  color: var(--text);
+  font-size: 12px;
+  font-family: inherit;
+  resize: vertical;
+}
+.staff-app .contact-quick-add-details input[type='file'] {
+  font-size: 11px;
 }
 .staff-app .contact-timeline {
   margin-top: 2px;
@@ -1518,9 +1563,14 @@
 .staff-app .contact-timeline-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  max-height: 140px;
+  gap: 8px;
+  max-height: 220px;
   overflow-y: auto;
+}
+.staff-app .contact-timeline-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 .staff-app .contact-timeline-item {
   display: flex;
@@ -1543,6 +1593,62 @@
 }
 .staff-app button.contact-timeline-remove:hover {
   color: var(--status-error);
+}
+.staff-app .contact-timeline-note {
+  margin: 0;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: var(--surface-soft);
+  color: var(--text);
+  font-size: 12px;
+  font-style: italic;
+}
+.staff-app .contact-timeline-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.staff-app .contact-attachment-chip {
+  position: relative;
+  width: 44px;
+  height: 44px;
+}
+.staff-app .contact-attachment-chip a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--hairline);
+  background: var(--surface-soft);
+}
+.staff-app .contact-attachment-chip img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.staff-app .contact-attachment-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+}
+.staff-app button.contact-attachment-remove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: none;
+  background: var(--status-error);
+  color: #fff;
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
 }
 .staff-app button.quick-search-fab {
   position: fixed;

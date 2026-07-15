@@ -1,6 +1,6 @@
 import { handleOptions, json, requireAdminFromRequest, supabaseService } from '../_shared/sameProjectAdminAuth.ts';
 
-const columns = 'id, email, source_table, source_id, contacted_at, created_at';
+const columns = 'id, email, source_table, source_id, contacted_at, note, created_at';
 
 const SOURCE_TABLES = ['email_leads', 'website_requests', 'german_website_requests', 'product_finder_submissions'];
 
@@ -30,6 +30,7 @@ Deno.serve(async (req) => {
     const sourceTable = typeof payload?.source_table === 'string' ? payload.source_table : '';
     const sourceId = typeof payload?.source_id === 'string' ? payload.source_id : null;
     const contactedAtInput = typeof payload?.contacted_at === 'string' ? payload.contacted_at : '';
+    const note = typeof payload?.note === 'string' && payload.note.trim() ? payload.note.trim() : null;
 
     if (!email) return json({ error: 'Missing email' }, 400);
     if (!SOURCE_TABLES.includes(sourceTable)) return json({ error: 'Invalid source_table' }, 400);
@@ -39,7 +40,7 @@ Deno.serve(async (req) => {
 
     const { data, error } = await supabaseService
       .from('lead_contact_events')
-      .insert({ email, source_table: sourceTable, source_id: sourceId, contacted_at: contactedAt })
+      .insert({ email, source_table: sourceTable, source_id: sourceId, contacted_at: contactedAt, note })
       .select(columns)
       .maybeSingle();
 

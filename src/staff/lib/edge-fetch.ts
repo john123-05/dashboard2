@@ -18,6 +18,7 @@ const routeMap: Record<string, string> = {
   '/api/admin/german-website-requests': 'admin-german-website-requests',
   '/api/admin/product-finder': 'admin-product-finder',
   '/api/admin/lead-contacts': 'admin-lead-contacts',
+  '/api/admin/lead-contact-attachments': 'admin-lead-contact-attachments',
   '/api/admin/email-leads': 'admin-email-leads',
   '/api/support-sync': 'support-sync',
   '/api/admin/push-subscription': 'save-push-subscription',

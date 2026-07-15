@@ -11,6 +11,7 @@ import LeadSortControl from '../components/LeadSortControl';
 import {
   attractionMaterialLabel,
   addContactEvent,
+  deleteContactAttachment,
   detectLanguageHint,
   deleteContactEvent,
   deleteEmailLead,
@@ -18,6 +19,7 @@ import {
   deleteProductFinderSubmission,
   deleteWebsiteRequest,
   eventsForEmail,
+  fetchContactAttachments,
   fetchContactEvents,
   fetchEmailLeads,
   fetchGermanWebsiteRequests,
@@ -30,8 +32,10 @@ import {
   updateGermanWebsiteRequest,
   updateProductFinderSubmission,
   updateWebsiteRequest,
+  uploadContactAttachment,
   LEAD_TEMPERATURES,
   LEAD_TEMPERATURE_LABELS,
+  type ContactAttachment,
   type ContactEvent,
   type EmailLead,
   type GermanWebsiteRequest,
@@ -471,6 +475,7 @@ export default function WebsiteAnfragenPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const [contactEvents, setContactEvents] = useState<ContactEvent[]>([]);
+  const [contactAttachments, setContactAttachments] = useState<ContactAttachment[]>([]);
 
   const loadContactEvents = useCallback(async () => {
     try {
@@ -481,10 +486,36 @@ export default function WebsiteAnfragenPage() {
     }
   }, []);
 
-  async function onAddContact(email: string, sourceTable: LeadSourceTable, sourceId: string, contactedAtIso: string) {
+  const loadContactAttachments = useCallback(async () => {
     try {
-      const event = await addContactEvent({ email, source_table: sourceTable, source_id: sourceId, contacted_at: contactedAtIso });
+      setContactAttachments(await fetchContactAttachments());
+    } catch {
+      // Non-critical, same reasoning as loadContactEvents above.
+    }
+  }, []);
+
+  async function onAddContact(
+    email: string,
+    sourceTable: LeadSourceTable,
+    sourceId: string,
+    contactedAtIso: string,
+    note: string,
+    files: File[],
+  ) {
+    try {
+      const event = await addContactEvent({
+        email,
+        source_table: sourceTable,
+        source_id: sourceId,
+        contacted_at: contactedAtIso,
+        note: note || undefined,
+      });
       setContactEvents((prev) => [...prev, event]);
+
+      if (files.length > 0) {
+        const uploaded = await Promise.all(files.map((file) => uploadContactAttachment(event.id, file)));
+        setContactAttachments((prev) => [...prev, ...uploaded]);
+      }
     } catch (err) {
       window.alert(err instanceof Error ? err.message : 'Kontakt konnte nicht gespeichert werden');
     }
@@ -497,6 +528,17 @@ export default function WebsiteAnfragenPage() {
       await deleteContactEvent(id);
     } catch (err) {
       setContactEvents(previous);
+      window.alert(err instanceof Error ? err.message : 'Löschen fehlgeschlagen');
+    }
+  }
+
+  async function onDeleteAttachment(id: string) {
+    const previous = contactAttachments;
+    setContactAttachments((prev) => prev.filter((a) => a.id !== id));
+    try {
+      await deleteContactAttachment(id);
+    } catch (err) {
+      setContactAttachments(previous);
       window.alert(err instanceof Error ? err.message : 'Löschen fehlgeschlagen');
     }
   }
@@ -636,7 +678,15 @@ export default function WebsiteAnfragenPage() {
     void loadProductFinderRows();
     void loadLeadRows();
     void loadContactEvents();
-  }, [loadLeadRows, loadWebsiteRows, loadGermanRows, loadProductFinderRows, loadContactEvents]);
+    void loadContactAttachments();
+  }, [
+    loadLeadRows,
+    loadWebsiteRows,
+    loadGermanRows,
+    loadProductFinderRows,
+    loadContactEvents,
+    loadContactAttachments,
+  ]);
 
   async function onWebsiteFieldChange(id: string, update: { temperature?: LeadTemperature; contacted_at?: string | null }) {
     const previous = websiteRows;
@@ -1150,7 +1200,14 @@ export default function WebsiteAnfragenPage() {
                         <span className="lead-qa-a">{row.antwort || '-'}</span>
                       </div>
                     )}
-                    {statsExpanded && <ContactTimeline events={ownContactEvents} onDelete={onDeleteContact} />}
+                    {statsExpanded && (
+                      <ContactTimeline
+                        events={ownContactEvents}
+                        attachments={contactAttachments}
+                        onDelete={onDeleteContact}
+                        onDeleteAttachment={onDeleteAttachment}
+                      />
+                    )}
                     <span className="lead-card-date">{formatDate(capturedAt) || '-'}</span>
                   </div>
                   <div className="lead-card-actions">
@@ -1158,7 +1215,9 @@ export default function WebsiteAnfragenPage() {
                       value={row.temperature}
                       onChange={(temperature) => onLeadFieldChange(row.id, { temperature })}
                     />
-                    <ContactQuickAdd onAdd={(iso) => onAddContact(row.email, 'email_leads', row.id, iso)} />
+                    <ContactQuickAdd
+                      onAdd={(iso, note, files) => onAddContact(row.email, 'email_leads', row.id, iso, note, files)}
+                    />
                     <button
                       type="button"
                       className="lead-delete-btn"
@@ -1256,7 +1315,14 @@ export default function WebsiteAnfragenPage() {
                     )}
                   </div>
                   {row.message && expanded && <p className="lead-card-message">{row.message}</p>}
-                  {statsExpanded && <ContactTimeline events={ownContactEvents} onDelete={onDeleteContact} />}
+                  {statsExpanded && (
+                    <ContactTimeline
+                      events={ownContactEvents}
+                      attachments={contactAttachments}
+                      onDelete={onDeleteContact}
+                      onDeleteAttachment={onDeleteAttachment}
+                    />
+                  )}
                   <div className="lead-card-meta">
                     <span className="lead-card-date">{formatDate(row.submitted_at) || '-'}</span>
                     {row.source && <span>{row.source}</span>}
@@ -1272,7 +1338,9 @@ export default function WebsiteAnfragenPage() {
                     value={row.temperature}
                     onChange={(temperature) => onWebsiteFieldChange(row.id, { temperature })}
                   />
-                  <ContactQuickAdd onAdd={(iso) => onAddContact(row.email, 'website_requests', row.id, iso)} />
+                  <ContactQuickAdd
+                    onAdd={(iso, note, files) => onAddContact(row.email, 'website_requests', row.id, iso, note, files)}
+                  />
                   <button
                     type="button"
                     className="lead-delete-btn"
@@ -1367,7 +1435,14 @@ export default function WebsiteAnfragenPage() {
                       </button>
                     </div>
                   )}
-                  {statsExpanded && <ContactTimeline events={ownContactEvents} onDelete={onDeleteContact} />}
+                  {statsExpanded && (
+                    <ContactTimeline
+                      events={ownContactEvents}
+                      attachments={contactAttachments}
+                      onDelete={onDeleteContact}
+                      onDeleteAttachment={onDeleteAttachment}
+                    />
+                  )}
                   <div className="lead-card-meta">
                     <span className="lead-card-date">{formatDate(row.submitted_at) || '-'}</span>
                     {row.referral_source && <span>{row.referral_source}</span>}
@@ -1378,7 +1453,11 @@ export default function WebsiteAnfragenPage() {
                     value={row.temperature}
                     onChange={(temperature) => onGermanFieldChange(row.id, { temperature })}
                   />
-                  <ContactQuickAdd onAdd={(iso) => onAddContact(row.email, 'german_website_requests', row.id, iso)} />
+                  <ContactQuickAdd
+                    onAdd={(iso, note, files) =>
+                      onAddContact(row.email, 'german_website_requests', row.id, iso, note, files)
+                    }
+                  />
                   <button
                     type="button"
                     className="lead-delete-btn"
@@ -1497,7 +1576,14 @@ export default function WebsiteAnfragenPage() {
                         ))}
                       </div>
                     )}
-                    {statsExpanded && <ContactTimeline events={ownContactEvents} onDelete={onDeleteContact} />}
+                    {statsExpanded && (
+                      <ContactTimeline
+                        events={ownContactEvents}
+                        attachments={contactAttachments}
+                        onDelete={onDeleteContact}
+                        onDeleteAttachment={onDeleteAttachment}
+                      />
+                    )}
                     <span className="lead-card-date">{formatDate(row.submitted_at) || '-'}</span>
                   </div>
                   <div className="lead-card-actions">
@@ -1506,7 +1592,9 @@ export default function WebsiteAnfragenPage() {
                       onChange={(temperature) => onProductFinderFieldChange(row.id, { temperature })}
                     />
                     <ContactQuickAdd
-                      onAdd={(iso) => onAddContact(row.email, 'product_finder_submissions', row.id, iso)}
+                      onAdd={(iso, note, files) =>
+                        onAddContact(row.email, 'product_finder_submissions', row.id, iso, note, files)
+                      }
                     />
                     <button
                       type="button"

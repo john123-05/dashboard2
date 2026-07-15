@@ -118,7 +118,56 @@ export interface ContactEvent {
   source_table: LeadSourceTable;
   source_id: string | null;
   contacted_at: string;
+  note: string | null;
   created_at: string;
+}
+
+// A file (image or PDF) attached to a specific contact event, so the
+// timeline can show exactly what was exchanged and when — not just that a
+// contact happened. `url` is a short-lived signed URL issued by the edge
+// function each time attachments are loaded, not a stored value.
+export interface ContactAttachment {
+  id: string;
+  contact_event_id: string;
+  file_path: string;
+  file_name: string;
+  mime_type: string | null;
+  file_size_bytes: number | null;
+  created_at: string;
+  url: string | null;
+}
+
+// Not a hook — safe to call inside a .map() while rendering a list of cards.
+export function attachmentsForEvent(attachments: ContactAttachment[], contactEventId: string): ContactAttachment[] {
+  return attachments.filter((a) => a.contact_event_id === contactEventId);
+}
+
+export async function fetchContactAttachments(): Promise<ContactAttachment[]> {
+  const res = await edgeFetch('/api/admin/lead-contact-attachments');
+  const body = await res.json().catch(() => null);
+  if (!res.ok) throw new Error(getApiErrorMessage(body, 'Anhänge konnten nicht geladen werden'));
+  return Array.isArray(body?.data) ? body.data : [];
+}
+
+export async function uploadContactAttachment(contactEventId: string, file: File): Promise<ContactAttachment> {
+  const form = new FormData();
+  form.set('contact_event_id', contactEventId);
+  form.set('file', file, file.name);
+  // No Content-Type header set deliberately — the browser needs to add its
+  // own multipart boundary, which it only does when the body is a FormData
+  // instance and nothing has already claimed Content-Type.
+  const res = await edgeFetch('/api/admin/lead-contact-attachments', { method: 'POST', body: form });
+  const body = await res.json().catch(() => null);
+  if (!res.ok) throw new Error(getApiErrorMessage(body, 'Datei konnte nicht hochgeladen werden'));
+  return body.data as ContactAttachment;
+}
+
+export async function deleteContactAttachment(id: string): Promise<void> {
+  const res = await edgeFetch(`/api/admin/lead-contact-attachments?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(getApiErrorMessage(body, 'Löschen fehlgeschlagen'));
+  }
 }
 
 // Not a hook — safe to call inside a .map() while rendering a list of cards.
@@ -143,6 +192,7 @@ export async function addContactEvent(input: {
   source_table: LeadSourceTable;
   source_id: string;
   contacted_at: string;
+  note?: string;
 }): Promise<ContactEvent> {
   const res = await edgeFetch('/api/admin/lead-contacts', {
     method: 'POST',
