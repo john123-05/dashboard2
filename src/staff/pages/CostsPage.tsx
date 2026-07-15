@@ -20,14 +20,25 @@ interface CostItemRow {
   sort_order: number;
 }
 
-function formatMoney(amount: number, currency: Currency): string {
+// Everything on this page displays in EUR - USD items (Bolt.new, Make.com,
+// 2 domains) are converted using this rate so totals can just be added
+// together instead of tracked as two separate currencies. Spot rate as of
+// 2026-07-15 (ECB-adjacent, ~0.875 EUR/USD) - update occasionally, it will
+// drift over time like any fixed exchange rate would.
+const USD_TO_EUR_RATE = 0.875;
+
+function toEur(amount: number, currency: Currency): number {
+  return currency === 'USD' ? amount * USD_TO_EUR_RATE : amount;
+}
+
+function formatMoney(amount: number, currency: Currency = 'EUR'): string {
   return new Intl.NumberFormat('de-DE', { style: 'currency', currency }).format(amount);
 }
 
-function sumBy(items: CostItemRow[], currency: Currency, cycle: Cycle): number {
+function sumEur(items: CostItemRow[], cycle: Cycle): number {
   return items
-    .filter((item) => item.currency === currency && item.cycle === cycle)
-    .reduce((sum, item) => sum + Number(item.amount), 0);
+    .filter((item) => item.cycle === cycle)
+    .reduce((sum, item) => sum + toEur(Number(item.amount), item.currency), 0);
 }
 
 function formatDateLong(dateStr: string): string {
@@ -96,7 +107,14 @@ function VendorGroup({ items }: { items: CostItemRow[] }) {
                       )}
                       <tr>
                         <td>{item.item_name}</td>
-                        <td>{formatMoney(Number(item.amount), item.currency)}</td>
+                        <td>
+                          {formatMoney(toEur(Number(item.amount), item.currency))}
+                          {item.currency === 'USD' && (
+                            <span className="note" style={{ display: 'block', fontSize: '11px' }}>
+                              ≈ {formatMoney(Number(item.amount), 'USD')}
+                            </span>
+                          )}
+                        </td>
                         <td>{cycleLabel[item.cycle]}</td>
                         <td className="note">{item.next_due_date ? formatDateShort(item.next_due_date) : '–'}</td>
                         <td className="note">{item.note ?? '–'}</td>
@@ -140,19 +158,15 @@ export default function CostsPage() {
     setLoading(false);
   }
 
-  const monthlyEur = sumBy(items, 'EUR', 'monthly');
-  const monthlyUsd = sumBy(items, 'USD', 'monthly');
-  const yearlyEur = sumBy(items, 'EUR', 'yearly');
-  const yearlyUsd = sumBy(items, 'USD', 'yearly');
+  const monthlyEur = sumEur(items, 'monthly');
+  const yearlyEur = sumEur(items, 'yearly');
 
   const payerTotals = (['Tom', 'John'] as const).map((payer) => {
     const payerItems = items.filter((item) => item.payer === payer);
     return {
       payer,
-      monthlyEur: sumBy(payerItems, 'EUR', 'monthly'),
-      monthlyUsd: sumBy(payerItems, 'USD', 'monthly'),
-      yearlyEur: sumBy(payerItems, 'EUR', 'yearly'),
-      yearlyUsd: sumBy(payerItems, 'USD', 'yearly'),
+      monthlyEur: sumEur(payerItems, 'monthly'),
+      yearlyEur: sumEur(payerItems, 'yearly'),
     };
   });
 
@@ -212,7 +226,7 @@ export default function CostsPage() {
             </p>
             <p className="cost-highlight-title">{nextPayment.item_name}</p>
             <p className="note">
-              {formatMoney(Number(nextPayment.amount), nextPayment.currency)} am{' '}
+              {formatMoney(toEur(Number(nextPayment.amount), nextPayment.currency))} am{' '}
               {formatDateLong(nextPayment.next_due_date!)} · zahlt {nextPayment.payer} · {nextPayment.vendor}
             </p>
           </div>
@@ -222,102 +236,56 @@ export default function CostsPage() {
       <div className="grid three">
         <div className="card cost-payer-card cost-payer-tom">
           <p className="note">Tom zahlt</p>
-          <p className="stat-value">{formatMoney(payerTotals[0].yearlyEur, 'EUR')} / Jahr</p>
+          <p className="stat-value">{formatMoney(payerTotals[0].yearlyEur)} / Jahr</p>
           <p className="note">
-            {payerTotals[0].monthlyEur > 0 ? `+ ${formatMoney(payerTotals[0].monthlyEur, 'EUR')} / Monat` : 'keine monatlichen Kosten'}
+            {payerTotals[0].monthlyEur > 0 ? `+ ${formatMoney(payerTotals[0].monthlyEur)} / Monat` : 'keine monatlichen Kosten'}
           </p>
         </div>
         <div className="card cost-payer-card cost-payer-john">
           <p className="note">John zahlt</p>
-          <p className="stat-value">{formatMoney(payerTotals[1].yearlyEur, 'EUR')} / Jahr</p>
-          <p className="note">
-            + {formatMoney(payerTotals[1].monthlyEur, 'EUR')} / Monat
-            {payerTotals[1].monthlyUsd > 0 ? ` + ${formatMoney(payerTotals[1].monthlyUsd, 'USD')} / Monat` : ''}
-            {payerTotals[1].yearlyUsd > 0 ? ` · + ${formatMoney(payerTotals[1].yearlyUsd, 'USD')} / Jahr` : ''}
-          </p>
+          <p className="stat-value">{formatMoney(payerTotals[1].yearlyEur)} / Jahr</p>
+          <p className="note">+ {formatMoney(payerTotals[1].monthlyEur)} / Monat</p>
         </div>
         <div className="card">
           <p className="note">Gesamt</p>
-          <p className="stat-value">{formatMoney(monthlyEur, 'EUR')} / Monat</p>
-          <p className="note">
-            + {formatMoney(monthlyUsd, 'USD')} / Monat · {formatMoney(yearlyEur, 'EUR')} + {formatMoney(yearlyUsd, 'USD')} / Jahr
-          </p>
+          <p className="stat-value">{formatMoney(monthlyEur)} / Monat</p>
+          <p className="note">{formatMoney(yearlyEur)} / Jahr</p>
         </div>
       </div>
 
-      <div className="card">
-        <div className="support-panel-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Receipt className="h-4 w-4" />
-            <h3 style={{ margin: 0 }}>Tom zahlt</h3>
-          </div>
-          <span className="note">
-            {formatMoney(payerTotals[0].monthlyEur, 'EUR')}/Monat · {formatMoney(payerTotals[0].yearlyEur, 'EUR')}/Jahr
-          </span>
+      <div className="cost-payer-banner">
+        <div className="cost-payer-banner-title">
+          <Receipt className="h-5 w-5" />
+          <h3>Tom zahlt</h3>
         </div>
+        <span>
+          {formatMoney(payerTotals[0].monthlyEur)}/Monat · {formatMoney(payerTotals[0].yearlyEur)}/Jahr
+        </span>
       </div>
       <VendorGroup items={tomItems} />
 
-      <div className="card">
-        <div className="support-panel-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Receipt className="h-4 w-4" />
-            <h3 style={{ margin: 0 }}>John zahlt</h3>
-          </div>
-          <span className="note">
-            {formatMoney(payerTotals[1].monthlyEur, 'EUR')} + {formatMoney(payerTotals[1].monthlyUsd, 'USD')}/Monat ·{' '}
-            {formatMoney(payerTotals[1].yearlyEur, 'EUR')} + {formatMoney(payerTotals[1].yearlyUsd, 'USD')}/Jahr
-          </span>
+      <div className="cost-payer-banner">
+        <div className="cost-payer-banner-title">
+          <Receipt className="h-5 w-5" />
+          <h3>John zahlt</h3>
         </div>
+        <span>
+          {formatMoney(payerTotals[1].monthlyEur)}/Monat · {formatMoney(payerTotals[1].yearlyEur)}/Jahr
+        </span>
       </div>
       <VendorGroup items={johnItems} />
 
       {unclearItems.length > 0 && (
         <>
-          <div className="card">
-            <h3>Zahler noch unklar</h3>
+          <div className="cost-payer-banner">
+            <div className="cost-payer-banner-title">
+              <Receipt className="h-5 w-5" />
+              <h3>Zahler noch unklar</h3>
+            </div>
           </div>
           <VendorGroup items={unclearItems} />
         </>
       )}
-
-      <div className="card">
-        <h3>Hinweise</h3>
-        <ul style={{ margin: 0, paddingLeft: '20px', display: 'grid', gap: '8px' }}>
-          <li className="note">
-            Die beiden Bolt.new-Domains (onridepictures.com, liftpictures-contact.com) laufen aktuell im
-            kostenlosen Testzeitraum. Die $19,99/Jahr fallen erst ab dem jeweiligen Testzeitraum-Ende an
-            (25.09.2026 bzw. 24.08.2026).
-          </li>
-          <li className="note">
-            Domain Factory: einige Domainnamen (noltingtom.de, tomsvilla.de, yvonnenolting.de, abi83.de, alfom.de,
-            sharesmile.de) klingen nach privaten/persönlichen Projekten statt nach Liftpictures-Geschäft — sie sind
-            trotzdem mit aufgeführt (wie gewünscht "alle Sachen"), aber bitte prüfen, ob sie in eine
-            Liftpictures-Kostenübersicht gehören.
-          </li>
-          <li className="note">
-            erlebnisfoto.com (Domain Factory): die letzte vorliegende Rechnung deckt nur bis 16.06.2026 — falls
-            keine Verlängerungsrechnung existiert, ist die Domain evtl. bereits ausgelaufen. Trotzdem mit dem
-            zuletzt bekannten Preis in der Übersicht, bis das geklärt ist.
-          </li>
-          <li className="note">
-            Domain Factory: die E-Mail-Postfächer haben 2025 mehrfach das Produkt gewechselt (MyMail Basic/
-            Individual → Microsoft 365 E-Mail Essentials), dabei fielen einige anteilige Zwischenrechnungen und
-            Gutschriften an. Hier gezeigt wird nur der aktuelle, stabile Jahresstand (3 Postfächer) — nicht die
-            einzelnen Übergangsbuchungen.
-          </li>
-          <li className="note">
-            Beträge in unterschiedlichen Währungen (EUR/USD) werden bewusst getrennt ausgewiesen statt mit einem
-            Wechselkurs zusammengerechnet, damit hier keine veraltete Umrechnung stehen bleibt.
-          </li>
-          <li className="note">
-            Ein täglicher Job prüft mittags, ob am nächsten Tag eine Zahlung fällig wird, und schickt dann eine
-            Push-Benachrichtigung an alle Staff-Geräte. Die Fälligkeitsdaten hier werden danach automatisch auf den
-            nächsten Zyklus weitergestellt — die Beträge sollten trotzdem hin und wieder gegen die echte Rechnung
-            geprüft werden, falls sich ein Preis ändert.
-          </li>
-        </ul>
-      </div>
     </div>
   );
 }
