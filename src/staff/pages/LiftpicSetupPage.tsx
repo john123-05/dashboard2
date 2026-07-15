@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { Cable, Copy, Download, Edit3, FileImage, Monitor, Power, RotateCcw, Trash2, UploadCloud } from 'lucide-react';
+import { Cable, Copy, Download, Edit3, Eye, EyeOff, FileImage, Monitor, Power, RotateCcw, Trash2, UploadCloud } from 'lucide-react';
 import { edgeFetch } from '../lib/edge-fetch';
 import { getApiErrorMessage } from '../lib/api-error';
 import { appendActivityEvent } from '../lib/activity-feed';
@@ -356,6 +356,50 @@ export default function LiftpicSetupPage() {
       title: 'Liftpic Pairing-Code erneuert',
       details: config.machine_label || config.machine_id,
       level: 'success',
+    });
+    await load();
+  }
+
+  async function toggleShadowMode(config: LiftpicMachineConfig) {
+    if (config.mode === 'count_only') {
+      setError('Bei "Nur Fahrten zaehlen" bleibt Shadow Mode automatisch an.');
+      return;
+    }
+
+    const nextShadowMode = !config.shadow_mode;
+    if (!nextShadowMode && !confirm(`"${config.machine_label || config.machine_id}" wirklich live schalten? Dann kann dieser PC echte Uploads ausfuehren.`)) {
+      return;
+    }
+
+    setBusyId(config.id);
+    setStatus(null);
+    setError(null);
+
+    const payload = {
+      ...toForm(config),
+      id: config.id,
+      shadow_mode: nextShadowMode,
+      attraction_id: config.attraction_id || null,
+    };
+
+    const res = await edgeFetch('/api/admin/liftpic-machines', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const body = await res.json().catch(() => null);
+    setBusyId(null);
+
+    if (!res.ok) {
+      setError(getApiErrorMessage(body, 'Shadow Mode konnte nicht geaendert werden'));
+      return;
+    }
+
+    setStatus(nextShadowMode ? 'Shadow Mode eingeschaltet' : 'Live-Modus eingeschaltet');
+    appendActivityEvent({
+      title: nextShadowMode ? 'Liftpic Shadow Mode eingeschaltet' : 'Liftpic Live-Modus eingeschaltet',
+      details: config.machine_label || config.machine_id,
+      level: nextShadowMode ? 'success' : 'warning',
     });
     await load();
   }
@@ -761,6 +805,7 @@ export default function LiftpicSetupPage() {
                 <th>Park</th>
                 <th>Kamera</th>
                 <th>Modus</th>
+                <th>Shadow</th>
                 <th>Funktionen</th>
                 <th>Pairing</th>
                 <th>Zuletzt gesehen</th>
@@ -783,6 +828,26 @@ export default function LiftpicSetupPage() {
                     </div>
                   </td>
                   <td>{modeLabels[config.mode]}</td>
+                  <td>
+                    <span className={`badge ${config.shadow_mode ? 'ok' : 'warn'}`}>
+                      {config.shadow_mode ? 'Testmodus' : 'Live'}
+                    </span>
+                    <div style={{ marginTop: 8 }}>
+                      <button
+                        type="button"
+                        className={config.shadow_mode ? 'secondary inline' : 'danger inline'}
+                        onClick={() => void toggleShadowMode(config)}
+                        disabled={busyId === config.id || config.mode === 'count_only'}
+                        title={config.mode === 'count_only' ? 'Bei Nur Fahrten zaehlen bleibt Shadow automatisch an' : undefined}
+                      >
+                        {config.shadow_mode ? <EyeOff size={14} /> : <Eye size={14} />}
+                        {config.shadow_mode ? 'Live schalten' : 'Shadow an'}
+                      </button>
+                    </div>
+                    {config.mode === 'count_only' && (
+                      <div className="note">Bei Nur Fahrten zaehlen immer an</div>
+                    )}
+                  </td>
                   <td>
                     <div className="note">
                       {[
@@ -845,7 +910,7 @@ export default function LiftpicSetupPage() {
               ))}
               {configs.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="note">Noch kein Attraktions-PC vorbereitet.</td>
+                  <td colSpan={9} className="note">Noch kein Attraktions-PC vorbereitet.</td>
                 </tr>
               )}
             </tbody>
