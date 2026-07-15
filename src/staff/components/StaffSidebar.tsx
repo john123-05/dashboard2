@@ -2,11 +2,9 @@ import { NavLink, useLocation } from 'react-router-dom';
 import {
   Mountain,
   Megaphone,
-  Camera,
   Globe,
   LifeBuoy,
   Activity,
-  Monitor,
   HelpCircle,
   KeyRound,
   Images,
@@ -21,13 +19,11 @@ import {
 } from 'lucide-react';
 
 const navItems = [
-  { to: '/staff/parks', icon: Mountain, label: 'Parks anlegen' },
+  { to: '/staff/kunden-management', icon: Mountain, label: 'Kunden Management' },
   { to: '/staff/werbematerialien', icon: Megaphone, label: 'Werbematerialien', tourTag: undefined },
   { to: '/staff/kosten', icon: Euro, label: 'Kosten' },
   { to: '/staff/passwoerter', icon: KeyRound, label: 'Passwörter' },
   { to: '/staff/medien', icon: Images, label: 'Medien' },
-  { to: '/staff/cameras', icon: Camera, label: 'Kameras' },
-  { to: '/staff/liftpic-setup', icon: Monitor, label: 'Liftpic Setup' },
   { to: '/staff/website-anfragen', icon: Globe, label: 'Interessenten und Anfragen' },
   { to: '/staff/support-ticket-kunden', icon: LifeBuoy, label: 'Support' },
   { to: '/staff/system-health', icon: Activity, label: 'Health' },

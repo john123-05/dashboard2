@@ -4,7 +4,7 @@ import { useCopyToClipboard } from '../lib/useCopyToClipboard';
 
 const steps = [
   {
-    title: '1. PC im Liftpic Setup anlegen',
+    title: '1. PC im Kunden Management anlegen',
     text: 'Im Superadmin Park, Attraktion, PC-ID, Kamera, Modus und Papierwarnung eintragen. Danach erzeugt das Dashboard einen Pairing-Code.',
   },
   {
@@ -22,8 +22,8 @@ const steps = [
 ];
 
 const commonErrors = [
-  { problem: 'Pairing-Code ungueltig', fix: 'Im Liftpic Setup neuen Code erzeugen und am PC erneut eintragen.' },
-  { problem: 'Ordner nicht gefunden', fix: 'RAW/OUT/QR/Webout-Pfade im Liftpic Setup mit dem PC abgleichen.' },
+  { problem: 'Pairing-Code ungueltig', fix: 'Im Kunden Management neuen Code erzeugen und am PC erneut eintragen.' },
+  { problem: 'Ordner nicht gefunden', fix: 'RAW/OUT/QR/Webout-Pfade im Kunden Management mit dem PC abgleichen.' },
   { problem: 'Keine neuen Fotos', fix: 'Pruefen, ob TIScapture nach C:\\liftpic\\fotos schreibt und AidaTest nach fotos\\out.' },
   { problem: 'Speed fehlt', fix: 'Upload laeuft trotzdem weiter; im Dashboard steht speed_status=missing oder timeout.' },
   { problem: 'Papierzaehler fehlt', fix: 'Pfad zur PrintCount-Datei pruefen. Ohne Datei wird nur Health mit Warnung gesendet.' },
@@ -46,8 +46,8 @@ export default function UploaderInstallPage() {
           Kamera, Modus und Pairing-Code aus dem Superadmin Dashboard.
         </p>
         <div className="material-actions" style={{ marginTop: 12 }}>
-          <Link to="/staff/liftpic-setup" className="btn-link">
-            Liftpic Setup oeffnen
+          <Link to="/staff/kunden-management?tab=liftpic" className="btn-link">
+            Kunden Management oeffnen
           </Link>
           <button type="button" className="secondary inline" onClick={() => copy('install-command', installCommand)}>
             {copiedId === 'install-command' ? 'Kopiert!' : 'Install-Befehl kopieren'}

@@ -21,8 +21,6 @@ import ComingSoonOverlay from './components/ComingSoonOverlay';
 import KioskAwareOverlay from './components/KioskAwareOverlay';
 import StaffAdminLayout from './staff/components/AdminLayout';
 import StaffLoginPage from './staff/pages/StaffLoginPage';
-import StaffParksPage from './staff/pages/ParksPage';
-import StaffCamerasPage from './staff/pages/CamerasPage';
 import StaffSupportTicketKundenPage from './staff/pages/SupportTicketKundenPage';
 import StaffWebsiteAnfragenPage from './staff/pages/WebsiteAnfragenPage';
 import StaffSystemHealthPage from './staff/pages/StaffSystemHealthPage';
@@ -33,7 +31,7 @@ import StaffUploaderInstallPage from './staff/pages/UploaderInstallPage';
 import StaffPasswordsPage from './staff/pages/PasswordsPage';
 import StaffMediaLibraryPage from './staff/pages/MediaLibraryPage';
 import StaffCostsPage from './staff/pages/CostsPage';
-import StaffLiftpicSetupPage from './staff/pages/LiftpicSetupPage';
+import StaffCustomerManagementPage from './staff/pages/CustomerManagementPage';
 
 export default function App() {
   return (
@@ -99,10 +97,11 @@ export default function App() {
                   production project) from the customer-facing dashboard above. */}
               <Route path="/staff/login" element={<StaffLoginPage />} />
               <Route element={<StaffAdminLayout />}>
-                <Route path="/staff" element={<Navigate to="/staff/parks" replace />} />
-                <Route path="/staff/parks" element={<StaffParksPage />} />
-                <Route path="/staff/cameras" element={<StaffCamerasPage />} />
-                <Route path="/staff/liftpic-setup" element={<StaffLiftpicSetupPage />} />
+                <Route path="/staff" element={<Navigate to="/staff/kunden-management" replace />} />
+                <Route path="/staff/kunden-management" element={<StaffCustomerManagementPage />} />
+                <Route path="/staff/parks" element={<Navigate to="/staff/kunden-management?tab=parks" replace />} />
+                <Route path="/staff/cameras" element={<Navigate to="/staff/kunden-management?tab=cameras" replace />} />
+                <Route path="/staff/liftpic-setup" element={<Navigate to="/staff/kunden-management?tab=liftpic" replace />} />
                 <Route path="/staff/support-ticket-kunden" element={<StaffSupportTicketKundenPage />} />
                 <Route path="/staff/website-anfragen" element={<StaffWebsiteAnfragenPage />} />
                 <Route path="/staff/system-health" element={<StaffSystemHealthPage />} />

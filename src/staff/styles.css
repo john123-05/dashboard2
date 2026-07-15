@@ -211,6 +211,100 @@
   gap: 10px;
   align-items: end;
   flex-wrap: wrap;
+}.staff-app .customer-management-page {
+  display: grid;
+  gap: 16px;
+}.staff-app .customer-management-hero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}.staff-app .customer-management-hero h2 {
+  margin: 0 0 4px;
+}.staff-app .customer-management-tabs {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}.staff-app button.customer-management-tab {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-height: 76px;
+  padding: 14px;
+  text-align: left;
+  background: color-mix(in srgb, var(--surface-elevated) 78%, var(--panel-strong) 22%);
+  color: var(--text);
+  border-color: var(--hairline);
+}.staff-app button.customer-management-tab svg {
+  flex: 0 0 auto;
+  color: var(--accent);
+}.staff-app button.customer-management-tab strong,
+.staff-app button.customer-management-tab small {
+  display: block;
+}.staff-app button.customer-management-tab small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+}.staff-app button.customer-management-tab.active {
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 18%, var(--surface-elevated)), var(--surface-elevated));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent), var(--shadow-main);
+}.staff-app .management-section {
+  min-width: 0;
+}.staff-app .liftpic-mode-grid,
+.staff-app .liftpic-toggle-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}.staff-app button.liftpic-mode-option {
+  display: block;
+  min-height: 92px;
+  padding: 13px 14px;
+  text-align: left;
+  background: color-mix(in srgb, var(--surface-elevated) 82%, var(--panel-strong) 18%);
+  color: var(--text);
+  border-color: var(--hairline);
+}.staff-app button.liftpic-mode-option strong,
+.staff-app button.liftpic-mode-option span {
+  display: block;
+}.staff-app button.liftpic-mode-option span {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+}.staff-app button.liftpic-mode-option.active {
+  color: var(--text-strong);
+  border-color: color-mix(in srgb, var(--accent) 62%, transparent);
+  background: color-mix(in srgb, var(--accent) 18%, var(--surface-elevated));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent);
+}.staff-app .liftpic-toggle-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface-elevated) 76%, var(--panel-strong) 24%);
+  cursor: pointer;
+}.staff-app .liftpic-toggle-card input {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  flex: 0 0 auto;
+}.staff-app .liftpic-toggle-card strong,
+.staff-app .liftpic-toggle-card small {
+  display: block;
+}.staff-app .liftpic-toggle-card small {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.3;
 }.staff-app .upload-file-col {
   flex: 1 1 320px;
   min-width: 0;
@@ -2064,6 +2158,14 @@
      overlay drawer, and redundant with the X close button above. */
   .staff-app button.mobile-nav-hide-collapse-btn {
     display: none;
+  }
+
+  .staff-app .customer-management-tabs {
+    grid-template-columns: 1fr;
+  }
+
+  .staff-app .customer-management-hero {
+    align-items: flex-start;
   }
 }
 

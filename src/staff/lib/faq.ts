@@ -33,7 +33,7 @@ export const faqItems: FaqItem[] = [
     category: 'Parks & Attraktionen',
     question: 'Wie lege ich einen neuen Park an?',
     answer:
-      'Unter Parks: Name und Slug eintragen, dann Speichern. Der Slug wird für Prefix-Mapping und Ingestion-Routing genutzt.',
+      'Im Kunden Management im Bereich Kunden & Parks: Name und Slug eintragen, dann Speichern. Der Slug wird fuer Prefix-Mapping und Ingestion-Routing genutzt.',
     tags: ['park', 'slug', 'prefix', 'anlegen'],
   },
   {
@@ -49,7 +49,7 @@ export const faqItems: FaqItem[] = [
     category: 'Parks & Attraktionen',
     question: 'Wie ordne ich Attraktionen zu?',
     answer:
-      'Unter Parks anlegen zuerst die Attraktion für den jeweiligen Park anlegen. Danach kann sie in Kameras für einen Kamera-Code ausgewählt werden.',
+      'Im Kunden Management zuerst die Attraktion fuer den jeweiligen Park anlegen. Danach kann sie im Kamera-Bereich fuer einen Kamera-Code ausgewaehlt werden.',
     tags: ['attraktion', 'zuordnung', 'kamera'],
   },
   {
@@ -81,7 +81,7 @@ export const faqItems: FaqItem[] = [
     category: 'Kameras',
     question: 'Wie füge ich eine neue Kamera-Zuordnung hinzu?',
     answer:
-      'Auf der Kameras-Seite unter „Neue Kamera-Zuordnung“: Park, Attraktion und 4-stelligen Kamera-Code eintragen und speichern.',
+      'Im Kunden Management den Tab Kameras oeffnen und unter Neue Kamera-Zuordnung Park, Attraktion und 4-stelligen Kamera-Code eintragen.',
     tags: ['kamera hinzufügen', 'zuordnung', 'code'],
   },
   {

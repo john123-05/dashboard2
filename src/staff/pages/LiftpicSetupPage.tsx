@@ -130,7 +130,7 @@ export default function LiftpicSetupPage() {
     const body = await res.json().catch(() => null);
 
     if (!res.ok) {
-      setError(getApiErrorMessage(body, 'Liftpic Setup konnte nicht geladen werden'));
+      setError(getApiErrorMessage(body, 'Liftpic PC-Bereich konnte nicht geladen werden'));
       setLoading(false);
       return;
     }
@@ -267,7 +267,7 @@ export default function LiftpicSetupPage() {
     return (
       <div className="grid" style={{ gap: 16 }}>
         <div className="card">
-          <p className="note">Liftpic Setup wird geladen...</p>
+          <p className="note">Liftpic PC-Bereich wird geladen...</p>
         </div>
       </div>
     );
@@ -367,44 +367,61 @@ export default function LiftpicSetupPage() {
 
             <div>
               <label>Modus</label>
-              <div className="grid three" style={{ gap: 8 }}>
+              <div className="liftpic-mode-grid">
                 {(['sold_only', 'all_photos', 'count_only'] as const).map((mode) => (
                   <button
                     key={mode}
                     type="button"
-                    className={form.mode === mode ? '' : 'secondary'}
+                    className={`liftpic-mode-option ${form.mode === mode ? 'active' : ''}`}
                     onClick={() => setMode(mode)}
                   >
-                    {modeLabels[mode]}
+                    <strong>{modeLabels[mode]}</strong>
+                    <span>
+                      {mode === 'sold_only' && 'Standard: nur gekaufte QR-Bilder werden hochgeladen.'}
+                      {mode === 'all_photos' && 'Diagnose oder Foto-Shop: jedes fertige Bild wird gesendet.'}
+                      {mode === 'count_only' && 'Nur Zaehler und Health, keine Bild-Uploads.'}
+                    </span>
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="grid two">
-              <label className="material-card">
+            <div className="liftpic-toggle-grid">
+              <label className="liftpic-toggle-card">
                 <input type="checkbox" checked={form.qr_enabled} onChange={(e) => patchForm({ qr_enabled: e.target.checked })} />
-                QR-Verkauf ist aktiv
+                <span>
+                  <strong>QR-Verkauf</strong>
+                  <small>Verkaufte Bilder aus qrcode beachten</small>
+                </span>
               </label>
-              <label className="material-card">
+              <label className="liftpic-toggle-card">
                 <input type="checkbox" checked={form.speed_enabled} onChange={(e) => patchForm({ speed_enabled: e.target.checked })} />
-                Speedmessung lesen
+                <span>
+                  <strong>Speedmessung</strong>
+                  <small>AidaTest-Namen auswerten</small>
+                </span>
               </label>
-              <label className="material-card">
+              <label className="liftpic-toggle-card">
                 <input
                   type="checkbox"
                   checked={form.count_rides_enabled}
                   onChange={(e) => patchForm({ count_rides_enabled: e.target.checked })}
                 />
-                Fahrten zaehlen
+                <span>
+                  <strong>Fahrten zaehlen</strong>
+                  <small>Auch ohne Bild-Upload</small>
+                </span>
               </label>
-              <label className="material-card">
+              <label className="liftpic-toggle-card">
                 <input
                   type="checkbox"
                   checked={form.shadow_mode}
                   onChange={(e) => patchForm({ shadow_mode: e.target.checked })}
                 />
-                Shadow Mode fuer Tests
+                <span>
+                  <strong>Shadow Mode</strong>
+                  <small>Erst testen, dann live schalten</small>
+                </span>
               </label>
             </div>
 

@@ -18,7 +18,7 @@ export default function StaffLoginPage() {
       return;
     }
 
-    window.location.href = '/staff/parks';
+    window.location.href = '/staff/kunden-management';
   };
 
   return (

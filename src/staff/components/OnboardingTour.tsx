@@ -15,77 +15,77 @@ type Rect = { top: number; left: number; width: number; height: number };
 const steps: TourStep[] = [
   {
     id: 'welcome',
-    route: '/staff/parks',
+    route: '/staff/kunden-management?tab=parks',
     selector: '.tour-panel',
     title: 'Willkommen im Liftpictures Operator Dashboard',
     text: 'Willkommen. Ich zeige dir in einer kurzen Tour die wichtigsten Funktionen, damit du sofort produktiv starten kannst.',
   },
   {
     id: 'parks',
-    route: '/staff/parks',
+    route: '/staff/kunden-management?tab=parks',
     selector: '#tour-park-create',
     title: 'Park anlegen',
     text: 'Hier legst du neue Parks an. Name + Slug werden fuer Routing und Datenzuordnung verwendet.',
   },
   {
     id: 'attraction',
-    route: '/staff/parks',
+    route: '/staff/kunden-management?tab=parks',
     selector: '#tour-attraction-create',
     title: 'Attraktion anlegen',
     text: 'Hier legst du eine Attraktion (z. B. Sommerrodelbahn) innerhalb eines Parks an.',
   },
   {
     id: 'prefix',
-    route: '/staff/parks',
+    route: '/staff/kunden-management?tab=parks',
     selector: '#tour-prefix-map',
     title: 'Fotos automatisch zuordnen',
     text: 'Jeder Park bekommt ein Kuerzel. Fotos, deren Dateiname mit diesem Kuerzel beginnt, landen automatisch im richtigen Park.',
   },
   {
     id: 'support',
-    route: '/staff/parks',
+    route: '/staff/kunden-management?tab=parks',
     selector: '#tour-support-preview',
     title: 'Support-Tickets',
     text: 'Hier siehst du, wie viele offene Support-Anfragen es gibt. Von hier springst du direkt zur Detailansicht.',
   },
   {
     id: 'cam-park',
-    route: '/staff/cameras',
+    route: '/staff/kunden-management?tab=cameras',
     selector: '#tour-cam-park-select',
     title: 'Kamera-Seite: Park Auswahl',
     text: 'Hier waehlt man den Park. Alle Zuordnungen und Vorschauen darunter beziehen sich zuerst auf diese Auswahl.',
   },
   {
     id: 'cam-map',
-    route: '/staff/cameras',
+    route: '/staff/kunden-management?tab=cameras',
     selector: '#tour-cam-create',
     title: 'Kamera-Zuordnung',
     text: 'Hier verknuepfst du Customer/Camera Code mit Kamera-Name und optional Attraktion. Das steuert die operative Zuordnung.',
   },
   {
     id: 'cam-dropdown',
-    route: '/staff/cameras',
+    route: '/staff/kunden-management?tab=cameras',
     selector: '#tour-cam-preview-select',
     title: 'Dropdown fuer Bildvorschau',
     text: 'Waehle im Dropdown eine Kamera. Danach zeigt die Vorschau die neuesten Bilder fuer den Code, inklusive Fallback wenn noetig.',
   },
   {
     id: 'cam-images',
-    route: '/staff/cameras',
+    route: '/staff/kunden-management?tab=cameras',
     selector: '#tour-cam-images',
     title: 'Aktuelle Kamera-Bilder',
     text: 'Hier siehst du die letzten Bilder und erkennst sofort, ob Zuordnung und Ingestion korrekt laufen.',
   },
   {
     id: 'help',
-    route: '/staff/parks',
+    route: '/staff/kunden-management?tab=parks',
     selector: '[data-tour=\"nav-help\"]',
     title: 'Hilfe Bereich',
     text: 'In der Navigation findest du unter Hilfe die FAQ mit Suche und Loesungswegen zu den wichtigsten Themen.',
   },
   {
     id: 'finish',
-    route: '/staff/parks',
+    route: '/staff/kunden-management?tab=parks',
     selector: '.tour-panel',
     title: 'Fertig',
     text: 'Das war die Kurz-Tour. Fuer alle Details gehe in der Navigation auf Hilfe. Wenn du diese Tour nicht mehr sehen willst: "Nicht mehr anzeigen".',
@@ -128,9 +128,9 @@ export default function OnboardingTour() {
   useEffect(() => {
     if (!visible) return;
     const route = step.route;
-    if (!route || location.pathname === route) return;
+    if (!route || `${location.pathname}${location.search}` === route) return;
     navigate(route, { replace: true });
-  }, [location.pathname, navigate, step.route, visible]);
+  }, [location.pathname, location.search, navigate, step.route, visible]);
 
   useEffect(() => {
     if (!visible) return;
