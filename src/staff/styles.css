@@ -305,6 +305,17 @@
   font-size: 12px;
   font-weight: 600;
   line-height: 1.3;
+}.staff-app .liftpic-asset-form button[type='submit'] {
+  justify-content: center;
+}.staff-app .liftpic-assets-table td {
+  vertical-align: top;
+}.staff-app .mono-path {
+  max-width: 280px;
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
 }.staff-app .upload-file-col {
   flex: 1 1 320px;
   min-width: 0;

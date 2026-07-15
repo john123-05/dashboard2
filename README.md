@@ -1,5 +1,24 @@
 # Dashboard
 
+## Liftpic Local Asset Sync
+
+`/staff/kunden-management?tab=liftpic` now also manages local files for
+attraction PCs: viewer logos, default photos, print overlays and legacy
+jpeg4web/imageloader assets.
+
+Flow:
+
+1. Staff uploads a file in the Liftpic PCs tab.
+2. Edge Function `admin-liftpic-assets` stores it in private bucket
+   `liftpic-assets`.
+3. The function writes `liftpic_asset_deployments` with slot, target Windows
+   path, machine/camera and SHA256.
+4. The PC-side `liftpic-sync` calls `liftpic-assets`, downloads signed files,
+   backs up the old local target, then replaces the approved path.
+
+This is separate from the customer-facing online overlay editor in
+`src/pages/Personalization.tsx`.
+
 ## Liftpic Ride Counts
 
 For kiosk/self-service parks, sold photos and total rides are two different

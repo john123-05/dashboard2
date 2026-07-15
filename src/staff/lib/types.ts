@@ -63,6 +63,27 @@ export interface LiftpicMachineConfig {
   updated_at: string;
 }
 
+export interface LiftpicAssetDeployment {
+  id: string;
+  park_id: string;
+  machine_config_id: string | null;
+  machine_id: string | null;
+  camera_code: string | null;
+  slot: string;
+  label: string | null;
+  target_path: string;
+  bucket: string;
+  storage_path: string;
+  sha256: string | null;
+  content_type: string | null;
+  file_size: number | null;
+  restart_hint: string | null;
+  notes: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export type SupportTicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
 export type SupportTicketPriority = 'low' | 'medium' | 'high' | 'critical';
 export type SupportTicketAuthorRole = 'operator' | 'support';
