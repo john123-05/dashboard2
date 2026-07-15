@@ -37,6 +37,15 @@ async function fetchExternal(path: string) {
   return { ok: true, data };
 }
 
+function numericValue(value: unknown): number {
+  const numberValue = Number(value ?? 0);
+  return Number.isFinite(numberValue) ? numberValue : 0;
+}
+
+function rowKey(row: Record<string, unknown>): string {
+  return `${String(row.camera_code ?? "unknown")}|${String(row.business_date ?? "")}`;
+}
+
 // For self-service/kiosk parks (no real shop, e.g. Imst's Alpine Coaster):
 // every photos row already IS a completed sale. The permanent daily rollup
 // (park_photo_sales_daily) survives the 30-day photos retention window —
@@ -80,9 +89,14 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const daysRes = await fetchExternal(
-      `park_photo_sales_daily?select=camera_code,business_date,photos_sold_count,min_file_code,max_file_code&park_id=eq.${parkId}&order=business_date.desc`
-    );
+    const [daysRes, rideRes] = await Promise.all([
+      fetchExternal(
+        `park_photo_sales_daily?select=camera_code,business_date,photos_sold_count,min_file_code,max_file_code&park_id=eq.${parkId}&order=business_date.desc`
+      ),
+      fetchExternal(
+        `park_photo_ride_daily?select=machine_id,camera_code,business_date,photos_taken_count,photos_sold_count&park_id=eq.${parkId}&order=business_date.desc`
+      ),
+    ]);
     if (!daysRes.ok) {
       return new Response(
         JSON.stringify({ error: "Failed to fetch sales rollup", details: daysRes.details }),
@@ -90,13 +104,49 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    const ridesByKey = new Map<string, { photos_taken_count: number; photos_sold_count: number }>();
+    if (rideRes.ok) {
+      for (const row of rideRes.data as Record<string, unknown>[]) {
+        const key = rowKey(row);
+        const current = ridesByKey.get(key) ?? { photos_taken_count: 0, photos_sold_count: 0 };
+        current.photos_taken_count += numericValue(row.photos_taken_count);
+        current.photos_sold_count += numericValue(row.photos_sold_count);
+        ridesByKey.set(key, current);
+      }
+    }
+
+    const mergedDays = (daysRes.data as Record<string, unknown>[]).map((row) => {
+      const rides = ridesByKey.get(rowKey(row));
+      if (rides) ridesByKey.delete(rowKey(row));
+      return {
+        ...row,
+        photos_taken_count: rides?.photos_taken_count ?? null,
+      };
+    });
+
+    for (const [key, rides] of ridesByKey.entries()) {
+      const [cameraCode, businessDate] = key.split("|");
+      mergedDays.push({
+        camera_code: cameraCode,
+        business_date: businessDate,
+        photos_sold_count: rides.photos_sold_count,
+        photos_taken_count: rides.photos_taken_count,
+        min_file_code: null,
+        max_file_code: null,
+      });
+    }
+
+    mergedDays.sort((left, right) =>
+      String(right.business_date ?? "").localeCompare(String(left.business_date ?? ""))
+    );
+
     return new Response(
       JSON.stringify({
         isKioskPark: true,
         priceCents,
         timezone: (park.timezone as string) ?? "Europe/Vienna",
         openingHours: park.opening_hours ?? null,
-        days: daysRes.data,
+        days: mergedDays,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

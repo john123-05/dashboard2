@@ -32,6 +32,13 @@ function formatDateLabel(iso: string): string {
   return new Intl.DateTimeFormat('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' }).format(date);
 }
 
+function formatSoldRideSubtitle(sold: number, expected: number | null): string {
+  if (expected !== null) {
+    return `${formatNumber(sold)} verkauft / ${formatNumber(expected)} Fahrten`;
+  }
+  return `${formatNumber(sold)} Foto${sold === 1 ? '' : 's'} verkauft`;
+}
+
 interface StripeRevenuePoint {
   date: string;
   amount: number;
@@ -444,7 +451,7 @@ export default function Revenue() {
             <KPICard
               title="Heute"
               value={formatCurrency(kioskKpis.today.revenueCents, 'eur')}
-              subtitle={`${kioskKpis.today.sold} Foto${kioskKpis.today.sold === 1 ? '' : 's'} verkauft`}
+              subtitle={formatSoldRideSubtitle(kioskKpis.today.sold, kioskKpis.today.expected)}
               icon={Ticket}
               iconColor="text-brand-600"
               iconBg="bg-brand-50"
@@ -452,7 +459,7 @@ export default function Revenue() {
             <KPICard
               title="Letzte 7 Tage"
               value={formatCurrency(kioskKpis.week.revenueCents, 'eur')}
-              subtitle={`${kioskKpis.week.sold} Fotos verkauft`}
+              subtitle={formatSoldRideSubtitle(kioskKpis.week.sold, kioskKpis.week.expected)}
               icon={Camera}
               iconColor="text-sky-600"
               iconBg="bg-sky-50"
@@ -460,7 +467,7 @@ export default function Revenue() {
             <KPICard
               title="Dieser Monat"
               value={formatCurrency(kioskKpis.month.revenueCents, 'eur')}
-              subtitle={`${kioskKpis.month.sold} Fotos verkauft`}
+              subtitle={formatSoldRideSubtitle(kioskKpis.month.sold, kioskKpis.month.expected)}
               icon={Receipt}
               iconColor="text-emerald-600"
               iconBg="bg-emerald-50"
@@ -468,7 +475,7 @@ export default function Revenue() {
             <KPICard
               title="Gesamt (seit Aufzeichnung)"
               value={formatCurrency(kioskKpis.total.revenueCents, 'eur')}
-              subtitle={`${kioskKpis.total.sold} Fotos verkauft`}
+              subtitle={formatSoldRideSubtitle(kioskKpis.total.sold, kioskKpis.total.expected)}
               icon={Wallet}
               iconColor="text-slate-700"
               iconBg="bg-slate-100"
@@ -694,6 +701,8 @@ export default function Revenue() {
                     <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-400">
                       <th className="py-2 pr-4">Tag</th>
                       <th className="py-2 pr-4">Verkauft</th>
+                      <th className="py-2 pr-4">Fahrten</th>
+                      <th className="py-2 pr-4">Quote</th>
                       <th className="py-2">Umsatz</th>
                     </tr>
                   </thead>
@@ -708,7 +717,13 @@ export default function Revenue() {
                         className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-white/40"
                       >
                         <td className="py-2 pr-4 text-slate-700">{formatDateLabel(day.businessDate)}</td>
-                        <td className="py-2 pr-4 text-slate-700">{day.soldCount}</td>
+                        <td className="py-2 pr-4 text-slate-700">{formatNumber(day.soldCount)}</td>
+                        <td className="py-2 pr-4 text-slate-700">
+                          {day.expectedCount !== null ? formatNumber(day.expectedCount) : '-'}
+                        </td>
+                        <td className="py-2 pr-4 text-slate-700">
+                          {day.conversionRate !== null ? formatPercent(day.conversionRate * 100) : '-'}
+                        </td>
                         <td className="py-2 font-medium text-slate-800">{formatCurrency(day.revenueCents, 'eur')}</td>
                       </tr>
                     ))}

@@ -1,5 +1,19 @@
 # Dashboard
 
+## Liftpic Ride Counts
+
+For kiosk/self-service parks, sold photos and total rides are two different
+signals:
+
+- sold photos come from `park_photo_sales_daily`
+- total rides/photos taken come from `park_photo_ride_daily`, which is filled
+  by `liftpic-sync` heartbeats
+
+The operator revenue dashboard prefers `photos_taken_count` from
+`park_photo_ride_daily` and falls back to the older `max_file_code -
+min_file_code + 1` estimate when a park has not rolled out the new uploader
+yet. Unsold JPEGs are not uploaded just to calculate conversion.
+
 ## Support Sync Outbound (Source Project)
 
 This project can mirror `support_tickets` and `support_ticket_messages` into a second Supabase project without a custom webhook receiver.

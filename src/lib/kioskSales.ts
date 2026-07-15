@@ -4,6 +4,7 @@ export interface DailySalesRow {
   camera_code: string;
   business_date: string;
   photos_sold_count: number;
+  photos_taken_count: number | null;
   min_file_code: number | null;
   max_file_code: number | null;
 }
@@ -168,16 +169,19 @@ export function bucketPurchasesByHour(
   });
 }
 
-// Multiple cameras at one park have independent, non-overlapping sequence
-// counters, so their per-day expected-ride-count (max-min+1) is summed
-// across cameras rather than compared against each other.
+// Multiple cameras at one park have independent sequence counters. Prefer the
+// uploader's real ride/photo-taken telemetry; fall back to the old max-min+1
+// estimate when older parks have not rolled out liftpic-sync counters yet.
 export function aggregateByDate(rows: DailySalesRow[], priceCents: number): AggregatedDay[] {
   const byDate = new Map<string, { sold: number; expected: number; hasExpected: boolean }>();
 
   for (const row of rows) {
     const bucket = byDate.get(row.business_date) ?? { sold: 0, expected: 0, hasExpected: false };
     bucket.sold += row.photos_sold_count;
-    if (row.min_file_code !== null && row.max_file_code !== null && row.max_file_code >= row.min_file_code) {
+    if (typeof row.photos_taken_count === 'number' && row.photos_taken_count >= 0) {
+      bucket.expected += row.photos_taken_count;
+      bucket.hasExpected = true;
+    } else if (row.min_file_code !== null && row.max_file_code !== null && row.max_file_code >= row.min_file_code) {
       bucket.expected += row.max_file_code - row.min_file_code + 1;
       bucket.hasExpected = true;
     }
