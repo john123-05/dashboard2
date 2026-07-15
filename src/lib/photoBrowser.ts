@@ -6,9 +6,11 @@ export interface BrowsablePhoto {
   imageUrl: string | null;
   capturedAt: string;
   isPaid: boolean;
+  speedKmh: number | null;
 }
 
-const SELECT_COLUMNS = 'id, external_code, storage_bucket, storage_path, captured_at, created_at, is_paid';
+const SELECT_COLUMNS =
+  'id, external_code, storage_bucket, storage_path, captured_at, created_at, is_paid, speed_kmh';
 
 function toImageUrl(bucket: string | null, path: string | null): string | null {
   if (!bucket || !path) return null;
@@ -16,12 +18,17 @@ function toImageUrl(bucket: string | null, path: string | null): string | null {
 }
 
 function toBrowsablePhoto(row: Record<string, unknown>): BrowsablePhoto {
+  const speed = row.speed_kmh as number | null;
   return {
     id: row.id as string,
     externalCode: (row.external_code as string) ?? null,
     imageUrl: toImageUrl(row.storage_bucket as string | null, row.storage_path as string | null),
     capturedAt: (row.captured_at ?? row.created_at) as string,
     isPaid: Boolean(row.is_paid),
+    // 0/null both mean "no real speed measurement" (many rows predate speed
+    // tracking, or the camera doesn't do speed matching) - only show a value
+    // when it's an actual positive reading.
+    speedKmh: typeof speed === 'number' && speed > 0 ? speed : null,
   };
 }
 

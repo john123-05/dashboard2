@@ -365,6 +365,9 @@ export default function Photos() {
                       {p.isPaid ? 'purchased' : 'available'}
                     </span>
                   </div>
+                  {p.speedKmh !== null && (
+                    <p className="mt-1 text-[10px] font-medium text-slate-500">{p.speedKmh.toFixed(1)} km/h</p>
+                  )}
                 </div>
               </button>
             ))}
@@ -384,6 +387,11 @@ export default function Photos() {
                   {selectedPhoto.externalCode || selectedPhoto.id}
                 </p>
                 <p className="mt-1 text-center text-xs text-slate-500">{formatDateTime(selectedPhoto.capturedAt)}</p>
+                {selectedPhoto.speedKmh !== null && (
+                  <p className="mt-1 text-center text-xs font-medium text-sky-600">
+                    {selectedPhoto.speedKmh.toFixed(1)} km/h
+                  </p>
+                )}
               </div>
             ) : (
               <div className="flex h-full min-h-[220px] items-center justify-center rounded-xl bg-white/20 p-6 text-center text-sm text-slate-400">
