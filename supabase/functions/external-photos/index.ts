@@ -55,10 +55,10 @@ Deno.serve(async (req: Request) => {
 
     const [photosRes, recentRes, attractionsRes] = await Promise.all([
       fetchExternal(
-        `photos?select=id,is_paid,created_at,captured_at,storage_bucket,storage_path,owner_user_id,park_id${parkFilter}`
+        `photos?select=id,is_paid,created_at,captured_at,storage_bucket,storage_path,attraction_id,park_id${parkFilter}`
       ),
       fetchExternal(
-        `photos?select=id,is_paid,created_at,captured_at,storage_bucket,storage_path,owner_user_id,park_id${parkFilter}&order=captured_at.desc&limit=12`
+        `photos?select=id,is_paid,created_at,captured_at,storage_bucket,storage_path,attraction_id,park_id${parkFilter}&order=captured_at.desc&limit=12`
       ),
       fetchExternal(
         `attractions?select=id,park_id,name&order=name.asc${parkFilter}`
@@ -99,7 +99,7 @@ Deno.serve(async (req: Request) => {
     const photos = (photosRes.data as Record<string, unknown>[]).map((p) => ({
       id: p.id,
       status: toStatus(p),
-      attraction_id: p.owner_user_id ?? null,
+      attraction_id: p.attraction_id ?? null,
     }));
 
     const attractions = (attractionsRes.data as Record<string, unknown>[]).map((attraction) => ({
