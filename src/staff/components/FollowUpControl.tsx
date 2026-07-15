@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { followUpUrgency, type LeadFollowUp } from '../lib/leads';
+import { followUpUrgency, formatFollowUpDate, nextFollowUpAfterCompletion, type LeadFollowUp } from '../lib/leads';
 
 interface FollowUpControlProps {
   followUp: LeadFollowUp | null;
@@ -16,12 +16,6 @@ const URGENCY_LABELS: Record<string, string> = {
 
 function todayIsoDate(): string {
   return new Date().toISOString().slice(0, 10);
-}
-
-function formatFollowUpDate(value: string): string {
-  return new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(
-    new Date(`${value}T00:00:00`),
-  );
 }
 
 export default function FollowUpControl({ followUp, onSet, onClear }: FollowUpControlProps) {
@@ -46,10 +40,9 @@ export default function FollowUpControl({ followUp, onSet, onClear }: FollowUpCo
     if (!followUp) return;
     setSaving(true);
     try {
-      if (followUp.cadence_days) {
-        const next = new Date();
-        next.setDate(next.getDate() + followUp.cadence_days);
-        await onSet(next.toISOString().slice(0, 10), followUp.cadence_days, followUp.note ?? '');
+      const rescheduled = nextFollowUpAfterCompletion(followUp);
+      if (rescheduled) {
+        await onSet(rescheduled.next_due_at, rescheduled.cadence_days, rescheduled.note);
       } else {
         await onClear(followUp.id);
       }

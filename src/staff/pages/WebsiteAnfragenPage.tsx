@@ -30,6 +30,9 @@ import {
   fetchWebsiteRequests,
   followUpForEmail,
   followUpUrgency,
+  formatFollowUpDate,
+  isToday,
+  nextFollowUpAfterCompletion,
   normalizeAttractionCategory,
   resolveLeadLanguage,
   sortLeadRows,
@@ -809,6 +812,27 @@ export default function WebsiteAnfragenPage() {
     [followUps, websiteRows, germanRows, leadRows, productFinderRows],
   );
 
+  // Raw totals across all 4 lists, not the currently filtered/searched view —
+  // "insgesamt" is meant as a system-wide count, independent of whatever
+  // tab/filter is active right now.
+  const totalLeadsCount = websiteRows.length + germanRows.length + leadRows.length + productFinderRows.length;
+
+  const contactedTodayCount = useMemo(
+    () => contactEvents.filter((event) => isToday(event.contacted_at)).length,
+    [contactEvents],
+  );
+
+  const nextDueEntry = followUpEntries[0] ?? null;
+
+  async function onQuickCompleteFollowUp(followUp: LeadFollowUp) {
+    const rescheduled = nextFollowUpAfterCompletion(followUp);
+    if (rescheduled) {
+      await onSetFollowUp(followUp.email, rescheduled.next_due_at, rescheduled.cadence_days, rescheduled.note);
+    } else {
+      await onClearFollowUp(followUp.id);
+    }
+  }
+
   async function onWebsiteFieldChange(id: string, update: { temperature?: LeadTemperature; contacted_at?: string | null }) {
     const previous = websiteRows;
     setWebsiteError(null);
@@ -1170,23 +1194,54 @@ export default function WebsiteAnfragenPage() {
         </p>
       </div>
 
-      {followUpCounts.total > 0 && (
+      {totalLeadsCount > 0 && (
         <div className="card follow-up-summary">
-          <div className="follow-up-summary-item follow-up-summary-overdue">
-            <span className="follow-up-summary-value">{followUpCounts.overdue}</span>
-            <span className="follow-up-summary-label">Überfällig</span>
+          <div className="follow-up-summary-stats">
+            <div className="follow-up-summary-item">
+              <span className="follow-up-summary-value">{totalLeadsCount}</span>
+              <span className="follow-up-summary-label">Interessenten insgesamt</span>
+            </div>
+            <div className="follow-up-summary-item">
+              <span className="follow-up-summary-value">{contactedTodayCount}</span>
+              <span className="follow-up-summary-label">Kontaktiert heute</span>
+            </div>
+            <div className="follow-up-summary-item">
+              <span className="follow-up-summary-value">{followUpCounts.dueToday}</span>
+              <span className="follow-up-summary-label">Follow-up heute fällig</span>
+            </div>
+            <div className="follow-up-summary-item follow-up-summary-overdue">
+              <span className="follow-up-summary-value">{followUpCounts.overdue}</span>
+              <span className="follow-up-summary-label">Überfällig</span>
+            </div>
+            <div className="follow-up-summary-item">
+              <span className="follow-up-summary-value">{followUpCounts.dueSoon}</span>
+              <span className="follow-up-summary-label">Diese Woche</span>
+            </div>
+            {followUpCounts.total > 0 && (
+              <button
+                type="button"
+                className="secondary inline follow-up-summary-btn"
+                onClick={() => setActiveTab('followUps')}
+              >
+                Follow-ups ansehen ({followUpCounts.total})
+              </button>
+            )}
           </div>
-          <div className="follow-up-summary-item">
-            <span className="follow-up-summary-value">{followUpCounts.dueToday}</span>
-            <span className="follow-up-summary-label">Heute fällig</span>
-          </div>
-          <div className="follow-up-summary-item">
-            <span className="follow-up-summary-value">{followUpCounts.dueSoon}</span>
-            <span className="follow-up-summary-label">Diese Woche</span>
-          </div>
-          <button type="button" className="secondary inline follow-up-summary-btn" onClick={() => setActiveTab('followUps')}>
-            Follow-ups ansehen ({followUpCounts.total})
-          </button>
+
+          {nextDueEntry && (
+            <div className="follow-up-next-highlight">
+              <div>
+                <p className="eyebrow">Als nächstes fällig</p>
+                <p className="follow-up-next-name">
+                  {nextDueEntry.lead?.displayName || nextDueEntry.followUp.email}
+                </p>
+                <p className="note">{formatFollowUpDate(nextDueEntry.followUp.next_due_at)}</p>
+              </div>
+              <button type="button" onClick={() => onQuickCompleteFollowUp(nextDueEntry.followUp)}>
+                ✓ Erledigt
+              </button>
+            </div>
+          )}
         </div>
       )}
 

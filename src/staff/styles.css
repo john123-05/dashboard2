@@ -1656,6 +1656,11 @@
 
 .staff-app .follow-up-summary {
   display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.staff-app .follow-up-summary-stats {
+  display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 20px;
@@ -1680,12 +1685,39 @@
   margin-left: auto;
   width: auto;
 }
+.staff-app .follow-up-next-highlight {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-left: 4px solid var(--accent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface-elevated) 90%);
+}
+.staff-app .follow-up-next-highlight button {
+  width: auto;
+  flex: none;
+  white-space: nowrap;
+}
+.staff-app .follow-up-next-name {
+  margin: 2px 0 4px;
+  font-size: 16px;
+  font-weight: 700;
+}
 @media (max-width: 640px) {
-  .staff-app .follow-up-summary {
+  .staff-app .follow-up-summary-stats {
     gap: 14px;
   }
   .staff-app .follow-up-summary-btn {
     margin-left: 0;
+    width: 100%;
+  }
+  .staff-app .follow-up-next-highlight {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .staff-app .follow-up-next-highlight button {
     width: 100%;
   }
 }

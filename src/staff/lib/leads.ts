@@ -524,6 +524,38 @@ export function followUpUrgency(nextDueAtDateStr: string): FollowUpUrgency {
   return 'later';
 }
 
+export function formatFollowUpDate(dateStr: string): string {
+  return new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(
+    new Date(`${dateStr}T00:00:00`),
+  );
+}
+
+// Compares in local time deliberately - contact timestamps are stored at
+// local noon (see ContactQuickAdd) specifically to stay clear of the
+// midnight boundary, so a plain local-getter comparison is safe here.
+export function isToday(isoDateTime: string): boolean {
+  const date = new Date(isoDateTime);
+  const today = new Date();
+  return (
+    date.getFullYear() === today.getFullYear() &&
+    date.getMonth() === today.getMonth() &&
+    date.getDate() === today.getDate()
+  );
+}
+
+// What should happen when a follow-up is marked done: repeat it
+// cadence_days out if it has a cadence, or clear it entirely if it doesn't.
+// Shared by FollowUpControl (per-lead) and the page-level "next due"
+// quick-complete action, so both stay in sync with a single definition.
+export function nextFollowUpAfterCompletion(
+  followUp: LeadFollowUp,
+): { next_due_at: string; cadence_days: number | null; note: string } | null {
+  if (!followUp.cadence_days) return null;
+  const next = new Date();
+  next.setDate(next.getDate() + followUp.cadence_days);
+  return { next_due_at: next.toISOString().slice(0, 10), cadence_days: followUp.cadence_days, note: followUp.note ?? '' };
+}
+
 export type LeadSortKey = 'date' | 'temperature' | 'name';
 export type SortDirection = 'asc' | 'desc';
 
