@@ -123,6 +123,62 @@ function buildCostReminderNotification(record: Record<string, unknown>): { title
   };
 }
 
+// lead_follow_ups is keyed only by email (see the migration) — this
+// resolves a display name the same way the frontend's resolveLeadByEmail
+// does, just server-side: check each of the 4 lead tables in turn and use
+// whichever name/company field is populated first.
+async function resolveLeadDisplayName(email: string): Promise<string> {
+  const lookups: Array<{ table: LeadTableName; fields: string[] }> = [
+    { table: 'website_requests', fields: ['name', 'company'] },
+    { table: 'german_website_requests', fields: ['name', 'company'] },
+    { table: 'email_leads', fields: ['name', 'firma'] },
+    { table: 'product_finder_submissions', fields: ['name', 'company'] },
+  ];
+
+  for (const { table, fields } of lookups) {
+    const { data } = await supabaseService
+      .from(table)
+      .select(fields.join(','))
+      .ilike('email', email)
+      .limit(1)
+      .maybeSingle();
+
+    if (data) {
+      const row = data as unknown as Record<string, unknown>;
+      for (const field of fields) {
+        const value = asText(row[field]);
+        if (value) return value;
+      }
+    }
+  }
+
+  return email;
+}
+
+interface FollowUpDueItem {
+  email: string;
+  note: string | null;
+}
+
+async function buildFollowUpDueNotification(
+  record: Record<string, unknown>,
+): Promise<{ title: string; body: string }> {
+  const items = (Array.isArray(record.items) ? record.items : []) as FollowUpDueItem[];
+
+  if (items.length === 1) {
+    const name = await resolveLeadDisplayName(items[0].email);
+    return {
+      title: 'Zeit für Follow-up',
+      body: items[0].note ? `${name} · ${items[0].note}` : name,
+    };
+  }
+
+  return {
+    title: `${items.length} Follow-ups heute fällig`,
+    body: 'Details in der Anfragen-Übersicht',
+  };
+}
+
 async function buildSupportTicketMessageNotification(
   record: Record<string, unknown>,
 ): Promise<{ title: string; body: string; url: string }> {
@@ -202,6 +258,9 @@ Deno.serve(async (req: Request) => {
   } else if (table === 'cost_reminder') {
     const { title, body: notifBody } = buildCostReminderNotification(record as Record<string, unknown>);
     payload = JSON.stringify({ title, body: notifBody, url: '/staff/kosten' });
+  } else if (table === 'lead_follow_up_due') {
+    const { title, body: notifBody } = await buildFollowUpDueNotification(record as Record<string, unknown>);
+    payload = JSON.stringify({ title, body: notifBody, url: '/staff/website-anfragen?tab=followUps' });
   } else if (isLeadTable(table)) {
     const meta = TABLE_META[table];
     payload = JSON.stringify({
