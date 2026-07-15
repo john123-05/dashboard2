@@ -83,7 +83,11 @@ export default function LeadStatsCharts({ website, german, leads, productFinder,
     const submissions: Array<{ date: string; channel: LeadSourceTable }> = [
       ...website.map((r) => ({ date: r.submitted_at, channel: 'website_requests' as const })),
       ...german.map((r) => ({ date: r.submitted_at, channel: 'german_website_requests' as const })),
-      ...leads.map((r) => ({ date: r.submitted_at, channel: 'email_leads' as const })),
+      // email_leads prefers spalte_1 over submitted_at when present - same
+      // reasoning as the card date display and the list sort (see
+      // sortLeadRows in leads.ts): CSV-imported rows source these from two
+      // different sheet columns and they can disagree.
+      ...leads.map((r) => ({ date: r.spalte_1 || r.submitted_at, channel: 'email_leads' as const })),
       ...productFinder.map((r) => ({ date: r.submitted_at, channel: 'product_finder_submissions' as const })),
     ];
     if (submissions.length === 0) return [];

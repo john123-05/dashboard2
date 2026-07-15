@@ -677,7 +677,13 @@ export default function WebsiteAnfragenPage() {
           row.antwort,
         ]),
     );
-    return sortLeadRows(filtered, sortKey, sortDirection, (row) => row.name || row.firma || row.email);
+    return sortLeadRows(
+      filtered,
+      sortKey,
+      sortDirection,
+      (row) => row.spalte_1 || row.submitted_at,
+      (row) => row.name || row.firma || row.email,
+    );
   }, [leadRows, query, categoryFilter, languageFilter, sortKey, sortDirection]);
 
   const filteredWebsiteRows = useMemo(() => {
@@ -686,7 +692,13 @@ export default function WebsiteAnfragenPage() {
         matchesFilters('website_requests', row) &&
         matchesQuery(query, [row.name, row.email, row.company, row.country, row.project_type, row.message]),
     );
-    return sortLeadRows(filtered, sortKey, sortDirection, (row) => row.name || row.company || row.email);
+    return sortLeadRows(
+      filtered,
+      sortKey,
+      sortDirection,
+      (row) => row.submitted_at,
+      (row) => row.name || row.company || row.email,
+    );
   }, [websiteRows, query, categoryFilter, languageFilter, sortKey, sortDirection]);
 
   const filteredGermanRows = useMemo(() => {
@@ -703,7 +715,13 @@ export default function WebsiteAnfragenPage() {
           row.comment,
         ]),
     );
-    return sortLeadRows(filtered, sortKey, sortDirection, (row) => row.name || row.company || row.email);
+    return sortLeadRows(
+      filtered,
+      sortKey,
+      sortDirection,
+      (row) => row.submitted_at,
+      (row) => row.name || row.company || row.email,
+    );
   }, [germanRows, query, categoryFilter, languageFilter, sortKey, sortDirection]);
 
   const filteredProductFinderRows = useMemo(() => {
@@ -720,7 +738,13 @@ export default function WebsiteAnfragenPage() {
           ...row.answers.map((a) => a.answer),
         ]),
     );
-    return sortLeadRows(filtered, sortKey, sortDirection, (row) => row.name || row.company || row.email);
+    return sortLeadRows(
+      filtered,
+      sortKey,
+      sortDirection,
+      (row) => row.submitted_at,
+      (row) => row.name || row.company || row.email,
+    );
   }, [productFinderRows, query, categoryFilter, languageFilter, sortKey, sortDirection]);
 
   const loadWebsiteRows = useCallback(async () => {

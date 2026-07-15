@@ -564,16 +564,27 @@ const TEMPERATURE_ORDER: Record<LeadTemperature, number> = { heiss: 0, warm: 1, 
 // Shared sort, applied client-side to already-fetched rows — kept generic so
 // all 4 tabs (and, later, a unified cross-table view) use the exact same
 // sort semantics instead of 4 subtly different reimplementations.
-export function sortLeadRows<T extends { submitted_at: string; temperature: LeadTemperature }>(
+//
+// Takes an explicit date accessor rather than assuming `submitted_at` -
+// email_leads rows display `spalte_1` in preference to `submitted_at` when
+// present (see capturedAt in WebsiteAnfragenPage.tsx), because CSV-imported
+// rows source those two fields from two different sheet columns and they
+// can disagree (e.g. a blank "timestamp" column silently falls back to
+// import time in toTimestamp()). Sorting by a different field than the one
+// shown on the card is exactly what makes a list look "shuffled" to a human
+// even though it's internally consistent - so the accessor used here must
+// match whatever is actually rendered as the date for that row.
+export function sortLeadRows<T extends { temperature: LeadTemperature }>(
   rows: T[],
   sortKey: LeadSortKey,
   direction: SortDirection,
+  getSortDate: (row: T) => string,
   getSortName: (row: T) => string,
 ): T[] {
   const sign = direction === 'asc' ? 1 : -1;
   return [...rows].sort((a, b) => {
     if (sortKey === 'date') {
-      return sign * (new Date(a.submitted_at).getTime() - new Date(b.submitted_at).getTime());
+      return sign * (new Date(getSortDate(a)).getTime() - new Date(getSortDate(b)).getTime());
     }
     if (sortKey === 'temperature') {
       return sign * (TEMPERATURE_ORDER[a.temperature] - TEMPERATURE_ORDER[b.temperature]);
