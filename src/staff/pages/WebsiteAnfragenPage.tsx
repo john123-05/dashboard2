@@ -9,6 +9,7 @@ import ContactTimeline from '../components/ContactTimeline';
 import FollowUpControl from '../components/FollowUpControl';
 import LeadFilterBar from '../components/LeadFilterBar';
 import LeadSortControl from '../components/LeadSortControl';
+import LeadStatsCharts from '../components/LeadStatsCharts';
 import {
   attractionMaterialLabel,
   addContactEvent,
@@ -389,8 +390,8 @@ function LeadAvatar({ label }: { label: string }) {
   return <div className="lead-avatar">{initial}</div>;
 }
 
-type LeadTab = 'leads' | 'website' | 'germanWebsite' | 'productFinder' | 'followUps';
-const VALID_LEAD_TABS: LeadTab[] = ['leads', 'website', 'germanWebsite', 'productFinder', 'followUps'];
+type LeadTab = 'leads' | 'website' | 'germanWebsite' | 'productFinder' | 'followUps' | 'statistik';
+const VALID_LEAD_TABS: LeadTab[] = ['leads', 'website', 'germanWebsite', 'productFinder', 'followUps', 'statistik'];
 
 interface ResolvedLeadRef {
   sourceTable: LeadSourceTable;
@@ -1287,6 +1288,13 @@ export default function WebsiteAnfragenPage() {
             Follow-ups
             {followUpCounts.total > 0 && <span className="lead-tab-count">{followUpCounts.total}</span>}
           </button>
+          <button
+            type="button"
+            className={`lead-tab ${activeTab === 'statistik' ? 'active' : ''}`}
+            onClick={() => setActiveTab('statistik')}
+          >
+            Statistik
+          </button>
         </div>
         <input
           type="search"
@@ -1297,23 +1305,25 @@ export default function WebsiteAnfragenPage() {
         />
       </div>
 
-      <div className="lead-filter-row">
-        <LeadFilterBar
-          category={categoryFilter}
-          onCategoryChange={setCategoryFilter}
-          language={languageFilter}
-          onLanguageChange={setLanguageFilter}
-          availableLanguages={availableLanguages}
-        />
-        <LeadSortControl
-          sortKey={sortKey}
-          direction={sortDirection}
-          onChange={(key, direction) => {
-            setSortKey(key);
-            setSortDirection(direction);
-          }}
-        />
-      </div>
+      {activeTab !== 'followUps' && activeTab !== 'statistik' && (
+        <div className="lead-filter-row">
+          <LeadFilterBar
+            category={categoryFilter}
+            onCategoryChange={setCategoryFilter}
+            language={languageFilter}
+            onLanguageChange={setLanguageFilter}
+            availableLanguages={availableLanguages}
+          />
+          <LeadSortControl
+            sortKey={sortKey}
+            direction={sortDirection}
+            onChange={(key, direction) => {
+              setSortKey(key);
+              setSortDirection(direction);
+            }}
+          />
+        </div>
+      )}
 
       {activeTab === 'leads' && (
       <div className="card">
@@ -1877,6 +1887,16 @@ export default function WebsiteAnfragenPage() {
           })}
         </div>
       </div>
+      )}
+
+      {activeTab === 'statistik' && (
+        <LeadStatsCharts
+          website={websiteRows}
+          german={germanRows}
+          leads={leadRows}
+          productFinder={productFinderRows}
+          contactEvents={contactEvents}
+        />
       )}
     </div>
   );

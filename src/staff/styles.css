@@ -1734,6 +1734,39 @@
   color: var(--text);
   border-color: var(--accent);
 }
+
+.staff-app .stats-chart-wrap {
+  height: 320px;
+  margin-top: 10px;
+}
+.staff-app .stats-range-toggle {
+  display: inline-flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--surface-soft);
+  border: 1px solid var(--hairline);
+}
+.staff-app .stats-range-toggle button {
+  width: auto;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.staff-app .stats-range-toggle button.active {
+  background: var(--accent);
+  color: #fff;
+}
+@media (max-width: 640px) {
+  .staff-app .stats-chart-wrap {
+    height: 240px;
+  }
+}
 .staff-app .follow-up-control {
   display: flex;
   flex-direction: column;
