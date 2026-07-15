@@ -2590,7 +2590,11 @@ async function buildPayload(
     );
   }
 
-  const machineStatuses = await fetchDashboardServiceRows<MachineStatusRow[]>(
+  // machine_status is written by the Liftpic Sync agent's heartbeat (via the
+  // liftpic-status function on the shared project) - it lives on the shared
+  // LiftPictures project, not this dashboard's own project, so this must go
+  // through fetchExternalRows, not fetchDashboardServiceRows.
+  const machineStatuses = await fetchExternalRows<MachineStatusRow[]>(
     `/rest/v1/machine_status?select=*&park_id=eq.${parkId}&order=last_seen_at.desc&limit=20`,
   ).catch((error) => {
     console.warn("Failed to load machine_status rows", error);
