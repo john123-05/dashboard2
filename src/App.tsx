@@ -79,14 +79,7 @@ export default function App() {
                 />
                 <Route path="/photos" element={<Photos />} />
                 <Route path="/leads" element={<Leads />} />
-                <Route
-                  path="/personalization"
-                  element={
-                    <ComingSoonOverlay description="Hier kannst du das Aussehen und die Texte deines Foto-Shops anpassen — zum Beispiel Farben, Logo oder Begrüßungstexte.">
-                      <Personalization />
-                    </ComingSoonOverlay>
-                  }
-                />
+                <Route path="/personalization" element={<Personalization />} />
                 <Route path="/tickets" element={<Support />} />
                 <Route path="/health" element={<SystemHealth />} />
                 <Route path="/settings" element={<Settings />} />
