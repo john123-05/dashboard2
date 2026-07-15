@@ -119,6 +119,25 @@ type ParsedAggregate = {
   sources: JsonRecord;
 };
 
+type MachineStatusRow = {
+  machine_id: string;
+  park_id: string;
+  park_slug: string;
+  app_version: string | null;
+  last_seen_at: string | null;
+  queue_count: number | null;
+  disk_free_mb: number | null;
+  camera_status: string | null;
+  paper_status: string | null;
+  paper_remaining: number | null;
+  last_error: string | null;
+  camera_code?: string | null;
+  photos_taken_today?: number | null;
+  photos_sold_today?: number | null;
+  photo_conversion_today?: number | null;
+  payload?: JsonRecord | null;
+};
+
 const PARSE_LIMITS_BY_KIND: Record<RecognizedKind, number> = {
   statistic: 8,
   debug_log: 4,
@@ -178,6 +197,13 @@ function parseIsoOrNull(value?: string | null) {
 
 function safeDate(value?: string | null, fallback?: string | null) {
   return parseIsoOrNull(value) ?? parseIsoOrNull(fallback) ?? new Date().toISOString();
+}
+
+function latestIso(values: Array<string | null | undefined>) {
+  return values
+    .map((value) => parseIsoOrNull(value))
+    .filter((value): value is string => Boolean(value))
+    .sort((left, right) => new Date(right).getTime() - new Date(left).getTime())[0] ?? null;
 }
 
 function pushMax<T>(list: T[], item: T, max: number) {
@@ -538,6 +564,15 @@ function buildDashboardWriteHeaders() {
   };
 }
 
+function buildDashboardServiceReadHeaders() {
+  if (!DASHBOARD_SUPABASE_URL || !DASHBOARD_SUPABASE_SERVICE_KEY) return null;
+  return {
+    Authorization: `Bearer ${DASHBOARD_SUPABASE_SERVICE_KEY}`,
+    apikey: DASHBOARD_SUPABASE_SERVICE_KEY,
+    "Content-Type": "application/json",
+  };
+}
+
 function buildExternalHeaders() {
   if (!EXTERNAL_SUPABASE_URL || !EXTERNAL_SUPABASE_SERVICE_KEY) return null;
   return {
@@ -558,6 +593,21 @@ async function fetchDashboardRows<T>(
   const headers = buildDashboardReadHeaders(userAuthHeader);
   if (!headers) {
     throw new Error("Dashboard read credentials are not configured.");
+  }
+
+  return fetchJson<T>(`${DASHBOARD_SUPABASE_URL}${path}`, {
+    headers,
+  });
+}
+
+async function fetchDashboardServiceRows<T>(path: string): Promise<T> {
+  if (!DASHBOARD_SUPABASE_URL) {
+    throw new Error("Dashboard Supabase URL is not configured.");
+  }
+
+  const headers = buildDashboardServiceReadHeaders();
+  if (!headers) {
+    throw new Error("Dashboard service read credentials are not configured.");
   }
 
   return fetchJson<T>(`${DASHBOARD_SUPABASE_URL}${path}`, {
@@ -2108,6 +2158,232 @@ function finalizeAggregate(
   };
 }
 
+function statusPriority(status: string | null | undefined) {
+  if (status === "down") return 3;
+  if (status === "degraded") return 2;
+  if (status === "operational") return 1;
+  return 0;
+}
+
+function mergeService(
+  services: Array<{ name: string; status: string; detail?: string | null; last_seen_at?: string | null }>,
+  next: { name: string; status: string; detail?: string | null; last_seen_at?: string | null },
+) {
+  const existing = services.find((item) => item.name === next.name);
+  if (!existing) {
+    services.push(next);
+    return;
+  }
+  if (statusPriority(next.status) > statusPriority(existing.status)) {
+    Object.assign(existing, next);
+    return;
+  }
+  if (!existing.detail && next.detail) existing.detail = next.detail;
+  if (!existing.last_seen_at && next.last_seen_at) existing.last_seen_at = next.last_seen_at;
+}
+
+function normalizeAgentEvent(raw: JsonRecord, fallbackAt: string | null, fallbackMachine: string): ParsedEvent {
+  const severity = typeof raw.severity === "string" && ["info", "warning", "error", "critical"].includes(raw.severity)
+    ? raw.severity as ParsedEvent["severity"]
+    : "info";
+  const category = typeof raw.category === "string" && [
+    "sale",
+    "payment",
+    "terminal",
+    "cash",
+    "printer",
+    "system",
+    "error",
+    "warning",
+    "photo",
+    "log",
+  ].includes(raw.category)
+    ? raw.category as ParsedEvent["category"]
+    : "system";
+  const status = typeof raw.status === "string" && [
+    "completed",
+    "failed",
+    "cancelled",
+    "warning",
+    "info",
+    "unknown",
+    "pending",
+  ].includes(raw.status)
+    ? raw.status as ParsedEvent["status"]
+    : severity === "info" ? "info" : severity === "warning" ? "warning" : "failed";
+
+  return {
+    id: typeof raw.id === "string" ? raw.id : `agent-${fallbackMachine}-${crypto.randomUUID()}`,
+    occurred_at: safeDate(typeof raw.occurred_at === "string" ? raw.occurred_at : null, fallbackAt),
+    severity,
+    category,
+    payment_method:
+      typeof raw.payment_method === "string" && ["cash", "coin", "terminal", "card", "unknown"].includes(raw.payment_method)
+        ? raw.payment_method as ParsedEvent["payment_method"]
+        : null,
+    status,
+    amount_cents: typeof raw.amount_cents === "number" ? raw.amount_cents : null,
+    amount_kind:
+      typeof raw.amount_kind === "string" && ["confirmed", "detected", "unknown"].includes(raw.amount_kind)
+        ? raw.amount_kind as ParsedEvent["amount_kind"]
+        : "unknown",
+    purchase_signal: "none",
+    description: String(raw.description ?? "Liftpic agent status").slice(0, 240),
+    source_file: String(raw.source_file ?? "liftpic-agent"),
+    raw_excerpt: String(raw.raw_excerpt ?? raw.description ?? "").slice(0, 400),
+    device: typeof raw.device === "string" ? raw.device : null,
+    tags: Array.isArray(raw.tags) ? raw.tags.map(String).slice(0, 8) : ["liftpic-agent"],
+  };
+}
+
+function mergeMachineStatuses(parsed: ParsedAggregate, rows: MachineStatusRow[]): ParsedAggregate {
+  if (rows.length === 0) return parsed;
+
+  const featureFlags = { ...(parsed.feature_flags as JsonRecord) };
+  const summary = { ...(parsed.summary as JsonRecord) };
+  const health = { ...(parsed.health as JsonRecord) };
+  const operations = { ...(parsed.operations as JsonRecord) };
+  const sources = { ...(parsed.sources as JsonRecord) };
+
+  const services = Array.isArray(health.services) ? [...(health.services as any[])] : [];
+  const devices = Array.isArray(health.devices) ? [...(health.devices as any[])] : [];
+  const healthEvents = Array.isArray(health.events) ? [...(health.events as ParsedEvent[])] : [];
+  const operationDevices = Array.isArray((operations as any).devices) ? [...(operations as any).devices] : [];
+  const operationActivity = Array.isArray((operations as any).activity) ? [...(operations as any).activity] : [];
+  const errors = [...parsed.errors];
+
+  const now = Date.now();
+  let latestAgentSeen: string | null = null;
+  let agentFiles = 0;
+
+  for (const row of rows) {
+    const payload = (row.payload ?? {}) as JsonRecord;
+    const lastSeen = parseIsoOrNull(row.last_seen_at) ?? parseIsoOrNull(String(payload.last_seen_at ?? "")) ?? null;
+    if (lastSeen && (!latestAgentSeen || latestAgentSeen < lastSeen)) latestAgentSeen = lastSeen;
+    const ageMs = lastSeen ? now - new Date(lastSeen).getTime() : Number.POSITIVE_INFINITY;
+    const agentStatus = ageMs <= 2 * 60 * 1000 ? "operational" : ageMs <= 10 * 60 * 1000 ? "degraded" : "down";
+    const agentName = `Liftpic Sync ${row.camera_code || payload.camera_code || row.machine_id}`;
+
+    mergeService(services, {
+      name: "Liftpic Sync",
+      status: agentStatus,
+      detail:
+        agentStatus === "operational"
+          ? `${row.machine_id} online, queue ${row.queue_count ?? 0}`
+          : `${row.machine_id} last seen ${lastSeen ?? "never"}`,
+      last_seen_at: lastSeen,
+    });
+    mergeService(devices, {
+      name: agentName,
+      status: agentStatus,
+      detail: `Queue ${row.queue_count ?? 0}, disk ${row.disk_free_mb ?? "-"} MB`,
+      last_seen_at: lastSeen,
+    });
+    mergeService(operationDevices, {
+      name: agentName,
+      status: agentStatus,
+      detail: `Queue ${row.queue_count ?? 0}, disk ${row.disk_free_mb ?? "-"} MB`,
+      last_seen_at: lastSeen,
+    });
+
+    const operationalDevices = Array.isArray(payload.operational_devices) ? payload.operational_devices as JsonRecord[] : [];
+    for (const device of operationalDevices) {
+      const name = String(device.name ?? "Machine device");
+      const status = String(device.status ?? "operational");
+      const detail = String(device.detail ?? "");
+      const last_seen_at = typeof device.last_seen_at === "string" ? device.last_seen_at : lastSeen;
+      const service = { name, status, detail, last_seen_at };
+      mergeService(services, service);
+      mergeService(devices, service);
+      mergeService(operationDevices, service);
+      const kind = String(device.kind ?? "");
+      if (kind === "cash") featureFlags.cash = true;
+      if (kind === "terminal") featureFlags.terminal = true;
+      if (kind === "printer") featureFlags.printer = true;
+      featureFlags.operations = true;
+      featureFlags.health = true;
+    }
+
+    const operationalEvents = Array.isArray(payload.operational_events) ? payload.operational_events as JsonRecord[] : [];
+    for (const rawEvent of operationalEvents) {
+      const event = normalizeAgentEvent(rawEvent, lastSeen, row.machine_id);
+      healthEvents.push(event);
+      operationActivity.push(event);
+      if (event.severity !== "info") errors.push(event);
+    }
+
+    if (row.paper_remaining !== null && row.paper_remaining !== undefined) {
+      summary.printer_paper_remaining = row.paper_remaining;
+      featureFlags.printer = true;
+      health.printer = {
+        ...(typeof health.printer === "object" && health.printer ? health.printer as JsonRecord : {}),
+        paper_remaining: row.paper_remaining,
+      };
+      operations.printer = {
+        ...(typeof operations.printer === "object" && operations.printer ? operations.printer as JsonRecord : {}),
+        paper_remaining: row.paper_remaining,
+      };
+    }
+
+    if (typeof row.photos_taken_today === "number") summary.photos_taken_today = row.photos_taken_today;
+    if (typeof row.photos_sold_today === "number") summary.photos_sold_today = row.photos_sold_today;
+    if (typeof row.photo_conversion_today === "number") summary.photo_conversion_today = row.photo_conversion_today;
+    agentFiles += 1;
+  }
+
+  const orderedServices = services.sort((a, b) => String(a.name).localeCompare(String(b.name)));
+  const communicationStatus = orderedServices.some((service) => service.status === "down")
+    ? "down"
+    : orderedServices.some((service) => service.status === "degraded")
+      ? "degraded"
+      : "operational";
+
+  health.services = orderedServices;
+  health.devices = devices.sort((a, b) => String(a.name).localeCompare(String(b.name)));
+  health.events = healthEvents
+    .sort((a, b) => new Date(b.occurred_at).getTime() - new Date(a.occurred_at).getTime())
+    .slice(0, 60);
+  health.communication_status = communicationStatus;
+  health.last_data_at = latestIso([health.last_data_at as string | null, latestAgentSeen]);
+  health.last_activity_at = latestIso([health.last_activity_at as string | null, latestAgentSeen]);
+
+  operations.devices = operationDevices.sort((a, b) => String(a.name).localeCompare(String(b.name)));
+  operations.activity = operationActivity
+    .sort((a, b) => new Date(b.occurred_at).getTime() - new Date(a.occurred_at).getTime())
+    .slice(0, 80);
+
+  summary.last_data_at = latestIso([summary.last_data_at as string | null, latestAgentSeen]);
+  summary.last_activity_at = latestIso([summary.last_activity_at as string | null, latestAgentSeen]);
+  summary.error_count = Math.max(Number(summary.error_count ?? 0), errors.filter((event) => event.severity === "error").length);
+  summary.warning_count = Math.max(Number(summary.warning_count ?? 0), errors.filter((event) => event.severity === "warning").length);
+  summary.critical_count = Math.max(Number(summary.critical_count ?? 0), errors.filter((event) => event.severity === "critical").length);
+
+  sources.files_scanned = Number(sources.files_scanned ?? 0) + agentFiles;
+  sources.recognized_files = Number(sources.recognized_files ?? 0) + agentFiles;
+  sources.latest_object_at = latestIso([sources.latest_object_at as string | null, latestAgentSeen]);
+  sources.matched_files = [
+    ...(Array.isArray(sources.matched_files) ? (sources.matched_files as any[]) : []),
+    ...rows.map((row) => ({
+      path: `machine_status:${row.machine_id}:${row.camera_code ?? "default"}`,
+      kind: "liftpic_agent",
+      updated_at: row.last_seen_at,
+      size: JSON.stringify(row.payload ?? {}).length,
+    })),
+  ].slice(0, 30);
+
+  return {
+    ...parsed,
+    feature_flags: featureFlags,
+    summary,
+    health,
+    errors: errors
+      .sort((a, b) => new Date(b.occurred_at).getTime() - new Date(a.occurred_at).getTime())
+      .slice(0, 160),
+    operations,
+    sources,
+  };
+}
+
 function applyMode<T>(mode: "auto" | "enabled" | "disabled", fallback: T, enabledValue: T, disabledValue: T) {
   if (mode === "enabled") return enabledValue;
   if (mode === "disabled") return disabledValue;
@@ -2313,6 +2589,14 @@ async function buildPayload(
       fingerprint,
     );
   }
+
+  const machineStatuses = await fetchDashboardServiceRows<MachineStatusRow[]>(
+    `/rest/v1/machine_status?select=*&park_id=eq.${parkId}&order=last_seen_at.desc&limit=20`,
+  ).catch((error) => {
+    console.warn("Failed to load machine_status rows", error);
+    return [] as MachineStatusRow[];
+  });
+  parsed = mergeMachineStatuses(parsed, machineStatuses);
 
   const resolvedFeatures = {
     stripe: applyMode(
