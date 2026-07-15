@@ -92,6 +92,7 @@ export default function Personalization() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [autoApplyUpload, setAutoApplyUpload] = useState(true);
   const [creatingCampaign, setCreatingCampaign] = useState(false);
   const [savingLayer, setSavingLayer] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -258,15 +259,67 @@ export default function Personalization() {
     return data as OverlayAsset;
   }
 
+  async function activateUploadedOverlay(asset: OverlayAsset) {
+    if (!parkId) throw new Error('Please select a park first.');
+
+    await supabase
+      .from('overlay_campaigns')
+      .update({ status: 'archived' })
+      .eq('park_id', parkId)
+      .eq('status', 'active')
+      .like('name', 'Sofort Overlay:%');
+
+    const { data: campaign, error: campaignError } = await supabase
+      .from('overlay_campaigns')
+      .insert({
+        park_id: parkId,
+        name: `Sofort Overlay: ${pathBasename(asset.path)}`,
+        starts_at: new Date().toISOString(),
+        ends_at: null,
+        priority: 1000,
+        status: 'active',
+      })
+      .select('id')
+      .single();
+
+    if (campaignError) throw new Error(campaignError.message);
+
+    const campaignId = (campaign as { id: string }).id;
+    const { error: layerError } = await supabase.from('overlay_campaign_layers').insert({
+      campaign_id: campaignId,
+      asset_id: asset.id,
+      z_index: 10,
+      opacity: 1,
+      blend_mode: 'normal',
+      fit: 'fill',
+      anchor: 'center',
+      scale: 1,
+    });
+
+    if (layerError) throw new Error(layerError.message);
+    return campaignId;
+  }
+
   async function handleAddOverlay(files: FileList | null) {
     if (!files || files.length === 0) return;
     setUploading(true);
     setActionError(null);
+    let activatedCampaignId: string | null = null;
     try {
+      const uploadedAssets: OverlayAsset[] = [];
       for (const file of Array.from(files)) {
-        await uploadOverlayFile(file);
+        uploadedAssets.push(await uploadOverlayFile(file));
       }
+
+      const latestAsset = uploadedAssets[uploadedAssets.length - 1];
+      if (autoApplyUpload && latestAsset) {
+        activatedCampaignId = await activateUploadedOverlay(latestAsset);
+      }
+
       await loadOverlayData();
+      if (activatedCampaignId) {
+        setSelectedCampaignId(activatedCampaignId);
+      }
     } catch (error) {
       setActionError(error instanceof Error ? error.message : 'Upload failed.');
     } finally {
@@ -527,8 +580,23 @@ export default function Personalization() {
                 disabled={!parkId || uploading}
               >
                 <Upload className="h-4 w-4" />
-                {uploading ? 'Uploading…' : t('personalization.upload_overlay')}
+                {uploading ? 'Uploading...' : t('personalization.upload_overlay')}
               </button>
+
+              <label className="flex items-start gap-2 rounded-xl bg-white/30 px-3 py-2 text-sm text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={autoApplyUpload}
+                  onChange={(e) => setAutoApplyUpload(e.target.checked)}
+                  className="mt-1"
+                />
+                <span>
+                  <strong className="block text-slate-700">Nach Upload sofort verwenden</strong>
+                  <span className="text-xs text-slate-500">
+                    Erstellt automatisch eine aktive Overlay-Kampagne fuer diesen Park.
+                  </span>
+                </span>
+              </label>
 
               <div className="space-y-2">
                 {assets.map((asset) => (
@@ -617,7 +685,7 @@ export default function Personalization() {
                 className="glass-button-primary w-full"
                 disabled={!parkId || creatingCampaign}
               >
-                {creatingCampaign ? 'Creating…' : 'Create Campaign'}
+                {creatingCampaign ? 'Creating...' : 'Create Campaign'}
               </button>
             </form>
 
@@ -638,7 +706,7 @@ export default function Personalization() {
                   >
                     <p className="truncate text-sm font-medium text-slate-700">{campaign.name}</p>
                     <p className="text-xs text-slate-400">
-                      {new Date(campaign.starts_at).toLocaleString()} • {campaign.status} • P
+                      {new Date(campaign.starts_at).toLocaleString()} - {campaign.status} - P
                       {campaign.priority}
                     </p>
                   </button>
@@ -780,7 +848,7 @@ export default function Personalization() {
                 className="glass-button-primary w-full"
                 disabled={!selectedCampaign || !layerForm.asset_id || savingLayer}
               >
-                {savingLayer ? 'Saving…' : 'Add Layer to Campaign'}
+                {savingLayer ? 'Saving...' : 'Add Layer to Campaign'}
               </button>
             </form>
 
@@ -794,7 +862,7 @@ export default function Personalization() {
                         {asset ? pathBasename(asset.path) : layer.asset_id}
                       </p>
                       <p className="text-xs text-slate-400">
-                        z{layer.z_index} • {layer.fit} • {layer.anchor}
+                        z{layer.z_index} - {layer.fit} - {layer.anchor}
                       </p>
                     </div>
                     <button
