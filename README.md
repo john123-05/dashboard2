@@ -6,6 +6,11 @@
 attraction PCs: viewer logos, default photos, print overlays and legacy
 jpeg4web/imageloader assets.
 
+The same tab also offers the one-file Windows installer:
+`install_liftpic_sync_bootstrap.ps1`. Staff creates the Liftpic PC row, downloads
+the installer, copies the row's install command, and runs it on the attraction PC
+as Administrator. The installer pairs the PC and starts the background task.
+
 Flow:
 
 1. Staff uploads a file in the Liftpic PCs tab.

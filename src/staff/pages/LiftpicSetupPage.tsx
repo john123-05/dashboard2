@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { Cable, Copy, Edit3, FileImage, Monitor, Power, RotateCcw, Trash2, UploadCloud } from 'lucide-react';
+import { Cable, Copy, Download, Edit3, FileImage, Monitor, Power, RotateCcw, Trash2, UploadCloud } from 'lucide-react';
 import { edgeFetch } from '../lib/edge-fetch';
 import { getApiErrorMessage } from '../lib/api-error';
 import { appendActivityEvent } from '../lib/activity-feed';
@@ -140,6 +140,9 @@ const defaultAssetForm: AssetForm = {
   restart_hint: assetSlots[3].hint,
   notes: '',
 };
+
+const bootstrapInstallerUrl =
+  'https://raw.githubusercontent.com/john123-05/testsoftware/main/scripts/install_liftpic_sync_bootstrap.ps1';
 
 function formatDate(value: string | null) {
   if (!value) return '-';
@@ -453,8 +456,31 @@ export default function LiftpicSetupPage() {
     await load();
   }
 
+  async function downloadBootstrapInstaller() {
+    setStatus(null);
+    setError(null);
+    try {
+      const res = await fetch(bootstrapInstallerUrl);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const text = await res.text();
+      const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'install_liftpic_sync_bootstrap.ps1';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      setStatus('Install-Datei heruntergeladen');
+    } catch (err) {
+      window.open(bootstrapInstallerUrl, '_blank', 'noopener,noreferrer');
+      setError(`Download konnte nicht automatisch starten: ${err instanceof Error ? err.message : 'unbekannter Fehler'}`);
+    }
+  }
+
   function installCommand(config: LiftpicMachineConfig) {
-    return `cd C:\\liftpic\\liftpic-sync && .\\liftpic-sync.exe pair --code ${config.pairing_code}`;
+    return `powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\\Downloads\\install_liftpic_sync_bootstrap.ps1" -PairingCode ${config.pairing_code}`;
   }
 
   if (loading) {
@@ -675,22 +701,51 @@ export default function LiftpicSetupPage() {
         </div>
 
         <div className="card">
-          <h3>Einfacher Ablauf</h3>
+          <div className="support-panel-header">
+            <div>
+              <p className="eyebrow">Installation</p>
+              <h3>Einfacher Ablauf am Kunden-PC</h3>
+              <p className="note">Eine Datei herunterladen, als Administrator starten, Pairing-Code eingeben.</p>
+            </div>
+            <button
+              type="button"
+              className="secondary inline"
+              onClick={() => void downloadBootstrapInstaller()}
+            >
+              <Download size={16} />
+              Install-Datei
+            </button>
+          </div>
           <div className="grid" style={{ gap: 10 }}>
             <div className="material-card">
               <Cable size={18} />
-              <h4>1. Alte Programme laufen lassen</h4>
-              <p className="material-desc">TIScapture/CAM und AidaTest bleiben unveraendert und schreiben weiter in ihre Ordner.</p>
+              <h4>1. Park und Attraktion anlegen</h4>
+              <p className="material-desc">Erst links im Tab Kunden & Parks den Kunden/Park und die Attraktion anlegen oder pruefen.</p>
             </div>
             <div className="material-card">
               <Monitor size={18} />
-              <h4>2. Diesen PC hier anlegen</h4>
-              <p className="material-desc">Park, Kamera, QR, Speed und Papierwarnung werden zentral gespeichert.</p>
+              <h4>2. Liftpic PC vorbereiten</h4>
+              <p className="material-desc">Hier Park, Kamera, Kundencode, Ordner, QR, Speed und Papierwarnung eintragen. Fuer Live-Test: Shadow Mode anlassen.</p>
             </div>
             <div className="material-card">
               <Copy size={18} />
-              <h4>3. Pairing-Code am Attraktions-PC eingeben</h4>
-              <p className="material-desc">Danach holt sich Liftpic Sync die Einstellungen und meldet Health/Papier/Fahrten.</p>
+              <h4>3. Install-Datei auf den Kunden-PC</h4>
+              <p className="material-desc">Datei in Downloads speichern, PowerShell als Administrator oeffnen, Install-Befehl aus der PC-Zeile kopieren und starten.</p>
+            </div>
+            <div className="material-card">
+              <Power size={18} />
+              <h4>4. Kontrolle</h4>
+              <p className="material-desc">Hier sollte nach kurzer Zeit Zuletzt gesehen, Papier, Fahrten und Queue erscheinen. Erst danach live schalten.</p>
+            </div>
+            <div className="material-card">
+              <FileImage size={18} />
+              <h4>Laufende Attraktion sicher testen</h4>
+              <p className="material-desc">Kamera, Aida, PhotoViewer und Print bleiben an. Liftpic Sync liest nur mit, solange Shadow Mode aktiv ist.</p>
+            </div>
+            <div className="material-card">
+              <UploadCloud size={18} />
+              <h4>Wann alten Uploader stoppen?</h4>
+              <p className="material-desc">Erst wenn Health und Test-Uploads passen. Nicht alten und neuen Uploader gleichzeitig live auf dieselben Bilder senden lassen.</p>
             </div>
           </div>
         </div>
