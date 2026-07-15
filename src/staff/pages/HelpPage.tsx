@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Camera, Globe, Images, KeyRound, Megaphone, Mountain, Search, X } from 'lucide-react';
+import { Camera, Globe, Images, KeyRound, Megaphone, Monitor, Mountain, Search, X } from 'lucide-react';
 import GlobalSearchResults from '../components/GlobalSearchResults';
 import { fetchSearchSources, searchSources, type SearchResult, type SearchSources } from '../lib/globalSearch';
 import { FAQ_CATEGORIES, faqItems, matchesFaqQuery, type FaqCategory } from '../lib/faq';
@@ -11,6 +11,7 @@ const QUICK_LINKS = [
   { to: '/staff/werbematerialien', icon: Megaphone, label: 'Werbematerialien', description: 'Kataloge, PDFs & Links' },
   { to: '/staff/website-anfragen', icon: Globe, label: 'Interessenten und Anfragen', description: 'Leads aus allen Kanälen' },
   { to: '/staff/cameras', icon: Camera, label: 'Kameras', description: 'Kamera-Zuordnungen verwalten' },
+  { to: '/staff/liftpic-setup', icon: Monitor, label: 'Liftpic Setup', description: 'Attraktions-PCs, Modus, Pairing & Health' },
   { to: '/staff/parks', icon: Mountain, label: 'Parks anlegen', description: 'Parks, Prefixes & Attraktionen' },
 ] as const;
 

@@ -153,10 +153,19 @@ export default function Overview() {
       // Photo/attraction/user counts and real support tickets still apply
       // regardless of the sales model, so those are kept.
       if (isKioskPark) {
-        const [kioskResult, kioskPurchasesResult, externalUsersResult, externalPhotosResult, attractionsResult, supportRepliesResult] =
+        const [
+          kioskResult,
+          kioskPurchasesResult,
+          parkDashboardResult,
+          externalUsersResult,
+          externalPhotosResult,
+          attractionsResult,
+          supportRepliesResult,
+        ] =
           await Promise.all([
             fetchKioskSales(parkId),
             fetchKioskPurchases(parkId).catch(() => null),
+            loadParkDashboardData(parkId).catch(() => ({ data: null, error: 'Operations feed unavailable' })),
             invokeEdgeFunction<{ customers: { id: string }[] }>('external-users', { query: { park_id: parkId } }),
             invokeEdgeFunction<{ photos: { id: string }[] }>('external-photos', { query: { park_id: parkId } }),
             invokeEdgeFunction<{ attractions: { is_active?: boolean }[] }>('external-attractions', { query: { park_id: parkId } }),
@@ -167,7 +176,12 @@ export default function Overview() {
           ]);
 
         setKioskDays(aggregateByDate(kioskResult.days, kioskResult.priceCents ?? 0));
-        setParkData(createEmptyParkDashboardData(parkId, parkName || 'Selected park'));
+        const kioskParkData =
+          parkDashboardResult.data ?? createEmptyParkDashboardData(parkId, parkName || 'Selected park');
+        setParkData({
+          ...kioskParkData,
+          park_name: kioskParkData.park_name || parkName || 'Selected park',
+        });
         setTotalUsers(externalUsersResult.error ? null : externalUsersResult.data?.customers?.length ?? null);
         setTotalPhotos(externalPhotosResult.error ? null : externalPhotosResult.data?.photos?.length ?? null);
         setActiveAttractions(
@@ -640,7 +654,7 @@ export default function Overview() {
       )}
 
       {isKioskPark && kioskKpis && (
-        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-6">
+        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-7">
           <KPICard
             title="Umsatz heute"
             value={formatCurrency(kioskKpis.today.revenueCents, 'eur')}
@@ -654,6 +668,17 @@ export default function Overview() {
             icon={Ticket}
             iconColor="text-amber-600"
             iconBg="bg-amber-50"
+          />
+          <KPICard
+            title="Fotopapier"
+            value={
+              parkData.summary.printer_paper_remaining !== null
+                ? formatNumber(parkData.summary.printer_paper_remaining)
+                : '-'
+            }
+            icon={Activity}
+            iconColor="text-cyan-600"
+            iconBg="bg-cyan-50"
           />
           <KPICard
             title="Fotos verkauft (Monat)"

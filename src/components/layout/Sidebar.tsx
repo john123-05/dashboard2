@@ -28,7 +28,7 @@ const navItems = [
   { to: '/leads', icon: Mail, labelKey: 'nav.leads' },
   { to: '/personalization', icon: Wand2, labelKey: 'nav.personalization', comingSoon: true },
   { to: '/tickets', icon: LifeBuoy, labelKey: 'nav.support' },
-  { to: '/health', icon: Activity, labelKey: 'nav.system_health', comingSoon: true },
+  { to: '/health', icon: Activity, labelKey: 'nav.system_health' },
   { to: '/settings', icon: Settings, labelKey: 'nav.settings' },
 ];
 

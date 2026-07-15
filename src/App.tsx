@@ -33,6 +33,7 @@ import StaffUploaderInstallPage from './staff/pages/UploaderInstallPage';
 import StaffPasswordsPage from './staff/pages/PasswordsPage';
 import StaffMediaLibraryPage from './staff/pages/MediaLibraryPage';
 import StaffCostsPage from './staff/pages/CostsPage';
+import StaffLiftpicSetupPage from './staff/pages/LiftpicSetupPage';
 
 export default function App() {
   return (
@@ -89,14 +90,7 @@ export default function App() {
                   }
                 />
                 <Route path="/tickets" element={<Support />} />
-                <Route
-                  path="/health"
-                  element={
-                    <ComingSoonOverlay description="Hier siehst du, ob technisch alles rund läuft — zum Beispiel ob die Kamera-Anbindung und die Bezahlung fehlerfrei funktionieren.">
-                      <SystemHealth />
-                    </ComingSoonOverlay>
-                  }
-                />
+                <Route path="/health" element={<SystemHealth />} />
                 <Route path="/settings" element={<Settings />} />
               </Route>
 
@@ -108,6 +102,7 @@ export default function App() {
                 <Route path="/staff" element={<Navigate to="/staff/parks" replace />} />
                 <Route path="/staff/parks" element={<StaffParksPage />} />
                 <Route path="/staff/cameras" element={<StaffCamerasPage />} />
+                <Route path="/staff/liftpic-setup" element={<StaffLiftpicSetupPage />} />
                 <Route path="/staff/support-ticket-kunden" element={<StaffSupportTicketKundenPage />} />
                 <Route path="/staff/website-anfragen" element={<StaffWebsiteAnfragenPage />} />
                 <Route path="/staff/system-health" element={<StaffSystemHealthPage />} />
