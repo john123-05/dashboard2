@@ -578,20 +578,6 @@ export default function Overview() {
           },
         ]
       : []),
-    ...(activeAttractions !== null
-      ? [
-          {
-            id: 'attractions',
-            label: 'Active attractions',
-            value: formatNumber(activeAttractions),
-            helper: 'Open photos',
-            route: '/photos',
-            icon: Activity,
-            iconColor: 'text-rose-600',
-            iconBg: 'bg-rose-50',
-          },
-        ]
-      : []),
   ];
 
   function handleWidgetNavigation(path: string) {
