@@ -578,6 +578,20 @@ export default function Overview() {
           },
         ]
       : []),
+    ...(activeAttractions !== null
+      ? [
+          {
+            id: 'attractions',
+            label: 'Active attractions',
+            value: formatNumber(activeAttractions),
+            helper: 'Open photos',
+            route: '/photos',
+            icon: Activity,
+            iconColor: 'text-rose-600',
+            iconBg: 'bg-rose-50',
+          },
+        ]
+      : []),
   ];
 
   function handleWidgetNavigation(path: string) {
@@ -640,7 +654,7 @@ export default function Overview() {
       )}
 
       {isKioskPark && kioskKpis && (
-        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-7">
+        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-6">
           <KPICard
             title="Umsatz heute"
             value={formatCurrency(kioskKpis.today.revenueCents, 'eur')}
@@ -687,15 +701,6 @@ export default function Overview() {
               icon={Camera}
               iconColor="text-violet-600"
               iconBg="bg-violet-50"
-            />
-          )}
-          {activeAttractions !== null && (
-            <KPICard
-              title="Aktive Attraktionen"
-              value={formatNumber(activeAttractions)}
-              icon={Activity}
-              iconColor="text-cyan-600"
-              iconBg="bg-cyan-50"
             />
           )}
         </div>
