@@ -6,6 +6,8 @@ import { getApiErrorMessage } from '../lib/api-error';
 import { appendActivityEvent } from '../lib/activity-feed';
 import ContactQuickAdd from '../components/ContactQuickAdd';
 import ContactTimeline from '../components/ContactTimeline';
+import LeadFilterBar from '../components/LeadFilterBar';
+import LeadSortControl from '../components/LeadSortControl';
 import {
   attractionMaterialLabel,
   addContactEvent,
@@ -21,6 +23,9 @@ import {
   fetchGermanWebsiteRequests,
   fetchProductFinderSubmissions,
   fetchWebsiteRequests,
+  normalizeAttractionCategory,
+  resolveLeadLanguage,
+  sortLeadRows,
   updateEmailLead,
   updateGermanWebsiteRequest,
   updateProductFinderSubmission,
@@ -30,10 +35,13 @@ import {
   type ContactEvent,
   type EmailLead,
   type GermanWebsiteRequest,
+  type LeadCategory,
+  type LeadSortKey,
   type LeadSourceTable,
   type LeadTemperature,
   type ProductFinderAnswer,
   type ProductFinderSubmission,
+  type SortDirection,
   type WebsiteRequest,
 } from '../lib/leads';
 
@@ -379,6 +387,10 @@ export default function WebsiteAnfragenPage() {
     return VALID_LEAD_TABS.includes(tab as LeadTab) ? (tab as LeadTab) : 'leads';
   });
   const [query, setQuery] = useState(() => searchParams.get('q') ?? '');
+  const [categoryFilter, setCategoryFilter] = useState<LeadCategory | ''>('');
+  const [languageFilter, setLanguageFilter] = useState('');
+  const [sortKey, setSortKey] = useState<LeadSortKey>('date');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [websiteRows, setWebsiteRows] = useState<WebsiteRequest[]>([]);
   const [websiteLoading, setWebsiteLoading] = useState(true);
   const [websiteError, setWebsiteError] = useState<string | null>(null);
@@ -489,9 +501,32 @@ export default function WebsiteAnfragenPage() {
     }
   }
 
-  const filteredLeadRows = useMemo(
-    () =>
-      leadRows.filter((row) =>
+  // Distinct languages actually present across all 4 tables right now, so the
+  // filter dropdown only ever offers choices that can return a result — built
+  // from the raw arrays (not the filtered ones) so switching tabs doesn't
+  // make the option list jump around.
+  const availableLanguages = useMemo(() => {
+    const set = new Set<string>();
+    const add = (lang: string | null) => {
+      if (lang) set.add(lang);
+    };
+    websiteRows.forEach((row) => add(resolveLeadLanguage('website_requests', row)));
+    germanRows.forEach((row) => add(resolveLeadLanguage('german_website_requests', row)));
+    leadRows.forEach((row) => add(resolveLeadLanguage('email_leads', row)));
+    productFinderRows.forEach((row) => add(resolveLeadLanguage('product_finder_submissions', row)));
+    return Array.from(set).sort();
+  }, [websiteRows, germanRows, leadRows, productFinderRows]);
+
+  function matchesFilters(sourceTable: LeadSourceTable, row: Parameters<typeof normalizeAttractionCategory>[1]): boolean {
+    if (categoryFilter && normalizeAttractionCategory(sourceTable, row) !== categoryFilter) return false;
+    if (languageFilter && resolveLeadLanguage(sourceTable, row) !== languageFilter) return false;
+    return true;
+  }
+
+  const filteredLeadRows = useMemo(() => {
+    const filtered = leadRows.filter(
+      (row) =>
+        matchesFilters('email_leads', row) &&
         matchesQuery(query, [
           row.name,
           row.email,
@@ -500,21 +535,23 @@ export default function WebsiteAnfragenPage() {
           row.frage,
           row.antwort,
         ]),
-      ),
-    [leadRows, query],
-  );
+    );
+    return sortLeadRows(filtered, sortKey, sortDirection, (row) => row.name || row.firma || row.email);
+  }, [leadRows, query, categoryFilter, languageFilter, sortKey, sortDirection]);
 
-  const filteredWebsiteRows = useMemo(
-    () =>
-      websiteRows.filter((row) =>
+  const filteredWebsiteRows = useMemo(() => {
+    const filtered = websiteRows.filter(
+      (row) =>
+        matchesFilters('website_requests', row) &&
         matchesQuery(query, [row.name, row.email, row.company, row.country, row.project_type, row.message]),
-      ),
-    [websiteRows, query],
-  );
+    );
+    return sortLeadRows(filtered, sortKey, sortDirection, (row) => row.name || row.company || row.email);
+  }, [websiteRows, query, categoryFilter, languageFilter, sortKey, sortDirection]);
 
-  const filteredGermanRows = useMemo(
-    () =>
-      germanRows.filter((row) =>
+  const filteredGermanRows = useMemo(() => {
+    const filtered = germanRows.filter(
+      (row) =>
+        matchesFilters('german_website_requests', row) &&
         matchesQuery(query, [
           row.name,
           row.email,
@@ -524,13 +561,14 @@ export default function WebsiteAnfragenPage() {
           row.interest,
           row.comment,
         ]),
-      ),
-    [germanRows, query],
-  );
+    );
+    return sortLeadRows(filtered, sortKey, sortDirection, (row) => row.name || row.company || row.email);
+  }, [germanRows, query, categoryFilter, languageFilter, sortKey, sortDirection]);
 
-  const filteredProductFinderRows = useMemo(
-    () =>
-      productFinderRows.filter((row) =>
+  const filteredProductFinderRows = useMemo(() => {
+    const filtered = productFinderRows.filter(
+      (row) =>
+        matchesFilters('product_finder_submissions', row) &&
         matchesQuery(query, [
           row.name,
           row.email,
@@ -540,9 +578,9 @@ export default function WebsiteAnfragenPage() {
           row.target_country,
           ...row.answers.map((a) => a.answer),
         ]),
-      ),
-    [productFinderRows, query],
-  );
+    );
+    return sortLeadRows(filtered, sortKey, sortDirection, (row) => row.name || row.company || row.email);
+  }, [productFinderRows, query, categoryFilter, languageFilter, sortKey, sortDirection]);
 
   const loadWebsiteRows = useCallback(async () => {
     setWebsiteLoading(true);
@@ -1002,6 +1040,24 @@ export default function WebsiteAnfragenPage() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Suche nach Name, E-Mail, Firma ..."
+        />
+      </div>
+
+      <div className="lead-filter-row">
+        <LeadFilterBar
+          category={categoryFilter}
+          onCategoryChange={setCategoryFilter}
+          language={languageFilter}
+          onLanguageChange={setLanguageFilter}
+          availableLanguages={availableLanguages}
+        />
+        <LeadSortControl
+          sortKey={sortKey}
+          direction={sortDirection}
+          onChange={(key, direction) => {
+            setSortKey(key);
+            setSortDirection(direction);
+          }}
         />
       </div>
 

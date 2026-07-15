@@ -313,3 +313,122 @@ export function detectLanguageHint(text: string): string | null {
   if (germanMarkers.test(text)) return 'DE';
   return 'EN';
 }
+
+// Cross-table attraction category, for filtering across all 4 lead lists at
+// once — each table names this concept differently (see the interfaces
+// above) and email_leads' own values are already inconsistently spelled
+// (handled by ATTRACTION_TYPE_ALIASES above). Anything that doesn't resolve
+// to a known id still lands in a visible "sonstiges" bucket rather than
+// disappearing from a filtered view or throwing.
+export const LEAD_CATEGORIES = ['onride', 'water', 'alpine', 'stationary', 'messen', 'sonstiges'] as const;
+export type LeadCategory = (typeof LEAD_CATEGORIES)[number];
+
+export const LEAD_CATEGORY_LABELS: Record<LeadCategory, string> = {
+  onride: 'OnRide',
+  water: 'Wasserattraktionen',
+  alpine: 'Alpine Coaster',
+  stationary: 'Stationär',
+  messen: 'Messen',
+  sonstiges: 'Sonstiges',
+};
+
+function categoryFromRawValue(raw: string | null | undefined): LeadCategory {
+  const trimmed = (raw || '').trim().toLowerCase();
+  if (!trimmed) return 'sonstiges';
+  const id = ATTRACTION_TYPE_ALIASES[trimmed] || trimmed;
+  return (LEAD_CATEGORIES as readonly string[]).includes(id) ? (id as LeadCategory) : 'sonstiges';
+}
+
+export function normalizeAttractionCategory(
+  sourceTable: LeadSourceTable,
+  row: EmailLead | WebsiteRequest | GermanWebsiteRequest | ProductFinderSubmission,
+): LeadCategory {
+  switch (sourceTable) {
+    case 'email_leads':
+      return categoryFromRawValue((row as EmailLead).attractionstyp);
+    case 'website_requests':
+      return categoryFromRawValue((row as WebsiteRequest).project_type);
+    case 'german_website_requests':
+      return categoryFromRawValue((row as GermanWebsiteRequest).attraction_type);
+    case 'product_finder_submissions':
+      return categoryFromRawValue((row as ProductFinderSubmission).attraction_type);
+    default:
+      return 'sonstiges';
+  }
+}
+
+// Common language-name/locale prefixes, so a product-finder value like
+// "Deutsch", "de-DE" or "English (US)" still resolves to a clean 2-letter
+// code. Anything unrecognized falls back to the raw value (uppercased)
+// rather than being dropped, so it's still filterable once real data is seen.
+const LANGUAGE_CODE_PREFIXES: Record<string, string> = {
+  de: 'DE',
+  en: 'EN',
+  fr: 'FR',
+  it: 'IT',
+  es: 'ES',
+  nl: 'NL',
+  pl: 'PL',
+  ru: 'RU',
+  zh: 'ZH',
+  ja: 'JA',
+};
+
+function normalizeLanguageCode(raw: string): string | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  const prefix = trimmed.slice(0, 2).toLowerCase();
+  return LANGUAGE_CODE_PREFIXES[prefix] || trimmed.toUpperCase();
+}
+
+// Only product_finder_submissions has a real language column. The German
+// channel (german_website_requests) is definitionally German end-to-end, so
+// that's hardcoded rather than guessed. The other two fall back to the
+// existing detectLanguageHint() heuristic over their own free-text fields.
+export function resolveLeadLanguage(
+  sourceTable: LeadSourceTable,
+  row: EmailLead | WebsiteRequest | GermanWebsiteRequest | ProductFinderSubmission,
+): string | null {
+  switch (sourceTable) {
+    case 'product_finder_submissions': {
+      const lang = (row as ProductFinderSubmission).language;
+      return lang ? normalizeLanguageCode(lang) : null;
+    }
+    case 'german_website_requests':
+      return 'DE';
+    case 'email_leads': {
+      const r = row as EmailLead;
+      return detectLanguageHint(`${r.frage} ${r.antwort}`.trim());
+    }
+    case 'website_requests':
+      return detectLanguageHint((row as WebsiteRequest).message);
+    default:
+      return null;
+  }
+}
+
+export type LeadSortKey = 'date' | 'temperature' | 'name';
+export type SortDirection = 'asc' | 'desc';
+
+const TEMPERATURE_ORDER: Record<LeadTemperature, number> = { heiss: 0, warm: 1, kalt: 2 };
+
+// Shared sort, applied client-side to already-fetched rows — kept generic so
+// all 4 tabs (and, later, a unified cross-table view) use the exact same
+// sort semantics instead of 4 subtly different reimplementations.
+export function sortLeadRows<T extends { submitted_at: string; temperature: LeadTemperature }>(
+  rows: T[],
+  sortKey: LeadSortKey,
+  direction: SortDirection,
+  getSortName: (row: T) => string,
+): T[] {
+  const sign = direction === 'asc' ? 1 : -1;
+  return [...rows].sort((a, b) => {
+    if (sortKey === 'date') {
+      return sign * (new Date(a.submitted_at).getTime() - new Date(b.submitted_at).getTime());
+    }
+    if (sortKey === 'temperature') {
+      return sign * (TEMPERATURE_ORDER[a.temperature] - TEMPERATURE_ORDER[b.temperature]);
+    }
+    return sign * getSortName(a).localeCompare(getSortName(b), 'de');
+  });
+}
