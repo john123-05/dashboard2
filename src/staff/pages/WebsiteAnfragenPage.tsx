@@ -6,25 +6,30 @@ import { getApiErrorMessage } from '../lib/api-error';
 import { appendActivityEvent } from '../lib/activity-feed';
 import ContactQuickAdd from '../components/ContactQuickAdd';
 import ContactTimeline from '../components/ContactTimeline';
+import FollowUpControl from '../components/FollowUpControl';
 import LeadFilterBar from '../components/LeadFilterBar';
 import LeadSortControl from '../components/LeadSortControl';
 import {
   attractionMaterialLabel,
   addContactEvent,
   deleteContactAttachment,
-  detectLanguageHint,
   deleteContactEvent,
   deleteEmailLead,
   deleteGermanWebsiteRequest,
+  deleteLeadFollowUp,
   deleteProductFinderSubmission,
   deleteWebsiteRequest,
+  detectLanguageHint,
   eventsForEmail,
   fetchContactAttachments,
   fetchContactEvents,
   fetchEmailLeads,
   fetchGermanWebsiteRequests,
+  fetchLeadFollowUps,
   fetchProductFinderSubmissions,
   fetchWebsiteRequests,
+  followUpForEmail,
+  followUpUrgency,
   normalizeAttractionCategory,
   resolveLeadLanguage,
   sortLeadRows,
@@ -33,6 +38,8 @@ import {
   updateProductFinderSubmission,
   updateWebsiteRequest,
   uploadContactAttachment,
+  upsertLeadFollowUp,
+  LEAD_SOURCE_TABLE_SHORT_LABELS,
   LEAD_TEMPERATURES,
   LEAD_TEMPERATURE_LABELS,
   type ContactAttachment,
@@ -40,6 +47,7 @@ import {
   type EmailLead,
   type GermanWebsiteRequest,
   type LeadCategory,
+  type LeadFollowUp,
   type LeadSortKey,
   type LeadSourceTable,
   type LeadTemperature,
@@ -378,8 +386,58 @@ function LeadAvatar({ label }: { label: string }) {
   return <div className="lead-avatar">{initial}</div>;
 }
 
-type LeadTab = 'leads' | 'website' | 'germanWebsite' | 'productFinder';
-const VALID_LEAD_TABS: LeadTab[] = ['leads', 'website', 'germanWebsite', 'productFinder'];
+type LeadTab = 'leads' | 'website' | 'germanWebsite' | 'productFinder' | 'followUps';
+const VALID_LEAD_TABS: LeadTab[] = ['leads', 'website', 'germanWebsite', 'productFinder', 'followUps'];
+
+interface ResolvedLeadRef {
+  sourceTable: LeadSourceTable;
+  sourceId: string;
+  displayName: string;
+  temperature: LeadTemperature;
+}
+
+// Follow-ups are keyed only by email (see LeadFollowUp) — this resolves one
+// back to whichever loaded row(s) actually have that email, so the
+// Follow-ups tab can show a name/company instead of a bare address. Not a
+// hook — safe to call inside a .map().
+function resolveLeadByEmail(
+  email: string,
+  website: WebsiteRequest[],
+  german: GermanWebsiteRequest[],
+  leads: EmailLead[],
+  productFinder: ProductFinderSubmission[],
+): ResolvedLeadRef | null {
+  const needle = email.trim().toLowerCase();
+  if (!needle) return null;
+
+  const w = website.find((r) => r.email.trim().toLowerCase() === needle);
+  if (w) {
+    return { sourceTable: 'website_requests', sourceId: w.id, displayName: w.name || w.company || w.email, temperature: w.temperature };
+  }
+  const g = german.find((r) => r.email.trim().toLowerCase() === needle);
+  if (g) {
+    return {
+      sourceTable: 'german_website_requests',
+      sourceId: g.id,
+      displayName: g.name || g.company || g.email,
+      temperature: g.temperature,
+    };
+  }
+  const l = leads.find((r) => r.email.trim().toLowerCase() === needle);
+  if (l) {
+    return { sourceTable: 'email_leads', sourceId: l.id, displayName: l.name || l.firma || l.email, temperature: l.temperature };
+  }
+  const p = productFinder.find((r) => r.email.trim().toLowerCase() === needle);
+  if (p) {
+    return {
+      sourceTable: 'product_finder_submissions',
+      sourceId: p.id,
+      displayName: p.name || p.company || p.email,
+      temperature: p.temperature,
+    };
+  }
+  return null;
+}
 
 export default function WebsiteAnfragenPage() {
   // Read once on mount so a deep link (e.g. from the global search on the
@@ -476,6 +534,43 @@ export default function WebsiteAnfragenPage() {
 
   const [contactEvents, setContactEvents] = useState<ContactEvent[]>([]);
   const [contactAttachments, setContactAttachments] = useState<ContactAttachment[]>([]);
+  const [followUps, setFollowUps] = useState<LeadFollowUp[]>([]);
+
+  const loadFollowUps = useCallback(async () => {
+    try {
+      setFollowUps(await fetchLeadFollowUps());
+    } catch {
+      // Non-critical, same reasoning as loadContactEvents below.
+    }
+  }, []);
+
+  async function onSetFollowUp(email: string, nextDueAt: string, cadenceDays: number | null, note: string) {
+    try {
+      const followUp = await upsertLeadFollowUp({
+        email,
+        next_due_at: nextDueAt,
+        cadence_days: cadenceDays,
+        note: note || undefined,
+      });
+      setFollowUps((prev) => {
+        const withoutThis = prev.filter((f) => f.id !== followUp.id);
+        return [...withoutThis, followUp];
+      });
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : 'Follow-up konnte nicht gespeichert werden');
+    }
+  }
+
+  async function onClearFollowUp(id: string) {
+    const previous = followUps;
+    setFollowUps((prev) => prev.filter((f) => f.id !== id));
+    try {
+      await deleteLeadFollowUp(id);
+    } catch (err) {
+      setFollowUps(previous);
+      window.alert(err instanceof Error ? err.message : 'Löschen fehlgeschlagen');
+    }
+  }
 
   const loadContactEvents = useCallback(async () => {
     try {
@@ -679,6 +774,7 @@ export default function WebsiteAnfragenPage() {
     void loadLeadRows();
     void loadContactEvents();
     void loadContactAttachments();
+    void loadFollowUps();
   }, [
     loadLeadRows,
     loadWebsiteRows,
@@ -686,7 +782,32 @@ export default function WebsiteAnfragenPage() {
     loadProductFinderRows,
     loadContactEvents,
     loadContactAttachments,
+    loadFollowUps,
   ]);
+
+  const followUpCounts = useMemo(() => {
+    let overdue = 0;
+    let dueToday = 0;
+    let dueSoon = 0;
+    followUps.forEach((f) => {
+      const urgency = followUpUrgency(f.next_due_at);
+      if (urgency === 'overdue') overdue += 1;
+      else if (urgency === 'today') dueToday += 1;
+      else if (urgency === 'soon') dueSoon += 1;
+    });
+    return { overdue, dueToday, dueSoon, total: followUps.length };
+  }, [followUps]);
+
+  const followUpEntries = useMemo(
+    () =>
+      followUps
+        .map((followUp) => ({
+          followUp,
+          lead: resolveLeadByEmail(followUp.email, websiteRows, germanRows, leadRows, productFinderRows),
+        }))
+        .sort((a, b) => a.followUp.next_due_at.localeCompare(b.followUp.next_due_at)),
+    [followUps, websiteRows, germanRows, leadRows, productFinderRows],
+  );
 
   async function onWebsiteFieldChange(id: string, update: { temperature?: LeadTemperature; contacted_at?: string | null }) {
     const previous = websiteRows;
@@ -1049,6 +1170,26 @@ export default function WebsiteAnfragenPage() {
         </p>
       </div>
 
+      {followUpCounts.total > 0 && (
+        <div className="card follow-up-summary">
+          <div className="follow-up-summary-item follow-up-summary-overdue">
+            <span className="follow-up-summary-value">{followUpCounts.overdue}</span>
+            <span className="follow-up-summary-label">Überfällig</span>
+          </div>
+          <div className="follow-up-summary-item">
+            <span className="follow-up-summary-value">{followUpCounts.dueToday}</span>
+            <span className="follow-up-summary-label">Heute fällig</span>
+          </div>
+          <div className="follow-up-summary-item">
+            <span className="follow-up-summary-value">{followUpCounts.dueSoon}</span>
+            <span className="follow-up-summary-label">Diese Woche</span>
+          </div>
+          <button type="button" className="secondary inline follow-up-summary-btn" onClick={() => setActiveTab('followUps')}>
+            Follow-ups ansehen ({followUpCounts.total})
+          </button>
+        </div>
+      )}
+
       <div className="lead-toolbar">
         <div className="lead-tabbar widget-scroll-x">
           <button
@@ -1082,6 +1223,14 @@ export default function WebsiteAnfragenPage() {
           >
             Produktfinder
             <span className="lead-tab-count">{productFinderLoading ? '...' : filteredProductFinderRows.length}</span>
+          </button>
+          <button
+            type="button"
+            className={`lead-tab ${activeTab === 'followUps' ? 'active' : ''}`}
+            onClick={() => setActiveTab('followUps')}
+          >
+            Follow-ups
+            {followUpCounts.total > 0 && <span className="lead-tab-count">{followUpCounts.total}</span>}
           </button>
         </div>
         <input
@@ -1218,6 +1367,11 @@ export default function WebsiteAnfragenPage() {
                     <ContactQuickAdd
                       onAdd={(iso, note, files) => onAddContact(row.email, 'email_leads', row.id, iso, note, files)}
                     />
+                    <FollowUpControl
+                      followUp={followUpForEmail(followUps, row.email)}
+                      onSet={(date, cadence, note) => onSetFollowUp(row.email, date, cadence, note)}
+                      onClear={onClearFollowUp}
+                    />
                     <button
                       type="button"
                       className="lead-delete-btn"
@@ -1341,6 +1495,11 @@ export default function WebsiteAnfragenPage() {
                   <ContactQuickAdd
                     onAdd={(iso, note, files) => onAddContact(row.email, 'website_requests', row.id, iso, note, files)}
                   />
+                  <FollowUpControl
+                    followUp={followUpForEmail(followUps, row.email)}
+                    onSet={(date, cadence, note) => onSetFollowUp(row.email, date, cadence, note)}
+                    onClear={onClearFollowUp}
+                  />
                   <button
                     type="button"
                     className="lead-delete-btn"
@@ -1457,6 +1616,11 @@ export default function WebsiteAnfragenPage() {
                     onAdd={(iso, note, files) =>
                       onAddContact(row.email, 'german_website_requests', row.id, iso, note, files)
                     }
+                  />
+                  <FollowUpControl
+                    followUp={followUpForEmail(followUps, row.email)}
+                    onSet={(date, cadence, note) => onSetFollowUp(row.email, date, cadence, note)}
+                    onClear={onClearFollowUp}
                   />
                   <button
                     type="button"
@@ -1596,6 +1760,11 @@ export default function WebsiteAnfragenPage() {
                         onAddContact(row.email, 'product_finder_submissions', row.id, iso, note, files)
                       }
                     />
+                    <FollowUpControl
+                      followUp={followUpForEmail(followUps, row.email)}
+                      onSet={(date, cadence, note) => onSetFollowUp(row.email, date, cadence, note)}
+                      onClear={onClearFollowUp}
+                    />
                     <button
                       type="button"
                       className="lead-delete-btn"
@@ -1608,6 +1777,49 @@ export default function WebsiteAnfragenPage() {
                 </div>
               );
             })}
+        </div>
+      </div>
+      )}
+
+      {activeTab === 'followUps' && (
+      <div className="card">
+        <div className="marketing-section-title">
+          <h3>Follow-ups ({followUpEntries.length})</h3>
+        </div>
+
+        {followUpEntries.length === 0 && (
+          <p className="note">
+            Keine offenen Follow-ups. Auf einer Anfrage auf "Follow-up setzen" klicken, um eine hinzuzufügen.
+          </p>
+        )}
+
+        <div className="lead-list">
+          {followUpEntries.map(({ followUp, lead }) => {
+            const urgency = followUpUrgency(followUp.next_due_at);
+            return (
+              <div key={followUp.id} className={`lead-card follow-up-entry-card follow-up-entry-${urgency}`}>
+                <LeadAvatar label={lead?.displayName || followUp.email} />
+                <div className="lead-card-main">
+                  <div className="lead-card-head">
+                    <span className="lead-card-name">{lead?.displayName || followUp.email}</span>
+                    {lead && (
+                      <span className="lead-lang-badge">{LEAD_SOURCE_TABLE_SHORT_LABELS[lead.sourceTable]}</span>
+                    )}
+                  </div>
+                  <a className="lead-card-email" href={`mailto:${followUp.email}`}>
+                    {followUp.email}
+                  </a>
+                </div>
+                <div className="lead-card-actions">
+                  <FollowUpControl
+                    followUp={followUp}
+                    onSet={(date, cadence, note) => onSetFollowUp(followUp.email, date, cadence, note)}
+                    onClear={onClearFollowUp}
+                  />
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
       )}

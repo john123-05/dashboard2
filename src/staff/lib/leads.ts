@@ -457,6 +457,73 @@ export function resolveLeadLanguage(
   }
 }
 
+// A manually-set "next follow-up" reminder, keyed by email like
+// ContactEvent above — never auto-scheduled by logging a contact, staff
+// always sets/changes this themselves. cadence_days is optional: if set,
+// marking it done re-schedules it that many days out instead of clearing it.
+export interface LeadFollowUp {
+  id: string;
+  email: string;
+  next_due_at: string;
+  cadence_days: number | null;
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export function followUpForEmail(followUps: LeadFollowUp[], email: string): LeadFollowUp | null {
+  const needle = email.trim().toLowerCase();
+  if (!needle) return null;
+  return followUps.find((f) => f.email.trim().toLowerCase() === needle) ?? null;
+}
+
+export async function fetchLeadFollowUps(): Promise<LeadFollowUp[]> {
+  const res = await edgeFetch('/api/admin/lead-follow-ups');
+  const body = await res.json().catch(() => null);
+  if (!res.ok) throw new Error(getApiErrorMessage(body, 'Follow-ups konnten nicht geladen werden'));
+  return Array.isArray(body?.data) ? body.data : [];
+}
+
+export async function upsertLeadFollowUp(input: {
+  email: string;
+  next_due_at: string;
+  cadence_days?: number | null;
+  note?: string;
+}): Promise<LeadFollowUp> {
+  const res = await edgeFetch('/api/admin/lead-follow-ups', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  const body = await res.json().catch(() => null);
+  if (!res.ok) throw new Error(getApiErrorMessage(body, 'Follow-up konnte nicht gespeichert werden'));
+  return body.data as LeadFollowUp;
+}
+
+export async function deleteLeadFollowUp(id: string): Promise<void> {
+  const res = await edgeFetch(`/api/admin/lead-follow-ups?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(getApiErrorMessage(body, 'Löschen fehlgeschlagen'));
+  }
+}
+
+export type FollowUpUrgency = 'overdue' | 'today' | 'soon' | 'later';
+
+// UTC-safe: both the "today" reference and the stored date are constructed
+// and compared in the same (local) frame, so this doesn't drift a day off
+// depending on the browser's timezone.
+export function followUpUrgency(nextDueAtDateStr: string): FollowUpUrgency {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const due = new Date(`${nextDueAtDateStr}T00:00:00`);
+  const diffDays = Math.round((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  if (diffDays < 0) return 'overdue';
+  if (diffDays === 0) return 'today';
+  if (diffDays <= 7) return 'soon';
+  return 'later';
+}
+
 export type LeadSortKey = 'date' | 'temperature' | 'name';
 export type SortDirection = 'asc' | 'desc';
 
