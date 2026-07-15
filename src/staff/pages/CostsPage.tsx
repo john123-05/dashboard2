@@ -236,20 +236,36 @@ export default function CostsPage() {
       <div className="grid three">
         <div className="card cost-payer-card cost-payer-tom">
           <p className="note">Tom zahlt</p>
-          <p className="stat-value">{formatMoney(payerTotals[0].yearlyEur)} / Jahr</p>
-          <p className="note">
-            {payerTotals[0].monthlyEur > 0 ? `+ ${formatMoney(payerTotals[0].monthlyEur)} / Monat` : 'keine monatlichen Kosten'}
-          </p>
+          <div className="cost-amount-row">
+            <span className="cost-amount-label">Jährlich</span>
+            <span className="cost-amount-value">{formatMoney(payerTotals[0].yearlyEur)}</span>
+          </div>
+          <div className="cost-amount-row">
+            <span className="cost-amount-label">Monatlich</span>
+            <span className="cost-amount-value">{formatMoney(payerTotals[0].monthlyEur)}</span>
+          </div>
         </div>
         <div className="card cost-payer-card cost-payer-john">
           <p className="note">John zahlt</p>
-          <p className="stat-value">{formatMoney(payerTotals[1].yearlyEur)} / Jahr</p>
-          <p className="note">+ {formatMoney(payerTotals[1].monthlyEur)} / Monat</p>
+          <div className="cost-amount-row">
+            <span className="cost-amount-label">Jährlich</span>
+            <span className="cost-amount-value">{formatMoney(payerTotals[1].yearlyEur)}</span>
+          </div>
+          <div className="cost-amount-row">
+            <span className="cost-amount-label">Monatlich</span>
+            <span className="cost-amount-value">{formatMoney(payerTotals[1].monthlyEur)}</span>
+          </div>
         </div>
         <div className="card">
           <p className="note">Gesamt</p>
-          <p className="stat-value">{formatMoney(monthlyEur)} / Monat</p>
-          <p className="note">{formatMoney(yearlyEur)} / Jahr</p>
+          <div className="cost-amount-row">
+            <span className="cost-amount-label">Jährlich</span>
+            <span className="cost-amount-value">{formatMoney(yearlyEur)}</span>
+          </div>
+          <div className="cost-amount-row">
+            <span className="cost-amount-label">Monatlich</span>
+            <span className="cost-amount-value">{formatMoney(monthlyEur)}</span>
+          </div>
         </div>
       </div>
 

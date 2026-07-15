@@ -156,6 +156,25 @@
   margin: 2px 0 4px;
   font-size: 18px;
   font-weight: 700;
+}.staff-app .cost-amount-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+}.staff-app .cost-amount-row + .cost-amount-row {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--hairline);
+}.staff-app .cost-amount-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}.staff-app .cost-amount-value {
+  font-size: 20px;
+  font-weight: 800;
 }.staff-app .cost-payer-card {
   border-top: 3px solid transparent;
 }.staff-app .cost-payer-tom {
