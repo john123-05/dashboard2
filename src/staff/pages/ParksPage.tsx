@@ -7,6 +7,29 @@ import { getApiErrorMessage } from '../lib/api-error';
 import { appendActivityEvent } from '../lib/activity-feed';
 import type { Attraction, Park, ParkPathPrefix } from '../lib/types';
 
+// park_access (the operator-dashboard login) lives on the OTHER Supabase
+// project (dashboard2's own, xcrxltiiovpoladpaewd) - not the shared content
+// project this page's other admin-* calls go through via edgeFetch. Same
+// public anon key already used elsewhere in this codebase for that project.
+const OPERATOR_PROJECT_URL = 'https://xcrxltiiovpoladpaewd.supabase.co';
+const OPERATOR_PROJECT_ANON_KEY =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhjcnhsdGlpb3Zwb2xhZHBhZXdkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5MTIxODEsImV4cCI6MjA4MjQ4ODE4MX0.qScZ_Uk6q68KHd35VloDuwb3DnC9iAktMx6xt17YWoQ';
+
+async function setParkPassword(parkId: string, parkName: string, password: string): Promise<string | null> {
+  const { data: sessionData } = await supabaseBrowser.auth.getSession();
+  const staffAccessToken = sessionData.session?.access_token;
+  if (!staffAccessToken) return 'Keine Staff-Sitzung gefunden';
+
+  const res = await fetch(`${OPERATOR_PROJECT_URL}/functions/v1/admin-set-park-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: OPERATOR_PROJECT_ANON_KEY },
+    body: JSON.stringify({ staffAccessToken, park_id: parkId, park_name: parkName, password }),
+  });
+  const body = await res.json();
+  if (!res.ok) return getApiErrorMessage(body, 'Passwort konnte nicht gespeichert werden');
+  return null;
+}
+
 export default function ParksPage() {
   const [parks, setParks] = useState<Park[]>([]);
   const [prefixes, setPrefixes] = useState<ParkPathPrefix[]>([]);
@@ -15,6 +38,7 @@ export default function ParksPage() {
 
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
+  const [parkPassword, setParkPassword] = useState('');
 
   const [parkForPrefix, setParkForPrefix] = useState('');
   const [pathPrefix, setPathPrefix] = useState('');
@@ -113,10 +137,25 @@ export default function ParksPage() {
       return;
     }
 
-    setStatus('Park gespeichert');
+    // Password is optional - a park can be created without dashboard login
+    // access and have one set later from the list below.
+    if (parkPassword.trim()) {
+      const passwordError = await setParkPassword(body.data.id, name, parkPassword.trim());
+      if (passwordError) {
+        setError(`Park gespeichert, aber Passwort fehlgeschlagen: ${passwordError}`);
+        setName('');
+        setSlug('');
+        setParkPassword('');
+        await load();
+        return;
+      }
+    }
+
+    setStatus(parkPassword.trim() ? 'Park und Passwort gespeichert' : 'Park gespeichert');
     appendActivityEvent({ title: 'Park gespeichert', details: `${name} (${slug})`, level: 'success' });
     setName('');
     setSlug('');
+    setParkPassword('');
     await load();
   };
 
@@ -250,6 +289,16 @@ export default function ParksPage() {
           <div>
             <label>Slug</label>
             <input value={slug} onChange={(e) => setSlug(e.target.value.toLowerCase())} placeholder="plose-plosebob" required />
+          </div>
+          <div>
+            <label>Dashboard-Passwort (optional)</label>
+            <input
+              type="text"
+              value={parkPassword}
+              onChange={(e) => setParkPassword(e.target.value)}
+              placeholder="Leer lassen, um später festzulegen"
+              minLength={6}
+            />
           </div>
           <button type="submit">Speichern</button>
         </form>
