@@ -193,4 +193,11 @@ export const helpfulLinks: HelpfulLink[] = [
     url: 'https://liftpictures-fotos.de/claim?code=',
     copyOnly: true,
   },
+  {
+    id: 'tarzans-claim',
+    label: 'liftpictures-fotos-tarzans.de/claim?code=…',
+    description: 'Muster-Link für die QR-Code-Bilder bei Tarzāns Sigulda. Noch kein echtes Hosting/Domain live – Code liegt im selben Repo wie Imst, Unterordner tarzans/. In echt steht nach "code=" die jeweilige Bildnummer – kein fertiger Link zum Anklicken, nur zum Kopieren als Vorlage.',
+    url: 'https://liftpictures-fotos-tarzans.de/claim?code=',
+    copyOnly: true,
+  },
 ];
