@@ -147,6 +147,10 @@ export interface HelpfulLink {
   url: string;
   // true for template/example URLs that aren't meant to be opened as-is.
   copyOnly?: boolean;
+  // Which customer/attraction this link belongs to, shown as a badge -
+  // only relevant for per-customer links (e.g. claim-page templates), not
+  // company-wide ones like the main domains or Calendly.
+  customer?: string;
 }
 
 export const helpfulLinks: HelpfulLink[] = [
@@ -192,6 +196,7 @@ export const helpfulLinks: HelpfulLink[] = [
     description: 'Muster-Link für die QR-Code-Bilder in Imst. In echt steht nach "code=" die jeweilige Bildnummer – kein fertiger Link zum Anklicken, nur zum Kopieren als Vorlage.',
     url: 'https://liftpictures-fotos.de/claim?code=',
     copyOnly: true,
+    customer: 'Imst (Imster Bergbahnen, Alpine Coaster)',
   },
   {
     id: 'tarzans-claim',
@@ -199,5 +204,6 @@ export const helpfulLinks: HelpfulLink[] = [
     description: 'Muster-Link für die QR-Code-Bilder bei Tarzāns Sigulda. Noch kein echtes Hosting/Domain live – Code liegt im selben Repo wie Imst, Unterordner tarzans/. In echt steht nach "code=" die jeweilige Bildnummer – kein fertiger Link zum Anklicken, nur zum Kopieren als Vorlage.',
     url: 'https://liftpictures-fotos-tarzans.de/claim?code=',
     copyOnly: true,
+    customer: 'SIA "CSS-ALPINE" / Tarzāns Sigulda (Lettland)',
   },
 ];

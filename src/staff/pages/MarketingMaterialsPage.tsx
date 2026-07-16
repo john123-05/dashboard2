@@ -131,7 +131,10 @@ export default function MarketingMaterialsPage() {
           {helpfulLinks.map((link) => (
             <div key={link.id} className="link-item">
               <div className="link-item-body">
-                <div className="link-item-label">{link.label}</div>
+                <div className="link-item-label">
+                  {link.label}
+                  {link.customer && <span className="material-lang-badge lang-en">{link.customer}</span>}
+                </div>
                 <p className="link-item-desc">{link.description}</p>
               </div>
               <div className="link-item-actions">
