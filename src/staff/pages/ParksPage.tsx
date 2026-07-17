@@ -5,7 +5,7 @@ import { supabaseBrowser } from '../lib/supabase';
 import { edgeFetch } from '../lib/edge-fetch';
 import { getApiErrorMessage } from '../lib/api-error';
 import { appendActivityEvent } from '../lib/activity-feed';
-import type { Attraction, Park, ParkPathPrefix } from '../lib/types';
+import type { Attraction, Park, ParkPathPrefix, SupportTicket } from '../lib/types';
 
 // park_access (the operator-dashboard login) lives on the OTHER Supabase
 // project (dashboard2's own, xcrxltiiovpoladpaewd) - not the shared content
@@ -34,7 +34,8 @@ export default function ParksPage() {
   const [parks, setParks] = useState<Park[]>([]);
   const [prefixes, setPrefixes] = useState<ParkPathPrefix[]>([]);
   const [attractions, setAttractions] = useState<Attraction[]>([]);
-  const [openTicketCount, setOpenTicketCount] = useState<number | null>(null);
+  const [openTickets, setOpenTickets] = useState<SupportTicket[] | null>(null);
+  const [deletingTicketId, setDeletingTicketId] = useState<string | null>(null);
 
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
@@ -93,32 +94,49 @@ export default function ParksPage() {
     }
   };
 
-  const loadOpenTicketCount = useCallback(async () => {
-    const { count, error: countError } = await supabaseBrowser
+  const loadOpenTickets = useCallback(async () => {
+    const { data, error: ticketsError } = await supabaseBrowser
       .from('support_tickets')
-      .select('id', { count: 'exact', head: true })
-      .eq('status', 'open');
+      .select('id, organization_id, created_by, subject, description, status, priority, created_at, updated_at')
+      .eq('status', 'open')
+      .order('created_at', { ascending: false });
 
-    if (!countError) setOpenTicketCount(count ?? 0);
+    if (!ticketsError) setOpenTickets((data || []) as SupportTicket[]);
   }, []);
 
   useEffect(() => {
     void load();
-    void loadOpenTicketCount();
-  }, [loadOpenTicketCount]);
+    void loadOpenTickets();
+  }, [loadOpenTickets]);
 
   useEffect(() => {
     const channel = supabaseBrowser
       .channel('support-ticket-count-live')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'support_tickets' }, () => {
-        void loadOpenTicketCount();
+        void loadOpenTickets();
       })
       .subscribe();
 
     return () => {
       void supabaseBrowser.removeChannel(channel);
     };
-  }, [loadOpenTicketCount]);
+  }, [loadOpenTickets]);
+
+  const deleteTicket = async (ticket: SupportTicket) => {
+    if (!confirm(`Support-Ticket "${ticket.subject}" wirklich löschen?`)) return;
+    setDeletingTicketId(ticket.id);
+    try {
+      const res = await edgeFetch(`/api/admin/support?id=${encodeURIComponent(ticket.id)}`, { method: 'DELETE' });
+      const body = await res.json().catch(() => null);
+      if (!res.ok) {
+        window.alert(getApiErrorMessage(body, 'Ticket konnte nicht gelöscht werden'));
+        return;
+      }
+      setOpenTickets((prev) => (prev ? prev.filter((t) => t.id !== ticket.id) : prev));
+    } finally {
+      setDeletingTicketId(null);
+    }
+  };
 
   const createPark = async (e: FormEvent) => {
     e.preventDefault();
@@ -354,8 +372,40 @@ export default function ParksPage() {
       <div className="card" id="tour-support-preview">
         <h2>Support-Tickets</h2>
         <p className="note">
-          {openTicketCount === null ? 'Lädt...' : `${openTicketCount} offene Anfrage${openTicketCount === 1 ? '' : 'n'} von Kunden.`}
+          {openTickets === null
+            ? 'Lädt...'
+            : `${openTickets.length} offene Anfrage${openTickets.length === 1 ? '' : 'n'} von Kunden.`}
         </p>
+
+        {openTickets !== null && openTickets.length > 0 && (
+          <div style={{ maxHeight: 220, overflowY: 'auto', display: 'grid', gap: 6, margin: '10px 0' }}>
+            {openTickets.map((ticket) => (
+              <div
+                key={ticket.id}
+                className="row"
+                style={{ alignItems: 'center', gap: 8, borderBottom: '1px solid var(--hairline)', paddingBottom: 6 }}
+              >
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {ticket.subject}
+                  </div>
+                  <div className="note" style={{ fontSize: 11 }}>{parkNameById(ticket.organization_id)}</div>
+                </div>
+                <button
+                  type="button"
+                  className="danger inline"
+                  style={{ flex: 'none' }}
+                  title="Ticket löschen"
+                  onClick={() => void deleteTicket(ticket)}
+                  disabled={deletingTicketId === ticket.id}
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
         <Link to="/staff/support-ticket-kunden" className="btn-link">
           Support-Tickets öffnen
         </Link>
