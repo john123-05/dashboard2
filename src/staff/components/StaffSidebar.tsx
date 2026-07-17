@@ -1,5 +1,6 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import {
+  LayoutDashboard,
   Mountain,
   Megaphone,
   Globe,
@@ -19,6 +20,7 @@ import {
 } from 'lucide-react';
 
 const navItems = [
+  { to: '/staff/uebersicht', icon: LayoutDashboard, label: 'Übersicht' },
   { to: '/staff/kunden-management', icon: Mountain, label: 'Kunden Management' },
   { to: '/staff/werbematerialien', icon: Megaphone, label: 'Werbematerialien', tourTag: undefined },
   { to: '/staff/kosten', icon: Euro, label: 'Kosten' },

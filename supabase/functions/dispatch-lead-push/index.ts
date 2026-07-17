@@ -236,10 +236,10 @@ Deno.serve(async (req: Request) => {
     return json({ error: 'Missing or unknown table/record' }, 400);
   }
 
-  let payload: string;
+  let notif: { title: string; body: string; url: string };
   if (table === 'support_tickets') {
     const { title, body: notifBody } = await buildSupportTicketNotification(record as Record<string, unknown>);
-    payload = JSON.stringify({ title, body: notifBody, url: '/staff/support-ticket-kunden' });
+    notif = { title, body: notifBody, url: '/staff/support-ticket-kunden' };
   } else if (table === 'support_ticket_messages') {
     // The trigger already gates this to author_role = 'operator' (support's
     // own replies shouldn't notify support) - this check is just defense in
@@ -251,26 +251,36 @@ Deno.serve(async (req: Request) => {
     const { title, body: notifBody, url } = await buildSupportTicketMessageNotification(
       record as Record<string, unknown>,
     );
-    payload = JSON.stringify({ title, body: notifBody, url });
+    notif = { title, body: notifBody, url };
   } else if (table === 'park_inactivity') {
     const { title, body: notifBody } = buildParkInactivityNotification(record as Record<string, unknown>);
-    payload = JSON.stringify({ title, body: notifBody, url: '/staff/cameras' });
+    notif = { title, body: notifBody, url: '/staff/cameras' };
   } else if (table === 'cost_reminder') {
     const { title, body: notifBody } = buildCostReminderNotification(record as Record<string, unknown>);
-    payload = JSON.stringify({ title, body: notifBody, url: '/staff/kosten' });
+    notif = { title, body: notifBody, url: '/staff/kosten' };
   } else if (table === 'lead_follow_up_due') {
     const { title, body: notifBody } = await buildFollowUpDueNotification(record as Record<string, unknown>);
-    payload = JSON.stringify({ title, body: notifBody, url: '/staff/website-anfragen?tab=followUps' });
+    notif = { title, body: notifBody, url: '/staff/website-anfragen?tab=followUps' };
   } else if (isLeadTable(table)) {
     const meta = TABLE_META[table];
-    payload = JSON.stringify({
+    notif = {
       title: meta.title,
       body: buildNotificationBody(record as Record<string, unknown>),
       url: `/staff/website-anfragen?tab=${meta.tab}`,
-    });
+    };
   } else {
     return json({ error: 'Missing or unknown table/record' }, 400);
   }
+
+  // Persisted, dismissible copy for the Uebersicht page - independent of
+  // whether the push send below actually succeeds/has any subscribers.
+  await supabaseService.from('staff_notifications').insert({
+    title: notif.title,
+    body: notif.body,
+    url: notif.url,
+  });
+
+  const payload = JSON.stringify(notif);
 
   const { data: subscriptions, error: fetchError } = await supabaseService
     .from('push_subscriptions')

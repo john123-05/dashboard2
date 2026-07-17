@@ -32,6 +32,7 @@ import StaffPasswordsPage from './staff/pages/PasswordsPage';
 import StaffMediaLibraryPage from './staff/pages/MediaLibraryPage';
 import StaffCostsPage from './staff/pages/CostsPage';
 import StaffCustomerManagementPage from './staff/pages/CustomerManagementPage';
+import StaffOverviewPage from './staff/pages/OverviewPage';
 
 export default function App() {
   return (
@@ -90,7 +91,8 @@ export default function App() {
                   production project) from the customer-facing dashboard above. */}
               <Route path="/staff/login" element={<StaffLoginPage />} />
               <Route element={<StaffAdminLayout />}>
-                <Route path="/staff" element={<Navigate to="/staff/kunden-management" replace />} />
+                <Route path="/staff" element={<Navigate to="/staff/uebersicht" replace />} />
+                <Route path="/staff/uebersicht" element={<StaffOverviewPage />} />
                 <Route path="/staff/kunden-management" element={<StaffCustomerManagementPage />} />
                 <Route path="/staff/parks" element={<Navigate to="/staff/kunden-management?tab=parks" replace />} />
                 <Route path="/staff/cameras" element={<Navigate to="/staff/kunden-management?tab=cameras" replace />} />
