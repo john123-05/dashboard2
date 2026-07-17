@@ -58,6 +58,10 @@ function formatRelative(dateStr: string): string {
   return `vor ${diffD} Tag${diffD === 1 ? '' : 'en'}`;
 }
 
+function formatShortDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
+}
+
 function notificationAccent(title: string): 'blue' | 'amber' | 'rose' | 'green' {
   const t = title.toLowerCase();
   if (t.includes('keine neuen bilder') || t.includes('inaktiv')) return 'amber';
@@ -349,7 +353,7 @@ export default function OverviewPage() {
               placeholder="Notiz für die nächste Schicht..."
               rows={2}
             />
-            <button type="submit" style={{ width: 'auto', marginTop: 8, flexShrink: 0 }}>
+            <button type="submit" className="inline" style={{ marginTop: 8 }}>
               Anheften
             </button>
           </form>
@@ -447,6 +451,7 @@ export default function OverviewPage() {
               photo.imageUrl ? (
                 <a key={photo.id} className="park-photo-thumb" href={photo.imageUrl} target="_blank" rel="noreferrer">
                   <img src={photo.imageUrl} alt={photo.externalCode ?? 'Foto'} loading="lazy" />
+                  <span className="park-photo-thumb-date">{formatShortDate(photo.capturedAt)}</span>
                 </a>
               ) : null,
             )}
