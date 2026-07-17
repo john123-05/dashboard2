@@ -1,6 +1,6 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Camera, CalendarClock, Euro, ListChecks, Receipt, StickyNote } from 'lucide-react';
+import { Bell, Camera, CalendarClock, Euro, ListChecks, Receipt } from 'lucide-react';
 import { supabaseBrowser } from '../lib/supabase';
 import { fetchLeadFollowUps, followUpUrgency } from '../lib/leads';
 import { fetchRecentPhotos, type BrowsablePhoto } from '../../lib/photoBrowser';
@@ -20,13 +20,6 @@ interface ChecklistItem {
   id: string;
   text: string;
   is_done: boolean;
-  created_at: string;
-}
-
-interface HandoffNote {
-  id: string;
-  note: string;
-  author_email: string | null;
   created_at: string;
 }
 
@@ -75,7 +68,6 @@ export default function OverviewPage() {
 
   const [notifications, setNotifications] = useState<StaffNotification[] | null>(null);
   const [checklist, setChecklist] = useState<ChecklistItem[] | null>(null);
-  const [notes, setNotes] = useState<HandoffNote[] | null>(null);
   const [followUpsToday, setFollowUpsToday] = useState<number | null>(null);
   const [nextCost, setNextCost] = useState<NextCostPayment | null>(null);
   const [adminEmail, setAdminEmail] = useState<string | null>(null);
@@ -86,7 +78,6 @@ export default function OverviewPage() {
   const [parkStats, setParkStats] = useState<ParkTodayStats | null>(null);
 
   const [newChecklistText, setNewChecklistText] = useState('');
-  const [newNoteText, setNewNoteText] = useState('');
 
   const loadNotifications = useCallback(async () => {
     const { data } = await supabaseBrowser
@@ -104,14 +95,6 @@ export default function OverviewPage() {
       .select('id, text, is_done, created_at')
       .order('created_at', { ascending: true });
     setChecklist((data || []) as ChecklistItem[]);
-  }, []);
-
-  const loadNotes = useCallback(async () => {
-    const { data } = await supabaseBrowser
-      .from('staff_handoff_notes')
-      .select('id, note, author_email, created_at')
-      .order('created_at', { ascending: false });
-    setNotes((data || []) as HandoffNote[]);
   }, []);
 
   const loadFollowUpsToday = useCallback(async () => {
@@ -186,7 +169,6 @@ export default function OverviewPage() {
   useEffect(() => {
     void loadNotifications();
     void loadChecklist();
-    void loadNotes();
     void loadFollowUpsToday();
     void loadNextCost();
     void loadParks();
@@ -194,7 +176,7 @@ export default function OverviewPage() {
       const { data } = await supabaseBrowser.auth.getUser();
       setAdminEmail(data.user?.email ?? null);
     })();
-  }, [loadNotifications, loadChecklist, loadNotes, loadFollowUpsToday, loadNextCost, loadParks]);
+  }, [loadNotifications, loadChecklist, loadFollowUpsToday, loadNextCost, loadParks]);
 
   useEffect(() => {
     if (!selectedParkId || !parks) return;
@@ -239,25 +221,11 @@ export default function OverviewPage() {
     await supabaseBrowser.from('staff_checklist_items').delete().eq('id', id);
   }
 
-  async function addNote(e: FormEvent) {
-    e.preventDefault();
-    const trimmed = newNoteText.trim();
-    if (!trimmed) return;
-    setNewNoteText('');
-    await supabaseBrowser.from('staff_handoff_notes').insert({ note: trimmed, author_email: adminEmail });
-    await loadNotes();
-  }
-
-  async function deleteNote(id: string) {
-    setNotes((prev) => (prev ? prev.filter((n) => n.id !== id) : prev));
-    await supabaseBrowser.from('staff_handoff_notes').delete().eq('id', id);
-  }
-
   const selectedPark = parks?.find((p) => p.id === selectedParkId) ?? null;
 
   return (
     <div className="grid" style={{ gap: 16 }}>
-      <div className="grid three">
+      <div className="grid two">
         <div className="card">
           <div className="marketing-section-title">
             <h3 style={{ display: 'flex', alignItems: 'center', gap: 8, margin: 0 }}>
@@ -336,41 +304,6 @@ export default function OverviewPage() {
                   >
                     ✕
                   </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="postit">
-          <h3 style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 0 }}>
-            <StickyNote size={17} /> Notizen
-          </h3>
-          <form onSubmit={addNote} style={{ marginTop: 8 }}>
-            <textarea
-              value={newNoteText}
-              onChange={(e) => setNewNoteText(e.target.value)}
-              placeholder="Notiz für die nächste Schicht..."
-              rows={2}
-            />
-            <button type="submit" className="inline" style={{ marginTop: 8 }}>
-              Anheften
-            </button>
-          </form>
-
-          {notes !== null && notes.length > 0 && (
-            <div style={{ maxHeight: 220, overflowY: 'auto', display: 'grid', gap: 8, marginTop: 14 }}>
-              {notes.map((n) => (
-                <div key={n.id} className="postit-entry">
-                  <p className="postit-entry-text">{n.note}</p>
-                  <div className="postit-entry-meta">
-                    <span>
-                      {n.author_email || 'Unbekannt'} · {formatRelative(n.created_at)}
-                    </span>
-                    <button type="button" className="postit-entry-delete" onClick={() => void deleteNote(n.id)}>
-                      ✕
-                    </button>
-                  </div>
                 </div>
               ))}
             </div>
