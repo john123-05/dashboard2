@@ -2289,7 +2289,7 @@
   opacity: 0.8;
 }
 
-.staff-app .feed-dismiss {
+.staff-app button.feed-dismiss {
   flex-shrink: 0;
   width: auto;
   padding: 4px 8px;
@@ -2300,7 +2300,7 @@
   font-weight: 600;
 }
 
-.staff-app .feed-dismiss:hover:not(:disabled) {
+.staff-app button.feed-dismiss:hover:not(:disabled) {
   background: var(--danger-bg);
   color: var(--danger-text);
   filter: none;
@@ -2405,13 +2405,19 @@
   gap: 8px;
 }
 
-.staff-app .postit-entry-delete {
+.staff-app button.postit-entry-delete {
+  flex-shrink: 0;
   width: auto;
   padding: 0 4px;
   background: transparent;
   border: none;
   color: rgba(58, 45, 0, 0.7);
   font-weight: 700;
+}
+
+.staff-app button.postit-entry-delete:hover:not(:disabled) {
+  color: #8f1324;
+  filter: none;
 }
 
 .staff-app .park-photo-grid {
