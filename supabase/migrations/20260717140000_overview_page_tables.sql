@@ -81,3 +81,26 @@ create policy "Admins can manage handoff notes"
   to authenticated
   using (exists (select 1 from public.admin_users where user_id = auth.uid()))
   with check (exists (select 1 from public.admin_users where user_id = auth.uid()));
+
+-- Additive only (no "enable row level security" here) - photos already has
+-- RLS on from the claim-flow repos' own migrations, this just adds an
+-- admin-scoped read path for the Uebersicht page's park photo preview,
+-- without touching whatever policies already govern operator/anon access.
+drop policy if exists "Staff admins can read all photos" on public.photos;
+create policy "Staff admins can read all photos"
+  on public.photos
+  for select
+  to authenticated
+  using (exists (select 1 from public.admin_users where user_id = auth.uid()));
+
+-- One-time seed so the Uebersicht notifications box has something to show
+-- before dispatch-lead-push has fired for real - only runs while the table
+-- is still empty, so it's safe to re-run this migration.
+insert into public.staff_notifications (title, body, url)
+select * from (
+  values
+    ('Neue Website-Anfrage (Deutschland)', 'Max Mustermann · max@example.com', '/staff/website-anfragen?tab=germanWebsite'),
+    ('Keine neuen Bilder bei Imst', 'Seit einer Stunde – einen Blick wert.', '/staff/kunden-management'),
+    ('Neues Support-Ticket', 'Von Imster Bergbahnen (Hoch)', '/staff/support-ticket-kunden')
+) as seed(title, body, url)
+where not exists (select 1 from public.staff_notifications);
