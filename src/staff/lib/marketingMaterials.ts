@@ -98,11 +98,11 @@ export const uploaderDocs: MaterialDoc[] = [
     url: storageUrl('Liftpictures_Kamera_Webout_Anleitung_Vollstaendig.pdf'),
   },
   {
-    id: 'uploader-script',
-    title: 'uploader.py (Script)',
+    id: 'liftpic-sync-installer',
+    title: 'install_liftpic_sync_bootstrap.ps1 (Installer)',
     language: 'de',
-    description: 'Das eigentliche Uploader-Script, das automatisch neue Fotos zu Supabase hochlädt.',
-    url: storageUrl('uploader.py'),
+    description: 'Der aktuelle Ein-Datei-Installer für Liftpic Sync: lädt die Software, schreibt die .env, koppelt den PC und startet die Aufgabe.',
+    url: 'https://raw.githubusercontent.com/john123-05/testsoftware/main/scripts/install_liftpic_sync_bootstrap.ps1',
   },
 ];
 

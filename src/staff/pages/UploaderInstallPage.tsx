@@ -5,19 +5,19 @@ import { useCopyToClipboard } from '../lib/useCopyToClipboard';
 const steps = [
   {
     title: '1. PC im Kunden Management anlegen',
-    text: 'Im Superadmin Park, Attraktion, PC-ID, Kamera, Modus und Papierwarnung eintragen. Danach erzeugt das Dashboard einen Pairing-Code.',
+    text: 'Unter Kunden Management -> Liftpic Park, Attraktion, PC-ID, Kamera, Modus und Papierwarnung eintragen. Jede PC-Zeile hat dort einen eigenen Pairing-Code und den fertigen Install-Befehl zum Kopieren.',
   },
   {
-    title: '2. Liftpic Sync auf den Attraktions-PC kopieren',
-    text: 'Der Zielordner ist C:\\liftpic\\liftpic-sync. Kamera, TIScapture und AidaTest bleiben unveraendert und laufen weiter wie bisher.',
+    title: '2. Installer herunterladen',
+    text: 'install_liftpic_sync_bootstrap.ps1 auf den Attraktions-PC laden (normal in Downloads). Kamera, TIScapture und AidaTest bleiben unveraendert und laufen weiter wie bisher.',
   },
   {
-    title: '3. Pairing-Code am PC eintragen',
-    text: 'Der neue Uploader holt sich damit seine Einstellungen aus Supabase: Ordner, Park, Kamera, QR-Modus, Speed-Modus und Health-Reporting.',
+    title: '3. Install-Befehl als Administrator ausfuehren',
+    text: 'Den Befehl mit dem Pairing-Code der PC-Zeile in einer Administrator-PowerShell starten. Der Installer laedt die Software, schreibt die .env, koppelt den PC und startet die Aufgabe LiftpicSync automatisch.',
   },
   {
-    title: '4. Als Windows-Dienst starten und Health pruefen',
-    text: 'Wenn Adminrechte vorhanden sind, laeuft Liftpic Sync als Service. Ohne Adminrechte nutzt die Installation eine geplante Aufgabe als Fallback.',
+    title: '4. Aenderungen spaeter aus der Ferne',
+    text: 'Shadow-Mode, Modus, Ordnerpfade und Assets spaeter einfach im Dashboard aendern - der PC zieht die neue Config selbst (kein erneutes Ausfuehren am PC noetig). Health pruefen mit dem health-Befehl unten.',
   },
 ];
 
@@ -30,9 +30,13 @@ const commonErrors = [
   { problem: 'Internet offline', fix: 'Fotos und Status bleiben lokal in SQLite in der Warteschlange und werden spaeter erneut gesendet.' },
 ];
 
+const bootstrapInstallerUrl =
+  'https://raw.githubusercontent.com/john123-05/testsoftware/main/scripts/install_liftpic_sync_bootstrap.ps1';
+
 export default function UploaderInstallPage() {
   const { copiedId, copy } = useCopyToClipboard();
-  const installCommand = 'cd C:\\liftpic\\liftpic-sync && .\\scripts\\install_windows_service.ps1';
+  const installCommand =
+    'powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\\Downloads\\install_liftpic_sync_bootstrap.ps1" -PairingCode DEIN-CODE';
 
   return (
     <div className="grid" style={{ gap: 16 }}>
@@ -49,10 +53,17 @@ export default function UploaderInstallPage() {
           <Link to="/staff/kunden-management?tab=liftpic" className="btn-link">
             Kunden Management oeffnen
           </Link>
+          <a className="btn-link" href={bootstrapInstallerUrl} target="_blank" rel="noopener noreferrer">
+            Installer herunterladen
+          </a>
           <button type="button" className="secondary inline" onClick={() => copy('install-command', installCommand)}>
-            {copiedId === 'install-command' ? 'Kopiert!' : 'Install-Befehl kopieren'}
+            {copiedId === 'install-command' ? 'Kopiert!' : 'Install-Befehl kopieren (Vorlage)'}
           </button>
         </div>
+        <p className="note" style={{ marginTop: 8 }}>
+          Den fertigen Befehl mit echtem Pairing-Code gibt es pro PC unter Kunden Management -&gt; Liftpic. Die Vorlage hier
+          nutzt den Platzhalter DEIN-CODE.
+        </p>
       </div>
 
       <div className="card">
