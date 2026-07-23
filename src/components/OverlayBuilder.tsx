@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
-import { Stage, Layer, Image as KImage, Text as KText, Transformer } from 'react-konva';
-import type Konva from 'konva';
+import { useRef, useState } from 'react';
 import { Type, ImagePlus, Trash2, Loader2, Download } from 'lucide-react';
+
+// Dependency-free drag & drop overlay editor: HTML for editing, the Canvas API
+// for the transparent-PNG export. No external library, so it always builds.
 
 type TextEl = { id: string; type: 'text'; x: number; y: number; text: string; fontSize: number; fill: string };
 type ImageEl = { id: string; type: 'image'; x: number; y: number; width: number; height: number };
@@ -14,10 +15,7 @@ const FORMATS = [
   { id: '1:1', label: '1:1 (Quadrat)', w: 1080, h: 1080 },
 ];
 const DISPLAY_W = 600;
-
-// Checkerboard so the user sees where the overlay is transparent.
-const CHECKER =
-  'repeating-conic-gradient(#e2e8f0 0% 25%, #f8fafc 0% 50%) 50% / 20px 20px';
+const CHECKER = 'repeating-conic-gradient(#e2e8f0 0% 25%, #f8fafc 0% 50%) 50% / 20px 20px';
 
 export default function OverlayBuilder({
   onSave,
@@ -34,31 +32,52 @@ export default function OverlayBuilder({
   const [images, setImages] = useState<Record<string, HTMLImageElement>>({});
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const stageRef = useRef<Konva.Stage>(null);
-  const trRef = useRef<Konva.Transformer>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const drag = useRef<{ id: string; mode: 'move' | 'resize'; sx: number; sy: number; ox: number; oy: number; ow: number; oh: number } | null>(null);
 
   const selected = els.find((e) => e.id === selectedId) ?? null;
+  const selectedText = selected?.type === 'text' ? selected : null;
 
-  useEffect(() => {
-    const tr = trRef.current;
-    const stage = stageRef.current;
-    if (!tr || !stage) return;
-    if (selected && selected.type === 'image') {
-      const node = stage.findOne('#' + selected.id);
-      tr.nodes(node ? [node] : []);
-    } else {
-      tr.nodes([]);
-    }
-    tr.getLayer()?.batchDraw();
-  }, [selectedId, els]);
+  function onMove(ev: PointerEvent) {
+    const d = drag.current;
+    if (!d) return;
+    const dx = ev.clientX - d.sx;
+    const dy = ev.clientY - d.sy;
+    setEls((p) =>
+      p.map((el) => {
+        if (el.id !== d.id) return el;
+        if (d.mode === 'move') return { ...el, x: Math.round(d.ox + dx), y: Math.round(d.oy + dy) };
+        if (el.type === 'image')
+          return { ...el, width: Math.max(20, Math.round(d.ow + dx)), height: Math.max(20, Math.round(d.oh + dy)) };
+        return el;
+      }),
+    );
+  }
+  function onUp() {
+    drag.current = null;
+    window.removeEventListener('pointermove', onMove);
+    window.removeEventListener('pointerup', onUp);
+  }
+  function startDrag(ev: React.PointerEvent, el: El, mode: 'move' | 'resize') {
+    ev.stopPropagation();
+    setSelectedId(el.id);
+    drag.current = {
+      id: el.id,
+      mode,
+      sx: ev.clientX,
+      sy: ev.clientY,
+      ox: el.x,
+      oy: el.y,
+      ow: el.type === 'image' ? el.width : 0,
+      oh: el.type === 'image' ? el.height : 0,
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  }
 
   function addText() {
     const id = crypto.randomUUID();
-    setEls((p) => [
-      ...p,
-      { id, type: 'text', x: DISPLAY_W * 0.2, y: displayH * 0.42, text: 'Dein Text', fontSize: 34, fill: '#ffffff' },
-    ]);
+    setEls((p) => [...p, { id, type: 'text', x: Math.round(DISPLAY_W * 0.2), y: Math.round(displayH * 0.42), text: 'Dein Text', fontSize: 34, fill: '#ffffff' }]);
     setSelectedId(id);
   }
 
@@ -69,10 +88,10 @@ export default function OverlayBuilder({
       img.onload = () => {
         const id = crypto.randomUUID();
         const scale = Math.min((DISPLAY_W * 0.45) / img.width, (displayH * 0.45) / img.height, 1);
-        const w = img.width * scale;
-        const h = img.height * scale;
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
         setImages((m) => ({ ...m, [id]: img }));
-        setEls((p) => [...p, { id, type: 'image', x: (DISPLAY_W - w) / 2, y: (displayH - h) / 2, width: w, height: h }]);
+        setEls((p) => [...p, { id, type: 'image', x: Math.round((DISPLAY_W - w) / 2), y: Math.round((displayH - h) / 2), width: w, height: h }]);
         setSelectedId(id);
       };
       img.src = reader.result as string;
@@ -84,11 +103,6 @@ export default function OverlayBuilder({
     if (!selectedId) return;
     setEls((p) => p.map((e) => (e.id === selectedId ? ({ ...e, ...patch } as El) : e)));
   }
-
-  function setPos(id: string, x: number, y: number) {
-    setEls((p) => p.map((e) => (e.id === id ? { ...e, x, y } : e)));
-  }
-
   function deleteSel() {
     if (!selectedId) return;
     setEls((p) => p.filter((e) => e.id !== selectedId));
@@ -96,26 +110,39 @@ export default function OverlayBuilder({
   }
 
   async function handleExport() {
-    const stage = stageRef.current;
-    if (!stage) return;
-    setSelectedId(null);
-    await new Promise((r) => setTimeout(r, 40));
-    const dataUrl = stage.toDataURL({ mimeType: 'image/png', pixelRatio: format.w / DISPLAY_W });
+    const scale = format.w / DISPLAY_W;
+    const canvas = document.createElement('canvas');
+    canvas.width = format.w;
+    canvas.height = format.h;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    for (const el of els) {
+      if (el.type === 'image') {
+        const img = images[el.id];
+        if (img) ctx.drawImage(img, el.x * scale, el.y * scale, el.width * scale, el.height * scale);
+      } else {
+        ctx.save();
+        ctx.font = `bold ${el.fontSize * scale}px Arial, Helvetica, sans-serif`;
+        ctx.fillStyle = el.fill;
+        ctx.textBaseline = 'top';
+        ctx.shadowColor = 'rgba(0,0,0,0.4)';
+        ctx.shadowBlur = 4 * scale;
+        el.text.split('\n').forEach((line, i) => {
+          ctx.fillText(line, el.x * scale, (el.y + i * el.fontSize * 1.25) * scale);
+        });
+        ctx.restore();
+      }
+    }
+    const dataUrl = canvas.toDataURL('image/png');
     const blob = await (await fetch(dataUrl)).blob();
     await onSave(new File([blob], `overlay-${Date.now()}.png`, { type: 'image/png' }));
   }
-
-  const selectedText = selected?.type === 'text' ? selected : null;
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_260px]">
       <div>
         <div className="mb-3 flex flex-wrap items-center gap-2">
-          <select
-            value={formatId}
-            onChange={(e) => setFormatId(e.target.value)}
-            className="glass-input text-sm"
-          >
+          <select value={formatId} onChange={(e) => setFormatId(e.target.value)} className="glass-input text-sm">
             {FORMATS.map((f) => (
               <option key={f.id} value={f.id}>
                 {f.label}
@@ -146,73 +173,71 @@ export default function OverlayBuilder({
           )}
         </div>
 
-        <div className="inline-block rounded-xl p-2 shadow-inner" style={{ background: CHECKER }}>
-          <Stage
-            ref={stageRef}
-            width={DISPLAY_W}
-            height={displayH}
-            onMouseDown={(e) => {
-              if (e.target === e.target.getStage()) setSelectedId(null);
-            }}
-            onTouchStart={(e) => {
-              if (e.target === e.target.getStage()) setSelectedId(null);
-            }}
-          >
-            <Layer>
-              {els.map((el) =>
-                el.type === 'text' ? (
-                  <KText
-                    key={el.id}
-                    id={el.id}
-                    x={el.x}
-                    y={el.y}
-                    text={el.text}
-                    fontSize={el.fontSize}
-                    fontStyle="bold"
-                    fill={el.fill}
-                    shadowColor="#00000066"
-                    shadowBlur={4}
-                    draggable
-                    onClick={() => setSelectedId(el.id)}
-                    onTap={() => setSelectedId(el.id)}
-                    onDragEnd={(ev) => setPos(el.id, ev.target.x(), ev.target.y())}
-                  />
-                ) : images[el.id] ? (
-                  <KImage
-                    key={el.id}
-                    id={el.id}
-                    image={images[el.id]}
-                    x={el.x}
-                    y={el.y}
-                    width={el.width}
-                    height={el.height}
-                    draggable
-                    onClick={() => setSelectedId(el.id)}
-                    onTap={() => setSelectedId(el.id)}
-                    onDragEnd={(ev) => setPos(el.id, ev.target.x(), ev.target.y())}
-                    onTransformEnd={(ev) => {
-                      const node = ev.target;
-                      const sx = node.scaleX();
-                      const sy = node.scaleY();
-                      node.scaleX(1);
-                      node.scaleY(1);
-                      setEls((p) =>
-                        p.map((e) =>
-                          e.id === el.id && e.type === 'image'
-                            ? { ...e, x: node.x(), y: node.y(), width: Math.max(12, e.width * sx), height: Math.max(12, e.height * sy) }
-                            : e,
-                        ),
-                      );
+        <div
+          className="relative select-none overflow-hidden rounded-xl shadow-inner"
+          style={{ width: DISPLAY_W, height: displayH, background: CHECKER, maxWidth: '100%' }}
+          onPointerDown={() => setSelectedId(null)}
+        >
+          {els.map((el) =>
+            el.type === 'text' ? (
+              <div
+                key={el.id}
+                onPointerDown={(e) => startDrag(e, el, 'move')}
+                style={{
+                  position: 'absolute',
+                  left: el.x,
+                  top: el.y,
+                  fontSize: el.fontSize,
+                  color: el.fill,
+                  fontWeight: 700,
+                  lineHeight: 1.25,
+                  whiteSpace: 'pre',
+                  cursor: 'move',
+                  textShadow: '0 1px 3px rgba(0,0,0,0.45)',
+                  outline: selectedId === el.id ? '2px solid #f97316' : 'none',
+                  outlineOffset: 2,
+                }}
+              >
+                {el.text}
+              </div>
+            ) : (
+              <div
+                key={el.id}
+                onPointerDown={(e) => startDrag(e, el, 'move')}
+                style={{
+                  position: 'absolute',
+                  left: el.x,
+                  top: el.y,
+                  width: el.width,
+                  height: el.height,
+                  cursor: 'move',
+                  outline: selectedId === el.id ? '2px solid #f97316' : 'none',
+                  outlineOffset: 2,
+                }}
+              >
+                <img src={images[el.id]?.src} alt="" draggable={false} style={{ width: '100%', height: '100%', pointerEvents: 'none' }} />
+                {selectedId === el.id && (
+                  <div
+                    onPointerDown={(e) => startDrag(e, el, 'resize')}
+                    style={{
+                      position: 'absolute',
+                      right: -7,
+                      bottom: -7,
+                      width: 14,
+                      height: 14,
+                      borderRadius: 8,
+                      background: '#f97316',
+                      border: '2px solid #fff',
+                      cursor: 'nwse-resize',
                     }}
                   />
-                ) : null,
-              )}
-              <Transformer ref={trRef} rotateEnabled keepRatio={false} />
-            </Layer>
-          </Stage>
+                )}
+              </div>
+            ),
+          )}
         </div>
         <p className="mt-2 text-xs text-slate-400">
-          Elemente anklicken zum Auswählen, ziehen zum Verschieben, Bilder an den Ecken skalieren. Der karierte
+          Element anklicken zum Auswählen, ziehen zum Verschieben, Bild am orangen Punkt skalieren. Der karierte
           Bereich ist transparent.
         </p>
       </div>
