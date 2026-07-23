@@ -3,6 +3,7 @@ import { Image as ImageIcon, Upload, X, Sparkles, Loader2 } from 'lucide-react';
 import { invokeEdgeFunction } from '../lib/edgeFunctions';
 import { supabase } from '../lib/supabase';
 import GlassCard from '../components/ui/GlassCard';
+import OverlayBuilder from '../components/OverlayBuilder';
 import { useI18n } from '../lib/i18n';
 import { usePark } from '../contexts/ParkContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -92,6 +93,7 @@ export default function Personalization() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [builderSaving, setBuilderSaving] = useState(false);
   const [autoApplyUpload, setAutoApplyUpload] = useState(true);
   const [creatingCampaign, setCreatingCampaign] = useState(false);
   const [savingLayer, setSavingLayer] = useState(false);
@@ -217,6 +219,20 @@ export default function Personalization() {
       setSelectedCampaignId(null);
     } else if (!selectedCampaignId || !parsedCampaigns.some((c) => c.id === selectedCampaignId)) {
       setSelectedCampaignId(parsedCampaigns[0].id);
+    }
+  }
+
+  async function handleBuilderSave(file: File) {
+    setBuilderSaving(true);
+    setActionError(null);
+    try {
+      await uploadOverlayFile(file);
+      await loadOverlayData();
+      setMessage('Overlay aus dem Builder gespeichert – du findest es unten in der Overlay-Liste zum Anwenden.');
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Speichern fehlgeschlagen.');
+    } finally {
+      setBuilderSaving(false);
     }
   }
 
@@ -471,6 +487,15 @@ export default function Personalization() {
         <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('personalization.title')}</h2>
         <p className="mt-1 text-sm text-slate-500">{t('personalization.subtitle')}</p>
       </div>
+
+      <GlassCard className="p-6">
+        <h3 className="mb-1 text-base font-semibold text-slate-800">Overlay-Builder</h3>
+        <p className="mb-4 text-sm text-slate-500">
+          Baue dir ein Overlay zusammen: Format wählen, Logo/Bild und Texte hinzufügen, per Drag &amp; Drop anordnen
+          und als Overlay speichern. Es erscheint danach unten in der Overlay-Liste zum Anwenden.
+        </p>
+        <OverlayBuilder onSave={handleBuilderSave} saving={builderSaving} />
+      </GlassCard>
 
       {!parkId && (
         <GlassCard className="p-4">
