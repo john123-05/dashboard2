@@ -8,7 +8,14 @@ import KPICard from '../components/ui/KPICard';
 import { useI18n } from '../lib/i18n';
 import { usePark } from '../contexts/ParkContext';
 import { useAuth } from '../contexts/AuthContext';
-import { fetchRecentPhotos, searchPhotosByCode, searchPhotosByDateTime, type BrowsablePhoto } from '../lib/photoBrowser';
+import { fetchRecentPhotos, searchPhotosByCode, searchPhotosByDateTime, claimLinkFor, type BrowsablePhoto } from '../lib/photoBrowser';
+
+// Local "YYYY-MM-DDTHH:MM" for a datetime-local input, defaulted to now so
+// staff can just tweak the time (date is today by default).
+function toLocalInput(d: Date): string {
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
 
 interface AttractionPhotoStats {
   name: string;
@@ -36,8 +43,19 @@ export default function Photos() {
   const [browseError, setBrowseError] = useState<string | null>(null);
   const [activeSearch, setActiveSearch] = useState<'recent' | 'code' | 'datetime'>('recent');
   const [codeQuery, setCodeQuery] = useState('');
-  const [dateTimeQuery, setDateTimeQuery] = useState('');
+  const [dateTimeQuery, setDateTimeQuery] = useState(() => toLocalInput(new Date()));
   const [selectedPhoto, setSelectedPhoto] = useState<BrowsablePhoto | null>(null);
+  const [copiedLink, setCopiedLink] = useState<'claim' | 'image' | null>(null);
+
+  async function copyLink(kind: 'claim' | 'image', url: string) {
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      window.prompt('Link kopieren:', url);
+    }
+    setCopiedLink(kind);
+    setTimeout(() => setCopiedLink((k) => (k === kind ? null : k)), 2000);
+  }
 
   useEffect(() => {
     loadData();
@@ -405,6 +423,34 @@ export default function Photos() {
                     {selectedPhoto.speedKmh.toFixed(1)} km/h
                   </p>
                 )}
+                {(() => {
+                  const claimLink = claimLinkFor(parkId, selectedPhoto.externalCode);
+                  const imageLink = selectedPhoto.imageUrl;
+                  return (
+                    <div className="mt-4 space-y-2">
+                      {claimLink && (
+                        <button
+                          onClick={() => copyLink('claim', claimLink)}
+                          className="glass-button-primary flex w-full items-center justify-center gap-1.5 text-sm"
+                        >
+                          {copiedLink === 'claim' ? 'Kopiert!' : 'Claim-Link kopieren'}
+                        </button>
+                      )}
+                      {imageLink && (
+                        <button
+                          onClick={() => copyLink('image', imageLink)}
+                          className="glass-button-secondary flex w-full items-center justify-center gap-1.5 text-sm"
+                        >
+                          {copiedLink === 'image' ? 'Kopiert!' : 'Bild-Link kopieren'}
+                        </button>
+                      )}
+                      <p className="text-center text-[11px] leading-relaxed text-slate-400">
+                        Claim-Link: der Kunde öffnet ihn und holt sein Foto per E-Mail (auch wenn der gedruckte QR
+                        falsch war). Bild-Link: direkter Download.
+                      </p>
+                    </div>
+                  );
+                })()}
               </div>
             ) : (
               <div className="flex h-full min-h-[220px] items-center justify-center rounded-xl bg-white/20 p-6 text-center text-sm text-slate-400">
