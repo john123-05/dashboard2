@@ -594,6 +594,33 @@ export default function Overview() {
           },
         ]
       : []),
+    ...(isKioskPark && kioskKpis
+      ? [
+          {
+            id: 'conversion-today',
+            label: 'Conversion heute',
+            value:
+              kioskKpis.today.expected && kioskKpis.today.expected > 0
+                ? formatPercent((kioskKpis.today.sold / kioskKpis.today.expected) * 100)
+                : '-',
+            helper: 'Verkauft je Fahrt',
+            route: '/revenue',
+            icon: Percent,
+            iconColor: 'text-fuchsia-600',
+            iconBg: 'bg-fuchsia-50',
+          },
+          {
+            id: 'rides-today',
+            label: 'Fahrten heute',
+            value: kioskKpis.today.expected !== null ? formatNumber(kioskKpis.today.expected) : '-',
+            helper: '',
+            route: '/revenue',
+            icon: Gauge,
+            iconColor: 'text-indigo-600',
+            iconBg: 'bg-indigo-50',
+          },
+        ]
+      : []),
   ];
 
   function handleWidgetNavigation(path: string) {
@@ -697,26 +724,6 @@ export default function Overview() {
             iconBg="bg-emerald-50"
           />
           <KPICard
-            title="Fahrten heute"
-            value={kioskKpis.today.expected !== null ? formatNumber(kioskKpis.today.expected) : '-'}
-            subtitle="Kamera-Aufnahmen heute"
-            icon={Gauge}
-            iconColor="text-indigo-600"
-            iconBg="bg-indigo-50"
-          />
-          <KPICard
-            title="Conversion heute"
-            value={
-              kioskKpis.today.expected && kioskKpis.today.expected > 0
-                ? formatPercent((kioskKpis.today.sold / kioskKpis.today.expected) * 100)
-                : '-'
-            }
-            subtitle="Verkauft je Fahrt"
-            icon={Percent}
-            iconColor="text-fuchsia-600"
-            iconBg="bg-fuchsia-50"
-          />
-          <KPICard
             title="Fotos verkauft (gesamt)"
             value={formatNumber(kioskDays.reduce((sum, day) => sum + day.soldCount, 0))}
             icon={Camera}
@@ -786,7 +793,7 @@ export default function Overview() {
       </div>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
+      <div className={`grid gap-4 sm:grid-cols-2 ${isKioskPark ? 'xl:grid-cols-5' : 'xl:grid-cols-6'}`}>
         {liveStatusWidgets.map((widget) => (
           <button
             key={widget.id}
