@@ -3,6 +3,12 @@
 # redeploys, since `supabase functions deploy` flags like --no-verify-jwt
 # otherwise leave no trace in version control.
 
+[functions.manage-staff]
+# Operator creates/lists/deletes their park staff. Verifies the caller from
+# the Authorization bearer via auth.getUser() and requires org_owner role, so
+# it handles auth itself rather than relying on the platform JWT gate.
+verify_jwt = false
+
 [functions.email-lead-intake]
 # Called by Make.com (no Supabase session), authenticated via its own
 # X-Intake-Secret header instead of a platform JWT.

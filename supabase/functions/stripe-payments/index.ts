@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { isStaffCaller, staffForbidden } from "../_shared/blockStaff.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -44,6 +45,8 @@ Deno.serve(async (req: Request) => {
       headers: corsHeaders,
     });
   }
+
+  if (await isStaffCaller(req)) return staffForbidden();
 
   try {
     const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY");

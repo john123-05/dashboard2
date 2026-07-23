@@ -98,7 +98,7 @@ export default function Purchases() {
 
       const [parkDashboardResult, paymentsResult] = await Promise.all([
         loadParkDashboardData(parkId),
-        invokeEdgeFunction<{ payments: StripePayment[] }>('stripe-payments'),
+        invokeEdgeFunction<{ payments: StripePayment[] }>('stripe-payments', { useSessionAuth: true }),
       ]);
 
       const nextIssues: string[] = [];

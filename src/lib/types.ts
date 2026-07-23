@@ -41,7 +41,7 @@ export interface OrganizationMembership {
   id: string;
   user_id: string;
   organization_id: string;
-  role: 'platform_admin' | 'org_owner' | 'park_manager' | 'marketing' | 'support_agent';
+  role: 'platform_admin' | 'org_owner' | 'park_manager' | 'marketing' | 'support_agent' | 'staff';
   created_at: string;
 }
 

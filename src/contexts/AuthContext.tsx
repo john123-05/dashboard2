@@ -11,6 +11,9 @@ interface AuthState {
   currentOrg: Organization | null;
   loading: boolean;
   hasOrg: boolean;
+  role: OrganizationMembership['role'] | null;
+  isStaff: boolean;
+  isOwner: boolean;
 }
 
 interface AuthContextType extends AuthState {
@@ -38,6 +41,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     currentOrg: null,
     loading: true,
     hasOrg: false,
+    role: null,
+    isStaff: false,
+    isOwner: false,
   });
 
   async function loadProfile(userId: string) {
@@ -57,7 +63,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       organization: m.organization as Organization,
     })) as (OrganizationMembership & { organization: Organization })[];
 
-    const currentOrg = mems.length > 0 ? mems[0].organization : null;
+    const currentMembership = mems.length > 0 ? mems[0] : null;
+    const currentOrg = currentMembership ? currentMembership.organization : null;
+    const role = currentMembership ? currentMembership.role : null;
 
     setState((prev) => ({
       ...prev,
@@ -65,6 +73,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       memberships: mems,
       currentOrg,
       hasOrg: mems.length > 0,
+      role,
+      isStaff: role === 'staff',
+      isOwner: role === 'org_owner' || role === 'platform_admin',
       loading: false,
     }));
   }
@@ -92,6 +103,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           memberships: [],
           currentOrg: null,
           hasOrg: false,
+          role: null,
+          isStaff: false,
+          isOwner: false,
           loading: false,
         }));
       }

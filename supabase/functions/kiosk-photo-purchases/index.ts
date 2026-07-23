@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { isStaffCaller, staffForbidden } from "../_shared/blockStaff.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -49,6 +50,8 @@ Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
   }
+
+  if (await isStaffCaller(req)) return staffForbidden();
 
   const envError = requireEnv();
   if (envError) return envError;

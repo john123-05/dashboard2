@@ -19,6 +19,8 @@ import { I18nProvider } from './lib/i18n';
 import { ParkProvider } from './contexts/ParkContext';
 import ComingSoonOverlay from './components/ComingSoonOverlay';
 import KioskAwareOverlay from './components/KioskAwareOverlay';
+import OwnerOnly from './components/OwnerOnly';
+import Team from './pages/Team';
 import StaffAdminLayout from './staff/components/AdminLayout';
 import StaffLoginPage from './staff/pages/StaffLoginPage';
 import StaffSupportTicketKundenPage from './staff/pages/SupportTicketKundenPage';
@@ -49,41 +51,50 @@ export default function App() {
                 <Route
                   path="/"
                   element={
-                    <KioskAwareOverlay description="Die Übersicht zeigt dir auf einen Blick die wichtigsten Zahlen deines Parks — zum Beispiel wie viele Fotos verkauft wurden und wie sich der Umsatz entwickelt.">
-                      <Overview />
-                    </KioskAwareOverlay>
+                    <OwnerOnly>
+                      <KioskAwareOverlay description="Die Übersicht zeigt dir auf einen Blick die wichtigsten Zahlen deines Parks — zum Beispiel wie viele Fotos verkauft wurden und wie sich der Umsatz entwickelt.">
+                        <Overview />
+                      </KioskAwareOverlay>
+                    </OwnerOnly>
                   }
                 />
                 <Route
                   path="/revenue"
                   element={
-                    <KioskAwareOverlay description="Hier siehst du deinen Umsatz im Detail — zum Beispiel wie viel du pro Tag oder pro Attraktion eingenommen hast.">
-                      <Revenue />
-                    </KioskAwareOverlay>
+                    <OwnerOnly>
+                      <KioskAwareOverlay description="Hier siehst du deinen Umsatz im Detail — zum Beispiel wie viel du pro Tag oder pro Attraktion eingenommen hast.">
+                        <Revenue />
+                      </KioskAwareOverlay>
+                    </OwnerOnly>
                   }
                 />
                 <Route
                   path="/purchases"
                   element={
-                    <KioskAwareOverlay description="Hier siehst du alle Käufe deiner Gäste im Überblick — wer wann was gekauft und wie viel bezahlt hat.">
-                      <Purchases />
-                    </KioskAwareOverlay>
+                    <OwnerOnly>
+                      <KioskAwareOverlay description="Hier siehst du alle Käufe deiner Gäste im Überblick — wer wann was gekauft und wie viel bezahlt hat.">
+                        <Purchases />
+                      </KioskAwareOverlay>
+                    </OwnerOnly>
                   }
                 />
                 <Route
                   path="/users"
                   element={
-                    <ComingSoonOverlay description="Hier findest du alle registrierten Nutzer-Accounts deines Parks — also Gäste, die sich für den Foto-Shop angemeldet haben.">
-                      <Users />
-                    </ComingSoonOverlay>
+                    <OwnerOnly>
+                      <ComingSoonOverlay description="Hier findest du alle registrierten Nutzer-Accounts deines Parks — also Gäste, die sich für den Foto-Shop angemeldet haben.">
+                        <Users />
+                      </ComingSoonOverlay>
+                    </OwnerOnly>
                   }
                 />
                 <Route path="/photos" element={<Photos />} />
-                <Route path="/leads" element={<Leads />} />
+                <Route path="/leads" element={<OwnerOnly><Leads /></OwnerOnly>} />
                 <Route path="/personalization" element={<Personalization />} />
                 <Route path="/tickets" element={<Support />} />
                 <Route path="/health" element={<SystemHealth />} />
-                <Route path="/settings" element={<Settings />} />
+                <Route path="/team" element={<OwnerOnly><Team /></OwnerOnly>} />
+                <Route path="/settings" element={<OwnerOnly><Settings /></OwnerOnly>} />
               </Route>
 
               {/* Internal LiftPictures staff tool — reached via the "Liftpictures Mitarbeiter?"

@@ -13,31 +13,51 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
+  UserCog,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useState } from 'react';
 import { useI18n } from '../../lib/i18n';
 import { usePark } from '../../contexts/ParkContext';
 
-const navItems = [
+type NavItem = {
+  to: string;
+  icon: typeof LayoutDashboard;
+  labelKey: string;
+  label?: string;
+  comingSoon?: boolean;
+  kioskUnlocks?: boolean;
+  // Visible to the restricted "staff" role. Everything else is owner-only.
+  staffAllowed?: boolean;
+  ownerOnly?: boolean;
+};
+
+const navItems: NavItem[] = [
   { to: '/', icon: LayoutDashboard, labelKey: 'nav.overview', comingSoon: true, kioskUnlocks: true },
   { to: '/revenue', icon: DollarSign, labelKey: 'nav.revenue', comingSoon: true, kioskUnlocks: true },
   { to: '/purchases', icon: ShoppingCart, labelKey: 'nav.purchases', comingSoon: true, kioskUnlocks: true },
   { to: '/users', icon: Users, labelKey: 'nav.users', comingSoon: true },
-  { to: '/photos', icon: Camera, labelKey: 'nav.photos' },
+  { to: '/photos', icon: Camera, labelKey: 'nav.photos', staffAllowed: true },
   { to: '/leads', icon: Mail, labelKey: 'nav.leads' },
-  { to: '/personalization', icon: Wand2, labelKey: 'nav.personalization' },
-  { to: '/tickets', icon: LifeBuoy, labelKey: 'nav.support' },
-  { to: '/health', icon: Activity, labelKey: 'nav.system_health' },
+  { to: '/personalization', icon: Wand2, labelKey: 'nav.personalization', staffAllowed: true },
+  { to: '/tickets', icon: LifeBuoy, labelKey: 'nav.support', staffAllowed: true },
+  { to: '/health', icon: Activity, labelKey: 'nav.system_health', staffAllowed: true },
+  { to: '/team', icon: UserCog, labelKey: 'nav.team', label: 'Mitarbeiter', ownerOnly: true },
   { to: '/settings', icon: Settings, labelKey: 'nav.settings' },
 ];
 
 export default function Sidebar() {
-  const { profile, currentOrg, signOut } = useAuth();
+  const { profile, currentOrg, signOut, isStaff, isOwner } = useAuth();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const { t } = useI18n();
   const { parkName, setPark, isKioskPark } = usePark();
+
+  const visibleItems = navItems.filter((item) => {
+    if (isStaff) return item.staffAllowed;
+    if (item.ownerOnly) return isOwner;
+    return true;
+  });
 
   return (
     <aside
@@ -66,7 +86,7 @@ export default function Sidebar() {
 
       <nav className="flex-1 overflow-y-auto px-3 py-4 scrollbar-thin">
         <div className="space-y-1">
-          {navItems.map((item) => {
+          {visibleItems.map((item) => {
             const isActive =
               item.to === '/'
                 ? location.pathname === '/'
@@ -84,7 +104,7 @@ export default function Sidebar() {
                 } ${collapsed ? 'justify-center' : ''}`}
                 title={
                   collapsed
-                    ? `${t(item.labelKey)}${showComingSoon ? ` (${t('nav.coming_soon')})` : ''}`
+                    ? `${item.label ?? t(item.labelKey)}${showComingSoon ? ` (${t('nav.coming_soon')})` : ''}`
                     : undefined
                 }
               >
@@ -95,7 +115,7 @@ export default function Sidebar() {
                 />
                 {!collapsed && (
                   <span className="animate-fade-in truncate">
-                    {t(item.labelKey)}
+                    {item.label ?? t(item.labelKey)}
                     {showComingSoon && (
                       <span className="ml-1 text-xs text-slate-500">({t('nav.coming_soon')})</span>
                     )}

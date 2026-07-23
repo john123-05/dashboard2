@@ -135,8 +135,8 @@ export default function Revenue() {
         invokeEdgeFunction<{
           total_revenue: number;
           revenue_by_day: StripeRevenuePoint[];
-        }>('stripe-revenue'),
-        invokeEdgeFunction<{ payments: StripePayment[] }>('stripe-payments'),
+        }>('stripe-revenue', { useSessionAuth: true }),
+        invokeEdgeFunction<{ payments: StripePayment[] }>('stripe-payments', { useSessionAuth: true }),
       ]);
 
       setKioskDays([]);
