@@ -488,15 +488,6 @@ export default function Personalization() {
         <p className="mt-1 text-sm text-slate-500">{t('personalization.subtitle')}</p>
       </div>
 
-      <GlassCard className="p-6">
-        <h3 className="mb-1 text-base font-semibold text-slate-800">Overlay-Builder</h3>
-        <p className="mb-4 text-sm text-slate-500">
-          Baue dir ein Overlay zusammen: Format wählen, Logo/Bild und Texte hinzufügen, per Drag &amp; Drop anordnen
-          und als Overlay speichern. Es erscheint danach unten in der Overlay-Liste zum Anwenden.
-        </p>
-        <OverlayBuilder onSave={handleBuilderSave} saving={builderSaving} previewUrl={baseImage} />
-      </GlassCard>
-
       {!parkId && (
         <GlassCard className="p-4">
           <p className="text-sm text-amber-700">
@@ -948,6 +939,15 @@ export default function Personalization() {
           </GlassCard>
         </div>
       </div>
+
+      <GlassCard className="p-6">
+        <h3 className="mb-1 text-base font-semibold text-slate-800">Overlay-Builder</h3>
+        <p className="mb-4 text-sm text-slate-500">
+          Baue dir ein Overlay zusammen: Format wählen, Logo/Bild und Texte hinzufügen, per Drag &amp; Drop anordnen
+          und als Overlay speichern. Es erscheint danach oben in der Overlay-Liste zum Anwenden.
+        </p>
+        <OverlayBuilder onSave={handleBuilderSave} saving={builderSaving} previewUrl={baseImage} />
+      </GlassCard>
     </div>
   );
 }
