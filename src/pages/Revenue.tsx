@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { Camera, ChevronLeft, ChevronRight, CreditCard, Download, Receipt, Ticket, Wallet } from 'lucide-react';
+import { Camera, ChevronLeft, ChevronRight, CreditCard, Download, Gauge, Percent, Receipt, Ticket, Wallet } from 'lucide-react';
 import { getOptionalSourceWarning, invokeEdgeFunction } from '../lib/edgeFunctions';
 import {
   createEmptyParkDashboardData,
@@ -479,6 +479,29 @@ export default function Revenue() {
               icon={Wallet}
               iconColor="text-slate-700"
               iconBg="bg-slate-100"
+            />
+          </div>
+
+          <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+            <KPICard
+              title="Fahrten heute"
+              value={kioskKpis.today.expected !== null ? formatNumber(kioskKpis.today.expected) : '-'}
+              subtitle="Kamera-Aufnahmen heute"
+              icon={Gauge}
+              iconColor="text-indigo-600"
+              iconBg="bg-indigo-50"
+            />
+            <KPICard
+              title="Conversion heute"
+              value={
+                kioskKpis.today.expected && kioskKpis.today.expected > 0
+                  ? formatPercent((kioskKpis.today.sold / kioskKpis.today.expected) * 100)
+                  : '-'
+              }
+              subtitle="Verkauft je Fahrt"
+              icon={Percent}
+              iconColor="text-fuchsia-600"
+              iconBg="bg-fuchsia-50"
             />
           </div>
 

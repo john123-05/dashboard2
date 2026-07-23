@@ -9,6 +9,8 @@ import {
   ChevronUp,
   CreditCard,
   FileWarning,
+  Gauge,
+  Percent,
   Receipt,
   Ticket,
   Users,
@@ -694,15 +696,33 @@ export default function Overview() {
             iconColor="text-emerald-600"
             iconBg="bg-emerald-50"
           />
-          {totalPhotos !== null && (
-            <KPICard
-              title="Fotos gesamt"
-              value={formatNumber(totalPhotos)}
-              icon={Camera}
-              iconColor="text-violet-600"
-              iconBg="bg-violet-50"
-            />
-          )}
+          <KPICard
+            title="Fahrten heute"
+            value={kioskKpis.today.expected !== null ? formatNumber(kioskKpis.today.expected) : '-'}
+            subtitle="Kamera-Aufnahmen heute"
+            icon={Gauge}
+            iconColor="text-indigo-600"
+            iconBg="bg-indigo-50"
+          />
+          <KPICard
+            title="Conversion heute"
+            value={
+              kioskKpis.today.expected && kioskKpis.today.expected > 0
+                ? formatPercent((kioskKpis.today.sold / kioskKpis.today.expected) * 100)
+                : '-'
+            }
+            subtitle="Verkauft je Fahrt"
+            icon={Percent}
+            iconColor="text-fuchsia-600"
+            iconBg="bg-fuchsia-50"
+          />
+          <KPICard
+            title="Fotos verkauft (gesamt)"
+            value={formatNumber(kioskDays.reduce((sum, day) => sum + day.soldCount, 0))}
+            icon={Camera}
+            iconColor="text-violet-600"
+            iconBg="bg-violet-50"
+          />
         </div>
       )}
 

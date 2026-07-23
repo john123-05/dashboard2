@@ -42,10 +42,6 @@ function numericValue(value: unknown): number {
   return Number.isFinite(numberValue) ? numberValue : 0;
 }
 
-function rowKey(row: Record<string, unknown>): string {
-  return `${String(row.camera_code ?? "unknown")}|${String(row.business_date ?? "")}`;
-}
-
 // For self-service/kiosk parks (no real shop, e.g. Imst's Alpine Coaster):
 // every photos row already IS a completed sale. The permanent daily rollup
 // (park_photo_sales_daily) survives the 30-day photos retention window —
@@ -104,41 +100,49 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const ridesByKey = new Map<string, { photos_taken_count: number; photos_sold_count: number }>();
+    // Aggregate BOTH rollups to per-business-date totals. Critically, the two
+    // rollups label the same physical camera differently: park_photo_sales_daily
+    // keys on the legacy customer code (e.g. "2734") while park_photo_ride_daily
+    // keys on the machine camera code (e.g. "cam1"). Merging by camera_code (as
+    // this once did) never matched them, so each day's sold count was emitted
+    // twice and summed downstream (68 -> 136), and the sales row's file-code
+    // span leaked into the ride/"taken" total. Merge by DATE only:
+    //   - sold  = the permanent sales rollup (authoritative revenue); the ride
+    //             rollup's own sold is only a fallback for dates sales has no row.
+    //   - taken = the ride rollup only (rides, for the conversion rate); null
+    //             when unknown so conversion is hidden, not nonsensical.
+    const salesByDate = new Map<string, number>();
+    for (const row of daysRes.data as Record<string, unknown>[]) {
+      const date = String(row.business_date ?? "");
+      salesByDate.set(date, (salesByDate.get(date) ?? 0) + numericValue(row.photos_sold_count));
+    }
+
+    const ridesByDate = new Map<string, { taken: number; sold: number }>();
     if (rideRes.ok) {
       for (const row of rideRes.data as Record<string, unknown>[]) {
-        const key = rowKey(row);
-        const current = ridesByKey.get(key) ?? { photos_taken_count: 0, photos_sold_count: 0 };
-        current.photos_taken_count += numericValue(row.photos_taken_count);
-        current.photos_sold_count += numericValue(row.photos_sold_count);
-        ridesByKey.set(key, current);
+        const date = String(row.business_date ?? "");
+        const current = ridesByDate.get(date) ?? { taken: 0, sold: 0 };
+        current.taken += numericValue(row.photos_taken_count);
+        current.sold += numericValue(row.photos_sold_count);
+        ridesByDate.set(date, current);
       }
     }
 
-    const mergedDays = (daysRes.data as Record<string, unknown>[]).map((row) => {
-      const rides = ridesByKey.get(rowKey(row));
-      if (rides) ridesByKey.delete(rowKey(row));
-      return {
-        ...row,
-        photos_taken_count: rides?.photos_taken_count ?? null,
-      };
-    });
-
-    for (const [key, rides] of ridesByKey.entries()) {
-      const [cameraCode, businessDate] = key.split("|");
-      mergedDays.push({
-        camera_code: cameraCode,
-        business_date: businessDate,
-        photos_sold_count: rides.photos_sold_count,
-        photos_taken_count: rides.photos_taken_count,
-        min_file_code: null,
-        max_file_code: null,
-      });
-    }
-
-    mergedDays.sort((left, right) =>
-      String(right.business_date ?? "").localeCompare(String(left.business_date ?? ""))
-    );
+    const allDates = new Set<string>([...salesByDate.keys(), ...ridesByDate.keys()]);
+    const mergedDays = Array.from(allDates)
+      .map((date) => {
+        const rides = ridesByDate.get(date);
+        const sold = salesByDate.has(date) ? (salesByDate.get(date) as number) : (rides?.sold ?? 0);
+        return {
+          camera_code: "all",
+          business_date: date,
+          photos_sold_count: sold,
+          photos_taken_count: rides && rides.taken > 0 ? rides.taken : null,
+          min_file_code: null,
+          max_file_code: null,
+        };
+      })
+      .sort((left, right) => right.business_date.localeCompare(left.business_date));
 
     return new Response(
       JSON.stringify({
