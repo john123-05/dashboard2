@@ -494,7 +494,7 @@ export default function Personalization() {
           Baue dir ein Overlay zusammen: Format wählen, Logo/Bild und Texte hinzufügen, per Drag &amp; Drop anordnen
           und als Overlay speichern. Es erscheint danach unten in der Overlay-Liste zum Anwenden.
         </p>
-        <OverlayBuilder onSave={handleBuilderSave} saving={builderSaving} />
+        <OverlayBuilder onSave={handleBuilderSave} saving={builderSaving} previewUrl={baseImage} />
       </GlassCard>
 
       {!parkId && (
