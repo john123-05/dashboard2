@@ -17,6 +17,13 @@ const EXTERNAL_SUPABASE_URL =
   Deno.env.get("APP_SUPABASE_URL") ?? Deno.env.get("EXTERNAL_SUPABASE_URL");
 const EXTERNAL_SUPABASE_SERVICE_KEY =
   Deno.env.get("APP_SUPABASE_SERVICE_KEY") ?? Deno.env.get("EXTERNAL_SUPABASE_SERVICE_KEY");
+// The shared project's anon key. machine_status has an anon read policy, so an
+// anon key is enough to read it - and avoids depending on the service key
+// secret being correctly configured.
+const EXTERNAL_SUPABASE_ANON_KEY =
+  Deno.env.get("APP_SUPABASE_ANON_KEY") ??
+  Deno.env.get("EXTERNAL_SUPABASE_ANON_KEY") ??
+  EXTERNAL_SUPABASE_SERVICE_KEY;
 
 const DEFAULT_OPERATIONS_BUCKET = Deno.env.get("OPERATIONS_BUCKET") ?? "daten";
 const MAX_FILES_TO_PARSE = 36;
@@ -582,6 +589,15 @@ function buildExternalHeaders() {
   };
 }
 
+function buildExternalAnonHeaders() {
+  if (!EXTERNAL_SUPABASE_URL || !EXTERNAL_SUPABASE_ANON_KEY) return null;
+  return {
+    Authorization: `Bearer ${EXTERNAL_SUPABASE_ANON_KEY}`,
+    apikey: EXTERNAL_SUPABASE_ANON_KEY,
+    "Content-Type": "application/json",
+  };
+}
+
 async function fetchDashboardRows<T>(
   path: string,
   userAuthHeader: string | null,
@@ -615,12 +631,12 @@ async function fetchDashboardServiceRows<T>(path: string): Promise<T> {
   });
 }
 
-async function fetchExternalRows<T>(path: string): Promise<T> {
+async function fetchExternalRows<T>(path: string, useAnon = false): Promise<T> {
   if (!EXTERNAL_SUPABASE_URL) {
     throw new Error("External Supabase URL is not configured.");
   }
 
-  const headers = buildExternalHeaders();
+  const headers = useAnon ? buildExternalAnonHeaders() : buildExternalHeaders();
   if (!headers) {
     throw new Error("External Supabase credentials are not configured.");
   }
@@ -2607,7 +2623,8 @@ async function buildPayload(
   // LiftPictures project, not this dashboard's own project, so this must go
   // through fetchExternalRows, not fetchDashboardServiceRows.
   const machineStatuses = await fetchExternalRows<MachineStatusRow[]>(
-    `/rest/v1/machine_status?select=*&park_id=eq.${parkId}&order=last_seen_at.desc&limit=20`,
+    `machine_status?select=*&park_id=eq.${parkId}&order=last_seen_at.desc&limit=20`,
+    true,
   ).catch((error) => {
     console.warn("Failed to load machine_status rows", error);
     return [] as MachineStatusRow[];
