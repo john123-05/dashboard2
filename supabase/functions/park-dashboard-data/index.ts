@@ -2325,9 +2325,21 @@ function mergeMachineStatuses(parsed: ParsedAggregate, rows: MachineStatusRow[])
       };
     }
 
-    if (typeof row.photos_taken_today === "number") summary.photos_taken_today = row.photos_taken_today;
-    if (typeof row.photos_sold_today === "number") summary.photos_sold_today = row.photos_sold_today;
-    if (typeof row.photo_conversion_today === "number") summary.photo_conversion_today = row.photo_conversion_today;
+    const num = (a: unknown, b: unknown): number | null =>
+      typeof a === "number" ? a : typeof b === "number" ? b : null;
+    const takenToday = num(row.photos_taken_today, payload.photos_taken_today);
+    const soldToday = num(row.photos_sold_today, payload.photos_sold_today);
+    const convToday = num(row.photo_conversion_today, payload.photo_conversion_today);
+    if (takenToday !== null) summary.photos_taken_today = takenToday;
+    if (soldToday !== null) summary.photos_sold_today = soldToday;
+    if (convToday !== null) summary.photo_conversion_today = convToday;
+
+    // Lifetime totals from the Liftpic Sync heartbeat (Gesamtfahrten etc.).
+    if (typeof payload.rides_total === "number") summary.rides_total = payload.rides_total;
+    if (typeof payload.photos_sold_total === "number") summary.photos_sold_total = payload.photos_sold_total;
+    if (typeof payload.photo_conversion_total === "number") summary.photo_conversion_total = payload.photo_conversion_total;
+    if (typeof payload.paper_printed === "number") summary.printer_paper_printed = payload.paper_printed;
+    if (typeof payload.paper_capacity === "number") summary.printer_paper_capacity = payload.paper_capacity;
     agentFiles += 1;
   }
 

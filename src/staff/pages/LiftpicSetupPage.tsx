@@ -33,6 +33,7 @@ type MachineForm = {
   statistic_file: string;
   print_count_file: string;
   paper_warn_remaining: number;
+  paper_capacity: number;
   is_active: boolean;
 };
 
@@ -66,6 +67,7 @@ const defaultForm: MachineForm = {
   statistic_file: 'C:\\liftpic\\samuel_neu\\Statistic.txt',
   print_count_file: 'C:\\liftpic\\samuel_neu\\PrintCount.txt',
   paper_warn_remaining: 30,
+  paper_capacity: 0,
   is_active: true,
 };
 
@@ -180,6 +182,7 @@ function toForm(config: LiftpicMachineConfig): MachineForm {
     statistic_file: config.statistic_file,
     print_count_file: config.print_count_file,
     paper_warn_remaining: config.paper_warn_remaining,
+    paper_capacity: config.paper_capacity ?? 0,
     is_active: config.is_active,
   };
 }
@@ -691,7 +694,17 @@ export default function LiftpicSetupPage() {
 
             <div className="row">
               <div>
-                <label>Warnung Fotopapier ab</label>
+                <label>Papier-Kapazität (Bilder pro Rolle)</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={form.paper_capacity}
+                  onChange={(e) => patchForm({ paper_capacity: Number(e.target.value) || 0 })}
+                />
+                <small>PrintCount zählt gedruckte Bilder hoch. Rest = Kapazität − PrintCount. 0 = unbekannt.</small>
+              </div>
+              <div>
+                <label>Warnung wenn Rest ≤</label>
                 <input
                   type="number"
                   min={0}
@@ -699,6 +712,9 @@ export default function LiftpicSetupPage() {
                   onChange={(e) => patchForm({ paper_warn_remaining: Number(e.target.value) || 0 })}
                 />
               </div>
+            </div>
+
+            <div className="row">
               <div>
                 <label>RAW Ordner</label>
                 <input value={form.raw_dir} onChange={(e) => patchForm({ raw_dir: e.target.value })} />

@@ -357,6 +357,30 @@ export default function SystemHealth() {
               {formatNumber(data.health.printer.print_count)}
             </p>
           </div>
+          <div className="rounded-xl bg-white/30 px-4 py-3">
+            <p className="text-xs uppercase tracking-wide text-slate-400">Fahrten gesamt</p>
+            <p className="mt-1 text-sm font-semibold text-slate-800">
+              {data.summary.rides_total !== null && data.summary.rides_total !== undefined
+                ? formatNumber(data.summary.rides_total)
+                : '-'}
+            </p>
+          </div>
+          <div className="rounded-xl bg-white/30 px-4 py-3">
+            <p className="text-xs uppercase tracking-wide text-slate-400">Verkauft gesamt</p>
+            <p className="mt-1 text-sm font-semibold text-slate-800">
+              {data.summary.photos_sold_total !== null && data.summary.photos_sold_total !== undefined
+                ? formatNumber(data.summary.photos_sold_total)
+                : '-'}
+            </p>
+          </div>
+          <div className="rounded-xl bg-white/30 px-4 py-3">
+            <p className="text-xs uppercase tracking-wide text-slate-400">Conversion gesamt</p>
+            <p className="mt-1 text-sm font-semibold text-slate-800">
+              {data.summary.photo_conversion_total !== null && data.summary.photo_conversion_total !== undefined
+                ? `${(data.summary.photo_conversion_total * 100).toFixed(1)}%`
+                : '-'}
+            </p>
+          </div>
         </div>
       </GlassCard>
 

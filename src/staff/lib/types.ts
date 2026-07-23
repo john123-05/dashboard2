@@ -54,6 +54,7 @@ export interface LiftpicMachineConfig {
   statistic_file: string;
   print_count_file: string;
   paper_warn_remaining: number;
+  paper_capacity: number;
   pairing_code: string;
   pairing_status: LiftpicPairingStatus;
   last_seen_at: string | null;

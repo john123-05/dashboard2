@@ -22,6 +22,7 @@ const selectColumns = `
   statistic_file,
   print_count_file,
   paper_warn_remaining,
+  paper_capacity,
   pairing_code,
   pairing_status,
   last_seen_at,
@@ -75,6 +76,7 @@ function configPayload(payload: Record<string, unknown>, userId: string, isUpdat
     statistic_file: text(payload.statistic_file, 'C:\\liftpic\\samuel_neu\\Statistic.txt'),
     print_count_file: text(payload.print_count_file, 'C:\\liftpic\\samuel_neu\\PrintCount.txt'),
     paper_warn_remaining: intValue(payload.paper_warn_remaining, 30),
+    paper_capacity: intValue(payload.paper_capacity, 0),
     is_active: bool(payload.is_active, true),
   };
 

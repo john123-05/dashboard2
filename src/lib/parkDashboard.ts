@@ -35,6 +35,12 @@ export interface ParkDashboardSummary {
   critical_count: number;
   printer_paper_remaining: number | null;
   print_count: number;
+  rides_total?: number | null;
+  photos_sold_total?: number | null;
+  photo_conversion_total?: number | null;
+  photos_taken_today?: number | null;
+  photos_sold_today?: number | null;
+  photo_conversion_today?: number | null;
   last_activity_at: string | null;
   last_data_at: string | null;
   success_rate: number | null;
@@ -198,6 +204,12 @@ export function createEmptyParkDashboardData(
       critical_count: 0,
       printer_paper_remaining: null,
       print_count: 0,
+      rides_total: null,
+      photos_sold_total: null,
+      photo_conversion_total: null,
+      photos_taken_today: null,
+      photos_sold_today: null,
+      photo_conversion_today: null,
       last_activity_at: null,
       last_data_at: null,
       success_rate: null,
