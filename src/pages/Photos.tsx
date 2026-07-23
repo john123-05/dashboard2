@@ -7,6 +7,7 @@ import GlassCard from '../components/ui/GlassCard';
 import KPICard from '../components/ui/KPICard';
 import { useI18n } from '../lib/i18n';
 import { usePark } from '../contexts/ParkContext';
+import { useAuth } from '../contexts/AuthContext';
 import { fetchRecentPhotos, searchPhotosByCode, searchPhotosByDateTime, type BrowsablePhoto } from '../lib/photoBrowser';
 
 interface AttractionPhotoStats {
@@ -22,6 +23,8 @@ const CHART_COLORS = ['#0ea5e9', '#10b981', '#f59e0b', '#94a3b8'];
 export default function Photos() {
   const { t } = useI18n();
   const { parkId } = usePark();
+  // Staff must not see purchase/conversion numbers (sales data).
+  const { isStaff } = useAuth();
   const [stats, setStats] = useState({ total: 0, purchased: 0, available: 0, expired: 0 });
   const [attractionStats, setAttractionStats] = useState<AttractionPhotoStats[]>([]);
   const [loading, setLoading] = useState(true);
@@ -201,12 +204,17 @@ export default function Photos() {
 
       <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
         <KPICard title={t('photos.total')} value={formatNumber(stats.total)} icon={Camera} />
-        <KPICard title={t('photos.purchased')} value={formatNumber(stats.purchased)} icon={ShoppingBag} iconColor="text-emerald-600" iconBg="bg-emerald-100" />
+        {!isStaff && (
+          <KPICard title={t('photos.purchased')} value={formatNumber(stats.purchased)} icon={ShoppingBag} iconColor="text-emerald-600" iconBg="bg-emerald-100" />
+        )}
         <KPICard title={t('photos.available')} value={formatNumber(stats.available)} icon={Eye} iconColor="text-amber-600" iconBg="bg-amber-100" />
-        <KPICard title={t('photos.conversion')} value={formatPercent(conversionRate)} icon={Clock} iconColor="text-cyan-600" iconBg="bg-cyan-100" />
+        {!isStaff && (
+          <KPICard title={t('photos.conversion')} value={formatPercent(conversionRate)} icon={Clock} iconColor="text-cyan-600" iconBg="bg-cyan-100" />
+        )}
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
+        {!isStaff && (
         <GlassCard className="p-6">
           <h3 className="mb-4 text-base font-semibold text-slate-800">{t('photos.status_distribution')}</h3>
           <div className="flex items-center gap-8">
@@ -237,6 +245,7 @@ export default function Photos() {
             </div>
           </div>
         </GlassCard>
+        )}
 
         <GlassCard className="p-6">
           <h3 className="mb-4 text-base font-semibold text-slate-800">{t('photos.by_attraction')}</h3>
@@ -254,15 +263,19 @@ export default function Photos() {
                     <span className="text-sm font-medium text-slate-700">{a.name}</span>
                     <span className="text-xs text-slate-500">{formatNumber(a.total)} photos</span>
                   </div>
-                  <div className="mb-1.5 h-2 overflow-hidden rounded-full bg-slate-100">
-                    <div
-                      className="h-full rounded-full bg-sky-500 transition-all duration-500"
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                  <p className="text-xs text-slate-400">
-                    {formatPercent(pct)} conversion ({formatNumber(a.purchased)} sold)
-                  </p>
+                  {!isStaff && (
+                    <>
+                      <div className="mb-1.5 h-2 overflow-hidden rounded-full bg-slate-100">
+                        <div
+                          className="h-full rounded-full bg-sky-500 transition-all duration-500"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      <p className="text-xs text-slate-400">
+                        {formatPercent(pct)} conversion ({formatNumber(a.purchased)} sold)
+                      </p>
+                    </>
+                  )}
                 </div>
               );
             })}
