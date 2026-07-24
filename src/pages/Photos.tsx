@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Camera, ShoppingBag, Eye, Clock, RefreshCw, Search, CalendarClock, X } from 'lucide-react';
+import { Camera, ShoppingBag, Eye, Clock, RefreshCw, Search, CalendarClock, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { getOptionalSourceWarning, invokeEdgeFunction, isEdgeSourceUnavailable } from '../lib/edgeFunctions';
 import { formatNumber, formatPercent, formatRelative, formatDateTime } from '../lib/utils';
@@ -9,7 +9,7 @@ import { useI18n } from '../lib/i18n';
 import { usePark } from '../contexts/ParkContext';
 import { useAuth } from '../contexts/AuthContext';
 import { fetchRecentPhotos, searchPhotosByCode, searchPhotosByDateTime, claimLinkFor, type BrowsablePhoto } from '../lib/photoBrowser';
-import { fetchKioskSales, aggregateByDate } from '../lib/kioskSales';
+import { fetchKioskSales, aggregateByDate, todayInTimezone, type AggregatedDay } from '../lib/kioskSales';
 
 // Local "YYYY-MM-DDTHH:MM" for a datetime-local input, defaulted to now so
 // staff can just tweak the time (date is today by default).
@@ -30,14 +30,17 @@ const CHART_COLORS = ['#0ea5e9', '#10b981', '#f59e0b', '#94a3b8'];
 
 export default function Photos() {
   const { t } = useI18n();
-  const { parkId, isKioskPark, parkName } = usePark();
+  const { parkId, isKioskPark, parkName, kioskTimezone } = usePark();
   // Staff must not see purchase/conversion numbers (sales data).
   const { isStaff } = useAuth();
   const [stats, setStats] = useState({ total: 0, purchased: 0, available: 0, expired: 0 });
-  // Kiosk-only: real sold vs rides (taken) for the conversion donut. Conversion
-  // is measured only over days that have BOTH numbers (since ride tracking
-  // started 2026-07-19); soldLifetime is the full permanent-rollup total.
+  // Kiosk-only: the daily rollups + the day the donuts/KPIs currently show
+  // (defaults to today, navigable back). soldLifetime is the full total.
   const [kioskConv, setKioskConv] = useState<{ sold: number; taken: number; soldLifetime: number } | null>(null);
+  const [kioskDays, setKioskDays] = useState<AggregatedDay[]>([]);
+  const [soldLifetime, setSoldLifetime] = useState(0);
+  const [attrName, setAttrName] = useState('Automat');
+  const [selectedDate, setSelectedDate] = useState('');
   const [attractionStats, setAttractionStats] = useState<AttractionPhotoStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -66,11 +69,45 @@ export default function Photos() {
     loadData();
   }, [parkId, isKioskPark, isStaff]);
 
+  // Default the day picker to today (park timezone) once we know the timezone.
+  useEffect(() => {
+    if (!isKioskPark || selectedDate) return;
+    setSelectedDate(todayInTimezone(kioskTimezone));
+  }, [isKioskPark, kioskTimezone, selectedDate]);
+
+  // Kiosk: derive the selected day's KPIs + donuts from the daily rollups, so
+  // navigating the date updates everything (defaults to today).
+  useEffect(() => {
+    if (!isKioskPark || isStaff) return;
+    const day = kioskDays.find((d) => d.businessDate === selectedDate);
+    const taken = day?.expectedCount ?? 0;
+    const sold = day?.soldCount ?? 0;
+    const available = Math.max(0, taken - sold);
+    setStats({ total: taken, purchased: sold, available, expired: 0 });
+    setKioskConv({ sold, taken, soldLifetime });
+    setAttractionStats([{ name: attrName, total: taken, purchased: sold, available, expired: 0 }]);
+  }, [isKioskPark, isStaff, kioskDays, selectedDate, soldLifetime, attrName]);
+
   useEffect(() => {
     setSelectedPhoto(null);
     if (parkId) runBrowse('recent');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [parkId]);
+
+  const todayStr = isKioskPark ? todayInTimezone(kioskTimezone) : '';
+  const selectedDateLabel = selectedDate
+    ? new Intl.DateTimeFormat('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' }).format(
+        new Date(`${selectedDate}T00:00:00`),
+      )
+    : '';
+  function stepDay(delta: number) {
+    if (!selectedDate) return;
+    const d = new Date(`${selectedDate}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() + delta);
+    const next = d.toISOString().slice(0, 10);
+    if (todayStr && next > todayStr) return;
+    setSelectedDate(next);
+  }
 
   async function runBrowse(mode: 'recent' | 'code' | 'datetime', codeValue?: string, dateTimeValue?: string) {
     if (!parkId) return;
@@ -129,24 +166,17 @@ export default function Photos() {
       try {
         const kiosk = await fetchKioskSales(parkId);
         const days = aggregateByDate(kiosk.days, kiosk.priceCents ?? 0);
-        // Conversion only over days that have BOTH sold and rides (taken),
-        // otherwise sold (15 days) vs rides (5 days) would be nonsense.
-        const rideDays = days.filter((d) => d.expectedCount !== null && d.expectedCount > 0);
-        const taken = rideDays.reduce((sum, d) => sum + (d.expectedCount ?? 0), 0);
-        const sold = rideDays.reduce((sum, d) => sum + d.soldCount, 0);
-        const soldLifetime = days.reduce((sum, d) => sum + d.soldCount, 0);
-        const available = Math.max(0, taken - sold);
-        setStats({ total: taken, purchased: sold, available, expired: 0 });
-        setKioskConv({ sold, taken, soldLifetime });
+        setKioskDays(days);
+        setSoldLifetime(days.reduce((sum, d) => sum + d.soldCount, 0));
 
-        let attrName = parkName || 'Automat';
+        let name = parkName || 'Automat';
         const attrRes = await invokeEdgeFunction<{ attractions: { name: string; is_active?: boolean }[] }>(
           'external-attractions',
           { query: { park_id: parkId } },
         );
         const activeAttr = (attrRes.data?.attractions || []).find((a) => a.is_active !== false);
-        if (activeAttr?.name) attrName = activeAttr.name;
-        setAttractionStats([{ name: attrName, total: taken, purchased: sold, available, expired: 0 }]);
+        if (activeAttr?.name) name = activeAttr.name;
+        setAttrName(name);
 
         setNotice(null);
         setError(null);
@@ -216,9 +246,9 @@ export default function Photos() {
 
   const conversionRate = stats.total > 0 ? (stats.purchased / stats.total) * 100 : 0;
   const pieData = [
-    { name: 'Purchased', value: stats.purchased },
-    { name: 'Available', value: stats.available },
-    { name: 'Expired', value: stats.expired },
+    { name: 'Gekauft', value: stats.purchased },
+    { name: 'Verfügbar', value: stats.available },
+    { name: 'Abgelaufen', value: stats.expired },
   ].filter((d) => d.value > 0);
 
   if (loading) {
@@ -263,11 +293,46 @@ export default function Photos() {
         </div>
       )}
 
+      {isKioskPark && !isStaff && selectedDate && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/40 bg-white/40 px-4 py-3 backdrop-blur-xl">
+          <div>
+            <p className="text-sm font-semibold text-slate-700">Auswertung für {selectedDateLabel}</p>
+            <p className="text-xs text-slate-400">Kacheln und Kreise beziehen sich auf diesen Tag</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={() => stepDay(-1)} className="glass-button-secondary p-2" aria-label="Vorheriger Tag">
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <input
+              type="date"
+              value={selectedDate}
+              max={todayStr}
+              onChange={(e) => e.target.value && setSelectedDate(e.target.value)}
+              className="rounded-xl border border-white/50 bg-white/70 px-3 py-2 text-sm text-slate-700"
+            />
+            <button
+              type="button"
+              onClick={() => stepDay(1)}
+              disabled={selectedDate >= todayStr}
+              className="glass-button-secondary p-2 disabled:opacity-40"
+              aria-label="Nächster Tag"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+            {selectedDate !== todayStr && (
+              <button type="button" onClick={() => setSelectedDate(todayStr)} className="glass-button-secondary px-3 py-2 text-sm">
+                Heute
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
         <KPICard
           title={t('photos.total')}
           value={formatNumber(stats.total)}
-          subtitle={kioskConv ? 'Aufnahmen seit 19.7.' : undefined}
+          subtitle={kioskConv ? `Aufnahmen · ${selectedDateLabel}` : undefined}
           icon={Camera}
         />
         {!isStaff && (
@@ -285,7 +350,7 @@ export default function Photos() {
           <KPICard
             title={t('photos.conversion')}
             value={formatPercent(conversionRate)}
-            subtitle={kioskConv ? 'seit Fahrten-Zählung' : undefined}
+            subtitle={kioskConv ? 'an diesem Tag' : undefined}
             icon={Clock}
             iconColor="text-cyan-600"
             iconBg="bg-cyan-100"
@@ -320,7 +385,7 @@ export default function Photos() {
                       <div className="h-3 w-3 rounded-full" style={{ backgroundColor: CHART_COLORS[i] }} />
                       <div>
                         <p className="text-sm font-medium text-slate-700">{d.name}</p>
-                        <p className="text-xs text-slate-400">{formatNumber(d.value)} photos</p>
+                        <p className="text-xs text-slate-400">{formatNumber(d.value)} Fotos</p>
                       </div>
                     </div>
                   ))}
@@ -377,7 +442,7 @@ export default function Photos() {
                         <p className="text-xs text-slate-400">{formatNumber(Math.max(0, kioskConv.taken - kioskConv.sold))} Fotos</p>
                       </div>
                     </div>
-                    <p className="pt-1 text-xs text-slate-500">von {formatNumber(kioskConv.taken)} Fahrten gesamt</p>
+                    <p className="pt-1 text-xs text-slate-500">von {formatNumber(kioskConv.taken)} Fahrten</p>
                   </div>
                 </div>
               </div>
@@ -391,29 +456,46 @@ export default function Photos() {
           <div className="space-y-3">
             {attractionStats.length === 0 && (
               <div className="rounded-xl bg-white/30 p-4 text-sm text-slate-500">
-                No attraction mapping available in the current photo feed yet.
+                Für diesen Tag liegen noch keine Attraktions-Daten vor.
               </div>
             )}
             {attractionStats.map((a) => {
               const pct = a.total > 0 ? (a.purchased / a.total) * 100 : 0;
               return (
-                <div key={a.name} className="rounded-xl bg-white/30 p-4">
-                  <div className="mb-2 flex items-center justify-between">
-                    <span className="text-sm font-medium text-slate-700">{a.name}</span>
-                    <span className="text-xs text-slate-500">{formatNumber(a.total)} photos</span>
+                <div key={a.name} className="flex items-center justify-between gap-4 rounded-xl bg-white/30 p-4">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-slate-700">{a.name}</p>
+                    <p className="mt-1 text-xs text-slate-400">
+                      {formatNumber(a.total)} Aufnahmen{!isStaff ? ` · ${formatNumber(a.purchased)} verkauft` : ''}
+                    </p>
                   </div>
                   {!isStaff && (
-                    <>
-                      <div className="mb-1.5 h-2 overflow-hidden rounded-full bg-slate-100">
-                        <div
-                          className="h-full rounded-full bg-sky-500 transition-all duration-500"
-                          style={{ width: `${pct}%` }}
-                        />
+                    <div className="relative h-20 w-20 shrink-0">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={[
+                              { name: 'Gekauft', value: a.purchased },
+                              { name: 'Rest', value: Math.max(0, a.total - a.purchased) },
+                            ]}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={26}
+                            outerRadius={36}
+                            startAngle={90}
+                            endAngle={-270}
+                            dataKey="value"
+                            strokeWidth={0}
+                          >
+                            <Cell fill="#0ea5e9" />
+                            <Cell fill="#e2e8f0" />
+                          </Pie>
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                        <span className="text-xs font-semibold text-slate-700">{formatPercent(pct)}</span>
                       </div>
-                      <p className="text-xs text-slate-400">
-                        {formatPercent(pct)} conversion ({formatNumber(a.purchased)} sold)
-                      </p>
-                    </>
+                    </div>
                   )}
                 </div>
               );
