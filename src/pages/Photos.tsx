@@ -296,89 +296,93 @@ export default function Photos() {
       <div className="grid gap-6 xl:grid-cols-2">
         {!isStaff && (
         <GlassCard className="p-6">
-          <h3 className="mb-4 text-base font-semibold text-slate-800">{t('photos.status_distribution')}</h3>
-          <div className="flex items-center gap-8">
-            <div className="h-48 w-48">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} dataKey="value" strokeWidth={0}>
-                    {pieData.map((_, i) => (
-                      <Cell key={i} fill={CHART_COLORS[i]} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{ background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.08)' }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="space-y-3">
-              {pieData.map((d, i) => (
-                <div key={d.name} className="flex items-center gap-3">
-                  <div className="h-3 w-3 rounded-full" style={{ backgroundColor: CHART_COLORS[i] }} />
-                  <div>
-                    <p className="text-sm font-medium text-slate-700">{d.name}</p>
-                    <p className="text-xs text-slate-400">{formatNumber(d.value)} photos</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {kioskConv && kioskConv.taken > 0 && (
-            <div className="mt-6 border-t border-slate-200/60 pt-6">
-              <h3 className="mb-4 text-base font-semibold text-slate-800">Conversion</h3>
-              <div className="flex items-center gap-8">
-                <div className="relative h-48 w-48">
+          <div className="grid gap-6 sm:grid-cols-2">
+            <div>
+              <h3 className="mb-4 text-base font-semibold text-slate-800">{t('photos.status_distribution')}</h3>
+              <div className="flex flex-col items-center gap-4">
+                <div className="h-40 w-40">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie
-                        data={[
-                          { name: 'Verkauft', value: kioskConv.sold },
-                          { name: 'Nicht gekauft', value: Math.max(0, kioskConv.taken - kioskConv.sold) },
-                        ]}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={58}
-                        outerRadius={80}
-                        startAngle={90}
-                        endAngle={-270}
-                        dataKey="value"
-                        strokeWidth={0}
-                      >
-                        <Cell fill="#0ea5e9" />
-                        <Cell fill="#f43f5e" />
+                      <Pie data={pieData} cx="50%" cy="50%" innerRadius={44} outerRadius={70} dataKey="value" strokeWidth={0}>
+                        {pieData.map((_, i) => (
+                          <Cell key={i} fill={CHART_COLORS[i]} />
+                        ))}
                       </Pie>
                       <Tooltip
                         contentStyle={{ background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.08)' }}
                       />
                     </PieChart>
                   </ResponsiveContainer>
-                  <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-2xl font-bold text-slate-800">{formatPercent(conversionRate)}</span>
-                    <span className="text-xs text-slate-400">verkauft</span>
-                  </div>
                 </div>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3">
-                    <div className="h-3 w-3 rounded-full" style={{ backgroundColor: '#0ea5e9' }} />
-                    <div>
-                      <p className="text-sm font-medium text-slate-700">Verkauft</p>
-                      <p className="text-xs text-slate-400">{formatNumber(kioskConv.sold)} Fotos</p>
+                <div className="w-full space-y-2">
+                  {pieData.map((d, i) => (
+                    <div key={d.name} className="flex items-center gap-3">
+                      <div className="h-3 w-3 rounded-full" style={{ backgroundColor: CHART_COLORS[i] }} />
+                      <div>
+                        <p className="text-sm font-medium text-slate-700">{d.name}</p>
+                        <p className="text-xs text-slate-400">{formatNumber(d.value)} photos</p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="h-3 w-3 rounded-full" style={{ backgroundColor: '#f43f5e' }} />
-                    <div>
-                      <p className="text-sm font-medium text-slate-700">Fahrten ohne Kauf</p>
-                      <p className="text-xs text-slate-400">{formatNumber(Math.max(0, kioskConv.taken - kioskConv.sold))} Fotos</p>
-                    </div>
-                  </div>
-                  <p className="pt-1 text-xs text-slate-500">von {formatNumber(kioskConv.taken)} Fahrten gesamt</p>
+                  ))}
                 </div>
               </div>
             </div>
-          )}
+
+            {kioskConv && kioskConv.taken > 0 && (
+              <div>
+                <h3 className="mb-4 text-base font-semibold text-slate-800">Conversion</h3>
+                <div className="flex flex-col items-center gap-4">
+                  <div className="relative h-40 w-40">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={[
+                            { name: 'Verkauft', value: kioskConv.sold },
+                            { name: 'Nicht gekauft', value: Math.max(0, kioskConv.taken - kioskConv.sold) },
+                          ]}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={50}
+                          outerRadius={70}
+                          startAngle={90}
+                          endAngle={-270}
+                          dataKey="value"
+                          strokeWidth={0}
+                        >
+                          <Cell fill="#0ea5e9" />
+                          <Cell fill="#f43f5e" />
+                        </Pie>
+                        <Tooltip
+                          contentStyle={{ background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.08)' }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                      <span className="text-xl font-bold text-slate-800">{formatPercent(conversionRate)}</span>
+                      <span className="text-[10px] text-slate-400">verkauft</span>
+                    </div>
+                  </div>
+                  <div className="w-full space-y-2">
+                    <div className="flex items-center gap-3">
+                      <div className="h-3 w-3 rounded-full" style={{ backgroundColor: '#0ea5e9' }} />
+                      <div>
+                        <p className="text-sm font-medium text-slate-700">Verkauft</p>
+                        <p className="text-xs text-slate-400">{formatNumber(kioskConv.sold)} Fotos</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="h-3 w-3 rounded-full" style={{ backgroundColor: '#f43f5e' }} />
+                      <div>
+                        <p className="text-sm font-medium text-slate-700">Fahrten ohne Kauf</p>
+                        <p className="text-xs text-slate-400">{formatNumber(Math.max(0, kioskConv.taken - kioskConv.sold))} Fotos</p>
+                      </div>
+                    </div>
+                    <p className="pt-1 text-xs text-slate-500">von {formatNumber(kioskConv.taken)} Fahrten gesamt</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </GlassCard>
         )}
 
