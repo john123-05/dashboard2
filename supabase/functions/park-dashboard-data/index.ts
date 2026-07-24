@@ -30,6 +30,12 @@ const MAX_FILES_TO_PARSE = 36;
 const MAX_OBJECTS_PER_PREFIX = 160;
 const MAX_RECURSION_DEPTH = 4;
 const MAX_LINES_PER_FILE = 2500;
+// Ignore recognized log files older than this. A park that switched to the
+// Liftpic Sync agent (machine_status heartbeats) stops writing to the ops
+// storage bucket, leaving months-old files behind (e.g. Imst's dead March
+// upload chain) - without this the System Health page keeps resurrecting
+// those stale "events"/devices. Files with unknown age are kept.
+const MAX_RECOGNIZED_FILE_AGE_MS = 21 * 24 * 60 * 60 * 1000; // 21 days
 
 type JsonRecord = Record<string, unknown>;
 
@@ -782,10 +788,15 @@ async function findRelevantObjects(
         const name = basename(item.name);
         const kind = detectKind(name);
         if (!kind) return null;
+        const updatedAt = parseIsoOrNull(item.updated_at ?? item.created_at);
+        // Drop long-dead log files so old data (e.g. March) can't resurface.
+        if (updatedAt && Date.now() - new Date(updatedAt).getTime() > MAX_RECOGNIZED_FILE_AGE_MS) {
+          return null;
+        }
         return {
           path: item.name,
           name,
-          updated_at: parseIsoOrNull(item.updated_at ?? item.created_at),
+          updated_at: updatedAt,
           size: Number(item.metadata?.size ?? 0),
           mime_type: typeof item.metadata?.mimetype === "string" ? item.metadata.mimetype : null,
           kind,
