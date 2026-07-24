@@ -267,7 +267,7 @@ export default function Photos() {
         <KPICard
           title={t('photos.total')}
           value={formatNumber(stats.total)}
-          subtitle={kioskConv ? 'Aufnahmen seit Fahrten-Zählung (19.7.)' : undefined}
+          subtitle={kioskConv ? 'Aufnahmen seit 19.7.' : undefined}
           icon={Camera}
         />
         {!isStaff && (
@@ -324,62 +324,62 @@ export default function Photos() {
               ))}
             </div>
           </div>
-        </GlassCard>
-        )}
 
-        {!isStaff && kioskConv && kioskConv.taken > 0 && (
-          <GlassCard className="p-6">
-            <h3 className="mb-4 text-base font-semibold text-slate-800">Conversion</h3>
-            <div className="flex items-center gap-8">
-              <div className="relative h-48 w-48">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={[
-                        { name: 'Verkauft', value: kioskConv.sold },
-                        { name: 'Nicht gekauft', value: Math.max(0, kioskConv.taken - kioskConv.sold) },
-                      ]}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={58}
-                      outerRadius={80}
-                      startAngle={90}
-                      endAngle={-270}
-                      dataKey="value"
-                      strokeWidth={0}
-                    >
-                      <Cell fill="#0ea5e9" />
-                      <Cell fill="#f43f5e" />
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{ background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.08)' }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-2xl font-bold text-slate-800">{formatPercent(conversionRate)}</span>
-                  <span className="text-xs text-slate-400">verkauft</span>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="h-3 w-3 rounded-full" style={{ backgroundColor: '#0ea5e9' }} />
-                  <div>
-                    <p className="text-sm font-medium text-slate-700">Verkauft</p>
-                    <p className="text-xs text-slate-400">{formatNumber(kioskConv.sold)} Fotos</p>
+          {kioskConv && kioskConv.taken > 0 && (
+            <div className="mt-6 border-t border-slate-200/60 pt-6">
+              <h3 className="mb-4 text-base font-semibold text-slate-800">Conversion</h3>
+              <div className="flex items-center gap-8">
+                <div className="relative h-48 w-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={[
+                          { name: 'Verkauft', value: kioskConv.sold },
+                          { name: 'Nicht gekauft', value: Math.max(0, kioskConv.taken - kioskConv.sold) },
+                        ]}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={58}
+                        outerRadius={80}
+                        startAngle={90}
+                        endAngle={-270}
+                        dataKey="value"
+                        strokeWidth={0}
+                      >
+                        <Cell fill="#0ea5e9" />
+                        <Cell fill="#f43f5e" />
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{ background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.08)' }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-2xl font-bold text-slate-800">{formatPercent(conversionRate)}</span>
+                    <span className="text-xs text-slate-400">verkauft</span>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="h-3 w-3 rounded-full" style={{ backgroundColor: '#f43f5e' }} />
-                  <div>
-                    <p className="text-sm font-medium text-slate-700">Fahrten ohne Kauf</p>
-                    <p className="text-xs text-slate-400">{formatNumber(Math.max(0, kioskConv.taken - kioskConv.sold))} Fotos</p>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="h-3 w-3 rounded-full" style={{ backgroundColor: '#0ea5e9' }} />
+                    <div>
+                      <p className="text-sm font-medium text-slate-700">Verkauft</p>
+                      <p className="text-xs text-slate-400">{formatNumber(kioskConv.sold)} Fotos</p>
+                    </div>
                   </div>
+                  <div className="flex items-center gap-3">
+                    <div className="h-3 w-3 rounded-full" style={{ backgroundColor: '#f43f5e' }} />
+                    <div>
+                      <p className="text-sm font-medium text-slate-700">Fahrten ohne Kauf</p>
+                      <p className="text-xs text-slate-400">{formatNumber(Math.max(0, kioskConv.taken - kioskConv.sold))} Fotos</p>
+                    </div>
+                  </div>
+                  <p className="pt-1 text-xs text-slate-500">von {formatNumber(kioskConv.taken)} Fahrten gesamt</p>
                 </div>
-                <p className="pt-1 text-xs text-slate-500">von {formatNumber(kioskConv.taken)} Fahrten gesamt</p>
               </div>
             </div>
-          </GlassCard>
+          )}
+        </GlassCard>
         )}
 
         <GlassCard className="p-6">
