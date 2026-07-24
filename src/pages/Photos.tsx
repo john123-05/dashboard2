@@ -9,7 +9,7 @@ import { useI18n } from '../lib/i18n';
 import { usePark } from '../contexts/ParkContext';
 import { useAuth } from '../contexts/AuthContext';
 import { fetchRecentPhotos, searchPhotosByCode, searchPhotosByDateTime, claimLinkFor, type BrowsablePhoto } from '../lib/photoBrowser';
-import { fetchKioskSales, aggregateByDate, todayInTimezone, type AggregatedDay } from '../lib/kioskSales';
+import { fetchKioskSales, fetchKioskPhotosForDay, aggregateByDate, todayInTimezone, type AggregatedDay } from '../lib/kioskSales';
 
 // Local "YYYY-MM-DDTHH:MM" for a datetime-local input, defaulted to now so
 // staff can just tweak the time (date is today by default).
@@ -41,6 +41,8 @@ export default function Photos() {
   const [soldLifetime, setSoldLifetime] = useState(0);
   const [attrName, setAttrName] = useState('Automat');
   const [selectedDate, setSelectedDate] = useState('');
+  // Kiosk-only: of the day's buyers, how many left an email (E-Mail-Erfassung).
+  const [emailDay, setEmailDay] = useState<{ given: number; total: number } | null>(null);
   const [attractionStats, setAttractionStats] = useState<AttractionPhotoStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -87,6 +89,30 @@ export default function Photos() {
     setKioskConv({ sold, taken, soldLifetime });
     setAttractionStats([{ name: attrName, total: taken, purchased: sold, available, expired: 0 }]);
   }, [isKioskPark, isStaff, kioskDays, selectedDate, soldLifetime, attrName]);
+
+  // Kiosk: how many of the selected day's buyers left an email address. Reads
+  // the day's individual purchases (each carries an email field), so it fills
+  // automatically once email capture is switched on at the kiosk.
+  useEffect(() => {
+    if (!isKioskPark || isStaff || !parkId || !selectedDate) {
+      setEmailDay(null);
+      return;
+    }
+    let cancelled = false;
+    fetchKioskPhotosForDay(parkId, selectedDate)
+      .then((res) => {
+        if (cancelled) return;
+        const purchases = res.purchases ?? [];
+        const given = purchases.filter((p) => p.email && p.email.trim()).length;
+        setEmailDay({ given, total: purchases.length });
+      })
+      .catch(() => {
+        if (!cancelled) setEmailDay(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isKioskPark, isStaff, parkId, selectedDate]);
 
   useEffect(() => {
     setSelectedPhoto(null);
@@ -245,6 +271,14 @@ export default function Photos() {
   }
 
   const conversionRate = stats.total > 0 ? (stats.purchased / stats.total) * 100 : 0;
+  const emailRate = emailDay && emailDay.total > 0 ? (emailDay.given / emailDay.total) * 100 : 0;
+  const emailPie =
+    emailDay && emailDay.total > 0
+      ? [
+          { key: 'given', value: emailDay.given, fill: '#10b981' },
+          { key: 'rest', value: Math.max(0, emailDay.total - emailDay.given), fill: '#e2e8f0' },
+        ]
+      : [{ key: 'empty', value: 1, fill: '#e2e8f0' }];
   const pieData = [
     { name: 'Gekauft', value: stats.purchased },
     { name: 'Verfügbar', value: stats.available },
@@ -500,6 +534,45 @@ export default function Photos() {
                 </div>
               );
             })}
+
+            {!isStaff && emailDay && (
+              <div className="flex items-center justify-between gap-4 rounded-xl bg-white/30 p-4">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-slate-700">E-Mail-Erfassung</p>
+                  <p className="mt-1 text-xs text-slate-400">
+                    {emailDay.total > 0
+                      ? `${formatNumber(emailDay.given)} von ${formatNumber(emailDay.total)} Käufern`
+                      : 'Keine Käufe an diesem Tag'}
+                  </p>
+                </div>
+                <div className="relative h-20 w-20 shrink-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={emailPie}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={26}
+                        outerRadius={36}
+                        startAngle={90}
+                        endAngle={-270}
+                        dataKey="value"
+                        strokeWidth={0}
+                      >
+                        {emailPie.map((e) => (
+                          <Cell key={e.key} fill={e.fill} />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                    <span className="text-xs font-semibold text-slate-700">
+                      {emailDay.total > 0 ? formatPercent(emailRate) : '—'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </GlassCard>
       </div>
