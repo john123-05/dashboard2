@@ -9,6 +9,7 @@ import { useI18n } from '../lib/i18n';
 import { usePark } from '../contexts/ParkContext';
 import { useAuth } from '../contexts/AuthContext';
 import { fetchRecentPhotos, searchPhotosByCode, searchPhotosByDateTime, claimLinkFor, type BrowsablePhoto } from '../lib/photoBrowser';
+import { fetchKioskSales, aggregateByDate } from '../lib/kioskSales';
 
 // Local "YYYY-MM-DDTHH:MM" for a datetime-local input, defaulted to now so
 // staff can just tweak the time (date is today by default).
@@ -29,10 +30,14 @@ const CHART_COLORS = ['#0ea5e9', '#10b981', '#f59e0b', '#94a3b8'];
 
 export default function Photos() {
   const { t } = useI18n();
-  const { parkId } = usePark();
+  const { parkId, isKioskPark, parkName } = usePark();
   // Staff must not see purchase/conversion numbers (sales data).
   const { isStaff } = useAuth();
   const [stats, setStats] = useState({ total: 0, purchased: 0, available: 0, expired: 0 });
+  // Kiosk-only: real sold vs rides (taken) for the conversion donut. Conversion
+  // is measured only over days that have BOTH numbers (since ride tracking
+  // started 2026-07-19); soldLifetime is the full permanent-rollup total.
+  const [kioskConv, setKioskConv] = useState<{ sold: number; taken: number; soldLifetime: number } | null>(null);
   const [attractionStats, setAttractionStats] = useState<AttractionPhotoStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +64,7 @@ export default function Photos() {
 
   useEffect(() => {
     loadData();
-  }, [parkId]);
+  }, [parkId, isKioskPark, isStaff]);
 
   useEffect(() => {
     setSelectedPhoto(null);
@@ -116,6 +121,44 @@ export default function Photos() {
   async function loadData() {
     setLoading(true);
     setError(null);
+
+    // Kiosk parks: the generic external-photos feed is capped at 1000 rows and
+    // never marks kiosk sales as "purchased", so it showed 1000/0/0%. Use the
+    // permanent sales + ride rollups instead (same source as Übersicht/Umsatz).
+    if (isKioskPark && parkId && !isStaff) {
+      try {
+        const kiosk = await fetchKioskSales(parkId);
+        const days = aggregateByDate(kiosk.days, kiosk.priceCents ?? 0);
+        // Conversion only over days that have BOTH sold and rides (taken),
+        // otherwise sold (15 days) vs rides (5 days) would be nonsense.
+        const rideDays = days.filter((d) => d.expectedCount !== null && d.expectedCount > 0);
+        const taken = rideDays.reduce((sum, d) => sum + (d.expectedCount ?? 0), 0);
+        const sold = rideDays.reduce((sum, d) => sum + d.soldCount, 0);
+        const soldLifetime = days.reduce((sum, d) => sum + d.soldCount, 0);
+        const available = Math.max(0, taken - sold);
+        setStats({ total: taken, purchased: sold, available, expired: 0 });
+        setKioskConv({ sold, taken, soldLifetime });
+
+        let attrName = parkName || 'Automat';
+        const attrRes = await invokeEdgeFunction<{ attractions: { name: string; is_active?: boolean }[] }>(
+          'external-attractions',
+          { query: { park_id: parkId } },
+        );
+        const activeAttr = (attrRes.data?.attractions || []).find((a) => a.is_active !== false);
+        if (activeAttr?.name) attrName = activeAttr.name;
+        setAttractionStats([{ name: attrName, total: taken, purchased: sold, available, expired: 0 }]);
+
+        setNotice(null);
+        setError(null);
+        setLoading(false);
+        return;
+      } catch (err) {
+        console.error('Failed to load kiosk photo stats:', err);
+        // fall through to the generic photo feed below
+      }
+    }
+
+    setKioskConv(null);
     const { data, error: invokeError } = await invokeEdgeFunction('external-photos', {
       query: { park_id: parkId || undefined },
     });
@@ -221,13 +264,32 @@ export default function Photos() {
       )}
 
       <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-        <KPICard title={t('photos.total')} value={formatNumber(stats.total)} icon={Camera} />
+        <KPICard
+          title={t('photos.total')}
+          value={formatNumber(stats.total)}
+          subtitle={kioskConv ? 'Aufnahmen seit Fahrten-Zählung (19.7.)' : undefined}
+          icon={Camera}
+        />
         {!isStaff && (
-          <KPICard title={t('photos.purchased')} value={formatNumber(stats.purchased)} icon={ShoppingBag} iconColor="text-emerald-600" iconBg="bg-emerald-100" />
+          <KPICard
+            title={t('photos.purchased')}
+            value={formatNumber(stats.purchased)}
+            subtitle={kioskConv ? `${formatNumber(kioskConv.soldLifetime)} gesamt` : undefined}
+            icon={ShoppingBag}
+            iconColor="text-emerald-600"
+            iconBg="bg-emerald-100"
+          />
         )}
         <KPICard title={t('photos.available')} value={formatNumber(stats.available)} icon={Eye} iconColor="text-amber-600" iconBg="bg-amber-100" />
         {!isStaff && (
-          <KPICard title={t('photos.conversion')} value={formatPercent(conversionRate)} icon={Clock} iconColor="text-cyan-600" iconBg="bg-cyan-100" />
+          <KPICard
+            title={t('photos.conversion')}
+            value={formatPercent(conversionRate)}
+            subtitle={kioskConv ? 'seit Fahrten-Zählung' : undefined}
+            icon={Clock}
+            iconColor="text-cyan-600"
+            iconBg="bg-cyan-100"
+          />
         )}
       </div>
 
@@ -263,6 +325,61 @@ export default function Photos() {
             </div>
           </div>
         </GlassCard>
+        )}
+
+        {!isStaff && kioskConv && kioskConv.taken > 0 && (
+          <GlassCard className="p-6">
+            <h3 className="mb-4 text-base font-semibold text-slate-800">Conversion</h3>
+            <div className="flex items-center gap-8">
+              <div className="relative h-48 w-48">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={[
+                        { name: 'Verkauft', value: kioskConv.sold },
+                        { name: 'Nicht gekauft', value: Math.max(0, kioskConv.taken - kioskConv.sold) },
+                      ]}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={58}
+                      outerRadius={80}
+                      startAngle={90}
+                      endAngle={-270}
+                      dataKey="value"
+                      strokeWidth={0}
+                    >
+                      <Cell fill="#0ea5e9" />
+                      <Cell fill="#f43f5e" />
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{ background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.08)' }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-2xl font-bold text-slate-800">{formatPercent(conversionRate)}</span>
+                  <span className="text-xs text-slate-400">verkauft</span>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-3 w-3 rounded-full" style={{ backgroundColor: '#0ea5e9' }} />
+                  <div>
+                    <p className="text-sm font-medium text-slate-700">Verkauft</p>
+                    <p className="text-xs text-slate-400">{formatNumber(kioskConv.sold)} Fotos</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="h-3 w-3 rounded-full" style={{ backgroundColor: '#f43f5e' }} />
+                  <div>
+                    <p className="text-sm font-medium text-slate-700">Fahrten ohne Kauf</p>
+                    <p className="text-xs text-slate-400">{formatNumber(Math.max(0, kioskConv.taken - kioskConv.sold))} Fotos</p>
+                  </div>
+                </div>
+                <p className="pt-1 text-xs text-slate-500">von {formatNumber(kioskConv.taken)} Fahrten gesamt</p>
+              </div>
+            </div>
+          </GlassCard>
         )}
 
         <GlassCard className="p-6">
