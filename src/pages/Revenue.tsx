@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, ComposedChart, Legend, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Camera, ChevronLeft, ChevronRight, CreditCard, Download, Gauge, Percent, Receipt, Ticket, Wallet } from 'lucide-react';
 import { getOptionalSourceWarning, invokeEdgeFunction } from '../lib/edgeFunctions';
 import {
@@ -13,12 +13,15 @@ import {
   daysAgoInTimezone,
   fetchKioskPhotosForDay,
   fetchKioskSales,
+  fetchRideSnapshots,
   getOpeningHourRangeForDate,
+  ridesByHour,
   sumDays,
   todayInTimezone,
   toChartSeries,
   type AggregatedDay,
   type KioskPurchaseRow,
+  type RideSnapshot,
 } from '../lib/kioskSales';
 import { formatCurrency, formatNumber, formatPercent, exportToCSV } from '../lib/utils';
 import GlassCard from '../components/ui/GlassCard';
@@ -77,6 +80,7 @@ export default function Revenue() {
   const [dayTab, setDayTab] = useState<'heute' | 'gestern' | 'other'>('heute');
   const [selectedDate, setSelectedDate] = useState('');
   const [dayPurchases, setDayPurchases] = useState<KioskPurchaseRow[]>([]);
+  const [daySnapshots, setDaySnapshots] = useState<RideSnapshot[]>([]);
   const [dayLoading, setDayLoading] = useState(false);
   const [dayError, setDayError] = useState<string | null>(null);
   const dateInputRef = useRef<HTMLInputElement | null>(null);
@@ -295,6 +299,16 @@ export default function Revenue() {
         setDayLoading(false);
       });
 
+    // Ride snapshots (rides-per-hour line). Optional - only populated from the
+    // day snapshot logging started, and must never block the revenue chart.
+    fetchRideSnapshots(parkId, selectedDate)
+      .then((snaps) => {
+        if (!cancelled) setDaySnapshots(snaps);
+      })
+      .catch(() => {
+        if (!cancelled) setDaySnapshots([]);
+      });
+
     return () => {
       cancelled = true;
     };
@@ -304,10 +318,12 @@ export default function Revenue() {
     () => getOpeningHourRangeForDate(kioskOpeningHours, selectedDate),
     [kioskOpeningHours, selectedDate],
   );
-  const hourlyBuckets = useMemo(
-    () => bucketPurchasesByHour(dayPurchases, kioskPriceCents ?? 0, kioskTimezone, dayHourRange),
-    [dayPurchases, kioskPriceCents, kioskTimezone, dayHourRange],
-  );
+  const hourlyBuckets = useMemo(() => {
+    const buckets = bucketPurchasesByHour(dayPurchases, kioskPriceCents ?? 0, kioskTimezone, dayHourRange);
+    const rideMap = ridesByHour(daySnapshots, kioskTimezone);
+    return buckets.map((bucket) => ({ ...bucket, rides: rideMap.get(bucket.hour) ?? 0 }));
+  }, [dayPurchases, daySnapshots, kioskPriceCents, kioskTimezone, dayHourRange]);
+  const hasRideData = useMemo(() => hourlyBuckets.some((bucket) => (bucket.rides ?? 0) > 0), [hourlyBuckets]);
   const dayTotalRevenueCents = dayPurchases.length * (kioskPriceCents ?? 0);
   const selectedDateLabel = selectedDate ? formatDateLabel(selectedDate) : '';
 
@@ -673,7 +689,7 @@ export default function Revenue() {
                     </div>
                   ) : (
                     <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={hourlyBuckets}>
+                      <ComposedChart data={hourlyBuckets}>
                         <defs>
                           <linearGradient id="kioskRevenueHourly" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="0%" stopColor="#0ea5e9" stopOpacity={0.22} />
@@ -683,11 +699,15 @@ export default function Revenue() {
                         <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#e2e8f0" />
                         <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} />
                         <YAxis
+                          yAxisId="rev"
                           axisLine={false}
                           tickLine={false}
                           tick={{ fontSize: 11, fill: '#94a3b8' }}
                           tickFormatter={(value) => `€${value}`}
                         />
+                        {/* Rides on their own hidden, auto-scaled axis so the two
+                            curves are comparable in shape, not absolute scale. */}
+                        <YAxis yAxisId="rides" orientation="right" hide domain={[0, 'auto']} />
                         <Tooltip
                           contentStyle={{
                             background: 'rgba(255,255,255,0.94)',
@@ -696,16 +716,34 @@ export default function Revenue() {
                             borderRadius: '12px',
                             boxShadow: '0 8px 32px rgba(15,23,42,0.08)',
                           }}
-                          formatter={(value) => [`€${Number(value ?? 0).toFixed(2)}`, 'Umsatz']}
+                          formatter={(value, name) =>
+                            name === 'Fahrten'
+                              ? [formatNumber(Number(value ?? 0)), 'Fahrten']
+                              : [`€${Number(value ?? 0).toFixed(2)}`, 'Umsatz']
+                          }
                         />
+                        {hasRideData && <Legend wrapperStyle={{ fontSize: 12 }} />}
                         <Area
+                          yAxisId="rev"
                           type="monotone"
                           dataKey="revenueEur"
+                          name="Umsatz"
                           stroke="#0ea5e9"
                           strokeWidth={2}
                           fill="url(#kioskRevenueHourly)"
                         />
-                      </AreaChart>
+                        {hasRideData && (
+                          <Line
+                            yAxisId="rides"
+                            type="monotone"
+                            dataKey="rides"
+                            name="Fahrten"
+                            stroke="#10b981"
+                            strokeWidth={2}
+                            dot={false}
+                          />
+                        )}
+                      </ComposedChart>
                     </ResponsiveContainer>
                   )}
                 </div>

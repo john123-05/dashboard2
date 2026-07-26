@@ -98,6 +98,41 @@ export interface HourlyBucket {
   soldCount: number;
   revenueCents: number;
   revenueEur: number;
+  rides?: number;
+}
+
+export interface RideSnapshot {
+  captured_at: string;
+  rides_today: number;
+}
+
+// The running daily ride count with timestamps for one local day. Written
+// server-side by the liftpic-status heartbeat, so no PC change is needed - but
+// only from the day snapshot logging was switched on onward.
+export async function fetchRideSnapshots(parkId: string, businessDate: string): Promise<RideSnapshot[]> {
+  const { data, error } = await invokeEdgeFunction<{ snapshots: RideSnapshot[] }>('kiosk-ride-snapshots', {
+    query: { park_id: parkId, date: businessDate },
+  });
+  if (error || !data) return [];
+  return data.snapshots ?? [];
+}
+
+// Turn cumulative ride snapshots into rides-per-hour (park-local hour) by
+// diffing consecutive readings. The first snapshot's whole count lands in its
+// hour (the rides before the first reading of the day).
+export function ridesByHour(snapshots: RideSnapshot[], timezone: string): Map<number, number> {
+  const byHour = new Map<number, number>();
+  const sorted = [...snapshots].sort((a, b) => a.captured_at.localeCompare(b.captured_at));
+  let prev = 0;
+  for (const snap of sorted) {
+    const current = Number(snap.rides_today) || 0;
+    const delta = Math.max(0, current - prev); // guard against a midnight reset
+    prev = current;
+    if (delta === 0) continue;
+    const hour = localHour(snap.captured_at, timezone);
+    byHour.set(hour, (byHour.get(hour) ?? 0) + delta);
+  }
+  return byHour;
 }
 
 function localHour(isoString: string, timezone: string): number {
