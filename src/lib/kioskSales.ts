@@ -118,14 +118,20 @@ export async function fetchRideSnapshots(parkId: string, businessDate: string): 
 }
 
 // Turn cumulative ride snapshots into rides-per-hour (park-local hour) by
-// diffing consecutive readings. The first snapshot's whole count lands in its
-// hour (the rides before the first reading of the day).
+// diffing consecutive readings. The FIRST snapshot is only a baseline (its
+// count already includes everything before logging started that day), so we
+// don't attribute it to any hour - otherwise a day where logging began
+// mid-morning would dump all earlier rides into one false spike.
 export function ridesByHour(snapshots: RideSnapshot[], timezone: string): Map<number, number> {
   const byHour = new Map<number, number>();
   const sorted = [...snapshots].sort((a, b) => a.captured_at.localeCompare(b.captured_at));
-  let prev = 0;
+  let prev: number | null = null;
   for (const snap of sorted) {
     const current = Number(snap.rides_today) || 0;
+    if (prev === null) {
+      prev = current; // baseline only - never counted as an increment
+      continue;
+    }
     const delta = Math.max(0, current - prev); // guard against a midnight reset
     prev = current;
     if (delta === 0) continue;
