@@ -9,6 +9,21 @@ import KPICard from '../components/ui/KPICard';
 import { useI18n } from '../lib/i18n';
 import { usePark } from '../contexts/ParkContext';
 
+function countryCodeToFlag(countryCode: string | null | undefined): string {
+  if (!countryCode || !/^[A-Za-z]{2}$/.test(countryCode)) return '';
+  return countryCode
+    .toUpperCase()
+    .replace(/./g, (char) => String.fromCodePoint(127397 + char.charCodeAt(0)));
+}
+
+function leadLocaleBadge(item: Record<string, unknown>): string | null {
+  const locale = typeof item.locale === 'string' ? item.locale.trim().toUpperCase() : '';
+  const countryCode = typeof item.country_code === 'string' ? item.country_code.trim().toUpperCase() : '';
+  const flag = countryCodeToFlag(countryCode);
+  const parts = [flag, locale, countryCode].filter(Boolean);
+  return parts.length > 0 ? parts.join(' ') : null;
+}
+
 export default function Leads() {
   const { t } = useI18n();
   const { parkId } = usePark();
@@ -82,14 +97,16 @@ export default function Leads() {
 
   function handleExport() {
     exportToCSV(
-      filtered.map((l) => ({
-        email: l.email as string,
-        name: (l.full_name as string) || '',
-        source: l.source as string,
-        opted_in: l.opted_in ? t('leads.opted_in') : t('leads.opted_out'),
-        park: l.park_name as string,
-        date: l.created_at as string,
-      })),
+        filtered.map((l) => ({
+          email: l.email as string,
+          name: (l.full_name as string) || '',
+          source: l.source as string,
+          opted_in: l.opted_in ? t('leads.opted_in') : t('leads.opted_out'),
+          park: l.park_name as string,
+          locale: typeof l.locale === 'string' ? l.locale : '',
+          country_code: typeof l.country_code === 'string' ? l.country_code : '',
+          date: l.created_at as string,
+        })),
       'leads-export'
     );
   }
@@ -126,9 +143,19 @@ export default function Leads() {
     {
       key: 'email',
       label: t('leads.table.email'),
-      render: (item: Record<string, unknown>) => (
-        <span className="font-medium text-slate-700">{item.email as string}</span>
-      ),
+      render: (item: Record<string, unknown>) => {
+        const localeBadge = leadLocaleBadge(item);
+        return (
+          <div className="flex flex-col gap-1">
+            <span className="font-medium text-slate-700">{item.email as string}</span>
+            {localeBadge && (
+              <span className="inline-flex w-fit rounded-full bg-sky-50 px-2 py-0.5 text-[11px] font-medium text-sky-700 ring-1 ring-sky-200">
+                {localeBadge}
+              </span>
+            )}
+          </div>
+        );
+      },
     },
     {
       key: 'full_name',
