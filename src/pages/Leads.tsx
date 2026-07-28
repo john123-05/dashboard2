@@ -24,18 +24,6 @@ type HourBucket = {
 
 type SvgViewBox = { minX: number; minY: number; width: number; height: number };
 
-const COUNTRY_COORDINATE_OVERRIDES: Record<string, { xPercent: number; yPercent: number }> = {
-  AT: { xPercent: 52.2, yPercent: 35.9 },
-  BE: { xPercent: 48.4, yPercent: 32.4 },
-  CH: { xPercent: 50.4, yPercent: 35.9 },
-  CZ: { xPercent: 53.4, yPercent: 34.1 },
-  DE: { xPercent: 50.8, yPercent: 33.1 },
-  GB: { xPercent: 46.0, yPercent: 29.3 },
-  IE: { xPercent: 43.6, yPercent: 29.9 },
-  NL: { xPercent: 49.0, yPercent: 31.3 },
-  US: { xPercent: 18.2, yPercent: 49.6 },
-};
-
 function getCountryName(countryCode: string): string {
   try {
     const displayNames = new Intl.DisplayNames(['de'], { type: 'region' });
@@ -125,13 +113,6 @@ function parseSvgViewBox(svgMarkup: string): SvgViewBox | null {
   return { minX, minY, width, height };
 }
 
-function resolveViewBoxCoordinate(viewBox: SvgViewBox, xPercent: number, yPercent: number) {
-  return {
-    x: viewBox.minX + (viewBox.width * xPercent) / 100,
-    y: viewBox.minY + (viewBox.height * yPercent) / 100,
-  };
-}
-
 function LeadWorldMap({
   svgMarkup,
   points,
@@ -184,19 +165,40 @@ function LeadWorldMap({
     }
 
     const next = points.map((point) => {
-      const manualCoordinate = COUNTRY_COORDINATE_OVERRIDES[point.countryCode];
-      if (manualCoordinate) {
-        const resolvedCoordinate = resolveViewBoxCoordinate(viewBox, manualCoordinate.xPercent, manualCoordinate.yPercent);
-        return { ...point, ...resolvedCoordinate };
-      }
-
+      const countryClass = point.countryCode.toLowerCase();
       const countryElement = svg.querySelector<SVGGraphicsElement>(`#${point.countryCode.toLowerCase()}`);
       if (!countryElement) return point;
 
       try {
-        const bbox = countryElement.getBBox();
-        const x = bbox.x + bbox.width / 2;
-        const y = bbox.y + bbox.height / 2;
+        const candidateElements = [
+          countryElement,
+          ...Array.from(countryElement.querySelectorAll<SVGGraphicsElement>(`.landxx.${countryClass}`)),
+        ];
+
+        const bestMatch = candidateElements.reduce<{
+          x: number;
+          y: number;
+          area: number;
+        } | null>((best, element) => {
+          const bbox = element.getBBox();
+          const area = bbox.width * bbox.height;
+          if (area <= 0) return best;
+
+          if (!best || area > best.area) {
+            return {
+              x: bbox.x + bbox.width / 2,
+              y: bbox.y + bbox.height / 2,
+              area,
+            };
+          }
+
+          return best;
+        }, null);
+
+        if (!bestMatch) return point;
+
+        const x = bestMatch.x;
+        const y = bestMatch.y;
         return { ...point, x, y };
       } catch {
         return point;
