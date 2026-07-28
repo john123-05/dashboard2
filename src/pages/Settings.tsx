@@ -34,6 +34,19 @@ interface StripeProduct {
   prices: StripePrice[];
 }
 
+function formatEuroInputFromCents(cents: number | null | undefined): string {
+  if (cents === null || cents === undefined || !Number.isFinite(cents)) return '';
+  return (cents / 100).toFixed(2).replace('.', ',');
+}
+
+function parseEuroInputToCents(value: string): number | null {
+  const normalized = value.replace(/\s/g, '').replace(',', '.');
+  if (!normalized) return null;
+  const amount = Number(normalized);
+  if (!Number.isFinite(amount) || amount < 0) return null;
+  return Math.round(amount * 100);
+}
+
 interface OperatorNotificationSettings {
   push_enabled: boolean;
   photo_inactivity_enabled: boolean;
@@ -55,7 +68,7 @@ const DEFAULT_OPERATOR_NOTIFICATION_SETTINGS: OperatorNotificationSettings = {
 };
 export default function Settings() {
   const { profile, currentOrg, memberships, refreshProfile } = useAuth();
-  const { parkId, parkName } = usePark();
+  const { parkId, parkName, refreshKioskState } = usePark();
   const { language, setLanguage, t } = useI18n();
   const [fullName, setFullName] = useState(profile?.full_name || '');
   const [saving, setSaving] = useState(false);
@@ -67,6 +80,9 @@ export default function Settings() {
   const [productsLoading, setProductsLoading] = useState(false);
   const [productsError, setProductsError] = useState<string | null>(null);
   const [selectedPriceIds, setSelectedPriceIds] = useState<Set<string>>(new Set());
+  const [photoPriceInput, setPhotoPriceInput] = useState('');
+  const [priceSavingMode, setPriceSavingMode] = useState<'future' | 'retroactive' | null>(null);
+  const [priceMessage, setPriceMessage] = useState<string | null>(null);
   const pushSupported = useMemo(() => isOperatorPushSupported(), []);
   const [notificationSettings, setNotificationSettings] = useState<OperatorNotificationSettings>(
     DEFAULT_OPERATOR_NOTIFICATION_SETTINGS,
@@ -187,6 +203,7 @@ export default function Settings() {
         slug: p.slug,
         location: null,
         timezone: 'UTC',
+        price_per_photo_cents: p.price_per_photo_cents ?? null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         attractions: attractionsByPark.get(p.id) || [],
@@ -201,6 +218,11 @@ export default function Settings() {
       ...patch,
     }));
   }
+
+  useEffect(() => {
+    setPhotoPriceInput(formatEuroInputFromCents(selectedPark?.price_per_photo_cents ?? null));
+    setPriceMessage(null);
+  }, [selectedPark?.id, selectedPark?.price_per_photo_cents]);
 
   async function handleSaveNotificationSettings() {
     if (!selectedPark?.id) return;
@@ -386,6 +408,44 @@ export default function Settings() {
     }
   }
 
+  async function handleSaveKioskPrice(mode: 'future' | 'retroactive') {
+    if (!selectedPark) return;
+
+    const nextPriceCents = parseEuroInputToCents(photoPriceInput);
+    if (nextPriceCents === null) {
+      setPriceMessage('Bitte einen gültigen Bildpreis eingeben, z. B. 4,50');
+      return;
+    }
+
+    setPriceSavingMode(mode);
+    setPriceMessage(null);
+
+    const { error } = await invokeEdgeFunction('update-kiosk-price', {
+      method: 'POST',
+      useSessionAuth: true,
+      body: {
+        park_id: selectedPark.id,
+        price_cents: nextPriceCents,
+        mode,
+      },
+    });
+
+    if (error) {
+      setPriceMessage(error);
+      setPriceSavingMode(null);
+      return;
+    }
+
+    await loadData();
+    refreshKioskState();
+    setPriceSavingMode(null);
+    setPriceMessage(
+      mode === 'retroactive'
+        ? 'Bildpreis gespeichert. Frühere Umsatzwerte werden jetzt ebenfalls mit dem neuen Preis gerechnet.'
+        : 'Bildpreis gespeichert. Neue Verkäufe laufen jetzt mit dem neuen Preis weiter.',
+    );
+  }
+
   const currentRole = memberships.find((m) => m.organization_id === currentOrg?.id)?.role || 'unknown';
 
   if (loading) {
@@ -477,6 +537,87 @@ export default function Settings() {
               )}
             </button>
           </form>
+        </GlassCard>
+
+        <GlassCard className="p-6 xl:col-span-2">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h3 className="text-base font-semibold text-slate-800">{t('settings.kiosk_price.title')}</h3>
+              <p className="mt-1 text-sm text-slate-500">{t('settings.kiosk_price.desc')}</p>
+            </div>
+            <div className="rounded-xl bg-white/30 px-4 py-3">
+              <p className="text-xs uppercase tracking-[0.24em] text-slate-400">{t('settings.kiosk_price.current')}</p>
+              <p className="mt-1 text-lg font-semibold text-slate-800">
+                {selectedPark?.price_per_photo_cents != null
+                  ? `${formatEuroInputFromCents(selectedPark.price_per_photo_cents)} €`
+                  : t('settings.kiosk_price.not_set')}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,280px)_1fr]">
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                {t('settings.kiosk_price.label')}
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={photoPriceInput}
+                  onChange={(e) => setPhotoPriceInput(e.target.value)}
+                  placeholder="5,00"
+                  className="glass-input pr-12"
+                />
+                <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">
+                  EUR
+                </span>
+              </div>
+            </div>
+
+            <div className="rounded-2xl bg-white/30 p-4">
+              <p className="text-sm font-medium text-slate-700">{t('settings.kiosk_price.scope')}</p>
+              <div className="mt-3 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() => void handleSaveKioskPrice('future')}
+                  disabled={!selectedPark || priceSavingMode !== null}
+                  className="glass-button-primary"
+                >
+                  {priceSavingMode === 'future' ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4" />
+                  )}
+                  {t('settings.kiosk_price.future')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleSaveKioskPrice('retroactive')}
+                  disabled={!selectedPark || priceSavingMode !== null}
+                  className="glass-button-secondary"
+                >
+                  {priceSavingMode === 'retroactive' ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4" />
+                  )}
+                  {t('settings.kiosk_price.retroactive')}
+                </button>
+              </div>
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                <div className="rounded-xl bg-slate-50 px-4 py-3">
+                  <p className="text-sm font-medium text-slate-700">{t('settings.kiosk_price.future')}</p>
+                  <p className="mt-1 text-sm text-slate-500">{t('settings.kiosk_price.future_desc')}</p>
+                </div>
+                <div className="rounded-xl bg-amber-50 px-4 py-3">
+                  <p className="text-sm font-medium text-amber-900">{t('settings.kiosk_price.retroactive')}</p>
+                  <p className="mt-1 text-sm text-amber-700">{t('settings.kiosk_price.retroactive_desc')}</p>
+                </div>
+              </div>
+              {priceMessage && <p className="mt-4 text-sm text-slate-600">{priceMessage}</p>}
+            </div>
+          </div>
         </GlassCard>
 
         <GlassCard className="p-6 xl:col-span-2">

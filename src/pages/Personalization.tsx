@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Image as ImageIcon, Upload, X, Sparkles, Loader2 } from 'lucide-react';
+import { Image as ImageIcon, Upload, X, Sparkles, Loader2, Trash2 } from 'lucide-react';
 import { invokeEdgeFunction } from '../lib/edgeFunctions';
 import { supabase } from '../lib/supabase';
 import GlassCard from '../components/ui/GlassCard';
@@ -94,6 +94,7 @@ export default function Personalization() {
   const [generating, setGenerating] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [builderSaving, setBuilderSaving] = useState(false);
+  const [deletingAssetId, setDeletingAssetId] = useState<string | null>(null);
   const [autoApplyUpload, setAutoApplyUpload] = useState(true);
   const [creatingCampaign, setCreatingCampaign] = useState(false);
   const [savingLayer, setSavingLayer] = useState(false);
@@ -140,6 +141,11 @@ export default function Personalization() {
     if (!selectedCampaign) return [];
     return [...(selectedCampaign.layers || [])].sort((a, b) => a.z_index - b.z_index);
   }, [selectedCampaign]);
+
+  const selectedAssetIds = useMemo(
+    () => new Set(selectedLayers.map((layer) => layer.asset_id)),
+    [selectedLayers]
+  );
 
   async function loadRecent() {
     setLoading(true);
@@ -465,6 +471,41 @@ export default function Personalization() {
     await loadOverlayData();
   }
 
+  async function handleDeleteAsset(asset: OverlayAssetWithPreview) {
+    setDeletingAssetId(asset.id);
+    setActionError(null);
+
+    const { error: layerError } = await supabase
+      .from('overlay_campaign_layers')
+      .delete()
+      .eq('asset_id', asset.id);
+
+    if (layerError) {
+      setActionError(layerError.message);
+      setDeletingAssetId(null);
+      return;
+    }
+
+    const { error: assetError } = await supabase
+      .from('overlay_assets')
+      .delete()
+      .eq('id', asset.id);
+
+    if (assetError) {
+      setActionError(assetError.message);
+      setDeletingAssetId(null);
+      return;
+    }
+
+    const { error: storageError } = await supabase.storage.from(asset.bucket).remove([asset.path]);
+    if (storageError) {
+      setActionError(storageError.message);
+    }
+
+    await loadOverlayData();
+    setDeletingAssetId(null);
+  }
+
   async function handleUpdateCampaignStatus(
     campaignId: string,
     status: OverlayCampaign['status']
@@ -502,81 +543,173 @@ export default function Personalization() {
         </GlassCard>
       )}
 
-      <div className="grid gap-6 xl:grid-cols-3">
-        <GlassCard className="p-6 xl:col-span-2">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-base font-semibold text-slate-800">{t('personalization.preview')}</h3>
-            <button
-              onClick={loadRecent}
-              className="glass-button-secondary"
-            >
-              {t('app.refresh')}
-            </button>
-          </div>
+      <div className="grid items-start gap-6 xl:grid-cols-3">
+        <div className="space-y-6 xl:col-span-2">
+          <GlassCard className="p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-base font-semibold text-slate-800">{t('personalization.preview')}</h3>
+              <button
+                onClick={loadRecent}
+                className="glass-button-secondary"
+              >
+                {t('app.refresh')}
+              </button>
+            </div>
 
-          <div className="relative w-full overflow-hidden rounded-2xl bg-slate-100 aspect-[4/3]">
-            {loading ? (
-              <div className="absolute inset-0 animate-pulse bg-white/40" />
-            ) : baseImage ? (
-              <img
-                src={baseImage}
-                alt="Recent"
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center text-slate-400">
-                <ImageIcon className="h-6 w-6" />
-                <span className="ml-2 text-sm">{t('personalization.no_recent_photo')}</span>
-              </div>
-            )}
-
-            {selectedLayers.map((layer) => {
-              const preview = assetById.get(layer.asset_id)?.preview_url;
-              if (!preview) return null;
-              return (
-              <img
-                key={layer.id}
-                src={preview}
-                alt="Overlay"
-                className="pointer-events-none absolute inset-0 h-full w-full"
-                style={{
-                  zIndex: layer.z_index,
-                  opacity: layer.opacity,
-                  mixBlendMode: layer.blend_mode,
-                  objectFit: layer.fit === 'fill' ? 'fill' : layer.fit,
-                  objectPosition: anchorToObjectPosition(layer.anchor),
-                  transform: `scale(${layer.scale})`,
-                }}
-              />
-            )})}
-
-            {message && (
-              <div className="absolute bottom-4 left-4 rounded-xl bg-black/50 px-3 py-2 text-sm text-white">
-                {message}
-              </div>
-            )}
-
-            {generating && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                <div className="flex flex-col items-center gap-4 rounded-2xl bg-white/80 px-6 py-5 shadow-lg backdrop-blur">
-                  <video
-                    src="https://xcrxltiiovpoladpaewd.supabase.co/storage/v1/object/public/test/_users_a6264f06-7d84-48b9-81d1-6a9e29e69b37_generated_c9f8234e-91e9-4185-b15c-f2e2ffe43415_generated_video.mov"
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    className="h-24 w-24 rounded-xl object-cover"
+            <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_240px]">
+              <div className="relative w-full overflow-hidden rounded-2xl bg-slate-100 aspect-[4/3] xl:aspect-[16/10]">
+                {loading ? (
+                  <div className="absolute inset-0 animate-pulse bg-white/40" />
+                ) : baseImage ? (
+                  <img
+                    src={baseImage}
+                    alt="Recent"
+                    className="h-full w-full object-cover"
                   />
-                  <div className="text-sm font-semibold text-slate-700">
-                    <span className="inline-block overflow-hidden whitespace-nowrap border-r-2 border-slate-500 pr-1 animate-[typing_2.4s_steps(12)_infinite]">
-                      Generating...
-                    </span>
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-slate-400">
+                    <ImageIcon className="h-6 w-6" />
+                    <span className="ml-2 text-sm">{t('personalization.no_recent_photo')}</span>
                   </div>
-                </div>
+                )}
+
+                {selectedLayers.map((layer) => {
+                  const preview = assetById.get(layer.asset_id)?.preview_url;
+                  if (!preview) return null;
+                  return (
+                    <img
+                      key={layer.id}
+                      src={preview}
+                      alt="Overlay"
+                      className="pointer-events-none absolute inset-0 h-full w-full"
+                      style={{
+                        zIndex: layer.z_index,
+                        opacity: layer.opacity,
+                        mixBlendMode: layer.blend_mode,
+                        objectFit: layer.fit === 'fill' ? 'fill' : layer.fit,
+                        objectPosition: anchorToObjectPosition(layer.anchor),
+                        transform: `scale(${layer.scale})`,
+                      }}
+                    />
+                  );
+                })}
+
+                {message && (
+                  <div className="absolute bottom-4 left-4 rounded-xl bg-black/50 px-3 py-2 text-sm text-white">
+                    {message}
+                  </div>
+                )}
+
+                {generating && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                    <div className="flex flex-col items-center gap-4 rounded-2xl bg-white/80 px-6 py-5 shadow-lg backdrop-blur">
+                      <video
+                        src="https://xcrxltiiovpoladpaewd.supabase.co/storage/v1/object/public/test/_users_a6264f06-7d84-48b9-81d1-6a9e29e69b37_generated_c9f8234e-91e9-4185-b15c-f2e2ffe43415_generated_video.mov"
+                        autoPlay
+                        loop
+                        muted
+                        playsInline
+                        className="h-24 w-24 rounded-xl object-cover"
+                      />
+                      <div className="text-sm font-semibold text-slate-700">
+                        <span className="inline-block overflow-hidden whitespace-nowrap border-r-2 border-slate-500 pr-1 animate-[typing_2.4s_steps(12)_infinite]">
+                          Generating...
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        </GlassCard>
+
+              <div className="rounded-2xl bg-white/30 p-4">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div>
+                    <h4 className="text-sm font-semibold text-slate-800">Gespeicherte Overlays</h4>
+                    <p className="text-xs text-slate-500">Direkt sichtbar nach dem Speichern.</p>
+                  </div>
+                  <span className="rounded-full bg-white/60 px-2.5 py-1 text-xs font-medium text-slate-600">
+                    {assets.length}
+                  </span>
+                </div>
+
+                {assets.length > 0 ? (
+                  <div className="flex gap-3 overflow-x-auto pb-2 xl:grid xl:max-h-[28rem] xl:grid-cols-1 xl:overflow-y-auto xl:overflow-x-hidden xl:pb-0">
+                    {assets.map((asset) => {
+                      const isDeleting = deletingAssetId === asset.id;
+                      const isActive = selectedAssetIds.has(asset.id);
+
+                      return (
+                        <div
+                          key={asset.id}
+                          className="w-40 shrink-0 rounded-2xl border border-white/40 bg-white/70 p-3 shadow-sm xl:w-auto"
+                        >
+                          <div className="mb-2 flex items-start justify-between gap-2">
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                                isActive
+                                  ? 'bg-brand-100 text-brand-700'
+                                  : 'bg-slate-100 text-slate-500'
+                              }`}
+                            >
+                              {isActive ? 'Aktiv' : 'Overlay'}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => void handleDeleteAsset(asset)}
+                              disabled={isDeleting}
+                              className="rounded-full p-1 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-50"
+                              aria-label={`Delete ${pathBasename(asset.path)}`}
+                            >
+                              {isDeleting ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-3.5 w-3.5" />
+                              )}
+                            </button>
+                          </div>
+
+                          <div className="flex h-24 items-center justify-center overflow-hidden rounded-xl bg-slate-100">
+                            {asset.preview_url ? (
+                              <img
+                                src={asset.preview_url}
+                                alt={pathBasename(asset.path)}
+                                className="h-full w-full object-contain"
+                              />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center text-slate-300">
+                                <ImageIcon className="h-5 w-5" />
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="mt-2 space-y-1">
+                            <p className="truncate text-sm font-medium text-slate-700">
+                              {pathBasename(asset.path)}
+                            </p>
+                            <p className="text-xs text-slate-400">
+                              {asset.width && asset.height ? `${asset.width}x${asset.height}` : 'Groesse unbekannt'}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-400">Noch keine Overlays gespeichert.</p>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-6 border-t border-white/30 pt-6">
+              <h3 className="mb-1 text-base font-semibold text-slate-800">Overlay-Builder</h3>
+              <p className="mb-4 text-sm text-slate-500">
+                Baue dir ein Overlay zusammen: Format wählen, Logo/Bild und Texte hinzufügen, per Drag &amp; Drop
+                anordnen und als Overlay speichern. Es erscheint danach direkt oben in der Galerie.
+              </p>
+              <OverlayBuilder onSave={handleBuilderSave} saving={builderSaving} previewUrl={baseImage} />
+            </div>
+          </GlassCard>
+        </div>
 
         <div className="space-y-6">
           <GlassCard className="p-6">
@@ -614,32 +747,8 @@ export default function Personalization() {
                 </span>
               </label>
 
-              <div className="space-y-2">
-                {assets.map((asset) => (
-                  <div
-                    key={asset.id}
-                    className="flex items-center justify-between rounded-xl bg-white/30 px-3 py-2"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm text-slate-700">{pathBasename(asset.path)}</p>
-                      <p className="text-xs text-slate-400">
-                        {asset.width && asset.height ? `${asset.width}x${asset.height}` : 'Unknown size'}
-                      </p>
-                    </div>
-                    {asset.preview_url ? (
-                      <img
-                        src={asset.preview_url}
-                        alt={pathBasename(asset.path)}
-                        className="h-10 w-10 rounded-lg border border-white/40 object-contain bg-white/60"
-                      />
-                    ) : (
-                      <div className="h-10 w-10 rounded-lg border border-white/30 bg-white/20" />
-                    )}
-                  </div>
-                ))}
-                {assets.length === 0 && (
-                  <p className="text-sm text-slate-400">{t('app.none')}</p>
-                )}
+              <div className="rounded-xl border border-dashed border-white/40 bg-white/20 px-3 py-3 text-sm text-slate-500">
+                Neue Uploads und Builder-Overlays erscheinen direkt links in der Galerie neben der Vorschau.
               </div>
             </div>
           </GlassCard>
@@ -940,14 +1049,6 @@ export default function Personalization() {
         </div>
       </div>
 
-      <GlassCard className="p-6">
-        <h3 className="mb-1 text-base font-semibold text-slate-800">Overlay-Builder</h3>
-        <p className="mb-4 text-sm text-slate-500">
-          Baue dir ein Overlay zusammen: Format wählen, Logo/Bild und Texte hinzufügen, per Drag &amp; Drop anordnen
-          und als Overlay speichern. Es erscheint danach oben in der Overlay-Liste zum Anwenden.
-        </p>
-        <OverlayBuilder onSave={handleBuilderSave} saving={builderSaving} previewUrl={baseImage} />
-      </GlassCard>
     </div>
   );
 }
