@@ -1,5 +1,6 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Camera, ShoppingBag, Eye, Clock, RefreshCw, Search, CalendarClock, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { getOptionalSourceWarning, invokeEdgeFunction, isEdgeSourceUnavailable } from '../lib/edgeFunctions';
 import { formatNumber, formatPercent, formatRelative, formatDateTime } from '../lib/utils';
@@ -56,6 +57,7 @@ export default function Photos() {
   const [dateTimeQuery, setDateTimeQuery] = useState(() => toLocalInput(new Date()));
   const [selectedPhoto, setSelectedPhoto] = useState<BrowsablePhoto | null>(null);
   const [copiedLink, setCopiedLink] = useState<'claim' | 'image' | null>(null);
+  const selectedPhotoCardRef = useRef<HTMLDivElement | null>(null);
 
   async function copyLink(kind: 'claim' | 'image', url: string) {
     try {
@@ -120,6 +122,16 @@ export default function Photos() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [parkId]);
 
+  useEffect(() => {
+    if (!selectedPhoto || typeof window === 'undefined') return;
+    if (!window.matchMedia('(max-width: 1023px)').matches) return;
+
+    selectedPhotoCardRef.current?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    });
+  }, [selectedPhoto]);
+
   const todayStr = isKioskPark ? todayInTimezone(kioskTimezone) : '';
   const selectedDateLabel = selectedDate
     ? new Intl.DateTimeFormat('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' }).format(
@@ -179,6 +191,92 @@ export default function Photos() {
   function handleRefreshBrowse() {
     setSelectedPhoto(null);
     runBrowse(activeSearch);
+  }
+
+  function renderSelectedPhotoCard() {
+    if (!selectedPhoto) {
+      return (
+        <div className="flex h-full min-h-[220px] items-center justify-center rounded-xl bg-white/20 p-6 text-center text-sm text-slate-400">
+          Foto auswählen, um es hier groß anzuzeigen.
+        </div>
+      );
+    }
+
+    const claimLink = claimLinkFor(parkId, selectedPhoto.externalCode);
+    const imageLink = selectedPhoto.imageUrl;
+
+    return (
+      <div ref={selectedPhotoCardRef} className="rounded-xl bg-white/30 p-3 sm:p-4">
+        {selectedPhoto.imageUrl && (
+          <img
+            src={selectedPhoto.imageUrl}
+            alt="Ausgewähltes Foto"
+            className="w-full rounded-lg object-cover"
+          />
+        )}
+        <p className="mt-3 text-center text-sm font-semibold text-slate-800">
+          {selectedPhoto.externalCode || selectedPhoto.id}
+        </p>
+        <p className="mt-1 text-center text-xs text-slate-500">{formatDateTime(selectedPhoto.capturedAt)}</p>
+        {selectedPhoto.speedKmh !== null && (
+          <p className="mt-1 text-center text-xs font-medium text-sky-600">
+            {selectedPhoto.speedKmh.toFixed(1)} km/h
+          </p>
+        )}
+
+        <div className="mt-4 space-y-2">
+          {claimLink && (
+            <button
+              onClick={() => copyLink('claim', claimLink)}
+              className="glass-button-primary flex w-full items-center justify-center gap-1.5 text-sm"
+            >
+              {copiedLink === 'claim' ? 'Kopiert!' : 'Claim-Link kopieren'}
+            </button>
+          )}
+          {imageLink && (
+            <button
+              onClick={() => copyLink('image', imageLink)}
+              className="glass-button-secondary flex w-full items-center justify-center gap-1.5 text-sm"
+            >
+              {copiedLink === 'image' ? 'Kopiert!' : 'Bild-Link kopieren'}
+            </button>
+          )}
+        </div>
+
+        {claimLink && (
+          <div className="mt-4 rounded-2xl border border-slate-200/70 bg-white/70 p-3 sm:p-4">
+            <div className="flex flex-col items-center gap-3">
+              <div className="rounded-2xl bg-white p-3 shadow-sm">
+                <QRCodeSVG
+                  value={claimLink}
+                  size={168}
+                  bgColor="#ffffff"
+                  fgColor="#0f172a"
+                  includeMargin
+                  level="M"
+                />
+              </div>
+              <div className="space-y-1 text-center">
+                <p className="text-sm font-semibold text-slate-800">QR-Code für dieses Foto</p>
+                <p className="text-xs leading-relaxed text-slate-500">
+                  Der Gast scannt den Code und landet direkt auf der passenden Claim-Seite mit dem korrekten Bildcode.
+                </p>
+                {selectedPhoto.externalCode && (
+                  <p className="text-[11px] font-medium uppercase tracking-[0.24em] text-slate-400">
+                    Code {selectedPhoto.externalCode}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        <p className="mt-3 text-center text-[11px] leading-relaxed text-slate-400">
+          Claim-Link: der Kunde öffnet ihn und holt sein Foto per E-Mail, auch wenn der gedruckte QR vorher nicht
+          funktioniert hat. Bild-Link: direkter Download.
+        </p>
+      </div>
+    );
   }
 
   async function loadData() {
@@ -636,7 +734,7 @@ export default function Photos() {
         )}
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4">
+          <div className="order-2 grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4 lg:order-1">
             {!browseLoading && browsePhotos.length === 0 && (
               <div className="col-span-full rounded-xl bg-white/30 p-6 text-center text-sm text-slate-500">
                 Keine Fotos gefunden.
@@ -680,59 +778,8 @@ export default function Photos() {
             ))}
           </div>
 
-          <div className="lg:sticky lg:top-6 lg:self-start">
-            {selectedPhoto ? (
-              <div className="rounded-xl bg-white/30 p-3">
-                {selectedPhoto.imageUrl && (
-                  <img
-                    src={selectedPhoto.imageUrl}
-                    alt="Ausgewähltes Foto"
-                    className="w-full rounded-lg object-cover"
-                  />
-                )}
-                <p className="mt-3 text-center text-sm font-semibold text-slate-800">
-                  {selectedPhoto.externalCode || selectedPhoto.id}
-                </p>
-                <p className="mt-1 text-center text-xs text-slate-500">{formatDateTime(selectedPhoto.capturedAt)}</p>
-                {selectedPhoto.speedKmh !== null && (
-                  <p className="mt-1 text-center text-xs font-medium text-sky-600">
-                    {selectedPhoto.speedKmh.toFixed(1)} km/h
-                  </p>
-                )}
-                {(() => {
-                  const claimLink = claimLinkFor(parkId, selectedPhoto.externalCode);
-                  const imageLink = selectedPhoto.imageUrl;
-                  return (
-                    <div className="mt-4 space-y-2">
-                      {claimLink && (
-                        <button
-                          onClick={() => copyLink('claim', claimLink)}
-                          className="glass-button-primary flex w-full items-center justify-center gap-1.5 text-sm"
-                        >
-                          {copiedLink === 'claim' ? 'Kopiert!' : 'Claim-Link kopieren'}
-                        </button>
-                      )}
-                      {imageLink && (
-                        <button
-                          onClick={() => copyLink('image', imageLink)}
-                          className="glass-button-secondary flex w-full items-center justify-center gap-1.5 text-sm"
-                        >
-                          {copiedLink === 'image' ? 'Kopiert!' : 'Bild-Link kopieren'}
-                        </button>
-                      )}
-                      <p className="text-center text-[11px] leading-relaxed text-slate-400">
-                        Claim-Link: der Kunde öffnet ihn und holt sein Foto per E-Mail (auch wenn der gedruckte QR
-                        falsch war). Bild-Link: direkter Download.
-                      </p>
-                    </div>
-                  );
-                })()}
-              </div>
-            ) : (
-              <div className="flex h-full min-h-[220px] items-center justify-center rounded-xl bg-white/20 p-6 text-center text-sm text-slate-400">
-                Foto auswählen, um es hier groß anzuzeigen.
-              </div>
-            )}
+          <div className="order-1 lg:order-2 lg:sticky lg:top-6 lg:self-start">
+            {renderSelectedPhotoCard()}
           </div>
         </div>
       </GlassCard>
