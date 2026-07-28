@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Download, Mail, UserPlus, Filter } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Download, Mail, Trash2, UserPlus } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { getOptionalSourceWarning, invokeEdgeFunction, isEdgeSourceUnavailable } from '../lib/edgeFunctions';
 import { formatDate, formatNumber, exportToCSV } from '../lib/utils';
@@ -31,9 +31,12 @@ export default function Leads() {
   const [sourceData, setSourceData] = useState<{ source: string; count: number }[]>([]);
   const [stats, setStats] = useState({ total: 0, optedIn: 0 });
   const [filterOptIn, setFilterOptIn] = useState<boolean | null>(null);
+  const [countryFilter, setCountryFilter] = useState('all');
+  const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -90,10 +93,73 @@ export default function Leads() {
 
     setError(null);
     setNotice(null);
+    setSelectedLeadIds([]);
     setLoading(false);
   }
 
-  const filtered = filterOptIn === null ? leads : leads.filter((l) => l.opted_in === filterOptIn);
+  const filtered = leads.filter((lead) => {
+    if (filterOptIn !== null && lead.opted_in !== filterOptIn) return false;
+    if (countryFilter !== 'all') {
+      const rowCountry = typeof lead.country_code === 'string' ? lead.country_code.trim().toUpperCase() : '';
+      if (rowCountry !== countryFilter) return false;
+    }
+    return true;
+  });
+
+  const countryOptions = useMemo(() => {
+    return [...new Set(
+      leads
+        .map((lead) => (typeof lead.country_code === 'string' ? lead.country_code.trim().toUpperCase() : ''))
+        .filter(Boolean),
+    )].sort((a, b) => a.localeCompare(b));
+  }, [leads]);
+
+  function isDeletableLead(lead: Record<string, unknown>) {
+    return lead.source === 'photo_claim' && typeof lead.id === 'string' && lead.id.length > 0;
+  }
+
+  function toggleLeadSelection(leadId: string) {
+    setSelectedLeadIds((current) =>
+      current.includes(leadId) ? current.filter((id) => id !== leadId) : [...current, leadId],
+    );
+  }
+
+  function toggleVisibleSelection() {
+    const visibleIds = filtered
+      .filter(isDeletableLead)
+      .map((lead) => String(lead.id));
+    const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedLeadIds.includes(id));
+    setSelectedLeadIds((current) => {
+      if (allVisibleSelected) return current.filter((id) => !visibleIds.includes(id));
+      return [...new Set([...current, ...visibleIds])];
+    });
+  }
+
+  async function deleteLeadIds(ids: string[]) {
+    if (!parkId || ids.length === 0) return;
+    const plural = ids.length > 1;
+    if (!confirm(plural ? `${ids.length} E-Mail-Leads wirklich löschen?` : 'Diesen E-Mail-Lead wirklich löschen?')) {
+      return;
+    }
+
+    setDeleting(true);
+    const { data, error: deleteError } = await invokeEdgeFunction<{ deletedIds?: string[] }>('external-leads', {
+      method: 'DELETE',
+      body: { park_id: parkId, ids },
+      useSessionAuth: true,
+    });
+
+    if (deleteError) {
+      setError(deleteError);
+      setDeleting(false);
+      return;
+    }
+
+    const deletedIds = Array.isArray(data?.deletedIds) ? data.deletedIds : ids;
+    setLeads((current) => current.filter((lead) => !deletedIds.includes(String(lead.id ?? ''))));
+    setSelectedLeadIds((current) => current.filter((id) => !deletedIds.includes(id)));
+    setDeleting(false);
+  }
 
   function handleExport() {
     exportToCSV(
@@ -140,6 +206,32 @@ export default function Leads() {
   }
 
   const columns = [
+    {
+      key: 'select',
+      label: (
+        <input
+          type="checkbox"
+          checked={filtered.filter(isDeletableLead).length > 0 && filtered.filter(isDeletableLead).every((lead) => selectedLeadIds.includes(String(lead.id)))}
+          onChange={toggleVisibleSelection}
+          className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
+          aria-label="Alle sichtbaren Leads auswählen"
+        />
+      ),
+      className: 'w-12',
+      render: (item: Record<string, unknown>) => {
+        if (!isDeletableLead(item)) return null;
+        const leadId = String(item.id);
+        return (
+          <input
+            type="checkbox"
+            checked={selectedLeadIds.includes(leadId)}
+            onChange={() => toggleLeadSelection(leadId)}
+            className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
+            aria-label={`Lead ${item.email as string} auswählen`}
+          />
+        );
+      },
+    },
     {
       key: 'email',
       label: t('leads.table.email'),
@@ -199,6 +291,26 @@ export default function Leads() {
         <span className="text-slate-500">{formatDate(item.created_at as string)}</span>
       ),
     },
+    {
+      key: 'actions',
+      label: '',
+      className: 'w-14 text-right',
+      render: (item: Record<string, unknown>) => {
+        if (!isDeletableLead(item)) return null;
+        return (
+          <button
+            type="button"
+            onClick={() => deleteLeadIds([String(item.id)])}
+            disabled={deleting}
+            className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-40"
+            title="Lead löschen"
+            aria-label={`Lead ${item.email as string} löschen`}
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        );
+      },
+    },
   ];
 
   return (
@@ -251,11 +363,10 @@ export default function Leads() {
         columns={columns}
         title={t('leads.title')}
         searchable
-        searchKeys={['email', 'full_name', 'source', 'park_name']}
+        searchKeys={['email', 'full_name', 'source', 'park_name', 'country_code', 'locale']}
         pageSize={10}
         actions={
           <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-slate-400" />
             <select
               value={filterOptIn === null ? 'all' : filterOptIn ? 'yes' : 'no'}
               onChange={(e) => {
@@ -268,6 +379,29 @@ export default function Leads() {
               <option value="yes">{t('leads.opted_in')}</option>
               <option value="no">{t('leads.opted_out')}</option>
             </select>
+            <select
+              value={countryFilter}
+              onChange={(e) => setCountryFilter(e.target.value)}
+              className="rounded-lg border border-slate-200/60 bg-white/60 px-3 py-1.5 text-sm text-slate-700"
+            >
+              <option value="all">Alle Länder</option>
+              {countryOptions.map((countryCode) => (
+                <option key={countryCode} value={countryCode}>
+                  {countryCodeToFlag(countryCode)} {countryCode}
+                </option>
+              ))}
+            </select>
+            {selectedLeadIds.length > 0 && (
+              <button
+                type="button"
+                onClick={() => deleteLeadIds(selectedLeadIds)}
+                disabled={deleting}
+                className="inline-flex items-center gap-2 rounded-lg border border-rose-200 bg-white/80 px-3 py-1.5 text-sm font-medium text-rose-600 transition-colors hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Trash2 className="h-4 w-4" />
+                {selectedLeadIds.length} löschen
+              </button>
+            )}
           </div>
         }
       />
