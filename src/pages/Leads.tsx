@@ -22,48 +22,16 @@ type HourBucket = {
   label: string;
 };
 
-const COUNTRY_COORDINATES: Record<string, { x: number; y: number }> = {
-  AR: { x: 32, y: 75 },
-  AT: { x: 52, y: 34 },
-  AU: { x: 85, y: 74 },
-  BE: { x: 48, y: 31 },
-  BG: { x: 56, y: 38 },
-  BR: { x: 30, y: 63 },
-  CA: { x: 20, y: 24 },
-  CH: { x: 50, y: 34 },
-  CN: { x: 74, y: 38 },
-  CZ: { x: 53, y: 32 },
-  DE: { x: 51, y: 30 },
-  DK: { x: 50, y: 27 },
-  EE: { x: 56, y: 23 },
-  ES: { x: 46, y: 40 },
-  FI: { x: 56, y: 18 },
-  FR: { x: 47, y: 33 },
-  GB: { x: 46, y: 24 },
-  GR: { x: 56, y: 42 },
-  HR: { x: 54, y: 37 },
-  HU: { x: 54, y: 35 },
-  IE: { x: 43, y: 25 },
-  IN: { x: 69, y: 49 },
-  IT: { x: 52, y: 38 },
-  JP: { x: 82, y: 35 },
-  KR: { x: 79, y: 34 },
-  LT: { x: 55, y: 25 },
-  LU: { x: 48, y: 30 },
-  LV: { x: 55, y: 24 },
-  MX: { x: 16, y: 42 },
-  NL: { x: 48, y: 29 },
-  NO: { x: 50, y: 19 },
-  NZ: { x: 91, y: 81 },
-  PL: { x: 55, y: 30 },
-  PT: { x: 43, y: 40 },
-  RO: { x: 57, y: 36 },
-  SE: { x: 53, y: 21 },
-  SI: { x: 53, y: 35 },
-  SK: { x: 55, y: 33 },
-  TR: { x: 61, y: 39 },
-  US: { x: 18, y: 33 },
-  ZA: { x: 56, y: 78 },
+const COUNTRY_COORDINATE_OVERRIDES: Record<string, { x: number; y: number }> = {
+  AT: { x: 52.8, y: 35.2 },
+  BE: { x: 48.8, y: 31.9 },
+  CH: { x: 50.3, y: 35.2 },
+  CZ: { x: 53.5, y: 33.8 },
+  DE: { x: 51.2, y: 32.1 },
+  GB: { x: 46.2, y: 28.2 },
+  IE: { x: 43.4, y: 29.6 },
+  NL: { x: 49.0, y: 31.0 },
+  US: { x: 14.8, y: 48.0 },
 };
 
 function getCountryName(countryCode: string): string {
@@ -133,6 +101,8 @@ function buildWorldMapMarkup(svgSource: string, points: CountryStat[], selectedC
       .landxx{fill:#e8eef7 !important;stroke:#c5d2e3 !important;stroke-width:1.6 !important;}
       .coastxx{fill:#e8eef7 !important;stroke:#c5d2e3 !important;stroke-width:1.6 !important;}
       .circlexx{opacity:0 !important;}
+      .oceanxx{fill:transparent !important;stroke:transparent !important;stroke-width:0 !important;}
+      .limitxx,.unxx,.antxx{stroke:#c5d2e3 !important;}
       path{vector-effect:non-scaling-stroke;}
       ${countryStyles}
     </style>
@@ -143,6 +113,14 @@ function buildWorldMapMarkup(svgSource: string, points: CountryStat[], selectedC
     .replace(/width="[^"]*"/, '')
     .replace(/height="[^"]*"/, '')
     .replace('>', `>${styleBlock}`);
+}
+
+function parseSvgViewBox(svgMarkup: string): { minX: number; minY: number; width: number; height: number } | null {
+  const match = svgMarkup.match(/viewBox="([^"]+)"/i);
+  if (!match) return null;
+  const [minX, minY, width, height] = match[1].split(/[\s,]+/).map(Number);
+  if ([minX, minY, width, height].some((value) => Number.isNaN(value))) return null;
+  return { minX, minY, width, height };
 }
 
 function LeadWorldMap({
@@ -178,11 +156,44 @@ function LeadWorldMap({
   onOffsetChange?: (next: { x: number; y: number }) => void;
   compact?: boolean;
 }) {
-  const visiblePoints = points.filter((point) => point.x !== null && point.y !== null);
-  const maxCount = Math.max(...visiblePoints.map((point) => point.count), 1);
   const mapRef = useRef<HTMLDivElement | null>(null);
   const dragStateRef = useRef<{ startX: number; startY: number; originX: number; originY: number } | null>(null);
+  const viewBox = useMemo(() => parseSvgViewBox(svgMarkup), [svgMarkup]);
+  const [resolvedPoints, setResolvedPoints] = useState(points);
   const effectiveScale = zoom;
+
+  useEffect(() => {
+    if (!mapRef.current || !viewBox) {
+      setResolvedPoints(points);
+      return;
+    }
+
+    const svg = mapRef.current.querySelector('svg');
+    if (!svg) {
+      setResolvedPoints(points);
+      return;
+    }
+
+    const next = points.map((point) => {
+      if (point.x !== null && point.y !== null) return point;
+      const countryElement = svg.querySelector<SVGGraphicsElement>(`#${point.countryCode.toLowerCase()}`);
+      if (!countryElement) return point;
+
+      try {
+        const bbox = countryElement.getBBox();
+        const x = ((bbox.x + bbox.width / 2 - viewBox.minX) / viewBox.width) * 100;
+        const y = ((bbox.y + bbox.height / 2 - viewBox.minY) / viewBox.height) * 100;
+        return { ...point, x, y };
+      } catch {
+        return point;
+      }
+    });
+
+    setResolvedPoints(next);
+  }, [points, svgMarkup, viewBox]);
+
+  const visiblePoints = resolvedPoints.filter((point) => point.x !== null && point.y !== null);
+  const maxCount = Math.max(...visiblePoints.map((point) => point.count), 1);
 
   function getCountryFromEventTarget(target: EventTarget | null): string | null {
     if (!(target instanceof Element)) return null;
@@ -280,7 +291,7 @@ function LeadWorldMap({
       />
       {visiblePoints.map((point) => {
         const isSelected = point.countryCode === selectedCountry || point.countryCode === hoveredCountry;
-        const radius = compact ? 5 + (point.count / maxCount) * 5 : 7 + (point.count / maxCount) * 7;
+        const radius = compact ? 2.8 + (point.count / maxCount) * 2.8 : 4 + (point.count / maxCount) * 5.8;
         return (
           <button
             key={point.countryCode}
@@ -461,8 +472,8 @@ export default function Leads() {
         countryCode,
         countryName: getCountryName(countryCode),
         count,
-        x: COUNTRY_COORDINATES[countryCode]?.x ?? null,
-        y: COUNTRY_COORDINATES[countryCode]?.y ?? null,
+        x: COUNTRY_COORDINATE_OVERRIDES[countryCode]?.x ?? null,
+        y: COUNTRY_COORDINATE_OVERRIDES[countryCode]?.y ?? null,
       }))
       .sort((a, b) => b.count - a.count || a.countryName.localeCompare(b.countryName));
   }, [leads]);
@@ -877,11 +888,11 @@ export default function Leads() {
                 zoom={detailMapZoom}
                 offset={detailMapOffset}
                 onOffsetChange={setDetailMapOffset}
-                onZoomIn={() => setDetailMapZoom((current) => Math.min(current + 0.2, 2.4))}
+                onZoomIn={() => setDetailMapZoom((current) => Math.min(current * 1.35, 6))}
                 onZoomOut={() =>
                   setDetailMapZoom((current) => {
-                    const next = Math.max(current - 0.2, 1);
-                    if (next === 1) setDetailMapOffset({ x: 0, y: 0 });
+                    const next = Math.max(current / 1.35, 0.6);
+                    if (next <= 1) setDetailMapOffset({ x: 0, y: 0 });
                     return next;
                   })
                 }
