@@ -299,7 +299,7 @@ export default function Leads() {
         <span className="text-slate-500">{formatDate(item.created_at as string)}</span>
       ),
     },
-    ...(selectionMode ? [{
+    {
       key: 'actions',
       label: '',
       className: 'w-14 text-right',
@@ -318,7 +318,7 @@ export default function Leads() {
           </button>
         );
       },
-    }] : []),
+    },
   ];
 
   return (
