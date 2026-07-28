@@ -264,8 +264,8 @@ export default function OverlayBuilder({
   );
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
-      <div>
+    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_280px]">
+      <div className="min-w-0">
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <select value={formatId} onChange={(e) => setFormatId(e.target.value)} className="glass-input w-full text-sm sm:w-auto">
             {FORMATS.map((f) => (
@@ -294,8 +294,11 @@ export default function OverlayBuilder({
           ))}
         </div>
 
-        <div ref={previewShellRef} className="w-full overflow-hidden">
-          <div style={{ height: scaledHeight }} className="relative w-full overflow-hidden rounded-xl">
+        <div ref={previewShellRef} className="w-full overflow-x-auto pb-2">
+          <div
+            style={{ height: scaledHeight, minWidth: Math.max(280, DISPLAY_W * Math.min(canvasScale, 1)) }}
+            className="relative w-full min-w-[280px] overflow-visible rounded-xl"
+          >
             <div
               className="relative select-none overflow-hidden rounded-xl shadow-inner"
               style={{
@@ -328,12 +331,12 @@ export default function OverlayBuilder({
         <p className="mt-2 text-xs text-slate-400">Element anklicken, ziehen zum Verschieben, am orangen Punkt skalieren. Karierter Bereich = transparent.</p>
       </div>
 
-      <div className="space-y-3">
+      <div className="min-w-0 space-y-3">
         {selected ? (
           <div className="space-y-3 rounded-xl bg-white/40 p-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm font-semibold text-slate-800">Element</p>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <button onClick={bringForward} className="text-xs text-slate-500 hover:text-slate-800">Nach vorne</button>
                 <button onClick={deleteSel} className="flex items-center gap-1 text-xs text-rose-600"><Trash2 className="h-3.5 w-3.5" />Löschen</button>
               </div>

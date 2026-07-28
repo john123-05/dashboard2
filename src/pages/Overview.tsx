@@ -109,6 +109,7 @@ export default function Overview() {
   const [error, setError] = useState<string | null>(null);
   const [issues, setIssues] = useState<string[]>([]);
   const [dismissedActivityIds, setDismissedActivityIds] = useState<string[]>([]);
+  const [dismissedActivityLoaded, setDismissedActivityLoaded] = useState(false);
 
   useEffect(() => {
     if (kioskCheckLoading) return;
@@ -119,6 +120,7 @@ export default function Overview() {
   useEffect(() => {
     if (!parkId) {
       setDismissedActivityIds([]);
+      setDismissedActivityLoaded(true);
       return;
     }
 
@@ -127,16 +129,18 @@ export default function Overview() {
       setDismissedActivityIds(stored ? JSON.parse(stored) : []);
     } catch {
       setDismissedActivityIds([]);
+    } finally {
+      setDismissedActivityLoaded(true);
     }
   }, [parkId]);
 
   useEffect(() => {
-    if (!parkId) return;
+    if (!parkId || !dismissedActivityLoaded) return;
     localStorage.setItem(
       `overview-dismissed-activity:${parkId}`,
       JSON.stringify(dismissedActivityIds),
     );
-  }, [dismissedActivityIds, parkId]);
+  }, [dismissedActivityIds, dismissedActivityLoaded, parkId]);
 
   async function loadData() {
     if (!parkId) {
@@ -481,7 +485,7 @@ export default function Overview() {
     return (
       <div className="space-y-6">
         <div className="h-8 w-56 animate-pulse rounded-lg bg-white/40" />
-        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 sm:gap-6 xl:grid-cols-4">
           {[...Array(4)].map((_, index) => (
             <div key={index} className="h-32 animate-pulse rounded-2xl bg-white/30" />
           ))}
@@ -683,7 +687,7 @@ export default function Overview() {
       )}
 
       {isKioskPark && kioskKpis && (
-        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-6">
+        <div className="grid grid-cols-2 gap-4 sm:gap-6 xl:grid-cols-6">
           <KPICard
             title="Umsatz heute"
             value={formatCurrency(kioskKpis.today.revenueCents, 'eur')}
@@ -734,7 +738,7 @@ export default function Overview() {
       )}
 
       {!isKioskPark && (
-      <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-6">
+      <div className="grid grid-cols-2 gap-4 sm:gap-6 xl:grid-cols-6">
         {parkData.features.stripe && (
           <KPICard
             title="Online Revenue"
@@ -793,13 +797,13 @@ export default function Overview() {
       </div>
       )}
 
-      <div className={`grid gap-4 sm:grid-cols-2 ${isKioskPark ? 'xl:grid-cols-4' : 'xl:grid-cols-6'}`}>
+      <div className={`grid grid-cols-2 gap-4 ${isKioskPark ? 'xl:grid-cols-4' : 'xl:grid-cols-6'}`}>
         {liveStatusWidgets.map((widget) => (
           <button
             key={widget.id}
             type="button"
             onClick={() => handleWidgetNavigation(widget.route)}
-            className="group rounded-2xl border border-white/40 bg-white/50 p-4 text-left shadow-[0_12px_32px_rgba(15,23,42,0.06)] backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/70"
+            className="group rounded-2xl border border-white/40 bg-white/50 p-4 text-left shadow-[0_12px_32px_rgba(15,23,42,0.06)] backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/70 sm:p-4"
           >
             <div className="flex items-start justify-between gap-3">
               <div className={`rounded-xl p-2.5 ${widget.iconBg}`}>
@@ -807,8 +811,10 @@ export default function Overview() {
               </div>
               <ArrowUpRight className="h-4 w-4 text-slate-300 transition-colors group-hover:text-slate-500" />
             </div>
-            <p className="mt-4 text-xs uppercase tracking-wide text-slate-400">{widget.label}</p>
-            <p className="mt-1 text-lg font-semibold text-slate-800">{widget.value}</p>
+            <p className="mt-3 text-[11px] uppercase tracking-wide text-slate-400 sm:mt-4 sm:text-xs">
+              {widget.label}
+            </p>
+            <p className="mt-1 text-base font-semibold text-slate-800 sm:text-lg">{widget.value}</p>
             <p className="mt-2 text-xs text-slate-500">{widget.helper}</p>
           </button>
         ))}
@@ -816,55 +822,57 @@ export default function Overview() {
 
       <div className="grid gap-6 xl:grid-cols-[1.8fr_1fr]">
         {isKioskPark && (
-        <GlassCard className="p-6">
+        <GlassCard className="p-5 sm:p-6">
           <div className="mb-4 flex items-center justify-between">
             <div>
               <h3 className="text-base font-semibold text-slate-800">Umsatz</h3>
               <p className="text-sm text-slate-500">Tägliche Einnahmen am Automaten</p>
             </div>
           </div>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={kioskChartData}>
-                <defs>
-                  <linearGradient id="kioskRevenueOverview" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#0ea5e9" stopOpacity={0.24} />
-                    <stop offset="100%" stopColor="#0ea5e9" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} />
-                <YAxis
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 11, fill: '#94a3b8' }}
-                  tickFormatter={(value) => `€${value}`}
-                />
-                <Tooltip
-                  contentStyle={{
-                    background: 'rgba(255,255,255,0.94)',
-                    backdropFilter: 'blur(12px)',
-                    border: '1px solid rgba(255,255,255,0.5)',
-                    borderRadius: '12px',
-                    boxShadow: '0 8px 32px rgba(15,23,42,0.08)',
-                  }}
-                  formatter={(value) => [`€${Number(value ?? 0).toFixed(2)}`, 'Umsatz']}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="revenueEur"
-                  stroke="#0ea5e9"
-                  strokeWidth={2}
-                  fill="url(#kioskRevenueOverview)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+          <div className="-mx-2 overflow-x-auto pb-2 sm:mx-0 sm:overflow-visible sm:pb-0">
+            <div className="h-[17rem] w-[520px] sm:h-80 sm:w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={kioskChartData}>
+                  <defs>
+                    <linearGradient id="kioskRevenueOverview" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#0ea5e9" stopOpacity={0.24} />
+                      <stop offset="100%" stopColor="#0ea5e9" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 11, fill: '#94a3b8' }}
+                    tickFormatter={(value) => `€${value}`}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      background: 'rgba(255,255,255,0.94)',
+                      backdropFilter: 'blur(12px)',
+                      border: '1px solid rgba(255,255,255,0.5)',
+                      borderRadius: '12px',
+                      boxShadow: '0 8px 32px rgba(15,23,42,0.08)',
+                    }}
+                    formatter={(value) => [`€${Number(value ?? 0).toFixed(2)}`, 'Umsatz']}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="revenueEur"
+                    stroke="#0ea5e9"
+                    strokeWidth={2}
+                    fill="url(#kioskRevenueOverview)"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </GlassCard>
         )}
 
         {!isKioskPark && (
-        <GlassCard className="p-6">
+        <GlassCard className="p-5 sm:p-6">
           <div className="mb-4 flex items-center justify-between">
             <div>
               <h3 className="text-base font-semibold text-slate-800">Revenue Flow</h3>
@@ -881,57 +889,59 @@ export default function Overview() {
               </div>
             )}
           </div>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={combinedDaily}>
-                <defs>
-                  <linearGradient id="onlineGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#0ea5e9" stopOpacity={0.24} />
-                    <stop offset="100%" stopColor="#0ea5e9" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="localGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#10b981" stopOpacity={0.24} />
-                    <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} tickFormatter={(value) => `$${value}`} />
-                <Tooltip
-                  contentStyle={{
-                    background: 'rgba(255,255,255,0.94)',
-                    backdropFilter: 'blur(12px)',
-                    border: '1px solid rgba(255,255,255,0.5)',
-                    borderRadius: '12px',
-                    boxShadow: '0 8px 32px rgba(15,23,42,0.08)',
-                  }}
-                  formatter={(value, name) => [`$${Number(value ?? 0).toFixed(2)}`, name === 'onlineRevenue' ? 'Online' : 'Local']}
-                />
-                {parkData.features.stripe && (
-                  <Area
-                    type="monotone"
-                    dataKey="onlineRevenue"
-                    stroke="#0ea5e9"
-                    strokeWidth={2}
-                    fill="url(#onlineGradient)"
+          <div className="-mx-2 overflow-x-auto pb-2 sm:mx-0 sm:overflow-visible sm:pb-0">
+            <div className="h-[17rem] w-[520px] sm:h-80 sm:w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={combinedDaily}>
+                  <defs>
+                    <linearGradient id="onlineGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#0ea5e9" stopOpacity={0.24} />
+                      <stop offset="100%" stopColor="#0ea5e9" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="localGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#10b981" stopOpacity={0.24} />
+                      <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} tickFormatter={(value) => `$${value}`} />
+                  <Tooltip
+                    contentStyle={{
+                      background: 'rgba(255,255,255,0.94)',
+                      backdropFilter: 'blur(12px)',
+                      border: '1px solid rgba(255,255,255,0.5)',
+                      borderRadius: '12px',
+                      boxShadow: '0 8px 32px rgba(15,23,42,0.08)',
+                    }}
+                    formatter={(value, name) => [`$${Number(value ?? 0).toFixed(2)}`, name === 'onlineRevenue' ? 'Online' : 'Local']}
                   />
-                )}
-                {parkData.features.local_sales && (
-                  <Area
-                    type="monotone"
-                    dataKey="localRevenue"
-                    stroke="#10b981"
-                    strokeWidth={2}
-                    fill="url(#localGradient)"
-                  />
-                )}
-              </AreaChart>
-            </ResponsiveContainer>
+                  {parkData.features.stripe && (
+                    <Area
+                      type="monotone"
+                      dataKey="onlineRevenue"
+                      stroke="#0ea5e9"
+                      strokeWidth={2}
+                      fill="url(#onlineGradient)"
+                    />
+                  )}
+                  {parkData.features.local_sales && (
+                    <Area
+                      type="monotone"
+                      dataKey="localRevenue"
+                      stroke="#10b981"
+                      strokeWidth={2}
+                      fill="url(#localGradient)"
+                    />
+                  )}
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </GlassCard>
         )}
 
-        <GlassCard className="p-6">
+        <GlassCard className="p-5 sm:p-6">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <h3 className="text-base font-semibold text-slate-800">Alerts & Activity</h3>

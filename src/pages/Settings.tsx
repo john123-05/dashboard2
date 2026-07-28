@@ -102,6 +102,13 @@ function createException(type: ScheduleException['type']): ScheduleException {
   };
 }
 
+function normalizeNotificationErrorMessage(message: string | null): string | null {
+  if (!message) return null;
+  const lower = message.toLowerCase();
+  if (lower.includes('invalid jwt')) return null;
+  return message;
+}
+
 export default function Settings() {
   const { profile, currentOrg, memberships, refreshProfile } = useAuth();
   const { parkId, parkName, refreshKioskState } = usePark();
@@ -162,7 +169,7 @@ export default function Settings() {
       if (cancelled) return;
 
       if (error || !data?.settings) {
-        setNotificationMessage(error || t('settings.notifications.load_error'));
+        setNotificationMessage(normalizeNotificationErrorMessage(error || t('settings.notifications.load_error')));
         setNotificationSettings(DEFAULT_OPERATOR_NOTIFICATION_SETTINGS);
       } else {
         setNotificationMessage(null);
@@ -297,7 +304,7 @@ export default function Settings() {
     );
 
     if (error) {
-      setNotificationMessage(error);
+      setNotificationMessage(normalizeNotificationErrorMessage(error));
       setNotificationSaving(false);
       return;
     }
@@ -815,15 +822,15 @@ export default function Settings() {
           )}
         </GlassCard>
 
-        <GlassCard className="p-6 xl:col-span-2">
+        <GlassCard className="p-5">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <h3 className="text-base font-semibold text-slate-800">{t('settings.kiosk_price.title')}</h3>
               <p className="mt-1 text-sm text-slate-500">{t('settings.kiosk_price.desc')}</p>
             </div>
-            <div className="rounded-xl bg-white/30 px-4 py-3">
+            <div className="rounded-xl bg-white/30 px-3 py-2.5">
               <p className="text-xs uppercase tracking-[0.24em] text-slate-400">{t('settings.kiosk_price.current')}</p>
-              <p className="mt-1 text-lg font-semibold text-slate-800">
+              <p className="mt-1 text-base font-semibold text-slate-800">
                 {selectedPark?.price_per_photo_cents != null
                   ? `${formatEuroInputFromCents(selectedPark.price_per_photo_cents)} €`
                   : t('settings.kiosk_price.not_set')}
@@ -831,7 +838,7 @@ export default function Settings() {
             </div>
           </div>
 
-          <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,280px)_1fr]">
+          <div className="mt-4 space-y-4">
             <div>
               <label className="mb-1.5 block text-sm font-medium text-slate-700">
                 {t('settings.kiosk_price.label')}
@@ -853,12 +860,12 @@ export default function Settings() {
 
             <div className="rounded-2xl bg-white/30 p-4">
               <p className="text-sm font-medium text-slate-700">{t('settings.kiosk_price.scope')}</p>
-              <div className="mt-3 flex flex-wrap gap-3">
+              <div className="mt-3 flex flex-wrap gap-2.5">
                 <button
                   type="button"
                   onClick={() => void handleSaveKioskPrice('future')}
                   disabled={!selectedPark || priceSavingMode !== null}
-                  className="glass-button-primary"
+                  className="glass-button-primary px-4 py-2"
                 >
                   {priceSavingMode === 'future' ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -871,7 +878,7 @@ export default function Settings() {
                   type="button"
                   onClick={() => void handleSaveKioskPrice('retroactive')}
                   disabled={!selectedPark || priceSavingMode !== null}
-                  className="glass-button-secondary"
+                  className="glass-button-secondary px-4 py-2"
                 >
                   {priceSavingMode === 'retroactive' ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -881,18 +888,205 @@ export default function Settings() {
                   {t('settings.kiosk_price.retroactive')}
                 </button>
               </div>
-              <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <div className="mt-4 grid gap-3">
                 <div className="rounded-xl bg-slate-50 px-4 py-3">
                   <p className="text-sm font-medium text-slate-700">{t('settings.kiosk_price.future')}</p>
-                  <p className="mt-1 text-sm text-slate-500">{t('settings.kiosk_price.future_desc')}</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-500">{t('settings.kiosk_price.future_desc')}</p>
                 </div>
                 <div className="rounded-xl bg-amber-50 px-4 py-3">
                   <p className="text-sm font-medium text-amber-900">{t('settings.kiosk_price.retroactive')}</p>
-                  <p className="mt-1 text-sm text-amber-700">{t('settings.kiosk_price.retroactive_desc')}</p>
+                  <p className="mt-1 text-xs leading-5 text-amber-700">{t('settings.kiosk_price.retroactive_desc')}</p>
                 </div>
               </div>
               {priceMessage && <p className="mt-4 text-sm text-slate-600">{priceMessage}</p>}
             </div>
+          </div>
+        </GlassCard>
+
+        <GlassCard className="self-start p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h3 className="text-base font-semibold text-slate-800">{t('settings.notifications.title')}</h3>
+            </div>
+            <div className="rounded-2xl bg-white/30 px-3 py-2.5">
+              <p className="text-xs uppercase tracking-[0.24em] text-slate-400">
+                {t('settings.notifications.active_device')}
+              </p>
+              <p className="mt-1 text-sm font-semibold text-slate-800">
+                {pushSupported
+                  ? pushSubscribed
+                    ? t('settings.notifications.device_on')
+                    : t('settings.notifications.device_off')
+                  : t('settings.notifications.unsupported')}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-4 rounded-2xl bg-white/30 p-4">
+            {notificationLoading ? (
+              <div className="flex items-center gap-3 py-6 text-sm text-slate-500">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                {t('settings.notifications.loading')}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="grid gap-3 md:grid-cols-2">
+                  <label className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-4 py-3">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800">Dieses Gerat</p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {pushSubscribed
+                          ? t('settings.notifications.device_on')
+                          : t('settings.notifications.device_off')}
+                      </p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={pushSubscribed}
+                      disabled={!pushSupported || pushBusy || pushChecking}
+                      onChange={(event) => void handleTogglePushDevice(event.target.checked)}
+                      className="h-5 w-5 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                    />
+                  </label>
+
+                  <label className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-4 py-3">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800">{t('settings.notifications.master')}</p>
+                      <p className="mt-1 text-xs text-slate-500">Parkweite Alerts aktivieren</p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={notificationSettings.push_enabled}
+                      onChange={(event) => patchNotificationSettings({ push_enabled: event.target.checked })}
+                      className="h-5 w-5 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                    />
+                  </label>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-xl bg-slate-50 p-3.5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-800">{t('settings.notifications.inactivity')}</p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={notificationSettings.photo_inactivity_enabled}
+                        onChange={(event) =>
+                          patchNotificationSettings({ photo_inactivity_enabled: event.target.checked })
+                        }
+                        className="mt-1 h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                      />
+                    </div>
+                    <label className="mt-3 block text-xs font-medium uppercase tracking-[0.24em] text-slate-400">
+                      {t('settings.notifications.minutes')}
+                    </label>
+                    <input
+                      type="number"
+                      min={5}
+                      max={240}
+                      value={notificationSettings.photo_inactivity_minutes}
+                      onChange={(event) =>
+                        patchNotificationSettings({
+                          photo_inactivity_minutes: Number(event.target.value) || 30,
+                        })
+                      }
+                      className="glass-input mt-2 py-2.5"
+                    />
+                  </div>
+
+                  <div className="rounded-xl bg-slate-50 p-3.5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-800">{t('settings.notifications.paper')}</p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={notificationSettings.paper_low_enabled}
+                        onChange={(event) =>
+                          patchNotificationSettings({ paper_low_enabled: event.target.checked })
+                        }
+                        className="mt-1 h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                      />
+                    </div>
+                    <label className="mt-3 block text-xs font-medium uppercase tracking-[0.24em] text-slate-400">
+                      {t('settings.notifications.threshold')}
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={500}
+                      value={notificationSettings.paper_low_threshold}
+                      onChange={(event) =>
+                        patchNotificationSettings({
+                          paper_low_threshold: Number(event.target.value) || 20,
+                        })
+                      }
+                      className="glass-input mt-2 py-2.5"
+                    />
+                  </div>
+
+                  <label className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 px-4 py-3">
+                    <div className="flex items-start gap-3">
+                      <LifeBuoy className="mt-0.5 h-4 w-4 text-slate-500" />
+                      <p className="text-sm font-semibold text-slate-800">{t('settings.notifications.support')}</p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={notificationSettings.support_enabled}
+                      onChange={(event) => patchNotificationSettings({ support_enabled: event.target.checked })}
+                      className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                    />
+                  </label>
+
+                  <label className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 px-4 py-3">
+                    <div className="flex items-start gap-3">
+                      <AlertTriangle className="mt-0.5 h-4 w-4 text-slate-500" />
+                      <p className="text-sm font-semibold text-slate-800">{t('settings.notifications.health')}</p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={notificationSettings.system_health_enabled}
+                      onChange={(event) =>
+                        patchNotificationSettings({ system_health_enabled: event.target.checked })
+                      }
+                      className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                    />
+                  </label>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                  <div className="flex flex-wrap gap-2">
+                    {pushSupported && pushSubscribed && (
+                      <button
+                        type="button"
+                        onClick={() => void handleSendTestPush()}
+                        disabled={pushTestBusy}
+                        className="glass-button-secondary px-4 py-2"
+                      >
+                        {pushTestBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Smartphone className="h-4 w-4" />}
+                        {t('settings.notifications.test')}
+                      </button>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void handleSaveNotificationSettings()}
+                    disabled={notificationSaving}
+                    className="glass-button-primary px-4 py-2"
+                  >
+                    {notificationSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bell className="h-4 w-4" />}
+                    {t('settings.notifications.save')}
+                  </button>
+                </div>
+
+                {(pushError || notificationMessage) && (
+                  <p className={`text-sm ${(pushError && pushError !== t('settings.notifications.test_sent')) ? 'text-rose-700' : 'text-slate-600'}`}>
+                    {pushError || notificationMessage}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </GlassCard>
 
@@ -901,177 +1095,172 @@ export default function Settings() {
             <div>
               <h3 className="text-base font-semibold text-slate-800">Öffnungszeiten & Saison</h3>
               <p className="mt-1 text-sm text-slate-500">
-                Lege fest, wann dein Park geöffnet ist. Diese Zeiten werden für Benachrichtigungen und die Tagesansichten im Umsatz genutzt.
+                Kompakt wie im Business-Profil: Wochenzeiten oben, Sonderzeiten nur bei Bedarf darunter.
               </p>
             </div>
-            <div className="rounded-xl bg-white/30 px-4 py-3 text-right">
-              <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Zeitzone</p>
-              <p className="mt-1 text-sm font-semibold text-slate-800">{selectedPark?.timezone || 'Europe/Vienna'}</p>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="rounded-xl bg-white/30 px-4 py-3 text-right">
+                <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Zeitzone</p>
+                <p className="mt-1 text-sm font-semibold text-slate-800">{selectedPark?.timezone || 'Europe/Vienna'}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => void handleSaveOpeningHours()}
+                disabled={scheduleSaving || !selectedPark}
+                className="glass-button-primary"
+              >
+                {scheduleSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Clock3 className="h-4 w-4" />}
+                Öffnungszeiten speichern
+              </button>
             </div>
           </div>
 
-          <div className="mt-5 grid gap-4 lg:grid-cols-2">
+          <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
             <div className="rounded-2xl bg-white/30 p-4">
-              <div className="mb-3 flex items-center gap-2">
-                <CalendarDays className="h-4 w-4 text-brand-600" />
-                <p className="text-sm font-semibold text-slate-800">Saison</p>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium uppercase tracking-[0.18em] text-slate-400">Saisonstart</label>
-                  <input
-                    type="date"
-                    value={scheduleConfig.season_start ?? ''}
-                    onChange={(e) => setScheduleConfig((current) => ({ ...current, season_start: e.target.value || null }))}
-                    className="glass-input"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium uppercase tracking-[0.18em] text-slate-400">Saisonende</label>
-                  <input
-                    type="date"
-                    value={scheduleConfig.season_end ?? ''}
-                    onChange={(e) => setScheduleConfig((current) => ({ ...current, season_end: e.target.value || null }))}
-                    className="glass-input"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-2xl bg-white/30 p-4">
-              <div className="mb-3 flex items-center gap-2">
+              <div className="mb-4 flex items-center gap-2">
                 <Clock3 className="h-4 w-4 text-brand-600" />
-                <p className="text-sm font-semibold text-slate-800">Hinweis</p>
+                <p className="text-sm font-semibold text-slate-800">Wochenzeiten</p>
               </div>
-              <p className="text-sm leading-6 text-slate-600">
-                Für jeden Wochentag kannst du Öffnen, Schließen und beliebig viele Pausen setzen. Feiertage und Urlaube überschreiben die normalen Zeiten automatisch.
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-5 space-y-3">
-            {WEEKDAY_ORDER.map((dayKey) => {
-              const day = scheduleConfig.weekdays[dayKey];
-              return (
-                <div key={dayKey} className="rounded-2xl bg-white/30 p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-slate-800">{WEEKDAY_LABELS[dayKey]}</p>
-                      <p className="text-xs text-slate-500">Öffnung, Schließung und Pausen</p>
-                    </div>
-                    <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
-                      <input
-                        type="checkbox"
-                        checked={day.enabled}
-                        onChange={(e) => updateWeekday(dayKey, 'enabled', e.target.checked)}
-                        className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
-                      />
-                      Geöffnet
-                    </label>
-                  </div>
-
-                  <div className="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
-                    <input
-                      type="time"
-                      value={day.open}
-                      onChange={(e) => updateWeekday(dayKey, 'open', e.target.value)}
-                      disabled={!day.enabled}
-                      className="glass-input"
-                    />
-                    <input
-                      type="time"
-                      value={day.close}
-                      onChange={(e) => updateWeekday(dayKey, 'close', e.target.value)}
-                      disabled={!day.enabled}
-                      className="glass-input"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => addPause(dayKey)}
-                      disabled={!day.enabled}
-                      className="glass-button-secondary"
-                    >
-                      <Plus className="h-4 w-4" />
-                      Pause
-                    </button>
-                  </div>
-
-                  {day.pauses.length > 0 && (
-                    <div className="mt-4 space-y-2">
-                      {day.pauses.map((pause, index) => (
-                        <div key={`${dayKey}-${index}`} className="grid gap-3 rounded-xl bg-slate-50 p-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+              <div className="space-y-2">
+                {WEEKDAY_ORDER.map((dayKey) => {
+                  const day = scheduleConfig.weekdays[dayKey];
+                  return (
+                    <div key={dayKey} className="rounded-xl bg-slate-50 p-3">
+                      <div className="grid gap-3 xl:grid-cols-[120px_136px_132px_132px_auto] xl:items-center">
+                        <p className="text-sm font-semibold text-slate-800">{WEEKDAY_LABELS[dayKey]}</p>
+                        <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
                           <input
-                            type="time"
-                            value={pause.start}
-                            onChange={(e) => updatePause(dayKey, index, 'start', e.target.value)}
-                            className="glass-input"
+                            type="checkbox"
+                            checked={!day.enabled}
+                            onChange={(e) => updateWeekday(dayKey, 'enabled', !e.target.checked)}
+                            className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
                           />
-                          <input
-                            type="time"
-                            value={pause.end}
-                            onChange={(e) => updatePause(dayKey, index, 'end', e.target.value)}
-                            className="glass-input"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removePause(dayKey, index)}
-                            className="glass-button-secondary"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                            Entfernen
-                          </button>
+                          Geschlossen
+                        </label>
+                        <input
+                          type="time"
+                          value={day.open}
+                          onChange={(e) => updateWeekday(dayKey, 'open', e.target.value)}
+                          disabled={!day.enabled}
+                          className="glass-input"
+                        />
+                        <input
+                          type="time"
+                          value={day.close}
+                          onChange={(e) => updateWeekday(dayKey, 'close', e.target.value)}
+                          disabled={!day.enabled}
+                          className="glass-input"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => addPause(dayKey)}
+                          disabled={!day.enabled}
+                          className="glass-button-secondary justify-self-start px-3 py-2 text-xs"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          Pause
+                        </button>
+                      </div>
+
+                      {day.pauses.length > 0 && (
+                        <div className="mt-3 space-y-2 border-t border-slate-200 pt-3">
+                          {day.pauses.map((pause, index) => (
+                            <div key={`${dayKey}-${index}`} className="grid gap-3 rounded-xl bg-white p-3 md:grid-cols-[minmax(0,132px)_minmax(0,132px)_auto]">
+                              <input
+                                type="time"
+                                value={pause.start}
+                                onChange={(e) => updatePause(dayKey, index, 'start', e.target.value)}
+                                className="glass-input"
+                              />
+                              <input
+                                type="time"
+                                value={pause.end}
+                                onChange={(e) => updatePause(dayKey, index, 'end', e.target.value)}
+                                className="glass-input"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => removePause(dayKey, index)}
+                                className="glass-button-secondary justify-self-start px-3 py-2 text-xs"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                                Entfernen
+                              </button>
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      )}
                     </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                  );
+                })}
+              </div>
+            </div>
 
-          <div className="mt-6 grid gap-4 xl:grid-cols-2">
-            {(['holiday', 'vacation', 'special_hours'] as const).map((type) => {
+            <div className="border-t border-slate-200/70 pt-5 xl:border-l xl:border-t-0 xl:pl-5 xl:pt-0">
+              <div className="space-y-3">
+                <div className="rounded-2xl bg-white/30 p-4">
+                  <div className="mb-3 flex items-center gap-2">
+                    <CalendarDays className="h-4 w-4 text-brand-600" />
+                    <p className="text-sm font-semibold text-slate-800">Saison</p>
+                  </div>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium uppercase tracking-[0.18em] text-slate-400">Saisonstart</label>
+                      <input
+                        type="date"
+                        value={scheduleConfig.season_start ?? ''}
+                        onChange={(e) => setScheduleConfig((current) => ({ ...current, season_start: e.target.value || null }))}
+                        className="glass-input"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium uppercase tracking-[0.18em] text-slate-400">Saisonende</label>
+                      <input
+                        type="date"
+                        value={scheduleConfig.season_end ?? ''}
+                        onChange={(e) => setScheduleConfig((current) => ({ ...current, season_end: e.target.value || null }))}
+                        className="glass-input"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {(['holiday', 'vacation', 'special_hours'] as const).map((type) => {
               const title =
                 type === 'holiday'
                   ? 'Feiertage'
                   : type === 'vacation'
-                    ? 'Urlaube / Schließtage'
+                    ? 'Urlaubszeiten / Schließtage'
                     : 'Sonderöffnungen';
               const buttonLabel =
                 type === 'holiday'
                   ? 'Feiertag hinzufügen'
                   : type === 'vacation'
-                    ? 'Urlaub hinzufügen'
-                    : 'Sonderzeit hinzufügen';
+                    ? 'Zeit hinzufügen'
+                    : 'Sonderöffnung hinzufügen';
               const items = scheduleConfig.exceptions.filter((entry) => entry.type === type);
 
               return (
-                <div key={type} className="rounded-2xl bg-white/30 p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
+                <details key={type} className="rounded-2xl bg-white/30 p-4" open={items.length > 0}>
+                  <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3">
                     <div>
                       <p className="text-sm font-semibold text-slate-800">{title}</p>
                       <p className="text-xs text-slate-500">
-                        {type === 'special_hours'
-                          ? 'Abweichende Öffnungszeiten für einzelne Tage oder Zeiträume'
-                          : 'Schließt oder überschreibt die normale Wochenplanung'}
+                        {items.length > 0 ? `${items.length} Einträge` : 'Noch nichts eingetragen'}
                       </p>
                     </div>
+                    <span className="text-xs font-medium uppercase tracking-[0.2em] text-slate-400">Bearbeiten</span>
+                  </summary>
+
+                  <div className="mt-4 space-y-3">
                     <button
                       type="button"
                       onClick={() => addScheduleException(type)}
-                      className="glass-button-secondary"
+                      className="glass-button-secondary px-3 py-2 text-xs"
                     >
                       <Plus className="h-4 w-4" />
                       {buttonLabel}
                     </button>
-                  </div>
-
-                  <div className="mt-4 space-y-3">
-                    {items.length === 0 && (
-                      <div className="rounded-xl border border-dashed border-white/40 bg-white/20 px-4 py-4 text-sm text-slate-500">
-                        Noch nichts eingetragen.
-                      </div>
-                    )}
 
                     {items.map((entry) => (
                       <div key={entry.id} className="rounded-xl bg-slate-50 p-4">
@@ -1133,7 +1322,7 @@ export default function Settings() {
                               <button
                                 type="button"
                                 onClick={() => addExceptionPause(entry.id)}
-                                className="glass-button-secondary"
+                                className="glass-button-secondary justify-self-start px-3 py-2 text-xs"
                               >
                                 <Plus className="h-4 w-4" />
                                 Pause
@@ -1159,7 +1348,7 @@ export default function Settings() {
                                     <button
                                       type="button"
                                       onClick={() => removeExceptionPause(entry.id, pauseIndex)}
-                                      className="glass-button-secondary"
+                                      className="glass-button-secondary justify-self-start px-3 py-2 text-xs"
                                     >
                                       <Trash2 className="h-4 w-4" />
                                       Entfernen
@@ -1175,7 +1364,7 @@ export default function Settings() {
                           <button
                             type="button"
                             onClick={() => removeScheduleException(entry.id)}
-                            className="glass-button-secondary"
+                            className="glass-button-secondary px-3 py-2 text-xs"
                           >
                             <Trash2 className="h-4 w-4" />
                             Eintrag löschen
@@ -1184,247 +1373,18 @@ export default function Settings() {
                       </div>
                     ))}
                   </div>
-                </div>
+                </details>
               );
             })}
+              </div>
+            </div>
           </div>
 
-          <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm text-slate-500">
-              Die Wochenzeiten werden automatisch als Basis für Umsatzdiagramme und Push-Alerts übernommen.
-            </p>
-            <button
-              type="button"
-              onClick={() => void handleSaveOpeningHours()}
-              disabled={scheduleSaving || !selectedPark}
-              className="glass-button-primary"
-            >
-              {scheduleSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Clock3 className="h-4 w-4" />}
-              Öffnungszeiten speichern
-            </button>
+          <div className="mt-4 text-sm text-slate-500">
+            Die Wochenzeiten werden automatisch als Basis für Umsatzdiagramme und Push-Alerts übernommen.
           </div>
 
           {scheduleMessage && <p className="mt-3 text-sm text-slate-600">{scheduleMessage}</p>}
-        </GlassCard>
-
-        <GlassCard className="p-6 xl:col-span-2">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <h3 className="text-base font-semibold text-slate-800">{t('settings.notifications.title')}</h3>
-              <p className="mt-1 text-sm text-slate-500">{t('settings.notifications.desc')}</p>
-            </div>
-            <div className="rounded-2xl bg-white/30 px-4 py-3">
-              <p className="text-xs uppercase tracking-[0.24em] text-slate-400">
-                {t('settings.notifications.active_device')}
-              </p>
-              <p className="mt-1 text-sm font-semibold text-slate-800">
-                {pushSupported
-                  ? pushSubscribed
-                    ? t('settings.notifications.device_on')
-                    : t('settings.notifications.device_off')
-                  : t('settings.notifications.unsupported')}
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,300px)_1fr]">
-            <div className="rounded-2xl bg-white/30 p-4">
-              <div className="flex items-start gap-3">
-                <div className="rounded-2xl bg-brand-50 p-3">
-                  <BellRing className="h-5 w-5 text-brand-600" />
-                </div>
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-800">{t('settings.notifications.device_title')}</p>
-                    <p className="mt-1 text-sm text-slate-500">{t('settings.notifications.device_desc')}</p>
-                  </div>
-
-                  {!pushSupported && (
-                    <p className="text-sm text-amber-700">{t('settings.notifications.unsupported_desc')}</p>
-                  )}
-
-                  {pushSupported && !pushChecking && (
-                    <label className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 px-4 py-3">
-                      <div>
-                        <p className="text-sm font-medium text-slate-800">
-                          {pushSubscribed
-                            ? t('settings.notifications.device_on')
-                            : t('settings.notifications.device_off')}
-                        </p>
-                        <p className="mt-1 text-xs text-slate-500">{t('settings.notifications.device_scope')}</p>
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={pushSubscribed}
-                        disabled={pushBusy}
-                        onChange={(event) => void handleTogglePushDevice(event.target.checked)}
-                        className="h-5 w-5 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
-                      />
-                    </label>
-                  )}
-
-                  {pushSupported && pushSubscribed && (
-                    <button
-                      type="button"
-                      onClick={() => void handleSendTestPush()}
-                      disabled={pushTestBusy}
-                      className="glass-button-secondary"
-                    >
-                      {pushTestBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Smartphone className="h-4 w-4" />}
-                      {t('settings.notifications.test')}
-                    </button>
-                  )}
-
-                  {pushError && (
-                    <p className={`text-sm ${pushError === t('settings.notifications.test_sent') ? 'text-emerald-700' : 'text-rose-700'}`}>
-                      {pushError}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-2xl bg-white/30 p-4">
-              {notificationLoading ? (
-                <div className="flex items-center gap-3 py-8 text-sm text-slate-500">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  {t('settings.notifications.loading')}
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <label className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 px-4 py-3">
-                    <div>
-                      <p className="text-sm font-semibold text-slate-800">{t('settings.notifications.master')}</p>
-                      <p className="mt-1 text-xs text-slate-500">{t('settings.notifications.master_desc')}</p>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={notificationSettings.push_enabled}
-                      onChange={(event) => patchNotificationSettings({ push_enabled: event.target.checked })}
-                      className="h-5 w-5 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
-                    />
-                  </label>
-
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <div className="rounded-xl bg-slate-50 p-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-semibold text-slate-800">{t('settings.notifications.inactivity')}</p>
-                          <p className="mt-1 text-xs text-slate-500">{t('settings.notifications.inactivity_desc')}</p>
-                        </div>
-                        <input
-                          type="checkbox"
-                          checked={notificationSettings.photo_inactivity_enabled}
-                          onChange={(event) =>
-                            patchNotificationSettings({ photo_inactivity_enabled: event.target.checked })
-                          }
-                          className="mt-1 h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
-                        />
-                      </div>
-                      <label className="mt-3 block text-xs font-medium uppercase tracking-[0.24em] text-slate-400">
-                        {t('settings.notifications.minutes')}
-                      </label>
-                      <input
-                        type="number"
-                        min={5}
-                        max={240}
-                        value={notificationSettings.photo_inactivity_minutes}
-                        onChange={(event) =>
-                          patchNotificationSettings({
-                            photo_inactivity_minutes: Number(event.target.value) || 30,
-                          })
-                        }
-                        className="glass-input mt-2"
-                      />
-                    </div>
-
-                    <div className="rounded-xl bg-slate-50 p-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-semibold text-slate-800">{t('settings.notifications.paper')}</p>
-                          <p className="mt-1 text-xs text-slate-500">{t('settings.notifications.paper_desc')}</p>
-                        </div>
-                        <input
-                          type="checkbox"
-                          checked={notificationSettings.paper_low_enabled}
-                          onChange={(event) =>
-                            patchNotificationSettings({ paper_low_enabled: event.target.checked })
-                          }
-                          className="mt-1 h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
-                        />
-                      </div>
-                      <label className="mt-3 block text-xs font-medium uppercase tracking-[0.24em] text-slate-400">
-                        {t('settings.notifications.threshold')}
-                      </label>
-                      <input
-                        type="number"
-                        min={1}
-                        max={500}
-                        value={notificationSettings.paper_low_threshold}
-                        onChange={(event) =>
-                          patchNotificationSettings({
-                            paper_low_threshold: Number(event.target.value) || 20,
-                          })
-                        }
-                        className="glass-input mt-2"
-                      />
-                    </div>
-
-                    <label className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 px-4 py-3">
-                      <div className="flex items-start gap-3">
-                        <LifeBuoy className="mt-0.5 h-4 w-4 text-slate-500" />
-                        <div>
-                          <p className="text-sm font-semibold text-slate-800">{t('settings.notifications.support')}</p>
-                          <p className="mt-1 text-xs text-slate-500">{t('settings.notifications.support_desc')}</p>
-                        </div>
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={notificationSettings.support_enabled}
-                        onChange={(event) => patchNotificationSettings({ support_enabled: event.target.checked })}
-                        className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
-                      />
-                    </label>
-
-                    <label className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 px-4 py-3">
-                      <div className="flex items-start gap-3">
-                        <AlertTriangle className="mt-0.5 h-4 w-4 text-slate-500" />
-                        <div>
-                          <p className="text-sm font-semibold text-slate-800">{t('settings.notifications.health')}</p>
-                          <p className="mt-1 text-xs text-slate-500">{t('settings.notifications.health_desc')}</p>
-                        </div>
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={notificationSettings.system_health_enabled}
-                        onChange={(event) =>
-                          patchNotificationSettings({ system_health_enabled: event.target.checked })
-                        }
-                        className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
-                      />
-                    </label>
-                  </div>
-
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <p className="text-xs text-slate-500">{t('settings.notifications.mobile_hint')}</p>
-                    <button
-                      type="button"
-                      onClick={() => void handleSaveNotificationSettings()}
-                      disabled={notificationSaving}
-                      className="glass-button-primary"
-                    >
-                      {notificationSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bell className="h-4 w-4" />}
-                      {t('settings.notifications.save')}
-                    </button>
-                  </div>
-
-                  {notificationMessage && (
-                    <p className="text-sm text-slate-600">{notificationMessage}</p>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
         </GlassCard>
       </div>
 

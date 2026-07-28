@@ -434,7 +434,7 @@ export default function Revenue() {
     return (
       <div className="space-y-6">
         <div className="h-8 w-32 animate-pulse rounded-lg bg-white/40" />
-        <div className="grid gap-6 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 sm:gap-6 sm:grid-cols-4">
           {[...Array(4)].map((_, index) => (
             <div key={index} className="h-32 animate-pulse rounded-2xl bg-white/30" />
           ))}
@@ -460,7 +460,7 @@ export default function Revenue() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('revenue.title')}</h2>
           <p className="mt-1 text-sm text-slate-500">
@@ -491,7 +491,7 @@ export default function Revenue() {
 
       {isKioskPark && kioskKpis && (
         <>
-          <GlassCard className="p-6">
+          <GlassCard className="p-5 sm:p-6">
             <h3 className="text-base font-semibold text-slate-800">Selbstbedienungs-Automat</h3>
             <p className="mt-2 text-sm text-slate-500">
               Kein eigener Webshop hier — jedes gespeicherte Foto ist bereits ein bezahlter Kauf am Automaten
@@ -499,7 +499,7 @@ export default function Revenue() {
             </p>
           </GlassCard>
 
-          <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-4 sm:gap-6 xl:grid-cols-4">
             <KPICard
               title="Heute"
               value={formatCurrency(kioskKpis.today.revenueCents, 'eur')}
@@ -534,7 +534,7 @@ export default function Revenue() {
             />
           </div>
 
-          <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-4 sm:gap-6 xl:grid-cols-4">
             <KPICard
               title="Fahrten heute"
               value={kioskKpis.today.expected !== null ? formatNumber(kioskKpis.today.expected) : '-'}
@@ -557,7 +557,7 @@ export default function Revenue() {
             />
           </div>
 
-          <GlassCard className="p-6">
+          <GlassCard className="p-5 sm:p-6">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h3 className="text-base font-semibold text-slate-800">Umsatz</h3>
@@ -621,49 +621,51 @@ export default function Revenue() {
             </div>
 
             {chartMode === 'trend' ? (
-              <div className="-mx-3 h-[20rem] sm:mx-0 sm:h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={kioskChartData} margin={chartMargin}>
-                    <defs>
-                      <linearGradient id="kioskRevenue" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#0ea5e9" stopOpacity={0.22} />
-                        <stop offset="100%" stopColor="#0ea5e9" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#e2e8f0" />
-                    <XAxis
-                      dataKey="label"
-                      axisLine={false}
-                      tickLine={false}
-                      tick={chartXAxisTick}
-                      minTickGap={isMobileChart ? 22 : 8}
-                      interval={isMobileChart ? 'preserveStartEnd' : 0}
-                    />
-                    <YAxis
-                      axisLine={false}
-                      tickLine={false}
-                      tick={chartYAxisTick}
-                      tickFormatter={(value) => `€${value}`}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        background: 'rgba(255,255,255,0.94)',
-                        backdropFilter: 'blur(12px)',
-                        border: '1px solid rgba(255,255,255,0.5)',
-                        borderRadius: '12px',
-                        boxShadow: '0 8px 32px rgba(15,23,42,0.08)',
-                      }}
-                      formatter={(value) => [`€${Number(value ?? 0).toFixed(2)}`, 'Umsatz']}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="revenueEur"
-                      stroke="#0ea5e9"
-                      strokeWidth={2}
-                      fill="url(#kioskRevenue)"
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
+              <div className="-mx-3 overflow-x-auto pb-2 sm:mx-0 sm:overflow-visible sm:pb-0">
+                <div className="h-[18rem] w-[580px] sm:h-80 sm:w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={kioskChartData} margin={chartMargin}>
+                      <defs>
+                        <linearGradient id="kioskRevenue" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#0ea5e9" stopOpacity={0.22} />
+                          <stop offset="100%" stopColor="#0ea5e9" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#e2e8f0" />
+                      <XAxis
+                        dataKey="label"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={chartXAxisTick}
+                        minTickGap={isMobileChart ? 22 : 8}
+                        interval={isMobileChart ? 'preserveStartEnd' : 0}
+                      />
+                      <YAxis
+                        axisLine={false}
+                        tickLine={false}
+                        tick={chartYAxisTick}
+                        tickFormatter={(value) => `€${value}`}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          background: 'rgba(255,255,255,0.94)',
+                          backdropFilter: 'blur(12px)',
+                          border: '1px solid rgba(255,255,255,0.5)',
+                          borderRadius: '12px',
+                          boxShadow: '0 8px 32px rgba(15,23,42,0.08)',
+                        }}
+                        formatter={(value) => [`€${Number(value ?? 0).toFixed(2)}`, 'Umsatz']}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="revenueEur"
+                        stroke="#0ea5e9"
+                        strokeWidth={2}
+                        fill="url(#kioskRevenue)"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
             ) : (
               <>
@@ -721,87 +723,87 @@ export default function Revenue() {
 
                 {dayError && <p className="mb-3 text-sm text-red-600">{dayError}</p>}
 
-                <div className="-mx-3 h-[20rem] sm:mx-0 sm:h-80">
+                <div className="-mx-3 overflow-x-auto pb-2 sm:mx-0 sm:overflow-visible sm:pb-0">
                   {dayLoading ? (
-                    <div className="flex h-full items-center justify-center text-sm text-slate-500">
+                    <div className="flex h-[18rem] items-center justify-center text-sm text-slate-500 sm:h-80">
                       Lädt...
                     </div>
                   ) : dayPurchases.length === 0 && !dayError ? (
-                    <div className="flex h-full items-center justify-center text-sm text-slate-500">
+                    <div className="flex h-[18rem] items-center justify-center text-sm text-slate-500 sm:h-80">
                       Keine Verkäufe an diesem Tag.
                     </div>
                   ) : (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <ComposedChart data={hourlyBuckets} margin={chartMargin}>
-                        <defs>
-                          <linearGradient id="kioskRevenueHourly" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#0ea5e9" stopOpacity={0.22} />
-                            <stop offset="100%" stopColor="#0ea5e9" stopOpacity={0} />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#e2e8f0" />
-                        <XAxis
-                          dataKey="label"
-                          axisLine={false}
-                          tickLine={false}
-                          tick={chartXAxisTick}
-                          minTickGap={isMobileChart ? 20 : 8}
-                          interval={isMobileChart ? 'preserveStartEnd' : 0}
-                        />
-                        <YAxis
-                          yAxisId="rev"
-                          axisLine={false}
-                          tickLine={false}
-                          tick={chartYAxisTick}
-                          tickFormatter={(value) => `€${value}`}
-                        />
-                        {/* Rides on their own hidden, auto-scaled axis so the two
-                            curves are comparable in shape, not absolute scale. */}
-                        <YAxis yAxisId="rides" orientation="right" hide domain={[0, 'auto']} />
-                        <Tooltip
-                          contentStyle={{
-                            background: 'rgba(255,255,255,0.94)',
-                            backdropFilter: 'blur(12px)',
-                            border: '1px solid rgba(255,255,255,0.5)',
-                            borderRadius: '12px',
-                            boxShadow: '0 8px 32px rgba(15,23,42,0.08)',
-                          }}
-                          formatter={(value, name) =>
-                            name === 'Fahrten'
-                              ? [formatNumber(Number(value ?? 0)), 'Fahrten']
-                              : [`€${Number(value ?? 0).toFixed(2)}`, 'Umsatz']
-                          }
-                        />
-                        {hasRideData && <Legend wrapperStyle={{ fontSize: 12 }} />}
-                        <Area
-                          yAxisId="rev"
-                          type="monotone"
-                          dataKey="revenueEur"
-                          name="Umsatz"
-                          stroke="#0ea5e9"
-                          strokeWidth={2}
-                          fill="url(#kioskRevenueHourly)"
-                        />
-                        {hasRideData && (
-                          <Line
-                            yAxisId="rides"
-                            type="monotone"
-                            dataKey="rides"
-                            name="Fahrten"
-                            stroke="#10b981"
-                            strokeWidth={2}
-                            dot={false}
+                    <div className="h-[18rem] w-[580px] sm:h-80 sm:w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <ComposedChart data={hourlyBuckets} margin={chartMargin}>
+                          <defs>
+                            <linearGradient id="kioskRevenueHourly" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#0ea5e9" stopOpacity={0.22} />
+                              <stop offset="100%" stopColor="#0ea5e9" stopOpacity={0} />
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#e2e8f0" />
+                          <XAxis
+                            dataKey="label"
+                            axisLine={false}
+                            tickLine={false}
+                            tick={chartXAxisTick}
+                            minTickGap={isMobileChart ? 20 : 8}
+                            interval={isMobileChart ? 'preserveStartEnd' : 0}
                           />
-                        )}
-                      </ComposedChart>
-                    </ResponsiveContainer>
+                          <YAxis
+                            yAxisId="rev"
+                            axisLine={false}
+                            tickLine={false}
+                            tick={chartYAxisTick}
+                            tickFormatter={(value) => `€${value}`}
+                          />
+                          <YAxis yAxisId="rides" orientation="right" hide domain={[0, 'auto']} />
+                          <Tooltip
+                            contentStyle={{
+                              background: 'rgba(255,255,255,0.94)',
+                              backdropFilter: 'blur(12px)',
+                              border: '1px solid rgba(255,255,255,0.5)',
+                              borderRadius: '12px',
+                              boxShadow: '0 8px 32px rgba(15,23,42,0.08)',
+                            }}
+                            formatter={(value, name) =>
+                              name === 'Fahrten'
+                                ? [formatNumber(Number(value ?? 0)), 'Fahrten']
+                                : [`€${Number(value ?? 0).toFixed(2)}`, 'Umsatz']
+                            }
+                          />
+                          {hasRideData && <Legend wrapperStyle={{ fontSize: 12 }} />}
+                          <Area
+                            yAxisId="rev"
+                            type="monotone"
+                            dataKey="revenueEur"
+                            name="Umsatz"
+                            stroke="#0ea5e9"
+                            strokeWidth={2}
+                            fill="url(#kioskRevenueHourly)"
+                          />
+                          {hasRideData && (
+                            <Line
+                              yAxisId="rides"
+                              type="monotone"
+                              dataKey="rides"
+                              name="Fahrten"
+                              stroke="#10b981"
+                              strokeWidth={2}
+                              dot={false}
+                            />
+                          )}
+                        </ComposedChart>
+                      </ResponsiveContainer>
+                    </div>
                   )}
                 </div>
               </>
             )}
           </GlassCard>
 
-          <GlassCard className="p-6">
+          <GlassCard className="p-5 sm:p-6">
             <h3 className="mb-4 text-base font-semibold text-slate-800">Tagesübersicht</h3>
             {kioskDays.length === 0 ? (
               <p className="text-sm text-slate-500">Noch keine Verkaufsdaten erfasst.</p>
@@ -848,7 +850,7 @@ export default function Revenue() {
 
       {(parkData.features.stripe || parkData.features.local_sales) && (
       <>
-      <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 sm:gap-6 xl:grid-cols-4">
         {parkData.features.stripe && (
           <KPICard
             title="Online Revenue"
@@ -883,7 +885,7 @@ export default function Revenue() {
         />
       </div>
 
-      <GlassCard className="p-6">
+      <GlassCard className="p-5 sm:p-6">
         <div className="grid gap-4 xl:grid-cols-2">
           <div>
             <h3 className="text-base font-semibold text-slate-800">Online Commerce Domain</h3>
@@ -917,7 +919,7 @@ export default function Revenue() {
         </div>
       </GlassCard>
 
-      <GlassCard className="p-6">
+      <GlassCard className="p-5 sm:p-6">
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h3 className="text-base font-semibold text-slate-800">Revenue Trend</h3>
@@ -933,62 +935,30 @@ export default function Revenue() {
             )}
           </div>
         </div>
-        <div className="-mx-3 h-[20rem] sm:mx-0 sm:h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={dailyRevenue} margin={chartMargin}>
-              <defs>
-                <linearGradient id="revOnline" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#0ea5e9" stopOpacity={0.22} />
-                  <stop offset="100%" stopColor="#0ea5e9" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="revLocal" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#10b981" stopOpacity={0.22} />
-                  <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis
-                dataKey="label"
-                axisLine={false}
-                tickLine={false}
-                tick={chartXAxisTick}
-                minTickGap={isMobileChart ? 22 : 8}
-                interval={isMobileChart ? 'preserveStartEnd' : 0}
-              />
-              <YAxis axisLine={false} tickLine={false} tick={chartYAxisTick} tickFormatter={(value) => `$${value}`} />
-              <Tooltip
-                contentStyle={{
-                  background: 'rgba(255,255,255,0.94)',
-                  backdropFilter: 'blur(12px)',
-                  border: '1px solid rgba(255,255,255,0.5)',
-                  borderRadius: '12px',
-                  boxShadow: '0 8px 32px rgba(15,23,42,0.08)',
-                }}
-                formatter={(value, name) => [`$${Number(value ?? 0).toFixed(2)}`, name === 'online' ? 'Online' : 'Local']}
-              />
-              {parkData.features.stripe && (
-                <Area type="monotone" dataKey="online" stroke="#0ea5e9" strokeWidth={2} fill="url(#revOnline)" />
-              )}
-              {parkData.features.local_sales && (
-                <Area type="monotone" dataKey="local" stroke="#10b981" strokeWidth={2} fill="url(#revLocal)" />
-              )}
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </GlassCard>
-
-      <div className="grid gap-6 xl:grid-cols-[1.3fr_1fr]">
-        <GlassCard className="p-6">
-          <h3 className="mb-4 text-base font-semibold text-slate-800">Local Sales Breakdown</h3>
-          <p className="mb-4 text-sm text-slate-500">
-            Only confirmed local cash and terminal amounts are charted here.
-          </p>
-          <div className="h-72">
+        <div className="-mx-3 overflow-x-auto pb-2 sm:mx-0 sm:overflow-visible sm:pb-0">
+          <div className="h-[18rem] w-[580px] sm:h-80 sm:w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={dailyRevenue}>
+              <AreaChart data={dailyRevenue} margin={chartMargin}>
+                <defs>
+                  <linearGradient id="revOnline" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#0ea5e9" stopOpacity={0.22} />
+                    <stop offset="100%" stopColor="#0ea5e9" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="revLocal" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#10b981" stopOpacity={0.22} />
+                    <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
                 <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} tickFormatter={(value) => `$${value}`} />
+                <XAxis
+                  dataKey="label"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={chartXAxisTick}
+                  minTickGap={isMobileChart ? 22 : 8}
+                  interval={isMobileChart ? 'preserveStartEnd' : 0}
+                />
+                <YAxis axisLine={false} tickLine={false} tick={chartYAxisTick} tickFormatter={(value) => `$${value}`} />
                 <Tooltip
                   contentStyle={{
                     background: 'rgba(255,255,255,0.94)',
@@ -997,16 +967,52 @@ export default function Revenue() {
                     borderRadius: '12px',
                     boxShadow: '0 8px 32px rgba(15,23,42,0.08)',
                   }}
-                  formatter={(value, name) => [`$${Number(value ?? 0).toFixed(2)}`, name === 'cash' ? 'Cash / Coin' : 'Terminal']}
+                  formatter={(value, name) => [`$${Number(value ?? 0).toFixed(2)}`, name === 'online' ? 'Online' : 'Local']}
                 />
-                <Bar dataKey="cash" stackId="local" fill="#14b8a6" radius={[6, 6, 0, 0]} />
-                <Bar dataKey="terminal" stackId="local" fill="#22c55e" radius={[6, 6, 0, 0]} />
-              </BarChart>
+                {parkData.features.stripe && (
+                  <Area type="monotone" dataKey="online" stroke="#0ea5e9" strokeWidth={2} fill="url(#revOnline)" />
+                )}
+                {parkData.features.local_sales && (
+                  <Area type="monotone" dataKey="local" stroke="#10b981" strokeWidth={2} fill="url(#revLocal)" />
+                )}
+              </AreaChart>
             </ResponsiveContainer>
+          </div>
+        </div>
+      </GlassCard>
+
+      <div className="grid gap-6 xl:grid-cols-[1.3fr_1fr]">
+        <GlassCard className="p-5 sm:p-6">
+          <h3 className="mb-4 text-base font-semibold text-slate-800">Local Sales Breakdown</h3>
+          <p className="mb-4 text-sm text-slate-500">
+            Only confirmed local cash and terminal amounts are charted here.
+          </p>
+          <div className="-mx-3 overflow-x-auto pb-2 sm:mx-0 sm:overflow-visible sm:pb-0">
+            <div className="h-[16rem] w-[560px] sm:h-72 sm:w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={dailyRevenue}>
+                  <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} tickFormatter={(value) => `$${value}`} />
+                  <Tooltip
+                    contentStyle={{
+                      background: 'rgba(255,255,255,0.94)',
+                      backdropFilter: 'blur(12px)',
+                      border: '1px solid rgba(255,255,255,0.5)',
+                      borderRadius: '12px',
+                      boxShadow: '0 8px 32px rgba(15,23,42,0.08)',
+                    }}
+                    formatter={(value, name) => [`$${Number(value ?? 0).toFixed(2)}`, name === 'cash' ? 'Cash / Coin' : 'Terminal']}
+                  />
+                  <Bar dataKey="cash" stackId="local" fill="#14b8a6" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="terminal" stackId="local" fill="#22c55e" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </GlassCard>
 
-        <GlassCard className="p-6">
+        <GlassCard className="p-5 sm:p-6">
           <h3 className="mb-4 text-base font-semibold text-slate-800">Sales Signals</h3>
           <div className="space-y-3">
             <div className="rounded-xl bg-white/30 p-4">

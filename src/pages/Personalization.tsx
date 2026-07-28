@@ -545,8 +545,8 @@ export default function Personalization() {
 
       <div className="grid items-start gap-6 xl:grid-cols-3">
         <div className="space-y-6 xl:col-span-2">
-          <GlassCard className="p-6">
-            <div className="mb-4 flex items-center justify-between">
+          <GlassCard className="p-4 sm:p-6">
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <h3 className="text-base font-semibold text-slate-800">{t('personalization.preview')}</h3>
               <button
                 onClick={loadRecent}
@@ -641,7 +641,7 @@ export default function Personalization() {
                       return (
                         <div
                           key={asset.id}
-                          className="w-40 shrink-0 rounded-2xl border border-white/40 bg-white/70 p-3 shadow-sm xl:w-auto"
+                          className="w-36 shrink-0 rounded-2xl border border-white/40 bg-white/70 p-3 shadow-sm sm:w-40 xl:w-auto"
                         >
                           <div className="mb-2 flex items-start justify-between gap-2">
                             <span
@@ -712,7 +712,7 @@ export default function Personalization() {
         </div>
 
         <div className="space-y-6">
-          <GlassCard className="p-6">
+          <GlassCard className="p-4 sm:p-6">
             <h3 className="mb-4 text-base font-semibold text-slate-800">{t('personalization.overlays')}</h3>
             <div className="space-y-3">
               <input
@@ -753,7 +753,7 @@ export default function Personalization() {
             </div>
           </GlassCard>
 
-          <GlassCard className="p-6">
+          <GlassCard className="p-4 sm:p-6">
             <h3 className="mb-4 text-base font-semibold text-slate-800">Campaigns</h3>
             <form onSubmit={handleCreateCampaign} className="space-y-3">
               <input
@@ -763,7 +763,7 @@ export default function Personalization() {
                 required
                 className="glass-input"
               />
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid gap-2 sm:grid-cols-2">
                 <input
                   type="datetime-local"
                   value={campaignForm.starts_at}
@@ -778,7 +778,7 @@ export default function Personalization() {
                   className="glass-input"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid gap-2 sm:grid-cols-2">
                 <input
                   type="number"
                   value={campaignForm.priority}
@@ -861,7 +861,7 @@ export default function Personalization() {
             </div>
           </GlassCard>
 
-          <GlassCard className="p-6">
+          <GlassCard className="p-4 sm:p-6">
             <h3 className="mb-4 text-base font-semibold text-slate-800">Campaign Layers</h3>
             <form onSubmit={handleAddLayer} className="space-y-3">
               <select
@@ -877,7 +877,7 @@ export default function Personalization() {
                   </option>
                 ))}
               </select>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid gap-2 sm:grid-cols-2">
                 <input
                   type="number"
                   value={layerForm.z_index}
@@ -898,7 +898,7 @@ export default function Personalization() {
                   className="glass-input"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid gap-2 sm:grid-cols-2">
                 <select
                   value={layerForm.fit}
                   onChange={(e) =>
@@ -934,7 +934,7 @@ export default function Personalization() {
                   <option value="bottom_right">bottom_right</option>
                 </select>
               </div>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid gap-2 sm:grid-cols-2">
                 <select
                   value={layerForm.blend_mode}
                   onChange={(e) =>
@@ -981,7 +981,7 @@ export default function Personalization() {
               {selectedLayers.map((layer) => {
                 const asset = assetById.get(layer.asset_id);
                 return (
-                  <div key={layer.id} className="flex items-center justify-between rounded-xl bg-white/30 px-3 py-2">
+                  <div key={layer.id} className="flex items-center justify-between gap-3 rounded-xl bg-white/30 px-3 py-2">
                     <div className="min-w-0">
                       <p className="truncate text-sm text-slate-700">
                         {asset ? pathBasename(asset.path) : layer.asset_id}
@@ -1007,7 +1007,7 @@ export default function Personalization() {
             </div>
           </GlassCard>
 
-          <GlassCard className="p-6">
+          <GlassCard className="p-4 sm:p-6">
             <h3 className="mb-4 text-base font-semibold text-slate-800">{t('personalization.message')}</h3>
             <label className="mb-1.5 block text-sm font-medium text-slate-700">
               {t('personalization.message')}

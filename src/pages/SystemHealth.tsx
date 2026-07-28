@@ -191,7 +191,7 @@ export default function SystemHealth() {
     return (
       <div className="space-y-6">
         <div className="h-8 w-32 animate-pulse rounded-lg bg-white/40" />
-        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 sm:gap-6 xl:grid-cols-3">
           {[...Array(6)].map((_, index) => (
             <div key={index} className="h-24 animate-pulse rounded-2xl bg-white/30" />
           ))}
@@ -293,7 +293,7 @@ export default function SystemHealth() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('health.title')}</h2>
           <p className="mt-1 text-sm text-slate-500">
@@ -313,7 +313,7 @@ export default function SystemHealth() {
         </div>
       )}
 
-      <GlassCard className="p-6">
+      <GlassCard className="p-5 sm:p-6">
         <div className="mb-4 flex items-center gap-2">
           {communicationStatus === 'down' ? (
             <XCircle className="h-5 w-5 text-rose-500" />
@@ -330,7 +330,7 @@ export default function SystemHealth() {
                 : 'Data source operational'}
           </h3>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
           <div className="rounded-xl bg-white/30 px-4 py-3">
             <p className="text-xs uppercase tracking-wide text-slate-400">Last data</p>
             <p className="mt-1 text-sm font-semibold text-slate-800">
@@ -384,7 +384,7 @@ export default function SystemHealth() {
         </div>
       </GlassCard>
 
-      <div className="grid gap-4 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {(
           [
             { label: t('health.critical'), count: severityCounts.critical, color: 'text-rose-600', bg: 'bg-rose-100', icon: XCircle },
@@ -408,14 +408,14 @@ export default function SystemHealth() {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <GlassCard className="p-6">
+        <GlassCard className="p-5 sm:p-6">
           <h3 className="mb-4 text-base font-semibold text-slate-800">Services</h3>
           <div className="space-y-3">
             {services.length === 0 ? (
               <p className="text-sm text-slate-500">No service health signals available.</p>
             ) : (
               services.map((service) => (
-                <div key={service.name} className="flex items-center justify-between rounded-xl bg-white/30 px-4 py-3">
+                <div key={service.name} className="flex flex-col gap-3 rounded-xl bg-white/30 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-center gap-3">
                     <div
                       className={`h-2.5 w-2.5 rounded-full ${
@@ -440,7 +440,7 @@ export default function SystemHealth() {
                         : service.status === 'degraded'
                           ? 'bg-amber-50 text-amber-700 ring-amber-200'
                           : 'bg-rose-50 text-rose-700 ring-rose-200'
-                    }`}
+                    } self-start sm:self-auto`}
                   >
                     {service.status}
                   </span>
@@ -450,7 +450,7 @@ export default function SystemHealth() {
           </div>
         </GlassCard>
 
-        <GlassCard className="p-6">
+        <GlassCard className="p-5 sm:p-6">
           <h3 className="mb-4 text-base font-semibold text-slate-800">Devices</h3>
           <div className="space-y-3">
             {devices.length === 0 ? (
@@ -458,7 +458,7 @@ export default function SystemHealth() {
             ) : (
               devices.map((device) => (
                 <div key={device.name} className="rounded-xl bg-white/30 px-4 py-3">
-                  <div className="flex items-center justify-between gap-3">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-center gap-3">
                       {device.name.toLowerCase().includes('printer') ? (
                         <Printer className="h-4 w-4 text-cyan-600" />
@@ -479,7 +479,7 @@ export default function SystemHealth() {
                           : device.status === 'degraded'
                             ? 'bg-amber-50 text-amber-700 ring-amber-200'
                             : 'bg-rose-50 text-rose-700 ring-rose-200'
-                      }`}
+                      } self-start sm:self-auto`}
                     >
                       {device.status}
                     </span>
@@ -492,17 +492,17 @@ export default function SystemHealth() {
       </div>
 
       <GlassCard className="overflow-hidden">
-        <div className="border-b border-slate-100/80 px-6 py-4">
+        <div className="border-b border-slate-100/80 px-5 py-4 sm:px-6">
           <h3 className="text-base font-semibold text-slate-800">Recent health events</h3>
         </div>
         <div className="divide-y divide-slate-50">
           {events.slice(0, 25).map((event) => (
-            <div key={event.id} className="flex items-start gap-4 px-6 py-4 transition-colors hover:bg-white/40">
+            <div key={event.id} className="flex items-start gap-3 px-5 py-4 transition-colors hover:bg-white/40 sm:gap-4 sm:px-6">
               <div className={`mt-0.5 rounded-lg px-2 py-1 text-xs font-semibold ${severityColor(event.severity)}`}>
                 {event.severity}
               </div>
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <span className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
                     {event.category}
                   </span>
@@ -518,7 +518,7 @@ export default function SystemHealth() {
             </div>
           ))}
           {events.length === 0 && (
-            <div className="px-6 py-12 text-center text-sm text-slate-400">
+            <div className="px-5 py-12 text-center text-sm text-slate-400 sm:px-6">
               {t('health.no_events')}
             </div>
           )}
@@ -533,7 +533,7 @@ export default function SystemHealth() {
         searchKeys={['category', 'device', 'description', 'source_file', 'severity']}
         pageSize={14}
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <button onClick={handleExport} className="glass-button-secondary">
               <Download className="h-4 w-4" />
               Export CSV

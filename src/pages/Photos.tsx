@@ -289,7 +289,7 @@ export default function Photos() {
     return (
       <div className="space-y-6">
         <div className="h-8 w-32 animate-pulse rounded-lg bg-white/40" />
-        <div className="grid gap-6 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 sm:gap-6">
           {[...Array(4)].map((_, i) => (
             <div key={i} className="h-32 animate-pulse rounded-2xl bg-white/30" />
           ))}
@@ -362,7 +362,7 @@ export default function Photos() {
         </div>
       )}
 
-      <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 sm:gap-6 xl:grid-cols-4">
         <KPICard
           title={t('photos.total')}
           value={formatNumber(stats.total)}
@@ -394,7 +394,7 @@ export default function Photos() {
 
       <div className="grid gap-6 xl:grid-cols-2">
         {!isStaff && (
-        <GlassCard className="p-6">
+        <GlassCard className="p-5 sm:p-6">
           <div className="grid gap-6 sm:grid-cols-2">
             <div>
               <h3 className="mb-4 text-base font-semibold text-slate-800">{t('photos.status_distribution')}</h3>
@@ -485,7 +485,7 @@ export default function Photos() {
         </GlassCard>
         )}
 
-        <GlassCard className="p-6">
+        <GlassCard className="p-5 sm:p-6">
           <h3 className="mb-4 text-base font-semibold text-slate-800">{t('photos.by_attraction')}</h3>
           <div className="space-y-3">
             {attractionStats.length === 0 && (
@@ -496,7 +496,7 @@ export default function Photos() {
             {attractionStats.map((a) => {
               const pct = a.total > 0 ? (a.purchased / a.total) * 100 : 0;
               return (
-                <div key={a.name} className="flex items-center justify-between gap-4 rounded-xl bg-white/30 p-4">
+                <div key={a.name} className="flex items-center justify-between gap-3 rounded-xl bg-white/30 p-3.5 sm:gap-4 sm:p-4">
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-slate-700">{a.name}</p>
                     <p className="mt-1 text-xs text-slate-400">
@@ -504,7 +504,7 @@ export default function Photos() {
                     </p>
                   </div>
                   {!isStaff && (
-                    <div className="relative h-20 w-20 shrink-0">
+                    <div className="relative h-16 w-16 shrink-0 sm:h-20 sm:w-20">
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                           <Pie
@@ -536,7 +536,7 @@ export default function Photos() {
             })}
 
             {!isStaff && emailDay && (
-              <div className="flex items-center justify-between gap-4 rounded-xl bg-white/30 p-4">
+              <div className="flex items-center justify-between gap-3 rounded-xl bg-white/30 p-3.5 sm:gap-4 sm:p-4">
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-slate-700">E-Mail-Erfassung</p>
                   <p className="mt-1 text-xs text-slate-400">
@@ -545,7 +545,7 @@ export default function Photos() {
                       : 'Keine Käufe an diesem Tag'}
                   </p>
                 </div>
-                <div className="relative h-20 w-20 shrink-0">
+                <div className="relative h-16 w-16 shrink-0 sm:h-20 sm:w-20">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
@@ -577,7 +577,7 @@ export default function Photos() {
         </GlassCard>
       </div>
 
-      <GlassCard className="p-6">
+      <GlassCard className="p-5 sm:p-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h3 className="text-base font-semibold text-slate-800">Foto-Browser</h3>
           <button
@@ -590,14 +590,14 @@ export default function Photos() {
           </button>
         </div>
 
-        <div className="mb-6 flex flex-wrap gap-3">
-          <form onSubmit={handleCodeSearch} className="flex items-center gap-2">
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+          <form onSubmit={handleCodeSearch} className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <input
               type="text"
               value={codeQuery}
               onChange={(e) => setCodeQuery(e.target.value)}
               placeholder="Bildnummer eingeben…"
-              className="glass-input w-48 text-sm"
+              className="glass-input w-full text-sm sm:w-48"
             />
             <button type="submit" className="glass-button-secondary flex items-center gap-1.5 text-sm">
               <Search className="h-4 w-4" />
@@ -605,12 +605,12 @@ export default function Photos() {
             </button>
           </form>
 
-          <form onSubmit={handleDateTimeSearch} className="flex items-center gap-2">
+          <form onSubmit={handleDateTimeSearch} className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <input
               type="datetime-local"
               value={dateTimeQuery}
               onChange={(e) => setDateTimeQuery(e.target.value)}
-              className="glass-input text-sm"
+              className="glass-input w-full text-sm"
             />
             <button type="submit" className="glass-button-secondary flex items-center gap-1.5 text-sm">
               <CalendarClock className="h-4 w-4" />

@@ -24,13 +24,17 @@ export default function KPICard({
   const isPositive = change !== undefined && change >= 0;
 
   return (
-    <GlassCard className="p-6 h-[132px]">
-      <div className="flex items-start justify-between">
-        <div className="space-y-3">
-          <p className="text-sm font-medium text-slate-500">{title}</p>
-          <p className="text-2xl font-bold tracking-tight text-slate-800">{value}</p>
+    <GlassCard className="h-full min-h-[138px] p-5 sm:min-h-[132px] sm:p-6">
+      <div className="flex h-full items-start justify-between gap-3">
+        <div className="min-w-0 space-y-2.5 sm:space-y-3">
+          <p className="text-xs font-medium text-slate-500 sm:text-sm">{title}</p>
+          <p className="text-[1.95rem] font-bold leading-none tracking-tight text-slate-800 sm:text-2xl">
+            {value}
+          </p>
           {subtitle && (
-            <p className="max-w-[12rem] text-xs leading-5 text-slate-500">{subtitle}</p>
+            <p className="max-w-[13rem] text-[11px] leading-4 text-slate-500 sm:text-xs sm:leading-5">
+              {subtitle}
+            </p>
           )}
           {change !== undefined && (
             <div
@@ -51,8 +55,8 @@ export default function KPICard({
             </div>
           )}
         </div>
-        <div className={`rounded-xl p-3 ${iconBg}`}>
-          <Icon className={`h-5 w-5 ${iconColor}`} />
+        <div className={`shrink-0 rounded-xl p-2.5 sm:p-3 ${iconBg}`}>
+          <Icon className={`h-4.5 w-4.5 sm:h-5 sm:w-5 ${iconColor}`} />
         </div>
       </div>
     </GlassCard>

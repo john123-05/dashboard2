@@ -99,16 +99,18 @@ function CompactMetricCard({
   iconWrapClassName: string;
 }) {
   return (
-    <GlassCard className="h-full min-h-[146px] p-4">
+    <GlassCard className="h-full min-h-[132px] p-4 sm:min-h-[146px]">
       <div className="space-y-2.5">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">{title}</p>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400 sm:text-xs">
+          {title}
+        </p>
         <div className="flex items-center gap-3">
-          <p className="text-[2rem] font-bold tracking-tight text-slate-800">{value}</p>
+          <p className="text-[1.85rem] font-bold tracking-tight text-slate-800 sm:text-[2rem]">{value}</p>
           <div className={`rounded-xl p-2 ${iconWrapClassName}`}>
             <Icon className={`h-4.5 w-4.5 ${iconClassName}`} />
           </div>
         </div>
-        <p className="max-w-[10rem] text-sm leading-5 text-slate-500">{subtitle}</p>
+        <p className="text-xs leading-5 text-slate-500 sm:max-w-[10rem] sm:text-sm">{subtitle}</p>
       </div>
     </GlassCard>
   );
@@ -335,7 +337,7 @@ function LeadWorldMap({
         dragStateRef.current = null;
         onHoverCountry?.({ countryCode: null, x: 0, y: 0 });
       }}
-      className={`relative overflow-hidden rounded-[24px] bg-white ${compact ? 'aspect-[2.34/1] min-h-[230px]' : 'aspect-[2.34/1] min-h-[420px]'} ${compact ? '' : 'cursor-grab active:cursor-grabbing'}`}
+      className={`relative overflow-hidden rounded-[24px] bg-white ${compact ? 'aspect-[2.5/1] min-h-[150px] sm:aspect-[2.34/1] sm:min-h-[220px] lg:min-h-[230px]' : 'aspect-[2.34/1] min-h-[320px] sm:min-h-[420px]'} ${compact ? '' : 'cursor-grab active:cursor-grabbing'}`}
     >
       {!compact && (
         <div
@@ -386,11 +388,11 @@ function LeadWorldMap({
         }}
       >
         <div
-          className={`absolute inset-0 flex items-center justify-center ${compact ? 'px-3 py-4' : 'px-6 py-5'} [&>svg]:h-auto [&>svg]:w-full [&>svg]:max-h-full [&>svg]:max-w-full`}
-          dangerouslySetInnerHTML={{ __html: svgMarkup }}
-        />
-        {viewBox && (
-          <div className={`pointer-events-none absolute inset-0 flex items-center justify-center ${compact ? 'px-3 py-4' : 'px-6 py-5'}`}>
+        className={`absolute inset-0 flex items-center justify-center ${compact ? 'px-2 py-3 sm:px-3 sm:py-4' : 'px-6 py-5'} [&>svg]:h-auto [&>svg]:w-full [&>svg]:max-h-full [&>svg]:max-w-full`}
+        dangerouslySetInnerHTML={{ __html: svgMarkup }}
+      />
+      {viewBox && (
+          <div className={`pointer-events-none absolute inset-0 flex items-center justify-center ${compact ? 'px-2 py-3 sm:px-3 sm:py-4' : 'px-6 py-5'}`}>
             <svg
               className="h-auto w-full max-h-full max-w-full overflow-visible"
               viewBox={`${viewBox.minX} ${viewBox.minY} ${viewBox.width} ${viewBox.height}`}
@@ -398,8 +400,8 @@ function LeadWorldMap({
             >
               {visiblePoints.map((point) => {
                 const isSelected = point.countryCode === selectedCountry || point.countryCode === hoveredCountry;
-                const radius = compact ? 10 + (point.count / maxCount) * 8 : 12 + (point.count / maxCount) * 12;
-                const haloRadius = radius + (compact ? 6 : 8);
+                const radius = compact ? 8 + (point.count / maxCount) * 5 : 12 + (point.count / maxCount) * 12;
+                const haloRadius = radius + (compact ? 5 : 8);
 
                 return (
                   <g key={point.countryCode}>
@@ -416,7 +418,7 @@ function LeadWorldMap({
                       r={radius}
                       fill={isSelected ? '#2563EB' : '#3B82F6'}
                       stroke="#ffffff"
-                      strokeWidth={compact ? 6 : 7}
+                      strokeWidth={compact ? 5 : 7}
                       pointerEvents="none"
                     />
                     <circle
@@ -1134,7 +1136,7 @@ export default function Leads() {
         </div>
       )}
 
-      <div className="grid gap-4 xl:grid-cols-[210px_210px_minmax(0,1fr)]">
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-[210px_210px_minmax(0,1fr)]">
         <CompactMetricCard
           title={t('leads.total')}
           value={formatNumber(stats.total)}
@@ -1152,25 +1154,29 @@ export default function Leads() {
           iconWrapClassName="bg-emerald-50"
         />
 
-        <GlassCard className="overflow-hidden">
+        <GlassCard className="col-span-2 overflow-hidden xl:col-span-1">
           <div className="border-b border-slate-100/90 px-6 py-4">
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-500">Deine Besucher kennenlernen</p>
           </div>
 
           <div className="grid gap-0 lg:grid-cols-[1.15fr_0.85fr]">
             <div className="px-6 py-5 lg:border-r lg:border-slate-100/90">
-              <div className="mb-3 flex items-center justify-between gap-3">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <h3 className="text-base font-semibold text-slate-800">Besucher nach Standort</h3>
-                <span className="text-sm text-slate-400">{resolvedCountryStats.length} Länder</span>
+                <span className="text-xs text-slate-400 sm:text-sm">{resolvedCountryStats.length} Länder</span>
               </div>
-              <LeadWorldMap
-                svgMarkup={worldMapMarkup}
-                points={resolvedCountryStats}
-                selectedCountry={selectedCountryStat?.countryCode || null}
-                onSelectCountry={setSelectedCountry}
-                offset={{ x: 0, y: 0 }}
-                compact
-              />
+              <div className="pb-2">
+                <div className="w-full">
+                  <LeadWorldMap
+                    svgMarkup={worldMapMarkup}
+                    points={resolvedCountryStats}
+                    selectedCountry={selectedCountryStat?.countryCode || null}
+                    onSelectCountry={setSelectedCountry}
+                    offset={{ x: 0, y: 0 }}
+                    compact
+                  />
+                </div>
+              </div>
               <button
                 type="button"
                 onClick={() =>
@@ -1193,7 +1199,7 @@ export default function Leads() {
                 <h3 className="text-base font-semibold text-slate-800">Zeit zwischen Kauf und Einlösung</h3>
               </div>
 
-              <div className="grid gap-2.5 sm:grid-cols-2">
+              <div className="grid grid-cols-2 gap-2.5">
                 <div className="rounded-2xl border border-slate-100 bg-white/70 p-3">
                   <p className="text-[11px] font-bold tracking-[0.08em] text-slate-500">Durchschnittlich später</p>
                   <p className="mt-1.5 text-base font-bold text-slate-800">{delayInsights.avgDelayLabel}</p>
@@ -1243,25 +1249,29 @@ export default function Leads() {
             </p>
           </div>
 
-          <div className="grid gap-6 p-6 lg:grid-cols-[1.55fr_0.85fr]">
+          <div className="grid gap-6 p-4 sm:p-6 lg:grid-cols-[1.55fr_0.85fr]">
             <div className="space-y-4">
-              <LeadWorldMap
-                svgMarkup={worldMapMarkup}
-                points={resolvedCountryStats}
-                selectedCountry={selectedCountryStat?.countryCode || null}
-                onSelectCountry={setSelectedCountry}
-                hoveredCountry={hoveredCountryInfo?.countryCode || null}
-                hoverLabel={hoveredCountryLabel}
-                hoverPosition={hoveredCountryInfo}
-                zoom={detailMapZoom}
-                offset={detailMapOffset}
-                onOffsetChange={setDetailMapOffset}
-                onZoomIn={zoomDetailMapIn}
-                onZoomOut={zoomDetailMapOut}
-                onResetView={resetDetailMapView}
-                onHoverCountry={setHoveredCountryInfo}
-              />
-              <div className="grid gap-4 sm:grid-cols-3">
+              <div className="-mx-2 overflow-x-auto pb-2 sm:mx-0 sm:overflow-visible sm:pb-0">
+                <div className="w-[680px] sm:w-full">
+                  <LeadWorldMap
+                    svgMarkup={worldMapMarkup}
+                    points={resolvedCountryStats}
+                    selectedCountry={selectedCountryStat?.countryCode || null}
+                    onSelectCountry={setSelectedCountry}
+                    hoveredCountry={hoveredCountryInfo?.countryCode || null}
+                    hoverLabel={hoveredCountryLabel}
+                    hoverPosition={hoveredCountryInfo}
+                    zoom={detailMapZoom}
+                    offset={detailMapOffset}
+                    onOffsetChange={setDetailMapOffset}
+                    onZoomIn={zoomDetailMapIn}
+                    onZoomOut={zoomDetailMapOut}
+                    onResetView={resetDetailMapView}
+                    onHoverCountry={setHoveredCountryInfo}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
                 <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Länder</p>
                   <p className="mt-2 text-2xl font-bold text-slate-800">{resolvedCountryStats.length}</p>
