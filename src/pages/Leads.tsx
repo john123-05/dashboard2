@@ -32,6 +32,7 @@ export default function Leads() {
   const [stats, setStats] = useState({ total: 0, optedIn: 0 });
   const [filterOptIn, setFilterOptIn] = useState<boolean | null>(null);
   const [countryFilter, setCountryFilter] = useState('all');
+  const [selectionMode, setSelectionMode] = useState(false);
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -124,6 +125,13 @@ export default function Leads() {
     );
   }
 
+  function toggleSelectionMode() {
+    setSelectionMode((current) => {
+      if (current) setSelectedLeadIds([]);
+      return !current;
+    });
+  }
+
   function toggleVisibleSelection() {
     const visibleIds = filtered
       .filter(isDeletableLead)
@@ -206,7 +214,7 @@ export default function Leads() {
   }
 
   const columns = [
-    {
+    ...(selectionMode ? [{
       key: 'select',
       label: (
         <input
@@ -231,7 +239,7 @@ export default function Leads() {
           />
         );
       },
-    },
+    }] : []),
     {
       key: 'email',
       label: t('leads.table.email'),
@@ -291,7 +299,7 @@ export default function Leads() {
         <span className="text-slate-500">{formatDate(item.created_at as string)}</span>
       ),
     },
-    {
+    ...(selectionMode ? [{
       key: 'actions',
       label: '',
       className: 'w-14 text-right',
@@ -310,7 +318,7 @@ export default function Leads() {
           </button>
         );
       },
-    },
+    }] : []),
   ];
 
   return (
@@ -367,6 +375,17 @@ export default function Leads() {
         pageSize={10}
         actions={
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={toggleSelectionMode}
+              className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
+                selectionMode
+                  ? 'border-sky-200 bg-sky-50 text-sky-700'
+                  : 'border-slate-200/60 bg-white/60 text-slate-600 hover:bg-white/80'
+              }`}
+            >
+              {selectionMode ? 'Fertig' : 'Auswählen'}
+            </button>
             <select
               value={filterOptIn === null ? 'all' : filterOptIn ? 'yes' : 'no'}
               onChange={(e) => {
@@ -391,7 +410,7 @@ export default function Leads() {
                 </option>
               ))}
             </select>
-            {selectedLeadIds.length > 0 && (
+            {selectionMode && selectedLeadIds.length > 0 && (
               <button
                 type="button"
                 onClick={() => deleteLeadIds(selectedLeadIds)}
