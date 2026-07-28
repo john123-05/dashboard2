@@ -22,16 +22,18 @@ type HourBucket = {
   label: string;
 };
 
-const COUNTRY_COORDINATE_OVERRIDES: Record<string, { x: number; y: number }> = {
-  AT: { x: 52.8, y: 35.2 },
-  BE: { x: 48.8, y: 31.9 },
-  CH: { x: 50.3, y: 35.2 },
-  CZ: { x: 53.5, y: 33.8 },
-  DE: { x: 51.2, y: 32.1 },
-  GB: { x: 46.2, y: 28.2 },
-  IE: { x: 43.4, y: 29.6 },
-  NL: { x: 49.0, y: 31.0 },
-  US: { x: 14.8, y: 48.0 },
+type SvgViewBox = { minX: number; minY: number; width: number; height: number };
+
+const COUNTRY_COORDINATE_OVERRIDES: Record<string, { xPercent: number; yPercent: number }> = {
+  AT: { xPercent: 52.2, yPercent: 35.9 },
+  BE: { xPercent: 48.4, yPercent: 32.4 },
+  CH: { xPercent: 50.4, yPercent: 35.9 },
+  CZ: { xPercent: 53.4, yPercent: 34.1 },
+  DE: { xPercent: 50.8, yPercent: 33.1 },
+  GB: { xPercent: 46.0, yPercent: 29.3 },
+  IE: { xPercent: 43.6, yPercent: 29.9 },
+  NL: { xPercent: 49.0, yPercent: 31.3 },
+  US: { xPercent: 18.2, yPercent: 49.6 },
 };
 
 function getCountryName(countryCode: string): string {
@@ -115,12 +117,19 @@ function buildWorldMapMarkup(svgSource: string, points: CountryStat[], selectedC
     .replace('>', `>${styleBlock}`);
 }
 
-function parseSvgViewBox(svgMarkup: string): { minX: number; minY: number; width: number; height: number } | null {
+function parseSvgViewBox(svgMarkup: string): SvgViewBox | null {
   const match = svgMarkup.match(/viewBox="([^"]+)"/i);
   if (!match) return null;
   const [minX, minY, width, height] = match[1].split(/[\s,]+/).map(Number);
   if ([minX, minY, width, height].some((value) => Number.isNaN(value))) return null;
   return { minX, minY, width, height };
+}
+
+function resolveViewBoxCoordinate(viewBox: SvgViewBox, xPercent: number, yPercent: number) {
+  return {
+    x: viewBox.minX + (viewBox.width * xPercent) / 100,
+    y: viewBox.minY + (viewBox.height * yPercent) / 100,
+  };
 }
 
 function LeadWorldMap({
@@ -175,14 +184,19 @@ function LeadWorldMap({
     }
 
     const next = points.map((point) => {
-      if (point.x !== null && point.y !== null) return point;
+      const manualCoordinate = COUNTRY_COORDINATE_OVERRIDES[point.countryCode];
+      if (manualCoordinate) {
+        const resolvedCoordinate = resolveViewBoxCoordinate(viewBox, manualCoordinate.xPercent, manualCoordinate.yPercent);
+        return { ...point, ...resolvedCoordinate };
+      }
+
       const countryElement = svg.querySelector<SVGGraphicsElement>(`#${point.countryCode.toLowerCase()}`);
       if (!countryElement) return point;
 
       try {
         const bbox = countryElement.getBBox();
-        const x = ((bbox.x + bbox.width / 2 - viewBox.minX) / viewBox.width) * 100;
-        const y = ((bbox.y + bbox.height / 2 - viewBox.minY) / viewBox.height) * 100;
+        const x = bbox.x + bbox.width / 2;
+        const y = bbox.y + bbox.height / 2;
         return { ...point, x, y };
       } catch {
         return point;
@@ -197,6 +211,8 @@ function LeadWorldMap({
 
   function getCountryFromEventTarget(target: EventTarget | null): string | null {
     if (!(target instanceof Element)) return null;
+    const markerCountry = target.closest('[data-country]')?.getAttribute('data-country')?.toUpperCase() || '';
+    if (markerCountry && /^[A-Z]{2}$/.test(markerCountry)) return markerCountry;
     const group = target.closest('g[id]');
     const id = group?.getAttribute('id')?.toUpperCase() || '';
     return id && /^[A-Z]{2}$/.test(id) ? id : null;
@@ -238,9 +254,15 @@ function LeadWorldMap({
     dragStateRef.current = null;
   }
 
+  function handleMapClick(event: React.MouseEvent<HTMLDivElement>) {
+    const countryCode = getCountryFromEventTarget(event.target);
+    if (countryCode) onSelectCountry(countryCode);
+  }
+
   return (
     <div
       ref={mapRef}
+      onClick={handleMapClick}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
@@ -285,39 +307,57 @@ function LeadWorldMap({
           transformOrigin: 'center center',
         }}
       >
-      <div
+        <div
           className={`absolute inset-0 flex items-center justify-center ${compact ? 'px-3 py-4' : 'px-6 py-5'} [&>svg]:h-auto [&>svg]:w-full [&>svg]:max-h-full [&>svg]:max-w-full`}
-        dangerouslySetInnerHTML={{ __html: svgMarkup }}
-      />
-      {visiblePoints.map((point) => {
-        const isSelected = point.countryCode === selectedCountry || point.countryCode === hoveredCountry;
-        const radius = compact ? 2.8 + (point.count / maxCount) * 2.8 : 4 + (point.count / maxCount) * 5.8;
-        return (
-          <button
-            key={point.countryCode}
-            type="button"
-            onClick={() => onSelectCountry(point.countryCode)}
-            className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full"
-            style={{ left: `${point.x}%`, top: `${point.y}%`, width: `${radius * 2 + 12}px`, height: `${radius * 2 + 12}px` }}
-            aria-label={`${point.countryName} auswählen`}
-          >
-            <span
-              className="absolute inset-0 rounded-full"
-              style={{ backgroundColor: 'rgba(37, 99, 235, 0.12)' }}
-            />
-            <span
-              className="absolute left-1/2 top-1/2 rounded-full border-[3px] border-white shadow-sm"
-              style={{
-                width: `${radius * 2}px`,
-                height: `${radius * 2}px`,
-                marginLeft: `${-radius}px`,
-                marginTop: `${-radius}px`,
-                backgroundColor: isSelected ? '#2563EB' : '#3B82F6',
-              }}
-            />
-          </button>
-        );
-      })}
+          dangerouslySetInnerHTML={{ __html: svgMarkup }}
+        />
+        {viewBox && (
+          <div className={`pointer-events-none absolute inset-0 flex items-center justify-center ${compact ? 'px-3 py-4' : 'px-6 py-5'}`}>
+            <svg
+              className="h-full w-full max-h-full max-w-full overflow-visible"
+              viewBox={`${viewBox.minX} ${viewBox.minY} ${viewBox.width} ${viewBox.height}`}
+              preserveAspectRatio="xMidYMid meet"
+            >
+              {visiblePoints.map((point) => {
+                const isSelected = point.countryCode === selectedCountry || point.countryCode === hoveredCountry;
+                const radius = compact ? 10 + (point.count / maxCount) * 8 : 12 + (point.count / maxCount) * 12;
+                const haloRadius = radius + (compact ? 6 : 8);
+
+                return (
+                  <g key={point.countryCode}>
+                    <circle
+                      cx={point.x!}
+                      cy={point.y!}
+                      r={haloRadius}
+                      fill="rgba(37, 99, 235, 0.12)"
+                      pointerEvents="none"
+                    />
+                    <circle
+                      cx={point.x!}
+                      cy={point.y!}
+                      r={radius}
+                      fill={isSelected ? '#2563EB' : '#3B82F6'}
+                      stroke="#ffffff"
+                      strokeWidth={compact ? 6 : 7}
+                      pointerEvents="none"
+                    />
+                    <circle
+                      data-country={point.countryCode}
+                      cx={point.x!}
+                      cy={point.y!}
+                      r={haloRadius + (compact ? 4 : 6)}
+                      fill="transparent"
+                      pointerEvents="auto"
+                      className="cursor-pointer"
+                    >
+                      <title>{`${point.countryName}: ${point.count}`}</title>
+                    </circle>
+                  </g>
+                );
+              })}
+            </svg>
+          </div>
+        )}
       </div>
 
       {!compact && hoverLabel && hoverPosition && (
@@ -472,8 +512,8 @@ export default function Leads() {
         countryCode,
         countryName: getCountryName(countryCode),
         count,
-        x: COUNTRY_COORDINATE_OVERRIDES[countryCode]?.x ?? null,
-        y: COUNTRY_COORDINATE_OVERRIDES[countryCode]?.y ?? null,
+        x: null,
+        y: null,
       }))
       .sort((a, b) => b.count - a.count || a.countryName.localeCompare(b.countryName));
   }, [leads]);
@@ -888,10 +928,10 @@ export default function Leads() {
                 zoom={detailMapZoom}
                 offset={detailMapOffset}
                 onOffsetChange={setDetailMapOffset}
-                onZoomIn={() => setDetailMapZoom((current) => Math.min(current * 1.35, 6))}
+                onZoomIn={() => setDetailMapZoom((current) => Math.min(current * 1.5, 10))}
                 onZoomOut={() =>
                   setDetailMapZoom((current) => {
-                    const next = Math.max(current / 1.35, 0.6);
+                    const next = Math.max(current / 1.5, 0.45);
                     if (next <= 1) setDetailMapOffset({ x: 0, y: 0 });
                     return next;
                   })
