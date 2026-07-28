@@ -14,9 +14,9 @@ import {
   ChevronLeft,
   ChevronRight,
   UserCog,
+  X,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { useState } from 'react';
 import { useI18n } from '../../lib/i18n';
 import { usePark } from '../../contexts/ParkContext';
 
@@ -32,6 +32,13 @@ type NavItem = {
   ownerOnly?: boolean;
 };
 
+interface SidebarProps {
+  collapsed: boolean;
+  onToggleCollapsed: () => void;
+  mobileOpen: boolean;
+  onCloseMobile: () => void;
+}
+
 const navItems: NavItem[] = [
   { to: '/', icon: LayoutDashboard, labelKey: 'nav.overview', comingSoon: true, kioskUnlocks: true },
   { to: '/revenue', icon: DollarSign, labelKey: 'nav.revenue', comingSoon: true, kioskUnlocks: true },
@@ -46,12 +53,17 @@ const navItems: NavItem[] = [
   { to: '/settings', icon: Settings, labelKey: 'nav.settings' },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({
+  collapsed,
+  onToggleCollapsed,
+  mobileOpen,
+  onCloseMobile,
+}: SidebarProps) {
   const { profile, currentOrg, signOut, isStaff, isOwner } = useAuth();
   const location = useLocation();
-  const [collapsed, setCollapsed] = useState(false);
   const { t } = useI18n();
   const { parkName, setPark, isKioskPark } = usePark();
+  const showFull = !collapsed || mobileOpen;
 
   const visibleItems = navItems.filter((item) => {
     if (isStaff) return item.staffAllowed;
@@ -63,7 +75,7 @@ export default function Sidebar() {
     <aside
       className={`glass-sidebar fixed inset-y-0 left-0 z-30 flex flex-col transition-all duration-300 ${
         collapsed ? 'w-[72px]' : 'w-64'
-      }`}
+      } ${mobileOpen ? 'mobile-open' : ''}`}
     >
       <div className="flex h-16 items-center gap-3 border-b border-white/[0.06] px-4">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center">
@@ -74,7 +86,7 @@ export default function Sidebar() {
             loading="lazy"
           />
         </div>
-        {!collapsed && (
+        {showFull && (
           <div className="animate-fade-in overflow-hidden">
             <h1 className="text-sm font-bold tracking-tight text-white">Liftpictures</h1>
             <p className="truncate text-[11px] text-slate-400">
@@ -82,6 +94,14 @@ export default function Sidebar() {
             </p>
           </div>
         )}
+        <button
+          type="button"
+          className="operator-mobile-nav-close"
+          aria-label="Navigation schließen"
+          onClick={onCloseMobile}
+        >
+          <X className="h-4 w-4" />
+        </button>
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-4 scrollbar-thin">
@@ -101,19 +121,20 @@ export default function Sidebar() {
                   isActive
                     ? 'bg-white/[0.12] text-white shadow-sm shadow-black/10'
                     : 'text-slate-400 hover:bg-white/[0.06] hover:text-slate-200'
-                } ${collapsed ? 'justify-center' : ''}`}
+                } ${showFull ? '' : 'justify-center'}`}
                 title={
                   collapsed
                     ? `${item.label ?? t(item.labelKey)}${showComingSoon ? ` (${t('nav.coming_soon')})` : ''}`
                     : undefined
                 }
+                onClick={onCloseMobile}
               >
                 <item.icon
                   className={`h-[18px] w-[18px] shrink-0 transition-colors ${
                     isActive ? 'text-brand-400' : 'text-slate-500 group-hover:text-slate-300'
                   }`}
                 />
-                {!collapsed && (
+                {showFull && (
                   <span className="animate-fade-in truncate">
                     {item.label ?? t(item.labelKey)}
                     {showComingSoon && (
@@ -128,7 +149,7 @@ export default function Sidebar() {
       </nav>
 
       <div className="border-t border-white/[0.06] p-3">
-        {!collapsed && profile && (
+        {showFull && profile && (
           <div className="mb-3 rounded-xl bg-white/[0.06] px-3 py-2.5">
             <p className="truncate text-sm font-medium text-slate-200">
               {profile.full_name}
@@ -140,21 +161,22 @@ export default function Sidebar() {
         <div className={`flex ${collapsed ? 'flex-col' : ''} gap-1`}>
           <button
             onClick={async () => {
+              onCloseMobile();
               setPark(null, null);
               await signOut();
             }}
             className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-slate-500 transition-colors hover:bg-white/[0.06] hover:text-rose-400 ${
-              collapsed ? 'justify-center' : 'flex-1'
+              showFull ? 'flex-1' : 'justify-center'
             }`}
             title={t('nav.sign_out')}
           >
             <LogOut className="h-4 w-4 shrink-0" />
-            {!collapsed && <span>{t('nav.sign_out')}</span>}
+            {showFull && <span>{t('nav.sign_out')}</span>}
           </button>
 
           <button
-            onClick={() => setCollapsed(!collapsed)}
-            className="flex items-center justify-center rounded-xl px-3 py-2 text-slate-500 transition-colors hover:bg-white/[0.06] hover:text-slate-300"
+            onClick={onToggleCollapsed}
+            className="operator-mobile-nav-hide-collapse-btn flex items-center justify-center rounded-xl px-3 py-2 text-slate-500 transition-colors hover:bg-white/[0.06] hover:text-slate-300"
             title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             {collapsed ? (
