@@ -37,6 +37,11 @@ async function fetchExternal(path: string) {
   return { ok: true, data };
 }
 
+function isMissingOpeningHoursConfig(details: string | undefined) {
+  const lower = (details || "").toLowerCase();
+  return lower.includes("opening_hours_config") && lower.includes("does not exist");
+}
+
 function numericValue(value: unknown): number {
   const numberValue = Number(value ?? 0);
   return Number.isFinite(numberValue) ? numberValue : 0;
@@ -65,9 +70,14 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const parkRes = await fetchExternal(
+    let parkRes = await fetchExternal(
       `parks?select=id,name,price_per_photo_cents,timezone,opening_hours,opening_hours_config&id=eq.${parkId}`
     );
+    if (!parkRes.ok && isMissingOpeningHoursConfig(parkRes.details)) {
+      parkRes = await fetchExternal(
+        `parks?select=id,name,price_per_photo_cents,timezone,opening_hours&id=eq.${parkId}`
+      );
+    }
     if (!parkRes.ok) {
       return new Response(
         JSON.stringify({ error: "Failed to fetch park", details: parkRes.details }),

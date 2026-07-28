@@ -210,10 +210,19 @@ async function loadLatestSupportReply(parkId: string): Promise<(SupportMessageRo
 async function loadParks(parkIds: string[]): Promise<Map<string, ParkRow>> {
   if (parkIds.length === 0) return new Map();
 
-  const { data, error } = await supabaseService
+  let { data, error } = await supabaseService
     .from('parks')
     .select('id, name, timezone, opening_hours, opening_hours_config')
     .in('id', parkIds);
+
+  if (error && String(error.message || '').includes('opening_hours_config')) {
+    const fallback = await supabaseService
+      .from('parks')
+      .select('id, name, timezone, opening_hours')
+      .in('id', parkIds);
+    data = fallback.data;
+    error = fallback.error;
+  }
 
   if (error || !data) return new Map();
 
