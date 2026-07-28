@@ -1,12 +1,17 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Save, Loader2, Building2, MapPin, Mountain, Package, Bell, BellRing, Smartphone, AlertTriangle, LifeBuoy } from 'lucide-react';
+import { Save, Loader2, Building2, MapPin, Mountain, Package, Bell, BellRing, Smartphone, AlertTriangle, LifeBuoy, CalendarDays, Clock3, Plus, Trash2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { getOptionalSourceWarning, invokeEdgeFunction, isEdgeSourceUnavailable } from '../lib/edgeFunctions';
 import { useAuth } from '../contexts/AuthContext';
 import { usePark } from '../contexts/ParkContext';
 import GlassCard from '../components/ui/GlassCard';
 import { useI18n } from '../lib/i18n';
-import type { Park, Attraction } from '../lib/types';
+import {
+  createDefaultOpeningHoursConfig,
+  deriveLegacyOpeningHoursFromConfig,
+  normalizeOpeningHoursConfig,
+} from '../lib/kioskSales';
+import type { Park, Attraction, OpeningHoursConfig, ScheduleException, SchedulePause, WeekdayKey } from '../lib/types';
 import { invokeSharedEdgeFunction } from '../lib/sharedEdgeFunctions';
 import {
   getCurrentOperatorPushSubscription,
@@ -66,6 +71,37 @@ const DEFAULT_OPERATOR_NOTIFICATION_SETTINGS: OperatorNotificationSettings = {
   support_enabled: true,
   system_health_enabled: true,
 };
+
+const WEEKDAY_ORDER: WeekdayKey[] = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+const WEEKDAY_LABELS: Record<WeekdayKey, string> = {
+  mon: 'Montag',
+  tue: 'Dienstag',
+  wed: 'Mittwoch',
+  thu: 'Donnerstag',
+  fri: 'Freitag',
+  sat: 'Samstag',
+  sun: 'Sonntag',
+};
+
+function createEmptyPause(): SchedulePause {
+  return { start: '12:00', end: '13:00' };
+}
+
+function createException(type: ScheduleException['type']): ScheduleException {
+  const today = new Date().toISOString().slice(0, 10);
+  return {
+    id: crypto.randomUUID(),
+    type,
+    label: type === 'holiday' ? 'Feiertag' : type === 'vacation' ? 'Urlaub' : 'Sonderöffnung',
+    start_date: today,
+    end_date: today,
+    is_closed: type !== 'special_hours',
+    open: type === 'special_hours' ? '10:00' : null,
+    close: type === 'special_hours' ? '16:00' : null,
+    pauses: [],
+  };
+}
+
 export default function Settings() {
   const { profile, currentOrg, memberships, refreshProfile } = useAuth();
   const { parkId, parkName, refreshKioskState } = usePark();
@@ -83,6 +119,9 @@ export default function Settings() {
   const [photoPriceInput, setPhotoPriceInput] = useState('');
   const [priceSavingMode, setPriceSavingMode] = useState<'future' | 'retroactive' | null>(null);
   const [priceMessage, setPriceMessage] = useState<string | null>(null);
+  const [scheduleConfig, setScheduleConfig] = useState<OpeningHoursConfig>(createDefaultOpeningHoursConfig(null));
+  const [scheduleSaving, setScheduleSaving] = useState(false);
+  const [scheduleMessage, setScheduleMessage] = useState<string | null>(null);
   const pushSupported = useMemo(() => isOperatorPushSupported(), []);
   const [notificationSettings, setNotificationSettings] = useState<OperatorNotificationSettings>(
     DEFAULT_OPERATOR_NOTIFICATION_SETTINGS,
@@ -202,8 +241,10 @@ export default function Settings() {
         name: p.name,
         slug: p.slug,
         location: null,
-        timezone: 'UTC',
+        timezone: p.timezone ?? 'Europe/Vienna',
         price_per_photo_cents: p.price_per_photo_cents ?? null,
+        opening_hours: p.opening_hours ?? null,
+        opening_hours_config: p.opening_hours_config ?? null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         attractions: attractionsByPark.get(p.id) || [],
@@ -223,6 +264,16 @@ export default function Settings() {
     setPhotoPriceInput(formatEuroInputFromCents(selectedPark?.price_per_photo_cents ?? null));
     setPriceMessage(null);
   }, [selectedPark?.id, selectedPark?.price_per_photo_cents]);
+
+  useEffect(() => {
+    setScheduleConfig(
+      normalizeOpeningHoursConfig(
+        selectedPark?.opening_hours_config ?? null,
+        selectedPark?.opening_hours ?? null,
+      ),
+    );
+    setScheduleMessage(null);
+  }, [selectedPark?.id, selectedPark?.opening_hours, selectedPark?.opening_hours_config]);
 
   async function handleSaveNotificationSettings() {
     if (!selectedPark?.id) return;
@@ -446,6 +497,173 @@ export default function Settings() {
     );
   }
 
+  function updateWeekday<K extends keyof OpeningHoursConfig['weekdays'][WeekdayKey]>(
+    dayKey: WeekdayKey,
+    field: K,
+    value: OpeningHoursConfig['weekdays'][WeekdayKey][K],
+  ) {
+    setScheduleConfig((current) => ({
+      ...current,
+      weekdays: {
+        ...current.weekdays,
+        [dayKey]: {
+          ...current.weekdays[dayKey],
+          [field]: value,
+        },
+      },
+    }));
+  }
+
+  function addPause(dayKey: WeekdayKey) {
+    setScheduleConfig((current) => ({
+      ...current,
+      weekdays: {
+        ...current.weekdays,
+        [dayKey]: {
+          ...current.weekdays[dayKey],
+          pauses: [...current.weekdays[dayKey].pauses, createEmptyPause()],
+        },
+      },
+    }));
+  }
+
+  function updatePause(dayKey: WeekdayKey, pauseIndex: number, field: keyof SchedulePause, value: string) {
+    setScheduleConfig((current) => ({
+      ...current,
+      weekdays: {
+        ...current.weekdays,
+        [dayKey]: {
+          ...current.weekdays[dayKey],
+          pauses: current.weekdays[dayKey].pauses.map((pause, index) =>
+            index === pauseIndex ? { ...pause, [field]: value } : pause,
+          ),
+        },
+      },
+    }));
+  }
+
+  function removePause(dayKey: WeekdayKey, pauseIndex: number) {
+    setScheduleConfig((current) => ({
+      ...current,
+      weekdays: {
+        ...current.weekdays,
+        [dayKey]: {
+          ...current.weekdays[dayKey],
+          pauses: current.weekdays[dayKey].pauses.filter((_, index) => index !== pauseIndex),
+        },
+      },
+    }));
+  }
+
+  function addScheduleException(type: ScheduleException['type']) {
+    setScheduleConfig((current) => ({
+      ...current,
+      exceptions: [...current.exceptions, createException(type)],
+    }));
+  }
+
+  function updateScheduleException(
+    exceptionId: string,
+    patch: Partial<ScheduleException>,
+  ) {
+    setScheduleConfig((current) => ({
+      ...current,
+      exceptions: current.exceptions.map((entry) => (entry.id === exceptionId ? { ...entry, ...patch } : entry)),
+    }));
+  }
+
+  function addExceptionPause(exceptionId: string) {
+    setScheduleConfig((current) => ({
+      ...current,
+      exceptions: current.exceptions.map((entry) =>
+        entry.id === exceptionId
+          ? { ...entry, pauses: [...entry.pauses, createEmptyPause()] }
+          : entry,
+      ),
+    }));
+  }
+
+  function updateExceptionPause(
+    exceptionId: string,
+    pauseIndex: number,
+    field: keyof SchedulePause,
+    value: string,
+  ) {
+    setScheduleConfig((current) => ({
+      ...current,
+      exceptions: current.exceptions.map((entry) =>
+        entry.id === exceptionId
+          ? {
+              ...entry,
+              pauses: entry.pauses.map((pause, index) =>
+                index === pauseIndex ? { ...pause, [field]: value } : pause,
+              ),
+            }
+          : entry,
+      ),
+    }));
+  }
+
+  function removeExceptionPause(exceptionId: string, pauseIndex: number) {
+    setScheduleConfig((current) => ({
+      ...current,
+      exceptions: current.exceptions.map((entry) =>
+        entry.id === exceptionId
+          ? { ...entry, pauses: entry.pauses.filter((_, index) => index !== pauseIndex) }
+          : entry,
+      ),
+    }));
+  }
+
+  function removeScheduleException(exceptionId: string) {
+    setScheduleConfig((current) => ({
+      ...current,
+      exceptions: current.exceptions.filter((entry) => entry.id !== exceptionId),
+    }));
+  }
+
+  async function handleSaveOpeningHours() {
+    if (!selectedPark) return;
+
+    setScheduleSaving(true);
+    setScheduleMessage(null);
+
+    const payload = {
+      ...scheduleConfig,
+      exceptions: scheduleConfig.exceptions
+        .slice()
+        .sort((left, right) => left.start_date.localeCompare(right.start_date)),
+    };
+
+    const { data, error } = await invokeSharedEdgeFunction<{
+      opening_hours: Park['opening_hours'];
+      opening_hours_config: OpeningHoursConfig;
+    }>('operator-park-schedule', {
+      method: 'POST',
+      body: {
+        park_id: selectedPark.id,
+        opening_hours_config: payload,
+      },
+    });
+
+    if (error) {
+      setScheduleMessage(error);
+      setScheduleSaving(false);
+      return;
+    }
+
+    const nextConfig = normalizeOpeningHoursConfig(
+      data?.opening_hours_config ?? payload,
+      data?.opening_hours ?? deriveLegacyOpeningHoursFromConfig(payload),
+    );
+
+    setScheduleConfig(nextConfig);
+    await loadData();
+    refreshKioskState();
+    setScheduleSaving(false);
+    setScheduleMessage('Öffnungszeiten gespeichert. Umsatzansicht und Benachrichtigungen nutzen jetzt diese Zeiten.');
+  }
+
   const currentRole = memberships.find((m) => m.organization_id === currentOrg?.id)?.role || 'unknown';
 
   if (loading) {
@@ -539,6 +757,64 @@ export default function Settings() {
           </form>
         </GlassCard>
 
+        <GlassCard className="p-6">
+          <h3 className="mb-4 text-base font-semibold text-slate-800">{t('settings.organization')}</h3>
+          {parksToRender.length > 0 ? (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 rounded-xl bg-white/30 p-4">
+                <div className="rounded-xl bg-brand-100 p-3">
+                  <Building2 className="h-5 w-5 text-brand-600" />
+                </div>
+                <div>
+                  <p className="font-semibold text-slate-800">{selectedPark?.name || t('app.none')}</p>
+                  <p className="text-xs text-slate-500">{t('settings.slug')}: {selectedPark?.slug || '-'}</p>
+                  {parkName && (
+                    <p className="text-xs text-slate-500">{t('settings.active_park')}: {parkName}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <p className="text-sm font-medium text-slate-600">{t('settings.parks_attractions')}</p>
+                {parksToRender.map((park) => (
+                  <div key={park.id} className="rounded-xl bg-white/30 p-4">
+                    <div className="mb-2 flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-brand-500" />
+                      <p className="text-sm font-semibold text-slate-800">{park.name}</p>
+                    </div>
+                    {park.location && (
+                      <p className="mb-2 text-xs text-slate-500">{park.location}</p>
+                    )}
+                    <div className="ml-6 space-y-1.5">
+                      {park.attractions.map((attr) => (
+                        <div key={attr.id} className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Mountain className="h-3.5 w-3.5 text-slate-400" />
+                            <span className="text-sm text-slate-700">{attr.name}</span>
+                          </div>
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                              attr.status === 'active'
+                                ? 'bg-emerald-50 text-emerald-700'
+                                : attr.status === 'maintenance'
+                                  ? 'bg-amber-50 text-amber-700'
+                                  : 'bg-slate-50 text-slate-500'
+                            }`}
+                          >
+                            {attr.status}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-slate-500">{t('app.none')}</p>
+          )}
+        </GlassCard>
+
         <GlassCard className="p-6 xl:col-span-2">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
@@ -618,6 +894,317 @@ export default function Settings() {
               {priceMessage && <p className="mt-4 text-sm text-slate-600">{priceMessage}</p>}
             </div>
           </div>
+        </GlassCard>
+
+        <GlassCard className="p-6 xl:col-span-2">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h3 className="text-base font-semibold text-slate-800">Öffnungszeiten & Saison</h3>
+              <p className="mt-1 text-sm text-slate-500">
+                Lege fest, wann dein Park geöffnet ist. Diese Zeiten werden für Benachrichtigungen und die Tagesansichten im Umsatz genutzt.
+              </p>
+            </div>
+            <div className="rounded-xl bg-white/30 px-4 py-3 text-right">
+              <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Zeitzone</p>
+              <p className="mt-1 text-sm font-semibold text-slate-800">{selectedPark?.timezone || 'Europe/Vienna'}</p>
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-4 lg:grid-cols-2">
+            <div className="rounded-2xl bg-white/30 p-4">
+              <div className="mb-3 flex items-center gap-2">
+                <CalendarDays className="h-4 w-4 text-brand-600" />
+                <p className="text-sm font-semibold text-slate-800">Saison</p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium uppercase tracking-[0.18em] text-slate-400">Saisonstart</label>
+                  <input
+                    type="date"
+                    value={scheduleConfig.season_start ?? ''}
+                    onChange={(e) => setScheduleConfig((current) => ({ ...current, season_start: e.target.value || null }))}
+                    className="glass-input"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium uppercase tracking-[0.18em] text-slate-400">Saisonende</label>
+                  <input
+                    type="date"
+                    value={scheduleConfig.season_end ?? ''}
+                    onChange={(e) => setScheduleConfig((current) => ({ ...current, season_end: e.target.value || null }))}
+                    className="glass-input"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl bg-white/30 p-4">
+              <div className="mb-3 flex items-center gap-2">
+                <Clock3 className="h-4 w-4 text-brand-600" />
+                <p className="text-sm font-semibold text-slate-800">Hinweis</p>
+              </div>
+              <p className="text-sm leading-6 text-slate-600">
+                Für jeden Wochentag kannst du Öffnen, Schließen und beliebig viele Pausen setzen. Feiertage und Urlaube überschreiben die normalen Zeiten automatisch.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-5 space-y-3">
+            {WEEKDAY_ORDER.map((dayKey) => {
+              const day = scheduleConfig.weekdays[dayKey];
+              return (
+                <div key={dayKey} className="rounded-2xl bg-white/30 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800">{WEEKDAY_LABELS[dayKey]}</p>
+                      <p className="text-xs text-slate-500">Öffnung, Schließung und Pausen</p>
+                    </div>
+                    <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                      <input
+                        type="checkbox"
+                        checked={day.enabled}
+                        onChange={(e) => updateWeekday(dayKey, 'enabled', e.target.checked)}
+                        className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                      />
+                      Geöffnet
+                    </label>
+                  </div>
+
+                  <div className="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+                    <input
+                      type="time"
+                      value={day.open}
+                      onChange={(e) => updateWeekday(dayKey, 'open', e.target.value)}
+                      disabled={!day.enabled}
+                      className="glass-input"
+                    />
+                    <input
+                      type="time"
+                      value={day.close}
+                      onChange={(e) => updateWeekday(dayKey, 'close', e.target.value)}
+                      disabled={!day.enabled}
+                      className="glass-input"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => addPause(dayKey)}
+                      disabled={!day.enabled}
+                      className="glass-button-secondary"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Pause
+                    </button>
+                  </div>
+
+                  {day.pauses.length > 0 && (
+                    <div className="mt-4 space-y-2">
+                      {day.pauses.map((pause, index) => (
+                        <div key={`${dayKey}-${index}`} className="grid gap-3 rounded-xl bg-slate-50 p-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+                          <input
+                            type="time"
+                            value={pause.start}
+                            onChange={(e) => updatePause(dayKey, index, 'start', e.target.value)}
+                            className="glass-input"
+                          />
+                          <input
+                            type="time"
+                            value={pause.end}
+                            onChange={(e) => updatePause(dayKey, index, 'end', e.target.value)}
+                            className="glass-input"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removePause(dayKey, index)}
+                            className="glass-button-secondary"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            Entfernen
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="mt-6 grid gap-4 xl:grid-cols-2">
+            {(['holiday', 'vacation', 'special_hours'] as const).map((type) => {
+              const title =
+                type === 'holiday'
+                  ? 'Feiertage'
+                  : type === 'vacation'
+                    ? 'Urlaube / Schließtage'
+                    : 'Sonderöffnungen';
+              const buttonLabel =
+                type === 'holiday'
+                  ? 'Feiertag hinzufügen'
+                  : type === 'vacation'
+                    ? 'Urlaub hinzufügen'
+                    : 'Sonderzeit hinzufügen';
+              const items = scheduleConfig.exceptions.filter((entry) => entry.type === type);
+
+              return (
+                <div key={type} className="rounded-2xl bg-white/30 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800">{title}</p>
+                      <p className="text-xs text-slate-500">
+                        {type === 'special_hours'
+                          ? 'Abweichende Öffnungszeiten für einzelne Tage oder Zeiträume'
+                          : 'Schließt oder überschreibt die normale Wochenplanung'}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => addScheduleException(type)}
+                      className="glass-button-secondary"
+                    >
+                      <Plus className="h-4 w-4" />
+                      {buttonLabel}
+                    </button>
+                  </div>
+
+                  <div className="mt-4 space-y-3">
+                    {items.length === 0 && (
+                      <div className="rounded-xl border border-dashed border-white/40 bg-white/20 px-4 py-4 text-sm text-slate-500">
+                        Noch nichts eingetragen.
+                      </div>
+                    )}
+
+                    {items.map((entry) => (
+                      <div key={entry.id} className="rounded-xl bg-slate-50 p-4">
+                        <div className="grid gap-3 md:grid-cols-2">
+                          <input
+                            type="text"
+                            value={entry.label}
+                            onChange={(e) => updateScheduleException(entry.id, { label: e.target.value })}
+                            placeholder="Bezeichnung"
+                            className="glass-input"
+                          />
+                          <label className="flex items-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-medium text-slate-700">
+                            <input
+                              type="checkbox"
+                              checked={entry.is_closed}
+                              onChange={(e) =>
+                                updateScheduleException(entry.id, {
+                                  is_closed: e.target.checked,
+                                  open: e.target.checked ? null : entry.open ?? '10:00',
+                                  close: e.target.checked ? null : entry.close ?? '16:00',
+                                })
+                              }
+                              className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                            />
+                            Geschlossen
+                          </label>
+                        </div>
+
+                        <div className="mt-3 grid gap-3 md:grid-cols-2">
+                          <input
+                            type="date"
+                            value={entry.start_date}
+                            onChange={(e) => updateScheduleException(entry.id, { start_date: e.target.value })}
+                            className="glass-input"
+                          />
+                          <input
+                            type="date"
+                            value={entry.end_date}
+                            onChange={(e) => updateScheduleException(entry.id, { end_date: e.target.value })}
+                            className="glass-input"
+                          />
+                        </div>
+
+                        {!entry.is_closed && (
+                          <>
+                            <div className="mt-3 grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+                              <input
+                                type="time"
+                                value={entry.open ?? '10:00'}
+                                onChange={(e) => updateScheduleException(entry.id, { open: e.target.value })}
+                                className="glass-input"
+                              />
+                              <input
+                                type="time"
+                                value={entry.close ?? '16:00'}
+                                onChange={(e) => updateScheduleException(entry.id, { close: e.target.value })}
+                                className="glass-input"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => addExceptionPause(entry.id)}
+                                className="glass-button-secondary"
+                              >
+                                <Plus className="h-4 w-4" />
+                                Pause
+                              </button>
+                            </div>
+
+                            {entry.pauses.length > 0 && (
+                              <div className="mt-3 space-y-2">
+                                {entry.pauses.map((pause, pauseIndex) => (
+                                  <div key={`${entry.id}-${pauseIndex}`} className="grid gap-3 rounded-xl bg-white p-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+                                    <input
+                                      type="time"
+                                      value={pause.start}
+                                      onChange={(e) => updateExceptionPause(entry.id, pauseIndex, 'start', e.target.value)}
+                                      className="glass-input"
+                                    />
+                                    <input
+                                      type="time"
+                                      value={pause.end}
+                                      onChange={(e) => updateExceptionPause(entry.id, pauseIndex, 'end', e.target.value)}
+                                      className="glass-input"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => removeExceptionPause(entry.id, pauseIndex)}
+                                      className="glass-button-secondary"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                      Entfernen
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </>
+                        )}
+
+                        <div className="mt-3 flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() => removeScheduleException(entry.id)}
+                            className="glass-button-secondary"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            Eintrag löschen
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-slate-500">
+              Die Wochenzeiten werden automatisch als Basis für Umsatzdiagramme und Push-Alerts übernommen.
+            </p>
+            <button
+              type="button"
+              onClick={() => void handleSaveOpeningHours()}
+              disabled={scheduleSaving || !selectedPark}
+              className="glass-button-primary"
+            >
+              {scheduleSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Clock3 className="h-4 w-4" />}
+              Öffnungszeiten speichern
+            </button>
+          </div>
+
+          {scheduleMessage && <p className="mt-3 text-sm text-slate-600">{scheduleMessage}</p>}
         </GlassCard>
 
         <GlassCard className="p-6 xl:col-span-2">
@@ -838,64 +1425,6 @@ export default function Settings() {
               )}
             </div>
           </div>
-        </GlassCard>
-
-        <GlassCard className="p-6">
-          <h3 className="mb-4 text-base font-semibold text-slate-800">{t('settings.organization')}</h3>
-          {parksToRender.length > 0 ? (
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 rounded-xl bg-white/30 p-4">
-                <div className="rounded-xl bg-brand-100 p-3">
-                  <Building2 className="h-5 w-5 text-brand-600" />
-                </div>
-                <div>
-                  <p className="font-semibold text-slate-800">{selectedPark?.name || t('app.none')}</p>
-                  <p className="text-xs text-slate-500">{t('settings.slug')}: {selectedPark?.slug || '-'}</p>
-                  {parkName && (
-                    <p className="text-xs text-slate-500">{t('settings.active_park')}: {parkName}</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <p className="text-sm font-medium text-slate-600">{t('settings.parks_attractions')}</p>
-                {parksToRender.map((park) => (
-                  <div key={park.id} className="rounded-xl bg-white/30 p-4">
-                    <div className="mb-2 flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-brand-500" />
-                      <p className="text-sm font-semibold text-slate-800">{park.name}</p>
-                    </div>
-                    {park.location && (
-                      <p className="mb-2 text-xs text-slate-500">{park.location}</p>
-                    )}
-                    <div className="ml-6 space-y-1.5">
-                      {park.attractions.map((attr) => (
-                        <div key={attr.id} className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <Mountain className="h-3.5 w-3.5 text-slate-400" />
-                            <span className="text-sm text-slate-700">{attr.name}</span>
-                          </div>
-                          <span
-                            className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                              attr.status === 'active'
-                                ? 'bg-emerald-50 text-emerald-700'
-                                : attr.status === 'maintenance'
-                                  ? 'bg-amber-50 text-amber-700'
-                                  : 'bg-slate-50 text-slate-500'
-                            }`}
-                          >
-                            {attr.status}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <p className="text-sm text-slate-500">{t('app.none')}</p>
-          )}
         </GlassCard>
       </div>
 

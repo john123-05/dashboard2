@@ -33,6 +33,19 @@ interface ParkRow {
   name: string;
   timezone: string | null;
   opening_hours: Record<string, [string, string]> | null;
+  opening_hours_config: {
+    season_start: string | null;
+    season_end: string | null;
+    weekdays: Record<string, { enabled: boolean; open: string; close: string; pauses?: Array<{ start: string; end: string }> }>;
+    exceptions?: Array<{
+      start_date: string;
+      end_date: string;
+      is_closed: boolean;
+      open: string | null;
+      close: string | null;
+      pauses?: Array<{ start: string; end: string }>;
+    }>;
+  } | null;
 }
 
 interface MachineStatusRow {
@@ -89,13 +102,18 @@ function parseOperationalEvents(payload: Record<string, unknown> | null): Array<
     : [];
 }
 
-function isWithinOpeningHours(park: ParkRow, now = new Date()): boolean {
-  const openingHours = park.opening_hours;
-  if (!openingHours || typeof openingHours !== 'object') return true;
+function toMinutes(value: string): number {
+  const [hour, minute] = value.split(':').map((part) => Number(part) || 0);
+  return hour * 60 + minute;
+}
 
+function isWithinOpeningHours(park: ParkRow, now = new Date()): boolean {
   try {
     const formatter = new Intl.DateTimeFormat('en-GB', {
       timeZone: park.timezone || 'Europe/Vienna',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
       weekday: 'short',
       hour: '2-digit',
       minute: '2-digit',
@@ -103,17 +121,51 @@ function isWithinOpeningHours(park: ParkRow, now = new Date()): boolean {
     });
     const parts = formatter.formatToParts(now);
     const day = parts.find((part) => part.type === 'weekday')?.value.toLowerCase().slice(0, 3) ?? '';
+    const year = parts.find((part) => part.type === 'year')?.value ?? '0000';
+    const month = parts.find((part) => part.type === 'month')?.value ?? '00';
+    const date = parts.find((part) => part.type === 'day')?.value ?? '00';
+    const dateKey = `${year}-${month}-${date}`;
     const hour = parts.find((part) => part.type === 'hour')?.value ?? '00';
     const minute = parts.find((part) => part.type === 'minute')?.value ?? '00';
+    const nowMinutes = Number(hour) * 60 + Number(minute);
+    const config = park.opening_hours_config;
+
+    if (config && typeof config === 'object') {
+      if (config.season_start && dateKey < config.season_start) return false;
+      if (config.season_end && dateKey > config.season_end) return false;
+
+      const exception = Array.isArray(config.exceptions)
+        ? config.exceptions.find((entry) => dateKey >= entry.start_date && dateKey <= entry.end_date)
+        : null;
+
+      if (exception) {
+        if (exception.is_closed) return false;
+        if (exception.open && exception.close) {
+          const startMinutes = toMinutes(exception.open) + 30;
+          const endMinutes = toMinutes(exception.close);
+          if (nowMinutes < startMinutes || nowMinutes > endMinutes) return false;
+          const pauses = Array.isArray(exception.pauses) ? exception.pauses : [];
+          return !pauses.some((pause) => nowMinutes >= toMinutes(pause.start) && nowMinutes <= toMinutes(pause.end));
+        }
+      }
+
+      const weekdayConfig = config.weekdays?.[day];
+      if (weekdayConfig) {
+        if (!weekdayConfig.enabled) return false;
+        const startMinutes = toMinutes(weekdayConfig.open) + 30;
+        const endMinutes = toMinutes(weekdayConfig.close);
+        if (nowMinutes < startMinutes || nowMinutes > endMinutes) return false;
+        const pauses = Array.isArray(weekdayConfig.pauses) ? weekdayConfig.pauses : [];
+        return !pauses.some((pause) => nowMinutes >= toMinutes(pause.start) && nowMinutes <= toMinutes(pause.end));
+      }
+    }
+
+    const openingHours = park.opening_hours;
+    if (!openingHours || typeof openingHours !== 'object') return true;
     const hoursForDay = openingHours[day];
     if (!Array.isArray(hoursForDay) || hoursForDay.length < 2) return false;
-
-    const nowMinutes = Number(hour) * 60 + Number(minute);
-    const [start, end] = hoursForDay;
-    const [startHour, startMinute] = start.split(':').map((value) => Number(value) || 0);
-    const [endHour, endMinute] = end.split(':').map((value) => Number(value) || 0);
-    const startMinutes = startHour * 60 + startMinute + 30;
-    const endMinutes = endHour * 60 + endMinute;
+    const startMinutes = toMinutes(hoursForDay[0]) + 30;
+    const endMinutes = toMinutes(hoursForDay[1]);
     return nowMinutes >= startMinutes && nowMinutes <= endMinutes;
   } catch {
     return true;
@@ -160,7 +212,7 @@ async function loadParks(parkIds: string[]): Promise<Map<string, ParkRow>> {
 
   const { data, error } = await supabaseService
     .from('parks')
-    .select('id, name, timezone, opening_hours')
+    .select('id, name, timezone, opening_hours, opening_hours_config')
     .in('id', parkIds);
 
   if (error || !data) return new Map();
@@ -173,6 +225,7 @@ async function loadParks(parkIds: string[]): Promise<Map<string, ParkRow>> {
         name: row.name,
         timezone: row.timezone ?? null,
         opening_hours: (row.opening_hours as Record<string, [string, string]> | null) ?? null,
+        opening_hours_config: (row.opening_hours_config as ParkRow['opening_hours_config']) ?? null,
       },
     ]),
   );

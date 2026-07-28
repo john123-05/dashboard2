@@ -64,7 +64,15 @@ interface RevenueSeriesRow {
 
 export default function Revenue() {
   const { t } = useI18n();
-  const { parkId, isKioskPark, kioskPriceCents, kioskTimezone, kioskOpeningHours, kioskCheckLoading } = usePark();
+  const {
+    parkId,
+    isKioskPark,
+    kioskPriceCents,
+    kioskTimezone,
+    kioskOpeningHours,
+    kioskOpeningHoursConfig,
+    kioskCheckLoading,
+  } = usePark();
   const [parkData, setParkData] = useState<ParkDashboardData | null>(null);
   const [dailyRevenue, setDailyRevenue] = useState<RevenueSeriesRow[]>([]);
   const [onlinePaymentCount, setOnlinePaymentCount] = useState(0);
@@ -343,8 +351,8 @@ export default function Revenue() {
   }, [chartMode, parkId, selectedDate]);
 
   const dayHourRange = useMemo(
-    () => getOpeningHourRangeForDate(kioskOpeningHours, selectedDate),
-    [kioskOpeningHours, selectedDate],
+    () => getOpeningHourRangeForDate(kioskOpeningHours, selectedDate, kioskOpeningHoursConfig),
+    [kioskOpeningHours, kioskOpeningHoursConfig, selectedDate],
   );
   const hourlyBuckets = useMemo(() => {
     const buckets = bucketPurchasesByHour(dayPurchases, kioskPriceCents ?? 0, kioskTimezone, dayHourRange);

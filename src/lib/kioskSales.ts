@@ -1,4 +1,11 @@
 import { invokeEdgeFunction } from './edgeFunctions';
+import type {
+  OpeningHoursConfig,
+  ScheduleDayConfig,
+  ScheduleException,
+  SchedulePause,
+  WeekdayKey,
+} from './types';
 
 export interface DailySalesRow {
   camera_code: string;
@@ -20,6 +27,7 @@ export interface KioskSalesResponse {
   priceCents: number | null;
   timezone: string | null;
   openingHours: OpeningHours | null;
+  openingHoursConfig: OpeningHoursConfig | null;
   days: DailySalesRow[];
 }
 
@@ -151,7 +159,173 @@ function localHour(isoString: string, timezone: string): number {
   return hourPart ? Number(hourPart.value) : new Date(isoString).getHours();
 }
 
-const WEEKDAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']; // index = Date#getUTCDay()
+const WEEKDAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const; // index = Date#getUTCDay()
+const WEEKDAY_CONFIG_KEYS: WeekdayKey[] = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+
+function isValidTime(value: unknown): value is string {
+  return typeof value === 'string' && /^\d{2}:\d{2}$/.test(value);
+}
+
+function normalizePause(pause: unknown): SchedulePause | null {
+  if (!pause || typeof pause !== 'object') return null;
+  const start = (pause as { start?: unknown }).start;
+  const end = (pause as { end?: unknown }).end;
+  if (!isValidTime(start) || !isValidTime(end)) return null;
+  return { start, end };
+}
+
+function normalizeDayConfig(
+  day: unknown,
+  fallback: [string, string] | null,
+): ScheduleDayConfig {
+  const fallbackOpen = fallback?.[0] ?? '09:00';
+  const fallbackClose = fallback?.[1] ?? '17:00';
+  if (!day || typeof day !== 'object') {
+    return {
+      enabled: Array.isArray(fallback),
+      open: fallbackOpen,
+      close: fallbackClose,
+      pauses: [],
+    };
+  }
+
+  const raw = day as {
+    enabled?: unknown;
+    open?: unknown;
+    close?: unknown;
+    pauses?: unknown[];
+  };
+
+  return {
+    enabled: typeof raw.enabled === 'boolean' ? raw.enabled : Array.isArray(fallback),
+    open: isValidTime(raw.open) ? raw.open : fallbackOpen,
+    close: isValidTime(raw.close) ? raw.close : fallbackClose,
+    pauses: Array.isArray(raw.pauses) ? raw.pauses.map(normalizePause).filter(Boolean) as SchedulePause[] : [],
+  };
+}
+
+function normalizeException(entry: unknown): ScheduleException | null {
+  if (!entry || typeof entry !== 'object') return null;
+  const raw = entry as Record<string, unknown>;
+  if (typeof raw.id !== 'string') return null;
+  if (typeof raw.label !== 'string') return null;
+  if (typeof raw.start_date !== 'string' || typeof raw.end_date !== 'string') return null;
+  const type =
+    raw.type === 'holiday' || raw.type === 'vacation' || raw.type === 'special_hours'
+      ? raw.type
+      : 'holiday';
+  const isClosed = typeof raw.is_closed === 'boolean' ? raw.is_closed : true;
+
+  return {
+    id: raw.id,
+    type,
+    label: raw.label,
+    start_date: raw.start_date,
+    end_date: raw.end_date,
+    is_closed: isClosed,
+    open: isValidTime(raw.open) ? raw.open : null,
+    close: isValidTime(raw.close) ? raw.close : null,
+    pauses: Array.isArray(raw.pauses) ? raw.pauses.map(normalizePause).filter(Boolean) as SchedulePause[] : [],
+  };
+}
+
+export function createDefaultOpeningHoursConfig(openingHours: OpeningHours | null): OpeningHoursConfig {
+  return {
+    season_start: null,
+    season_end: null,
+    weekdays: {
+      mon: normalizeDayConfig(null, openingHours?.mon ?? null),
+      tue: normalizeDayConfig(null, openingHours?.tue ?? null),
+      wed: normalizeDayConfig(null, openingHours?.wed ?? null),
+      thu: normalizeDayConfig(null, openingHours?.thu ?? null),
+      fri: normalizeDayConfig(null, openingHours?.fri ?? null),
+      sat: normalizeDayConfig(null, openingHours?.sat ?? null),
+      sun: normalizeDayConfig(null, openingHours?.sun ?? null),
+    },
+    exceptions: [],
+  };
+}
+
+export function normalizeOpeningHoursConfig(
+  config: unknown,
+  fallbackOpeningHours: OpeningHours | null,
+): OpeningHoursConfig {
+  if (!config || typeof config !== 'object') {
+    return createDefaultOpeningHoursConfig(fallbackOpeningHours);
+  }
+
+  const raw = config as {
+    season_start?: unknown;
+    season_end?: unknown;
+    weekdays?: Partial<Record<WeekdayKey, unknown>>;
+    exceptions?: unknown[];
+  };
+
+  const base = createDefaultOpeningHoursConfig(fallbackOpeningHours);
+
+  return {
+    season_start: typeof raw.season_start === 'string' ? raw.season_start : null,
+    season_end: typeof raw.season_end === 'string' ? raw.season_end : null,
+    weekdays: WEEKDAY_CONFIG_KEYS.reduce((acc, key) => {
+      const legacyFallback = fallbackOpeningHours?.[key] ?? null;
+      acc[key] = normalizeDayConfig(raw.weekdays?.[key], legacyFallback);
+      return acc;
+    }, {} as Record<WeekdayKey, ScheduleDayConfig>),
+    exceptions: Array.isArray(raw.exceptions)
+      ? raw.exceptions.map(normalizeException).filter(Boolean) as ScheduleException[]
+      : [],
+  };
+}
+
+export function deriveLegacyOpeningHoursFromConfig(config: OpeningHoursConfig): OpeningHours {
+  return WEEKDAY_CONFIG_KEYS.reduce((acc, key) => {
+    const day = config.weekdays[key];
+    acc[key] = day?.enabled ? [day.open, day.close] : null;
+    return acc;
+  }, {} as OpeningHours);
+}
+
+function weekdayKeyForDate(dateKey: string): WeekdayKey {
+  const dow = new Date(`${dateKey}T00:00:00Z`).getUTCDay();
+  const key = WEEKDAY_KEYS[dow];
+  return key === 'sun' ? 'sun' : key;
+}
+
+function isWithinSeason(dateKey: string, config: OpeningHoursConfig): boolean {
+  if (config.season_start && dateKey < config.season_start) return false;
+  if (config.season_end && dateKey > config.season_end) return false;
+  return true;
+}
+
+export function getEffectiveScheduleForDate(
+  config: OpeningHoursConfig | null,
+  businessDate: string,
+  fallbackOpeningHours?: OpeningHours | null,
+): ScheduleDayConfig | null {
+  const normalized = normalizeOpeningHoursConfig(config, fallbackOpeningHours ?? null);
+  if (!isWithinSeason(businessDate, normalized)) return null;
+
+  const matchingException = normalized.exceptions.find(
+    (entry) => businessDate >= entry.start_date && businessDate <= entry.end_date,
+  );
+
+  if (matchingException) {
+    if (matchingException.is_closed) return null;
+    if (matchingException.open && matchingException.close) {
+      return {
+        enabled: true,
+        open: matchingException.open,
+        close: matchingException.close,
+        pauses: matchingException.pauses,
+      };
+    }
+  }
+
+  const weekdayKey = weekdayKeyForDate(businessDate);
+  const day = normalized.weekdays[weekdayKey];
+  if (!day?.enabled) return null;
+  return day;
+}
 
 // Which [openHour, closeHour] to chart for a given local business date -
 // looked up by weekday, matching the same opening_hours column the
@@ -162,17 +336,36 @@ const WEEKDAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']; // index
 export function getOpeningHourRangeForDate(
   openingHours: OpeningHours | null,
   businessDate: string,
+  openingHoursConfig?: OpeningHoursConfig | null,
 ): { startHour: number; endHour: number } | null {
-  if (!openingHours || !businessDate) return null;
-  const dow = new Date(`${businessDate}T00:00:00Z`).getUTCDay();
-  const hours = openingHours[WEEKDAY_KEYS[dow]];
-  if (!Array.isArray(hours) || hours.length < 2) return null;
+  if (!businessDate) return null;
+  const effective = getEffectiveScheduleForDate(openingHoursConfig ?? null, businessDate, openingHours);
+  if (!effective) return null;
 
-  const startHour = Number(hours[0].split(':')[0]);
-  const endHour = Number(hours[1].split(':')[0]);
+  const startHour = Number(effective.open.split(':')[0]);
+  const endHour = Number(effective.close.split(':')[0]);
   if (Number.isNaN(startHour) || Number.isNaN(endHour) || endHour < startHour) return null;
 
   return { startHour, endHour };
+}
+
+export function getClosingMinutesForDate(
+  date: Date,
+  timezone: string,
+  openingHours: OpeningHours | null,
+  openingHoursConfig?: OpeningHoursConfig | null,
+): number | null {
+  const dateKey = new Intl.DateTimeFormat('en-CA', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
+  const effective = getEffectiveScheduleForDate(openingHoursConfig ?? null, dateKey, openingHours);
+  if (!effective) return null;
+  const [closeHour, closeMinute] = effective.close.split(':').map(Number);
+  if (Number.isNaN(closeHour) || Number.isNaN(closeMinute)) return null;
+  return closeHour * 60 + closeMinute;
 }
 
 // Hourly buckets across [hourRange.startHour, hourRange.endHour] (inclusive

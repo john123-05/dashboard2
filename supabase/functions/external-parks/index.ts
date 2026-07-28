@@ -43,7 +43,9 @@ Deno.serve(async (req: Request) => {
   const parkId = url.searchParams.get("park_id");
   const parkFilter = parkId ? `&id=eq.${parkId}` : "";
 
-  const parksRes = await fetchExternal(`parks?select=id,slug,name&order=name.asc${parkFilter}`);
+  const parksRes = await fetchExternal(
+    `parks?select=id,slug,name,timezone,price_per_photo_cents,opening_hours,opening_hours_config&order=name.asc${parkFilter}`,
+  );
   if (!parksRes.ok) {
     return new Response(JSON.stringify({ error: "Failed to fetch parks", details: parksRes.details }), {
       status: parksRes.status,

@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { fetchKioskSales, type OpeningHours } from '../lib/kioskSales';
+import type { OpeningHoursConfig } from '../lib/types';
 
 interface ParkState {
   parkId: string | null;
@@ -13,6 +14,7 @@ interface ParkState {
   kioskPriceCents: number | null;
   kioskTimezone: string;
   kioskOpeningHours: OpeningHours | null;
+  kioskOpeningHoursConfig: OpeningHoursConfig | null;
   kioskCheckLoading: boolean;
 }
 
@@ -26,6 +28,7 @@ export function ParkProvider({ children }: { children: ReactNode }) {
   const [kioskPriceCents, setKioskPriceCents] = useState<number | null>(null);
   const [kioskTimezone, setKioskTimezone] = useState('Europe/Vienna');
   const [kioskOpeningHours, setKioskOpeningHours] = useState<OpeningHours | null>(null);
+  const [kioskOpeningHoursConfig, setKioskOpeningHoursConfig] = useState<OpeningHoursConfig | null>(null);
   const [kioskCheckLoading, setKioskCheckLoading] = useState(true);
   const [kioskRefreshNonce, setKioskRefreshNonce] = useState(0);
 
@@ -50,6 +53,7 @@ export function ParkProvider({ children }: { children: ReactNode }) {
       setIsKioskPark(false);
       setKioskPriceCents(null);
       setKioskOpeningHours(null);
+      setKioskOpeningHoursConfig(null);
       setKioskCheckLoading(false);
       return;
     }
@@ -61,12 +65,14 @@ export function ParkProvider({ children }: { children: ReactNode }) {
         setKioskPriceCents(result.priceCents);
         setKioskTimezone(result.timezone ?? 'Europe/Vienna');
         setKioskOpeningHours(result.openingHours ?? null);
+        setKioskOpeningHoursConfig(result.openingHoursConfig ?? null);
       })
       .catch(() => {
         if (cancelled) return;
         setIsKioskPark(false);
         setKioskPriceCents(null);
         setKioskOpeningHours(null);
+        setKioskOpeningHoursConfig(null);
       })
       .finally(() => {
         if (!cancelled) setKioskCheckLoading(false);
@@ -102,6 +108,7 @@ export function ParkProvider({ children }: { children: ReactNode }) {
         kioskPriceCents,
         kioskTimezone,
         kioskOpeningHours,
+        kioskOpeningHoursConfig,
         kioskCheckLoading,
       }}
     >

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Download, Mail, Minus, Plus, Trash2, UserPlus } from 'lucide-react';
 import { getOptionalSourceWarning, invokeEdgeFunction, isEdgeSourceUnavailable } from '../lib/edgeFunctions';
-import { fetchKioskPhotosForDay, type KioskPurchaseRow, type OpeningHours } from '../lib/kioskSales';
+import { fetchKioskPhotosForDay, getClosingMinutesForDate, type KioskPurchaseRow } from '../lib/kioskSales';
 import { formatDate, formatNumber, exportToCSV } from '../lib/utils';
 import GlassCard from '../components/ui/GlassCard';
 import DataTable from '../components/ui/DataTable';
@@ -28,16 +28,6 @@ type ClaimDelayMatch = {
 };
 
 type SvgViewBox = { minX: number; minY: number; width: number; height: number };
-
-const WEEKDAY_SHORT_TO_KEY: Record<string, keyof OpeningHours> = {
-  Sun: 'sun',
-  Mon: 'mon',
-  Tue: 'tue',
-  Wed: 'wed',
-  Thu: 'thu',
-  Fri: 'fri',
-  Sat: 'sat',
-};
 
 function getCountryName(countryCode: string): string {
   try {
@@ -80,23 +70,6 @@ function shiftDateKey(dateKey: string, days: number): string {
   const date = new Date(`${dateKey}T00:00:00Z`);
   date.setUTCDate(date.getUTCDate() + days);
   return date.toISOString().slice(0, 10);
-}
-
-function closingMinutesForDate(date: Date, timezone: string, openingHours: OpeningHours | null): number | null {
-  if (!openingHours) return null;
-  const weekday = new Intl.DateTimeFormat('en-US', {
-    timeZone: timezone,
-    weekday: 'short',
-  }).format(date);
-
-  const key = WEEKDAY_SHORT_TO_KEY[weekday];
-  const hours = key ? openingHours[key] : null;
-  if (!hours) return null;
-
-  const [, close] = hours;
-  const [closeHour, closeMinute] = close.split(':').map(Number);
-  if (Number.isNaN(closeHour) || Number.isNaN(closeMinute)) return null;
-  return closeHour * 60 + closeMinute;
 }
 
 function formatDelay(ms: number): string {
@@ -497,7 +470,14 @@ function leadLocaleBadge(item: Record<string, unknown>): string | null {
 
 export default function Leads() {
   const { t } = useI18n();
-  const { parkId, isKioskPark, kioskTimezone, kioskOpeningHours, kioskCheckLoading } = usePark();
+  const {
+    parkId,
+    isKioskPark,
+    kioskTimezone,
+    kioskOpeningHours,
+    kioskOpeningHoursConfig,
+    kioskCheckLoading,
+  } = usePark();
   const locationDetailsRef = useRef<HTMLDivElement | null>(null);
   const [leads, setLeads] = useState<Record<string, unknown>[]>([]);
   const [kioskPurchases, setKioskPurchases] = useState<KioskPurchaseRow[]>([]);
@@ -756,7 +736,12 @@ export default function Leads() {
           const delayMs = Math.max(0, claimedAt.getTime() - purchaseEntry.purchasedAt.getTime());
           const claimedOnLaterDay =
             localDateKey(purchaseEntry.purchasedAt, kioskTimezone) !== localDateKey(claimedAt, kioskTimezone);
-          const closingMinutes = closingMinutesForDate(purchaseEntry.purchasedAt, kioskTimezone, kioskOpeningHours);
+          const closingMinutes = getClosingMinutesForDate(
+            purchaseEntry.purchasedAt,
+            kioskTimezone,
+            kioskOpeningHours,
+            kioskOpeningHoursConfig,
+          );
           const claimedAfterClose =
             !claimedOnLaterDay &&
             closingMinutes !== null &&
@@ -814,7 +799,12 @@ export default function Leads() {
         const delayMs = Math.max(0, leadEntry.claimedAt.getTime() - purchaseEntry.purchasedAt.getTime());
         const claimedOnLaterDay =
           localDateKey(purchaseEntry.purchasedAt, kioskTimezone) !== localDateKey(leadEntry.claimedAt, kioskTimezone);
-        const closingMinutes = closingMinutesForDate(purchaseEntry.purchasedAt, kioskTimezone, kioskOpeningHours);
+        const closingMinutes = getClosingMinutesForDate(
+          purchaseEntry.purchasedAt,
+          kioskTimezone,
+          kioskOpeningHours,
+          kioskOpeningHoursConfig,
+        );
         const claimedAfterClose =
           !claimedOnLaterDay &&
           closingMinutes !== null &&
@@ -838,7 +828,7 @@ export default function Leads() {
     });
 
     return matches.sort((left, right) => right.delayMs - left.delayMs);
-  }, [isKioskPark, kioskOpeningHours, kioskPurchases, kioskTimezone, leads]);
+  }, [isKioskPark, kioskOpeningHours, kioskOpeningHoursConfig, kioskPurchases, kioskTimezone, leads]);
 
   const delayInsights = useMemo(() => {
     const matchedCount = claimDelayMatches.length;

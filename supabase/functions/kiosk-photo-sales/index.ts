@@ -66,7 +66,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const parkRes = await fetchExternal(
-      `parks?select=id,name,price_per_photo_cents,timezone,opening_hours&id=eq.${parkId}`
+      `parks?select=id,name,price_per_photo_cents,timezone,opening_hours,opening_hours_config&id=eq.${parkId}`
     );
     if (!parkRes.ok) {
       return new Response(
@@ -80,7 +80,7 @@ Deno.serve(async (req: Request) => {
 
     if (!park || priceCents === null) {
       return new Response(
-        JSON.stringify({ isKioskPark: false, priceCents: null, timezone: null, openingHours: null, days: [] }),
+        JSON.stringify({ isKioskPark: false, priceCents: null, timezone: null, openingHours: null, openingHoursConfig: null, days: [] }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -150,6 +150,7 @@ Deno.serve(async (req: Request) => {
         priceCents,
         timezone: (park.timezone as string) ?? "Europe/Vienna",
         openingHours: park.opening_hours ?? null,
+        openingHoursConfig: park.opening_hours_config ?? null,
         days: mergedDays,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }

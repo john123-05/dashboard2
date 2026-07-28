@@ -7,6 +7,39 @@ export interface Organization {
   updated_at: string;
 }
 
+export type WeekdayKey = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
+
+export interface SchedulePause {
+  start: string;
+  end: string;
+}
+
+export interface ScheduleDayConfig {
+  enabled: boolean;
+  open: string;
+  close: string;
+  pauses: SchedulePause[];
+}
+
+export interface ScheduleException {
+  id: string;
+  type: 'holiday' | 'vacation' | 'special_hours';
+  label: string;
+  start_date: string;
+  end_date: string;
+  is_closed: boolean;
+  open: string | null;
+  close: string | null;
+  pauses: SchedulePause[];
+}
+
+export interface OpeningHoursConfig {
+  season_start: string | null;
+  season_end: string | null;
+  weekdays: Record<WeekdayKey, ScheduleDayConfig>;
+  exceptions: ScheduleException[];
+}
+
 export interface Park {
   id: string;
   organization_id: string;
@@ -14,6 +47,9 @@ export interface Park {
   slug: string;
   location: string | null;
   timezone: string;
+  price_per_photo_cents?: number | null;
+  opening_hours?: Record<string, [string, string] | null> | null;
+  opening_hours_config?: OpeningHoursConfig | null;
   created_at: string;
   updated_at: string;
 }
