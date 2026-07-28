@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import DashboardLayout from './components/layout/DashboardLayout';
 import Login from './pages/Login';
@@ -36,9 +37,40 @@ import StaffCostsPage from './staff/pages/CostsPage';
 import StaffCustomerManagementPage from './staff/pages/CustomerManagementPage';
 import StaffOverviewPage from './staff/pages/OverviewPage';
 
+function AppShellMetaController() {
+  const location = useLocation();
+
+  useEffect(() => {
+    const isStaffRoute = location.pathname.startsWith('/staff');
+    const manifestHref = isStaffRoute ? '/manifest-staff.webmanifest' : '/manifest-operator.webmanifest';
+    const title = isStaffRoute ? 'Liftpictures Super Admin' : 'Liftpictures Operator Dashboard';
+    const appTitle = isStaffRoute ? 'Liftpictures Super Admin' : 'Liftpictures Operator';
+
+    document.title = title;
+
+    const manifestLink = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
+    if (manifestLink && manifestLink.getAttribute('href') !== manifestHref) {
+      manifestLink.setAttribute('href', manifestHref);
+    }
+
+    const appleTitleMeta = document.querySelector<HTMLMetaElement>('meta[name="apple-mobile-web-app-title"]');
+    if (appleTitleMeta) {
+      appleTitleMeta.setAttribute('content', appTitle);
+    }
+
+    const applicationNameMeta = document.querySelector<HTMLMetaElement>('meta[name="application-name"]');
+    if (applicationNameMeta) {
+      applicationNameMeta.setAttribute('content', appTitle);
+    }
+  }, [location.pathname]);
+
+  return null;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
+      <AppShellMetaController />
       <I18nProvider>
         <AuthProvider>
           <ParkProvider>

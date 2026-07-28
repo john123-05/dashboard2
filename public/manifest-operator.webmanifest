@@ -1,12 +1,12 @@
 {
-  "id": "/staff-super-admin",
-  "name": "Liftpictures Super Admin",
-  "short_name": "Lift Staff",
-  "description": "Liftpictures Super-Admin: Kunden, Support, Medien, Kosten und Systemverwaltung.",
-  "start_url": "/staff/uebersicht",
-  "scope": "/staff/",
+  "id": "/operator-dashboard",
+  "name": "Liftpictures Operator Dashboard",
+  "short_name": "Liftpictures",
+  "description": "Liftpictures Operator-Tools: Parks, Kameras, E-Mail-Liste, Umsatz und Einstellungen.",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#17181b",
+  "background_color": "#eef4fb",
   "theme_color": "#e8722a",
   "icons": [
     {
