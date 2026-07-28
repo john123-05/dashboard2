@@ -79,6 +79,8 @@ export default function Settings() {
   const [pushBusy, setPushBusy] = useState(false);
   const [pushError, setPushError] = useState<string | null>(null);
   const [pushTestBusy, setPushTestBusy] = useState(false);
+  const selectedPark = parkId ? parks.find((p) => p.id === parkId) : parks[0];
+  const parksToRender = selectedPark ? [selectedPark] : parks;
 
   useEffect(() => {
     loadData();
@@ -192,9 +194,6 @@ export default function Settings() {
     );
     setLoading(false);
   }
-
-  const selectedPark = parkId ? parks.find((p) => p.id === parkId) : parks[0];
-  const parksToRender = selectedPark ? [selectedPark] : parks;
 
   function patchNotificationSettings(patch: Partial<OperatorNotificationSettings>) {
     setNotificationSettings((current) => ({
