@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Clock3, Download, Globe2, Mail, Sparkles, Trash2, UserPlus, X } from 'lucide-react';
+import { Clock3, Download, Mail, Trash2, UserPlus, X } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { getOptionalSourceWarning, invokeEdgeFunction, isEdgeSourceUnavailable } from '../lib/edgeFunctions';
 import { formatDate, formatNumber, exportToCSV } from '../lib/utils';
@@ -66,15 +66,6 @@ const COUNTRY_COORDINATES: Record<string, { x: number; y: number }> = {
   ZA: { x: 56, y: 78 },
 };
 
-const WORLD_LANDMASSES = [
-  'M78 120C55 111 46 89 56 66C67 43 108 32 144 44C162 50 173 63 174 79C175 95 163 112 145 122C131 129 117 136 101 137C91 137 84 133 78 120Z',
-  'M146 143C159 147 168 158 170 176C172 195 166 213 159 230C153 245 145 262 136 280C130 292 121 297 113 292C104 286 103 271 107 257C111 242 119 227 123 211C126 199 125 188 123 177C121 164 128 151 146 143Z',
-  'M317 101C332 84 359 77 381 82C398 85 407 96 409 111C411 123 403 132 391 139C381 145 370 149 358 147C343 144 327 135 318 122C314 116 313 108 317 101Z',
-  'M332 147C345 142 362 146 375 156C390 168 401 186 405 210C409 235 403 258 391 274C381 287 366 294 351 289C336 284 327 269 325 252C322 231 326 213 333 196C338 183 339 168 332 147Z',
-  'M406 106C436 77 488 66 542 73C576 77 608 93 628 116C648 139 650 164 637 182C624 200 597 210 570 207C544 205 525 211 510 223C494 236 471 241 447 234C422 226 405 209 399 187C393 166 395 136 406 106Z',
-  'M594 231C613 223 636 228 651 241C667 255 670 275 660 291C650 307 629 315 608 311C587 307 572 292 571 274C570 257 578 239 594 231Z',
-];
-
 function getCountryName(countryCode: string): string {
   try {
     const displayNames = new Intl.DisplayNames(['de'], { type: 'region' });
@@ -119,12 +110,43 @@ function CompactMetricCard({
   );
 }
 
+function buildWorldMapMarkup(svgSource: string, points: CountryStat[], selectedCountry: string | null): string {
+  if (!svgSource) return '';
+
+  const maxCount = Math.max(...points.map((point) => point.count), 1);
+  const countryStyles = points
+    .map((point) => {
+      const intensity = point.count / maxCount;
+      const fill = selectedCountry === point.countryCode
+        ? '#2563EB'
+        : intensity > 0.7
+          ? '#60A5FA'
+          : intensity > 0.35
+            ? '#BFDBFE'
+            : '#DBEAFE';
+      return `#${point.countryCode.toLowerCase()} path{fill:${fill}!important;}`;
+    })
+    .join('');
+
+  const styleBlock = `
+    <style>
+      #layer1 path{fill:#e9eef5;stroke:#cbd5e1;stroke-width:1.15;}
+      #layer1 g path{transition:fill .2s ease;}
+      ${countryStyles}
+    </style>
+  `;
+
+  return svgSource.replace('<svg ', `<svg preserveAspectRatio="xMidYMid meet" `).replace('>', `>${styleBlock}`);
+}
+
 function LeadWorldMap({
+  svgMarkup,
   points,
   selectedCountry,
   onSelectCountry,
   compact = false,
 }: {
+  svgMarkup: string;
   points: CountryStat[];
   selectedCountry: string | null;
   onSelectCountry: (countryCode: string) => void;
@@ -134,43 +156,40 @@ function LeadWorldMap({
   const maxCount = Math.max(...visiblePoints.map((point) => point.count), 1);
 
   return (
-    <div className={`relative overflow-hidden rounded-[28px] border border-slate-100 bg-slate-50/80 ${compact ? 'h-[220px]' : 'h-[360px]'}`}>
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.12),_transparent_35%),radial-gradient(circle_at_bottom_right,_rgba(59,130,246,0.08),_transparent_32%)]" />
-      <svg viewBox="0 0 720 360" className="relative h-full w-full">
-        {WORLD_LANDMASSES.map((path, index) => (
-          <path
-            key={index}
-            d={path}
-            transform="translate(0 6) scale(1.03 1.03)"
-            fill="#E2E8F0"
-            stroke="#CBD5E1"
-            strokeWidth="1.5"
-            opacity="0.95"
-          />
-        ))}
-
-        {visiblePoints.map((point) => {
-          const isSelected = point.countryCode === selectedCountry;
-          const radius = 6 + (point.count / maxCount) * (compact ? 8 : 12);
-          return (
-            <g
-              key={point.countryCode}
-              onClick={() => onSelectCountry(point.countryCode)}
-              className="cursor-pointer"
-            >
-              <circle cx={`${point.x}%`} cy={`${point.y}%`} r={radius + 6} fill="rgba(14, 165, 233, 0.10)" />
-              <circle
-                cx={`${point.x}%`}
-                cy={`${point.y}%`}
-                r={radius}
-                fill={isSelected ? '#2563EB' : '#3B82F6'}
-                stroke="rgba(255,255,255,0.92)"
-                strokeWidth="3"
-              />
-            </g>
-          );
-        })}
-      </svg>
+    <div className={`relative overflow-hidden rounded-[24px] bg-white ${compact ? 'h-[170px]' : 'h-[360px]'}`}>
+      <div
+        className="pointer-events-none absolute inset-0 [&>svg]:h-full [&>svg]:w-full"
+        dangerouslySetInnerHTML={{ __html: svgMarkup }}
+      />
+      {visiblePoints.map((point) => {
+        const isSelected = point.countryCode === selectedCountry;
+        const radius = compact ? 5 + (point.count / maxCount) * 5 : 7 + (point.count / maxCount) * 7;
+        return (
+          <button
+            key={point.countryCode}
+            type="button"
+            onClick={() => onSelectCountry(point.countryCode)}
+            className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full"
+            style={{ left: `${point.x}%`, top: `${point.y}%`, width: `${radius * 2 + 12}px`, height: `${radius * 2 + 12}px` }}
+            aria-label={`${point.countryName} auswählen`}
+          >
+            <span
+              className="absolute inset-0 rounded-full"
+              style={{ backgroundColor: 'rgba(37, 99, 235, 0.12)' }}
+            />
+            <span
+              className="absolute left-1/2 top-1/2 rounded-full border-[3px] border-white shadow-sm"
+              style={{
+                width: `${radius * 2}px`,
+                height: `${radius * 2}px`,
+                marginLeft: `${-radius}px`,
+                marginTop: `${-radius}px`,
+                backgroundColor: isSelected ? '#2563EB' : '#3B82F6',
+              }}
+            />
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -194,7 +213,6 @@ export default function Leads() {
   const { t } = useI18n();
   const { parkId } = usePark();
   const [leads, setLeads] = useState<Record<string, unknown>[]>([]);
-  const [sourceData, setSourceData] = useState<{ source: string; count: number }[]>([]);
   const [stats, setStats] = useState({ total: 0, optedIn: 0 });
   const [filterOptIn, setFilterOptIn] = useState<boolean | null>(null);
   const [countryFilter, setCountryFilter] = useState('all');
@@ -202,6 +220,7 @@ export default function Leads() {
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [showLocationModal, setShowLocationModal] = useState(false);
+  const [worldMapSvg, setWorldMapSvg] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -210,6 +229,23 @@ export default function Leads() {
   useEffect(() => {
     loadData();
   }, [parkId]);
+
+  useEffect(() => {
+    let active = true;
+
+    fetch('/world-map-gray.svg')
+      .then((response) => response.text())
+      .then((svg) => {
+        if (active) setWorldMapSvg(svg);
+      })
+      .catch(() => {
+        if (active) setWorldMapSvg('');
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   async function loadData() {
     setLoading(true);
@@ -222,7 +258,6 @@ export default function Leads() {
       if (isEdgeSourceUnavailable(invokeError)) {
         setLeads([]);
         setStats({ total: 0, optedIn: 0 });
-        setSourceData([]);
         setNotice(getOptionalSourceWarning('Lead feed', invokeError));
         setError(null);
         setLoading(false);
@@ -248,17 +283,6 @@ export default function Leads() {
       total: rows.length,
       optedIn: rows.filter((l) => l.opted_in === true).length,
     });
-
-    const bySource = new Map<string, number>();
-    rows.forEach((l) => {
-      const src = String(l.source || 'unknown');
-      bySource.set(src, (bySource.get(src) || 0) + 1);
-    });
-    setSourceData(
-      Array.from(bySource.entries())
-        .map(([source, count]) => ({ source, count }))
-        .sort((a, b) => b.count - a.count)
-    );
 
     setError(null);
     setNotice(null);
@@ -348,6 +372,10 @@ export default function Leads() {
   }, [leadsWithTimestamps]);
 
   const optInRate = stats.total > 0 ? Math.round((stats.optedIn / stats.total) * 100) : 0;
+  const worldMapMarkup = useMemo(
+    () => buildWorldMapMarkup(worldMapSvg, countryStats, selectedCountry),
+    [countryStats, selectedCountry, worldMapSvg],
+  );
 
   function isDeletableLead(lead: Record<string, unknown>) {
     return lead.source === 'photo_claim' && typeof lead.id === 'string' && lead.id.length > 0;
@@ -450,7 +478,6 @@ export default function Leads() {
   const selectedCountryStat =
     countryStats.find((country) => country.countryCode === selectedCountry) || topCountries[0] || null;
   const totalMappedLeads = countryStats.reduce((sum, country) => sum + country.count, 0);
-  const topSourceData = sourceData.slice(0, 4);
 
   const columns = [
     ...(selectionMode ? [{
@@ -584,121 +611,37 @@ export default function Leads() {
         </div>
       )}
 
-      <div className="grid gap-6 xl:grid-cols-12">
-        <div className="grid gap-6 xl:col-span-4">
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
-            <CompactMetricCard
-              title={t('leads.total')}
-              value={formatNumber(stats.total)}
-              subtitle={`${countryStats.length} Länder erkannt`}
-              icon={UserPlus}
-              iconClassName="text-sky-600"
-              iconWrapClassName="bg-sky-50"
-            />
-            <CompactMetricCard
-              title={t('leads.optins')}
-              value={formatNumber(stats.optedIn)}
-              subtitle={`${optInRate}% Opt-in-Quote`}
-              icon={Mail}
-              iconClassName="text-emerald-600"
-              iconWrapClassName="bg-emerald-50"
-            />
-          </div>
+      <div className="grid gap-4 xl:grid-cols-[220px_220px_minmax(0,1fr)]">
+        <CompactMetricCard
+          title={t('leads.total')}
+          value={formatNumber(stats.total)}
+          subtitle="Gesammelte Kontakte"
+          icon={UserPlus}
+          iconClassName="text-sky-600"
+          iconWrapClassName="bg-sky-50"
+        />
+        <CompactMetricCard
+          title={t('leads.optins')}
+          value={formatNumber(stats.optedIn)}
+          subtitle={`${optInRate}% Opt-in-Quote`}
+          icon={Mail}
+          iconClassName="text-emerald-600"
+          iconWrapClassName="bg-emerald-50"
+        />
 
-          <GlassCard className="p-5">
-            <div className="mb-4 flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Leads nach Quelle</p>
-                <h3 className="mt-2 text-base font-semibold text-slate-800">Welche Wege am meisten bringen</h3>
-              </div>
-              <div className="rounded-2xl bg-sky-50 p-3">
-                <Sparkles className="h-5 w-5 text-sky-600" />
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              {topSourceData.map((entry) => {
-                const share = stats.total > 0 ? Math.round((entry.count / stats.total) * 100) : 0;
-                return (
-                  <div key={entry.source} className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium text-slate-700">{entry.source}</span>
-                      <span className="text-slate-500">
-                        {entry.count} <span className="text-slate-400">({share}%)</span>
-                      </span>
-                    </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-sky-500 to-blue-500"
-                        style={{ width: `${Math.max(share, entry.count > 0 ? 8 : 0)}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </GlassCard>
-
-          <GlassCard className="p-5">
-            <div className="mb-4 flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Beste Uhrzeiten</p>
-                <h3 className="mt-2 text-base font-semibold text-slate-800">Wann Besucher ihre E-Mail abgeben</h3>
-              </div>
-              <div className="rounded-2xl bg-amber-50 p-3">
-                <Clock3 className="h-5 w-5 text-amber-600" />
-              </div>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl border border-slate-100 bg-white/70 p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Stärkste Stunde</p>
-                <p className="mt-2 text-lg font-semibold text-slate-800">{formatHourRange(peakHour.hour)}</p>
-                <p className="mt-1 text-sm text-slate-500">{peakHour.count} Leads in diesem Zeitfenster</p>
-              </div>
-              <div className="rounded-2xl border border-slate-100 bg-white/70 p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Letzte Abgabe</p>
-                <p className="mt-2 text-lg font-semibold text-slate-800">{latestLeadLabel}</p>
-                <p className="mt-1 text-sm text-slate-500">Zeitpunkt der zuletzt erkannten E-Mail</p>
-              </div>
-            </div>
-
-            <div className="mt-4 h-28">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={hourlyData}>
-                  <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} interval={2} />
-                  <YAxis hide />
-                  <Tooltip
-                    formatter={(value: number) => [`${value} Leads`, 'Eingänge']}
-                    labelFormatter={(label) => `${label} Uhr`}
-                    contentStyle={{ background: 'rgba(255,255,255,0.95)', border: '1px solid rgba(226,232,240,0.9)', borderRadius: '14px', boxShadow: '0 18px 40px rgba(15,23,42,0.08)' }}
-                  />
-                  <Bar dataKey="count" fill="#f59e0b" radius={[5, 5, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </GlassCard>
-        </div>
-
-        <GlassCard className="overflow-hidden xl:col-span-8">
-          <div className="border-b border-slate-100/90 px-6 py-5">
+        <GlassCard className="overflow-hidden">
+          <div className="border-b border-slate-100/90 px-6 py-4">
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-500">Deine Besucher kennenlernen</p>
-            <div className="mt-2 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-              <div>
-                <h3 className="text-xl font-semibold text-slate-800">Besucher nach Standort</h3>
-                <p className="mt-1 text-sm text-slate-500">
-                  Die Punkte zeigen automatisch, aus welchen Ländern neue E-Mail-Adressen kommen.
-                </p>
-              </div>
-              <div className="rounded-2xl border border-sky-100 bg-sky-50/80 px-4 py-3 text-sm text-sky-800">
-                <span className="font-semibold">{formatNumber(totalMappedLeads)}</span> Leads mit Land erkannt
-              </div>
-            </div>
           </div>
 
-          <div className="grid gap-6 p-6 lg:grid-cols-[1.35fr_0.95fr]">
-            <div>
+          <div className="grid gap-0 lg:grid-cols-2">
+            <div className="px-6 py-5 lg:border-r lg:border-slate-100/90">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h3 className="text-base font-semibold text-slate-800">Besucher nach Standort</h3>
+                <span className="text-sm text-slate-400">{countryStats.length} Länder</span>
+              </div>
               <LeadWorldMap
+                svgMarkup={worldMapMarkup}
                 points={countryStats}
                 selectedCountry={selectedCountryStat?.countryCode || null}
                 onSelectCountry={setSelectedCountry}
@@ -707,77 +650,46 @@ export default function Leads() {
               <button
                 type="button"
                 onClick={() => setShowLocationModal(true)}
-                className="mt-4 text-sm font-medium text-sky-600 transition-colors hover:text-sky-700"
+                className="mt-3 text-sm font-medium text-sky-600 transition-colors hover:text-sky-700"
               >
                 Detaillierte Karte anzeigen
               </button>
             </div>
 
-            <div className="space-y-4">
-              <div className="rounded-[28px] border border-slate-100 bg-white/70 p-5">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Aktives Land</p>
-                    <h4 className="mt-2 text-lg font-semibold text-slate-800">
-                      {selectedCountryStat ? `${countryCodeToFlag(selectedCountryStat.countryCode)} ${selectedCountryStat.countryName}` : 'Noch keine Länder'}
-                    </h4>
-                  </div>
-                  <div className="rounded-2xl bg-slate-100 p-3">
-                    <Globe2 className="h-5 w-5 text-slate-500" />
-                  </div>
-                </div>
-                <div className="mt-4 flex items-end justify-between">
-                  <div>
-                    <p className="text-3xl font-bold tracking-tight text-slate-800">{selectedCountryStat?.count ?? 0}</p>
-                    <p className="mt-1 text-sm text-slate-500">Leads aus diesem Land</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => selectedCountryStat && setCountryFilter(selectedCountryStat.countryCode)}
-                    disabled={!selectedCountryStat}
-                    className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:border-sky-200 hover:text-sky-700 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    Im Filter öffnen
-                  </button>
+            <div className="px-6 py-5">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h3 className="text-base font-semibold text-slate-800">Wann Besucher ihre E-Mail-Adressen abgeben</h3>
+                <div className="rounded-full bg-amber-50 p-2">
+                  <Clock3 className="h-4 w-4 text-amber-600" />
                 </div>
               </div>
 
-              <div className="space-y-3">
-                {topCountries.map((country) => {
-                  const share = totalMappedLeads > 0 ? Math.round((country.count / totalMappedLeads) * 100) : 0;
-                  const active = country.countryCode === selectedCountryStat?.countryCode;
-                  return (
-                    <button
-                      key={country.countryCode}
-                      type="button"
-                      onClick={() => setSelectedCountry(country.countryCode)}
-                      className={`w-full rounded-2xl border px-4 py-3 text-left transition-all ${
-                        active
-                          ? 'border-sky-200 bg-sky-50/80 shadow-sm'
-                          : 'border-slate-100 bg-white/70 hover:border-slate-200 hover:bg-white'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
-                          <p className="font-medium text-slate-700">
-                            {countryCodeToFlag(country.countryCode)} {country.countryName}
-                          </p>
-                          <p className="mt-1 text-xs text-slate-400">{country.countryCode}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-semibold text-slate-800">{country.count}</p>
-                          <p className="text-xs text-slate-400">{share}%</p>
-                        </div>
-                      </div>
-                      <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
-                        <div
-                          className="h-full rounded-full bg-gradient-to-r from-sky-500 to-blue-500"
-                          style={{ width: `${Math.max(share, country.count > 0 ? 10 : 0)}%` }}
-                        />
-                      </div>
-                    </button>
-                  );
-                })}
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl border border-slate-100 bg-white/70 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Stärkste Stunde</p>
+                  <p className="mt-2 text-base font-semibold text-slate-800">{formatHourRange(peakHour.hour)}</p>
+                  <p className="mt-1 text-sm text-slate-500">{peakHour.count} Leads</p>
+                </div>
+                <div className="rounded-2xl border border-slate-100 bg-white/70 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Letzte Abgabe</p>
+                  <p className="mt-2 text-base font-semibold text-slate-800">{latestLeadLabel}</p>
+                  <p className="mt-1 text-sm text-slate-500">Zuletzt erkannt</p>
+                </div>
+              </div>
+
+              <div className="mt-4 h-[150px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={hourlyData}>
+                    <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} interval={2} />
+                    <YAxis hide />
+                    <Tooltip
+                      formatter={(value: number) => [`${value} Leads`, 'Eingänge']}
+                      labelFormatter={(label) => `${label} Uhr`}
+                      contentStyle={{ background: 'rgba(255,255,255,0.95)', border: '1px solid rgba(226,232,240,0.9)', borderRadius: '14px', boxShadow: '0 18px 40px rgba(15,23,42,0.08)' }}
+                    />
+                    <Bar dataKey="count" fill="#f59e0b" radius={[5, 5, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </div>
           </div>
@@ -867,6 +779,7 @@ export default function Leads() {
             <div className="grid max-h-[calc(90vh-88px)] gap-6 overflow-y-auto p-6 lg:grid-cols-[1.6fr_0.8fr]">
               <div className="space-y-4">
                 <LeadWorldMap
+                  svgMarkup={worldMapMarkup}
                   points={countryStats}
                   selectedCountry={selectedCountryStat?.countryCode || null}
                   onSelectCountry={setSelectedCountry}
