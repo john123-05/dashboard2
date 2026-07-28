@@ -95,7 +95,7 @@ function CompactMetricCard({
   iconWrapClassName: string;
 }) {
   return (
-    <GlassCard className="h-full min-h-[156px] p-5">
+    <GlassCard className="h-full min-h-[172px] p-5">
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-2">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">{title}</p>
@@ -154,14 +154,12 @@ function LeadWorldMap({
 }) {
   const visiblePoints = points.filter((point) => point.x !== null && point.y !== null);
   const maxCount = Math.max(...visiblePoints.map((point) => point.count), 1);
-  const dotOffsetY = compact ? -1.8 : 0;
+  const dotOffsetY = 0;
 
   return (
-    <div
-      className={`relative overflow-hidden rounded-[24px] bg-white ${compact ? 'h-[220px]' : 'h-[420px]'}`}
-    >
+    <div className={`relative overflow-hidden rounded-[24px] bg-white ${compact ? 'aspect-[2.34/1] min-h-[230px]' : 'aspect-[2.34/1] min-h-[420px]'}`}>
       <div
-        className={`pointer-events-none absolute inset-0 flex items-center justify-center ${compact ? 'px-2 py-3' : 'px-4 py-4'} [&>svg]:h-auto [&>svg]:w-full [&>svg]:max-h-full [&>svg]:max-w-full`}
+        className={`pointer-events-none absolute inset-0 flex items-center justify-center ${compact ? 'px-3 py-4' : 'px-6 py-5'} [&>svg]:h-auto [&>svg]:w-full [&>svg]:max-h-full [&>svg]:max-w-full`}
         dangerouslySetInnerHTML={{ __html: svgMarkup }}
       />
       {visiblePoints.map((point) => {
