@@ -1,4 +1,4 @@
-import { useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
 import { Type, ImagePlus, Trash2, Loader2, Download, Square, Circle, Minus, Frame, Image as ImgIcon } from 'lucide-react';
 
 // Canva-style overlay editor, dependency-free: HTML/CSS for live editing, the
@@ -52,9 +52,34 @@ export default function OverlayBuilder({
   const [showPhoto, setShowPhoto] = useState(false);
 
   const fileRef = useRef<HTMLInputElement>(null);
+  const previewShellRef = useRef<HTMLDivElement>(null);
   const drag = useRef<{ id: string; mode: 'move' | 'resize'; sx: number; sy: number; ox: number; oy: number; ow: number; oh: number; of: number } | null>(null);
+  const [canvasScale, setCanvasScale] = useState(1);
 
   const selected = els.find((e) => e.id === selectedId) ?? null;
+  const scaledHeight = Math.round(displayH * canvasScale);
+
+  useEffect(() => {
+    const node = previewShellRef.current;
+    if (!node) return;
+
+    const updateScale = () => {
+      const availableWidth = node.clientWidth;
+      if (!availableWidth) return;
+      setCanvasScale(Math.min(1, availableWidth / DISPLAY_W));
+    };
+
+    updateScale();
+
+    const observer = new ResizeObserver(() => updateScale());
+    observer.observe(node);
+    window.addEventListener('resize', updateScale);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', updateScale);
+    };
+  }, []);
 
   function update(id: string, patch: Partial<Record<string, unknown>>) {
     setEls((p) => p.map((e) => (e.id === id ? ({ ...e, ...patch } as El) : e)));
@@ -233,7 +258,7 @@ export default function OverlayBuilder({
   }
 
   const ToolBtn = ({ onClick, icon: Icon, label }: { onClick: () => void; icon: typeof Type; label: string }) => (
-    <button onClick={onClick} className="glass-button-secondary flex items-center gap-1.5 text-sm">
+    <button onClick={onClick} className="glass-button-secondary flex w-full items-center justify-center gap-1.5 text-sm sm:w-auto">
       <Icon className="h-4 w-4" /> {label}
     </button>
   );
@@ -242,7 +267,7 @@ export default function OverlayBuilder({
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
       <div>
         <div className="mb-3 flex flex-wrap items-center gap-2">
-          <select value={formatId} onChange={(e) => setFormatId(e.target.value)} className="glass-input text-sm">
+          <select value={formatId} onChange={(e) => setFormatId(e.target.value)} className="glass-input w-full text-sm sm:w-auto">
             {FORMATS.map((f) => (
               <option key={f.id} value={f.id}>{f.label}</option>
             ))}
@@ -269,26 +294,36 @@ export default function OverlayBuilder({
           ))}
         </div>
 
-        <div
-          className="relative select-none overflow-hidden rounded-xl shadow-inner"
-          style={{ width: DISPLAY_W, height: displayH, background: CHECKER, maxWidth: '100%' }}
-          onPointerDown={() => setSelectedId(null)}
-        >
-          {showPhoto && previewUrl && (
-            <img src={previewUrl} alt="" draggable={false} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }} />
-          )}
-          {els.map((el) => (
-            <div key={el.id} onPointerDown={(e) => startDrag(e, el, 'move')} style={elStyle(el)}>
-              {el.type === 'text' && el.text}
-              {el.type === 'image' && <img src={images[el.id]?.src} alt="" draggable={false} style={{ width: '100%', height: '100%', pointerEvents: 'none' }} />}
-              {selectedId === el.id && (
-                <div
-                  onPointerDown={(e) => startDrag(e, el, 'resize')}
-                  style={{ position: 'absolute', right: -7, bottom: -7, width: 14, height: 14, borderRadius: 8, background: '#f97316', border: '2px solid #fff', cursor: 'nwse-resize' }}
-                />
+        <div ref={previewShellRef} className="w-full overflow-hidden">
+          <div style={{ height: scaledHeight }} className="relative w-full overflow-hidden rounded-xl">
+            <div
+              className="relative select-none overflow-hidden rounded-xl shadow-inner"
+              style={{
+                width: DISPLAY_W,
+                height: displayH,
+                background: CHECKER,
+                transform: `scale(${canvasScale})`,
+                transformOrigin: 'top left',
+              }}
+              onPointerDown={() => setSelectedId(null)}
+            >
+              {showPhoto && previewUrl && (
+                <img src={previewUrl} alt="" draggable={false} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }} />
               )}
+              {els.map((el) => (
+                <div key={el.id} onPointerDown={(e) => startDrag(e, el, 'move')} style={elStyle(el)}>
+                  {el.type === 'text' && el.text}
+                  {el.type === 'image' && <img src={images[el.id]?.src} alt="" draggable={false} style={{ width: '100%', height: '100%', pointerEvents: 'none' }} />}
+                  {selectedId === el.id && (
+                    <div
+                      onPointerDown={(e) => startDrag(e, el, 'resize')}
+                      style={{ position: 'absolute', right: -7, bottom: -7, width: 14, height: 14, borderRadius: 8, background: '#f97316', border: '2px solid #fff', cursor: 'nwse-resize' }}
+                    />
+                  )}
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
         </div>
         <p className="mt-2 text-xs text-slate-400">Element anklicken, ziehen zum Verschieben, am orangen Punkt skalieren. Karierter Bereich = transparent.</p>
       </div>

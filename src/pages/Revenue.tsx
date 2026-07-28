@@ -84,6 +84,17 @@ export default function Revenue() {
   const [dayLoading, setDayLoading] = useState(false);
   const [dayError, setDayError] = useState<string | null>(null);
   const dateInputRef = useRef<HTMLInputElement | null>(null);
+  const [isMobileChart, setIsMobileChart] = useState(false);
+
+  useEffect(() => {
+    const updateViewport = () => {
+      setIsMobileChart(window.innerWidth < 640);
+    };
+
+    updateViewport();
+    window.addEventListener('resize', updateViewport);
+    return () => window.removeEventListener('resize', updateViewport);
+  }, []);
 
   // Clicking "Anderer Tag" should open the calendar immediately rather than
   // just revealing an inert input - showPicker() needs the input actually
@@ -273,6 +284,23 @@ export default function Revenue() {
   const minSelectableDate = useMemo(
     () => (isKioskPark ? daysAgoInTimezone(kioskTimezone, 29) : ''),
     [isKioskPark, kioskTimezone],
+  );
+  const chartXAxisTick = useMemo(
+    () => ({ fontSize: isMobileChart ? 10 : 11, fill: '#94a3b8' }),
+    [isMobileChart],
+  );
+  const chartYAxisTick = useMemo(
+    () => ({ fontSize: isMobileChart ? 10 : 11, fill: '#94a3b8' }),
+    [isMobileChart],
+  );
+  const chartMargin = useMemo(
+    () => ({
+      top: 8,
+      right: isMobileChart ? 4 : 12,
+      left: isMobileChart ? -24 : -10,
+      bottom: 0,
+    }),
+    [isMobileChart],
   );
 
   useEffect(() => {
@@ -585,9 +613,9 @@ export default function Revenue() {
             </div>
 
             {chartMode === 'trend' ? (
-              <div className="h-80">
+              <div className="-mx-3 h-[20rem] sm:mx-0 sm:h-80">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={kioskChartData}>
+                  <AreaChart data={kioskChartData} margin={chartMargin}>
                     <defs>
                       <linearGradient id="kioskRevenue" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="#0ea5e9" stopOpacity={0.22} />
@@ -595,11 +623,18 @@ export default function Revenue() {
                       </linearGradient>
                     </defs>
                     <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#e2e8f0" />
-                    <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} />
+                    <XAxis
+                      dataKey="label"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={chartXAxisTick}
+                      minTickGap={isMobileChart ? 22 : 8}
+                      interval={isMobileChart ? 'preserveStartEnd' : 0}
+                    />
                     <YAxis
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fontSize: 11, fill: '#94a3b8' }}
+                      tick={chartYAxisTick}
                       tickFormatter={(value) => `€${value}`}
                     />
                     <Tooltip
@@ -678,7 +713,7 @@ export default function Revenue() {
 
                 {dayError && <p className="mb-3 text-sm text-red-600">{dayError}</p>}
 
-                <div className="h-80">
+                <div className="-mx-3 h-[20rem] sm:mx-0 sm:h-80">
                   {dayLoading ? (
                     <div className="flex h-full items-center justify-center text-sm text-slate-500">
                       Lädt...
@@ -689,7 +724,7 @@ export default function Revenue() {
                     </div>
                   ) : (
                     <ResponsiveContainer width="100%" height="100%">
-                      <ComposedChart data={hourlyBuckets}>
+                      <ComposedChart data={hourlyBuckets} margin={chartMargin}>
                         <defs>
                           <linearGradient id="kioskRevenueHourly" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="0%" stopColor="#0ea5e9" stopOpacity={0.22} />
@@ -697,12 +732,19 @@ export default function Revenue() {
                           </linearGradient>
                         </defs>
                         <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#e2e8f0" />
-                        <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} />
+                        <XAxis
+                          dataKey="label"
+                          axisLine={false}
+                          tickLine={false}
+                          tick={chartXAxisTick}
+                          minTickGap={isMobileChart ? 20 : 8}
+                          interval={isMobileChart ? 'preserveStartEnd' : 0}
+                        />
                         <YAxis
                           yAxisId="rev"
                           axisLine={false}
                           tickLine={false}
-                          tick={{ fontSize: 11, fill: '#94a3b8' }}
+                          tick={chartYAxisTick}
                           tickFormatter={(value) => `€${value}`}
                         />
                         {/* Rides on their own hidden, auto-scaled axis so the two
@@ -883,9 +925,9 @@ export default function Revenue() {
             )}
           </div>
         </div>
-        <div className="h-80">
+        <div className="-mx-3 h-[20rem] sm:mx-0 sm:h-80">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={dailyRevenue}>
+            <AreaChart data={dailyRevenue} margin={chartMargin}>
               <defs>
                 <linearGradient id="revOnline" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#0ea5e9" stopOpacity={0.22} />
@@ -897,8 +939,15 @@ export default function Revenue() {
                 </linearGradient>
               </defs>
               <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} tickFormatter={(value) => `$${value}`} />
+              <XAxis
+                dataKey="label"
+                axisLine={false}
+                tickLine={false}
+                tick={chartXAxisTick}
+                minTickGap={isMobileChart ? 22 : 8}
+                interval={isMobileChart ? 'preserveStartEnd' : 0}
+              />
+              <YAxis axisLine={false} tickLine={false} tick={chartYAxisTick} tickFormatter={(value) => `$${value}`} />
               <Tooltip
                 contentStyle={{
                   background: 'rgba(255,255,255,0.94)',
