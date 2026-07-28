@@ -130,13 +130,19 @@ function buildWorldMapMarkup(svgSource: string, points: CountryStat[], selectedC
 
   const styleBlock = `
     <style>
-      #layer1 path{fill:#e9eef5;stroke:#cbd5e1;stroke-width:1.15;}
-      #layer1 g path{transition:fill .2s ease;}
+      .landxx{fill:#e8eef7 !important;stroke:#c5d2e3 !important;stroke-width:1.6 !important;}
+      .coastxx{fill:#e8eef7 !important;stroke:#c5d2e3 !important;stroke-width:1.6 !important;}
+      .circlexx{opacity:0 !important;}
+      path{vector-effect:non-scaling-stroke;}
       ${countryStyles}
     </style>
   `;
 
-  return svgSource.replace('<svg ', `<svg preserveAspectRatio="xMidYMid meet" `).replace('>', `>${styleBlock}`);
+  return svgSource
+    .replace('<svg ', `<svg preserveAspectRatio="xMidYMid meet" `)
+    .replace(/width="[^"]*"/, '')
+    .replace(/height="[^"]*"/, '')
+    .replace('>', `>${styleBlock}`);
 }
 
 function LeadWorldMap({
@@ -176,8 +182,7 @@ function LeadWorldMap({
   const maxCount = Math.max(...visiblePoints.map((point) => point.count), 1);
   const mapRef = useRef<HTMLDivElement | null>(null);
   const dragStateRef = useRef<{ startX: number; startY: number; originX: number; originY: number } | null>(null);
-  const baseScale = compact ? 0.34 : 0.44;
-  const effectiveScale = baseScale * zoom;
+  const effectiveScale = zoom;
 
   function getCountryFromEventTarget(target: EventTarget | null): string | null {
     if (!(target instanceof Element)) return null;
