@@ -30,3 +30,17 @@ verify_jwt = false
 # Called by a Postgres trigger (pg_net), not by a browser session — gated by
 # its own X-Dispatch-Secret header instead of a platform JWT.
 verify_jwt = false
+
+[functions.operator-notification-settings]
+# Browser calls come from operator accounts on the separate operator project.
+# These functions validate the operator token themselves via _shared/operatorAuth.ts,
+# so the shared-project JWT gateway must not reject that foreign-project token first.
+verify_jwt = false
+
+[functions.operator-push-subscription]
+# Same cross-project operator auth pattern as operator-notification-settings.
+verify_jwt = false
+
+[functions.operator-test-push]
+# Same cross-project operator auth pattern as operator-notification-settings.
+verify_jwt = false
