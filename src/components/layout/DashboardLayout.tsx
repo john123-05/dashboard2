@@ -1,9 +1,9 @@
-import { useState } from 'react';
-import { Outlet, Navigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Outlet, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import Sidebar from './Sidebar';
 import WelcomeTour from '../WelcomeTour';
-import { Loader2, Mountain, ArrowRight } from 'lucide-react';
+import { Loader2, Mountain, ArrowRight, Menu } from 'lucide-react';
 import { useI18n } from '../../lib/i18n';
 import { usePark } from '../../contexts/ParkContext';
 
@@ -12,6 +12,13 @@ export default function DashboardLayout() {
   const { t } = useI18n();
   const { parkId } = usePark();
   const [joining, setJoining] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const location = useLocation();
+
+  useEffect(() => {
+    setMobileNavOpen(false);
+  }, [location.pathname]);
 
   if (loading) {
     return (
@@ -67,10 +74,31 @@ export default function DashboardLayout() {
   }
 
   return (
-    <div className="mesh-gradient flex min-h-screen overflow-x-clip">
-      <Sidebar />
-      <main className="flex-1 pl-64 transition-all duration-300 overflow-x-clip">
-        <div className="min-h-screen p-6 lg:p-8 w-full">
+    <div className="operator-app mesh-gradient flex min-h-screen overflow-x-clip">
+      {mobileNavOpen && (
+        <div className="mobile-nav-backdrop" onClick={() => setMobileNavOpen(false)} />
+      )}
+      <Sidebar
+        collapsed={collapsed}
+        onToggleCollapsed={() => setCollapsed((prev) => !prev)}
+        mobileOpen={mobileNavOpen}
+        onCloseMobile={() => setMobileNavOpen(false)}
+      />
+      {!mobileNavOpen && (
+        <button
+          type="button"
+          className="mobile-nav-toggle"
+          aria-label="Navigation öffnen"
+          onClick={() => setMobileNavOpen(true)}
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+      )}
+      <main
+        className="operator-main flex-1 min-w-0 transition-all duration-300 overflow-x-clip"
+        style={{ paddingLeft: collapsed ? 72 : 256 }}
+      >
+        <div className="min-h-screen w-full min-w-0 p-4 sm:p-6 lg:p-8">
           <Outlet />
         </div>
       </main>
