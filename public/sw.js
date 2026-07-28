@@ -18,7 +18,7 @@ self.addEventListener('push', (event) => {
     body: data.body || '',
     icon: LOGO_URL,
     badge: LOGO_URL,
-    data: { url: data.url || '/staff/website-anfragen' },
+    data: { url: data.url || '/' },
   };
 
   event.waitUntil(self.registration.showNotification(title, options));
@@ -26,7 +26,7 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const url = event.notification.data && event.notification.data.url ? event.notification.data.url : '/staff/website-anfragen';
+  const url = event.notification.data && event.notification.data.url ? event.notification.data.url : '/';
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {

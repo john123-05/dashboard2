@@ -18,6 +18,7 @@ import {
   isOperatorPushSupported,
   sendOperatorTestPush,
   subscribeOperatorPush,
+  syncOperatorPushSubscription,
   unsubscribeOperatorPush,
 } from '../lib/operatorPushNotifications';
 
@@ -202,6 +203,13 @@ export default function Settings() {
 
       setPushChecking(true);
       const subscription = await getCurrentOperatorPushSubscription().catch(() => null);
+      if (subscription && selectedPark?.id) {
+        await syncOperatorPushSubscription(selectedPark.id).catch((error) => {
+          if (!cancelled) {
+            setPushError(error instanceof Error ? error.message : t('settings.notifications.device_error'));
+          }
+        });
+      }
       if (!cancelled) {
         setPushSubscribed(Boolean(subscription));
         setPushChecking(false);
