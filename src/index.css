@@ -177,11 +177,11 @@
   .operator-app .mobile-nav-toggle {
     display: flex;
     position: fixed;
-    left: 16px;
-    bottom: 16px;
+    left: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
     z-index: 250;
-    width: 52px;
-    height: 52px;
+    width: 46px;
+    height: 46px;
     padding: 0;
     align-items: center;
     justify-content: center;
@@ -190,6 +190,15 @@
     color: #fff;
     border: 1px solid rgba(0, 0, 0, 0.14);
     box-shadow: 0 8px 24px var(--brand-orange-glow), 0 2px 6px rgba(0, 0, 0, 0.16);
+  }
+
+  .operator-app .mobile-nav-toggle svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .operator-app main.operator-main > div {
+    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
   }
 
   .operator-app .mobile-nav-backdrop {

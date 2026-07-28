@@ -824,13 +824,13 @@ export default function Overview() {
         {isKioskPark && (
         <GlassCard className="p-5 sm:p-6">
           <div className="mb-4 flex items-center justify-between">
-            <div>
+            <div className="min-w-0">
               <h3 className="text-base font-semibold text-slate-800">Umsatz</h3>
               <p className="text-sm text-slate-500">Tägliche Einnahmen am Automaten</p>
             </div>
           </div>
           <div className="-mx-2 overflow-x-auto pb-2 sm:mx-0 sm:overflow-visible sm:pb-0">
-            <div className="h-[17rem] w-[520px] sm:h-80 sm:w-full">
+            <div className="h-[17rem] min-w-[320px] w-full sm:h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={kioskChartData}>
                   <defs>
@@ -873,15 +873,15 @@ export default function Overview() {
 
         {!isKioskPark && (
         <GlassCard className="p-5 sm:p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div className="min-w-0">
               <h3 className="text-base font-semibold text-slate-800">Revenue Flow</h3>
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-slate-500 break-words">
                 Online and local sales combined over the last 30 days
               </p>
             </div>
             {(parkData.summary.success_rate ?? null) !== null && (
-              <div className="text-right">
+              <div className="shrink-0 text-right">
                 <p className="text-xs uppercase tracking-wide text-slate-400">Payment Success</p>
                 <p className="text-sm font-semibold text-slate-800">
                   {formatPercent(parkData.summary.success_rate ?? 0)}
@@ -890,7 +890,7 @@ export default function Overview() {
             )}
           </div>
           <div className="-mx-2 overflow-x-auto pb-2 sm:mx-0 sm:overflow-visible sm:pb-0">
-            <div className="h-[17rem] w-[520px] sm:h-80 sm:w-full">
+            <div className="h-[17rem] min-w-[320px] w-full sm:h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={combinedDaily}>
                   <defs>
@@ -941,9 +941,9 @@ export default function Overview() {
         </GlassCard>
         )}
 
-        <GlassCard className="p-5 sm:p-6">
+        <GlassCard className="overflow-hidden p-5 sm:p-6">
           <div className="mb-4 flex items-center justify-between gap-3">
-            <div>
+            <div className="min-w-0">
               <h3 className="text-base font-semibold text-slate-800">Alerts & Activity</h3>
               <p className="mt-1 text-sm text-slate-500">
                 Live warnings, support updates and recent operational signals
@@ -957,7 +957,7 @@ export default function Overview() {
               </p>
             ) : (
               visibleActivityItems.map((item) => (
-                <div key={item.id} className="rounded-xl bg-white/30 p-4">
+                <div key={item.id} className="overflow-hidden rounded-xl bg-white/30 p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="mb-1 flex items-center gap-2">
@@ -974,8 +974,8 @@ export default function Overview() {
                           <span className={`status-badge ${statusColor(item.status)}`}>{item.status}</span>
                         )}
                       </div>
-                      <p className="text-sm font-semibold text-slate-800">{item.title}</p>
-                      <p className="mt-1 text-sm text-slate-500">{item.description}</p>
+                      <p className="break-words text-sm font-semibold text-slate-800">{item.title}</p>
+                      <p className="mt-1 break-words text-sm text-slate-500">{item.description}</p>
                     </div>
                     <div className="flex shrink-0 items-start gap-2">
                       <span className="text-xs text-slate-400">{formatRelative(item.created_at)}</span>

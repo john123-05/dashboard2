@@ -1252,7 +1252,7 @@ export default function Leads() {
           <div className="grid gap-6 p-4 sm:p-6 lg:grid-cols-[1.55fr_0.85fr]">
             <div className="space-y-4">
               <div className="-mx-2 overflow-x-auto pb-2 sm:mx-0 sm:overflow-visible sm:pb-0">
-                <div className="w-[680px] sm:w-full">
+                <div className="min-w-[320px] w-full sm:min-w-0">
                   <LeadWorldMap
                     svgMarkup={worldMapMarkup}
                     points={resolvedCountryStats}

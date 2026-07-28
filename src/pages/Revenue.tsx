@@ -621,8 +621,8 @@ export default function Revenue() {
             </div>
 
             {chartMode === 'trend' ? (
-              <div className="-mx-3 overflow-x-auto pb-2 sm:mx-0 sm:overflow-visible sm:pb-0">
-                <div className="h-[18rem] w-[580px] sm:h-80 sm:w-full">
+              <div className="-mx-2 overflow-x-auto pb-2 sm:mx-0 sm:overflow-visible sm:pb-0">
+                <div className="h-[18rem] min-w-[320px] w-full sm:h-80">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={kioskChartData} margin={chartMargin}>
                       <defs>
@@ -723,7 +723,7 @@ export default function Revenue() {
 
                 {dayError && <p className="mb-3 text-sm text-red-600">{dayError}</p>}
 
-                <div className="-mx-3 overflow-x-auto pb-2 sm:mx-0 sm:overflow-visible sm:pb-0">
+                <div className="-mx-2 overflow-x-auto pb-2 sm:mx-0 sm:overflow-visible sm:pb-0">
                   {dayLoading ? (
                     <div className="flex h-[18rem] items-center justify-center text-sm text-slate-500 sm:h-80">
                       Lädt...
@@ -733,7 +733,7 @@ export default function Revenue() {
                       Keine Verkäufe an diesem Tag.
                     </div>
                   ) : (
-                    <div className="h-[18rem] w-[580px] sm:h-80 sm:w-full">
+                    <div className="h-[18rem] min-w-[320px] w-full sm:h-80">
                       <ResponsiveContainer width="100%" height="100%">
                         <ComposedChart data={hourlyBuckets} margin={chartMargin}>
                           <defs>
@@ -935,8 +935,8 @@ export default function Revenue() {
             )}
           </div>
         </div>
-        <div className="-mx-3 overflow-x-auto pb-2 sm:mx-0 sm:overflow-visible sm:pb-0">
-          <div className="h-[18rem] w-[580px] sm:h-80 sm:w-full">
+        <div className="-mx-2 overflow-x-auto pb-2 sm:mx-0 sm:overflow-visible sm:pb-0">
+          <div className="h-[18rem] min-w-[320px] w-full sm:h-80">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={dailyRevenue} margin={chartMargin}>
                 <defs>
@@ -987,8 +987,8 @@ export default function Revenue() {
           <p className="mb-4 text-sm text-slate-500">
             Only confirmed local cash and terminal amounts are charted here.
           </p>
-          <div className="-mx-3 overflow-x-auto pb-2 sm:mx-0 sm:overflow-visible sm:pb-0">
-            <div className="h-[16rem] w-[560px] sm:h-72 sm:w-full">
+          <div className="-mx-2 overflow-x-auto pb-2 sm:mx-0 sm:overflow-visible sm:pb-0">
+            <div className="h-[16rem] min-w-[320px] w-full sm:h-72">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={dailyRevenue}>
                   <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#e2e8f0" />
