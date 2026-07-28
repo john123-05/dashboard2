@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Clock3, Download, Mail, Trash2, UserPlus } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Clock3, Download, Mail, Minus, Plus, Trash2, UserPlus } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { getOptionalSourceWarning, invokeEdgeFunction, isEdgeSourceUnavailable } from '../lib/edgeFunctions';
 import { formatDate, formatNumber, exportToCSV } from '../lib/utils';
@@ -96,15 +96,15 @@ function CompactMetricCard({
 }) {
   return (
     <GlassCard className="h-full min-h-[172px] p-5">
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">{title}</p>
+      <div className="space-y-3">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">{title}</p>
+        <div className="flex items-center gap-3">
           <p className="text-3xl font-bold tracking-tight text-slate-800">{value}</p>
-          <p className="max-w-[11rem] text-sm leading-6 text-slate-500">{subtitle}</p>
+          <div className={`rounded-xl p-2.5 ${iconWrapClassName}`}>
+            <Icon className={`h-4.5 w-4.5 ${iconClassName}`} />
+          </div>
         </div>
-        <div className={`rounded-2xl p-3 ${iconWrapClassName}`}>
-          <Icon className={`h-5 w-5 ${iconClassName}`} />
-        </div>
+        <p className="max-w-[11rem] text-sm leading-6 text-slate-500">{subtitle}</p>
       </div>
     </GlassCard>
   );
@@ -144,26 +144,137 @@ function LeadWorldMap({
   points,
   selectedCountry,
   onSelectCountry,
+  onHoverCountry,
+  hoveredCountry,
+  hoverLabel,
+  hoverPosition,
+  zoom = 1,
+  offset = { x: 0, y: 0 },
+  onZoomIn,
+  onZoomOut,
+  onResetView,
+  onOffsetChange,
   compact = false,
 }: {
   svgMarkup: string;
   points: CountryStat[];
   selectedCountry: string | null;
   onSelectCountry: (countryCode: string) => void;
+  onHoverCountry?: (payload: { countryCode: string | null; x: number; y: number }) => void;
+  hoveredCountry?: string | null;
+  hoverLabel?: string | null;
+  hoverPosition?: { x: number; y: number } | null;
+  zoom?: number;
+  offset?: { x: number; y: number };
+  onZoomIn?: () => void;
+  onZoomOut?: () => void;
+  onResetView?: () => void;
+  onOffsetChange?: (next: { x: number; y: number }) => void;
   compact?: boolean;
 }) {
   const visiblePoints = points.filter((point) => point.x !== null && point.y !== null);
   const maxCount = Math.max(...visiblePoints.map((point) => point.count), 1);
-  const dotOffsetY = 0;
+  const mapRef = useRef<HTMLDivElement | null>(null);
+  const dragStateRef = useRef<{ startX: number; startY: number; originX: number; originY: number } | null>(null);
+  const baseScale = compact ? 0.34 : 0.44;
+  const effectiveScale = baseScale * zoom;
+
+  function getCountryFromEventTarget(target: EventTarget | null): string | null {
+    if (!(target instanceof Element)) return null;
+    const group = target.closest('g[id]');
+    const id = group?.getAttribute('id')?.toUpperCase() || '';
+    return id && /^[A-Z]{2}$/.test(id) ? id : null;
+  }
+
+  function handlePointerDown(event: React.PointerEvent<HTMLDivElement>) {
+    if (compact || zoom <= 1 || !mapRef.current) return;
+    dragStateRef.current = {
+      startX: event.clientX,
+      startY: event.clientY,
+      originX: offset.x,
+      originY: offset.y,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function handlePointerMove(event: React.PointerEvent<HTMLDivElement>) {
+    const countryCode = getCountryFromEventTarget(event.target);
+    if (onHoverCountry && mapRef.current) {
+      const bounds = mapRef.current.getBoundingClientRect();
+      onHoverCountry({
+        countryCode,
+        x: event.clientX - bounds.left,
+        y: event.clientY - bounds.top,
+      });
+    }
+
+    if (!compact && dragStateRef.current) {
+      const nextX = dragStateRef.current.originX + (event.clientX - dragStateRef.current.startX);
+      const nextY = dragStateRef.current.originY + (event.clientY - dragStateRef.current.startY);
+      onOffsetChange?.({ x: nextX, y: nextY });
+    }
+  }
+
+  function handlePointerUp(event: React.PointerEvent<HTMLDivElement>) {
+    if (!compact) {
+      event.currentTarget.releasePointerCapture?.(event.pointerId);
+    }
+    dragStateRef.current = null;
+  }
 
   return (
-    <div className={`relative overflow-hidden rounded-[24px] bg-white ${compact ? 'aspect-[2.34/1] min-h-[230px]' : 'aspect-[2.34/1] min-h-[420px]'}`}>
+    <div
+      ref={mapRef}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerLeave={() => {
+        dragStateRef.current = null;
+        onHoverCountry?.({ countryCode: null, x: 0, y: 0 });
+      }}
+      className={`relative overflow-hidden rounded-[24px] bg-white ${compact ? 'aspect-[2.34/1] min-h-[230px]' : 'aspect-[2.34/1] min-h-[420px]'} ${compact ? '' : 'cursor-grab active:cursor-grabbing'}`}
+    >
+      {!compact && (
+        <div className="absolute right-4 top-4 z-20 flex items-center gap-2 rounded-full border border-slate-200 bg-white/92 px-2 py-2 shadow-sm">
+          <button
+            type="button"
+            onClick={onZoomOut}
+            className="rounded-full p-1.5 text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-700"
+            aria-label="Karte herauszoomen"
+          >
+            <Minus className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={onZoomIn}
+            className="rounded-full p-1.5 text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-700"
+            aria-label="Karte hineinzoomen"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={onResetView}
+            className="rounded-full px-2 py-1 text-xs font-semibold text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-700"
+          >
+            Reset
+          </button>
+        </div>
+      )}
+
       <div
-        className={`pointer-events-none absolute inset-0 flex items-center justify-center ${compact ? 'px-3 py-4' : 'px-6 py-5'} [&>svg]:h-auto [&>svg]:w-full [&>svg]:max-h-full [&>svg]:max-w-full`}
+        className="absolute inset-0"
+        style={{
+          transform: `translate(${offset.x}px, ${offset.y}px) scale(${effectiveScale})`,
+          transformOrigin: 'center center',
+        }}
+      >
+      <div
+          className={`absolute inset-0 flex items-center justify-center ${compact ? 'px-3 py-4' : 'px-6 py-5'} [&>svg]:h-auto [&>svg]:w-full [&>svg]:max-h-full [&>svg]:max-w-full`}
         dangerouslySetInnerHTML={{ __html: svgMarkup }}
       />
       {visiblePoints.map((point) => {
-        const isSelected = point.countryCode === selectedCountry;
+        const isSelected = point.countryCode === selectedCountry || point.countryCode === hoveredCountry;
         const radius = compact ? 5 + (point.count / maxCount) * 5 : 7 + (point.count / maxCount) * 7;
         return (
           <button
@@ -171,7 +282,7 @@ function LeadWorldMap({
             type="button"
             onClick={() => onSelectCountry(point.countryCode)}
             className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full"
-            style={{ left: `${point.x}%`, top: `${point.y + dotOffsetY}%`, width: `${radius * 2 + 12}px`, height: `${radius * 2 + 12}px` }}
+            style={{ left: `${point.x}%`, top: `${point.y}%`, width: `${radius * 2 + 12}px`, height: `${radius * 2 + 12}px` }}
             aria-label={`${point.countryName} auswählen`}
           >
             <span
@@ -191,6 +302,19 @@ function LeadWorldMap({
           </button>
         );
       })}
+      </div>
+
+      {!compact && hoverLabel && hoverPosition && (
+        <div
+          className="pointer-events-none absolute z-30 rounded-xl border border-slate-200 bg-white/96 px-3 py-2 text-xs font-medium text-slate-700 shadow-sm"
+          style={{
+            left: Math.min(Math.max(hoverPosition.x + 12, 12), (mapRef.current?.clientWidth || 0) - 160),
+            top: Math.max(hoverPosition.y - 42, 12),
+          }}
+        >
+          {hoverLabel}
+        </div>
+      )}
     </div>
   );
 }
@@ -213,6 +337,7 @@ function leadLocaleBadge(item: Record<string, unknown>): string | null {
 export default function Leads() {
   const { t } = useI18n();
   const { parkId } = usePark();
+  const locationDetailsRef = useRef<HTMLDivElement | null>(null);
   const [leads, setLeads] = useState<Record<string, unknown>[]>([]);
   const [stats, setStats] = useState({ total: 0, optedIn: 0 });
   const [filterOptIn, setFilterOptIn] = useState<boolean | null>(null);
@@ -221,6 +346,9 @@ export default function Leads() {
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [showLocationDetails, setShowLocationDetails] = useState(false);
+  const [detailMapZoom, setDetailMapZoom] = useState(1);
+  const [detailMapOffset, setDetailMapOffset] = useState({ x: 0, y: 0 });
+  const [hoveredCountryInfo, setHoveredCountryInfo] = useState<{ countryCode: string | null; x: number; y: number } | null>(null);
   const [worldMapSvg, setWorldMapSvg] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -247,6 +375,13 @@ export default function Leads() {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!showLocationDetails) return;
+    requestAnimationFrame(() => {
+      locationDetailsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, [showLocationDetails]);
 
   async function loadData() {
     setLoading(true);
@@ -374,9 +509,15 @@ export default function Leads() {
 
   const optInRate = stats.total > 0 ? Math.round((stats.optedIn / stats.total) * 100) : 0;
   const worldMapMarkup = useMemo(
-    () => buildWorldMapMarkup(worldMapSvg, countryStats, selectedCountry),
-    [countryStats, selectedCountry, worldMapSvg],
+    () => buildWorldMapMarkup(worldMapSvg, countryStats, hoveredCountryInfo?.countryCode || selectedCountry),
+    [countryStats, hoveredCountryInfo?.countryCode, selectedCountry, worldMapSvg],
   );
+  const hoveredCountryStat = hoveredCountryInfo?.countryCode
+    ? countryStats.find((country) => country.countryCode === hoveredCountryInfo.countryCode) || null
+    : null;
+  const hoveredCountryLabel = hoveredCountryStat
+    ? `${hoveredCountryStat.count} aus ${hoveredCountryStat.countryName}`
+    : null;
 
   function isDeletableLead(lead: Record<string, unknown>) {
     return lead.source === 'photo_claim' && typeof lead.id === 'string' && lead.id.length > 0;
@@ -646,11 +787,21 @@ export default function Leads() {
                 points={countryStats}
                 selectedCountry={selectedCountryStat?.countryCode || null}
                 onSelectCountry={setSelectedCountry}
+                offset={{ x: 0, y: 0 }}
                 compact
               />
               <button
                 type="button"
-                onClick={() => setShowLocationDetails((current) => !current)}
+                onClick={() =>
+                  setShowLocationDetails((current) => {
+                    const next = !current;
+                    if (next) {
+                      setDetailMapZoom(1);
+                      setDetailMapOffset({ x: 0, y: 0 });
+                    }
+                    return next;
+                  })
+                }
                 className="mt-3 text-sm font-medium text-sky-600 transition-colors hover:text-sky-700"
               >
                 {showLocationDetails ? 'Detaillierte Karte ausblenden' : 'Detaillierte Karte anzeigen'}
@@ -698,6 +849,7 @@ export default function Leads() {
       </div>
 
       {showLocationDetails && (
+        <div ref={locationDetailsRef}>
         <GlassCard className="overflow-hidden">
           <div className="border-b border-slate-100 px-6 py-5">
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-500">Besucher nach Standort</p>
@@ -714,6 +866,25 @@ export default function Leads() {
                 points={countryStats}
                 selectedCountry={selectedCountryStat?.countryCode || null}
                 onSelectCountry={setSelectedCountry}
+                hoveredCountry={hoveredCountryInfo?.countryCode || null}
+                hoverLabel={hoveredCountryLabel}
+                hoverPosition={hoveredCountryInfo}
+                zoom={detailMapZoom}
+                offset={detailMapOffset}
+                onOffsetChange={setDetailMapOffset}
+                onZoomIn={() => setDetailMapZoom((current) => Math.min(current + 0.2, 2.4))}
+                onZoomOut={() =>
+                  setDetailMapZoom((current) => {
+                    const next = Math.max(current - 0.2, 1);
+                    if (next === 1) setDetailMapOffset({ x: 0, y: 0 });
+                    return next;
+                  })
+                }
+                onResetView={() => {
+                  setDetailMapZoom(1);
+                  setDetailMapOffset({ x: 0, y: 0 });
+                }}
+                onHoverCountry={setHoveredCountryInfo}
               />
               <div className="grid gap-4 sm:grid-cols-3">
                 <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
@@ -764,6 +935,7 @@ export default function Leads() {
             </div>
           </div>
         </GlassCard>
+        </div>
       )}
 
       <DataTable
