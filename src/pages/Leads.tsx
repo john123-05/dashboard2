@@ -273,10 +273,17 @@ function LeadWorldMap({
       className={`relative overflow-hidden rounded-[24px] bg-white ${compact ? 'aspect-[2.34/1] min-h-[230px]' : 'aspect-[2.34/1] min-h-[420px]'} ${compact ? '' : 'cursor-grab active:cursor-grabbing'}`}
     >
       {!compact && (
-        <div className="absolute right-4 top-4 z-20 flex items-center gap-2 rounded-full border border-slate-200 bg-white/92 px-2 py-2 shadow-sm">
+        <div
+          className="absolute right-4 top-4 z-20 flex items-center gap-2 rounded-full border border-slate-200 bg-white/92 px-2 py-2 shadow-sm"
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => event.stopPropagation()}
+        >
           <button
             type="button"
-            onClick={onZoomOut}
+            onClick={(event) => {
+              event.stopPropagation();
+              onZoomOut?.();
+            }}
             className="rounded-full p-1.5 text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-700"
             aria-label="Karte herauszoomen"
           >
@@ -284,7 +291,10 @@ function LeadWorldMap({
           </button>
           <button
             type="button"
-            onClick={onZoomIn}
+            onClick={(event) => {
+              event.stopPropagation();
+              onZoomIn?.();
+            }}
             className="rounded-full p-1.5 text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-700"
             aria-label="Karte hineinzoomen"
           >
@@ -292,7 +302,10 @@ function LeadWorldMap({
           </button>
           <button
             type="button"
-            onClick={onResetView}
+            onClick={(event) => {
+              event.stopPropagation();
+              onResetView?.();
+            }}
             className="rounded-full px-2 py-1 text-xs font-semibold text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-700"
           >
             Reset
@@ -314,7 +327,7 @@ function LeadWorldMap({
         {viewBox && (
           <div className={`pointer-events-none absolute inset-0 flex items-center justify-center ${compact ? 'px-3 py-4' : 'px-6 py-5'}`}>
             <svg
-              className="h-full w-full max-h-full max-w-full overflow-visible"
+              className="h-auto w-full max-h-full max-w-full overflow-visible"
               viewBox={`${viewBox.minX} ${viewBox.minY} ${viewBox.width} ${viewBox.height}`}
               preserveAspectRatio="xMidYMid meet"
             >
@@ -574,6 +587,37 @@ export default function Leads() {
   const hoveredCountryLabel = hoveredCountryStat
     ? `${hoveredCountryStat.count} aus ${hoveredCountryStat.countryName}`
     : null;
+
+  function zoomDetailMapIn() {
+    setDetailMapZoom((current) => {
+      const next = Math.min(current * 1.5, 10);
+      setDetailMapOffset((currentOffset) => ({
+        x: currentOffset.x * (next / current),
+        y: currentOffset.y * (next / current),
+      }));
+      return next;
+    });
+  }
+
+  function zoomDetailMapOut() {
+    setDetailMapZoom((current) => {
+      const next = current <= 1.35 ? 1 : Math.max(current / 1.5, 0.45);
+      setDetailMapOffset((currentOffset) => {
+        if (next <= 1) return { x: 0, y: 0 };
+        const ratio = next / current;
+        return {
+          x: currentOffset.x * ratio,
+          y: currentOffset.y * ratio,
+        };
+      });
+      return next;
+    });
+  }
+
+  function resetDetailMapView() {
+    setDetailMapZoom(1);
+    setDetailMapOffset({ x: 0, y: 0 });
+  }
 
   function isDeletableLead(lead: Record<string, unknown>) {
     return lead.source === 'photo_claim' && typeof lead.id === 'string' && lead.id.length > 0;
@@ -852,8 +896,7 @@ export default function Leads() {
                   setShowLocationDetails((current) => {
                     const next = !current;
                     if (next) {
-                      setDetailMapZoom(1);
-                      setDetailMapOffset({ x: 0, y: 0 });
+                      resetDetailMapView();
                     }
                     return next;
                   })
@@ -928,18 +971,9 @@ export default function Leads() {
                 zoom={detailMapZoom}
                 offset={detailMapOffset}
                 onOffsetChange={setDetailMapOffset}
-                onZoomIn={() => setDetailMapZoom((current) => Math.min(current * 1.5, 10))}
-                onZoomOut={() =>
-                  setDetailMapZoom((current) => {
-                    const next = Math.max(current / 1.5, 0.45);
-                    if (next <= 1) setDetailMapOffset({ x: 0, y: 0 });
-                    return next;
-                  })
-                }
-                onResetView={() => {
-                  setDetailMapZoom(1);
-                  setDetailMapOffset({ x: 0, y: 0 });
-                }}
+                onZoomIn={zoomDetailMapIn}
+                onZoomOut={zoomDetailMapOut}
+                onResetView={resetDetailMapView}
                 onHoverCountry={setHoveredCountryInfo}
               />
               <div className="grid gap-4 sm:grid-cols-3">
