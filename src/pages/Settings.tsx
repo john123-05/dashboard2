@@ -26,22 +26,9 @@ interface StripeProduct {
   prices: StripePrice[];
 }
 
-function formatEuroInputFromCents(cents: number | null | undefined): string {
-  if (cents === null || cents === undefined || !Number.isFinite(cents)) return '';
-  return (cents / 100).toFixed(2).replace('.', ',');
-}
-
-function parseEuroInputToCents(value: string): number | null {
-  const normalized = value.replace(/\s/g, '').replace(',', '.');
-  if (!normalized) return null;
-  const amount = Number(normalized);
-  if (!Number.isFinite(amount) || amount < 0) return null;
-  return Math.round(amount * 100);
-}
-
 export default function Settings() {
   const { profile, currentOrg, memberships, refreshProfile } = useAuth();
-  const { parkId, parkName, refreshKioskState } = usePark();
+  const { parkId, parkName } = usePark();
   const { language, setLanguage, t } = useI18n();
   const [fullName, setFullName] = useState(profile?.full_name || '');
   const [saving, setSaving] = useState(false);
@@ -53,9 +40,6 @@ export default function Settings() {
   const [productsLoading, setProductsLoading] = useState(false);
   const [productsError, setProductsError] = useState<string | null>(null);
   const [selectedPriceIds, setSelectedPriceIds] = useState<Set<string>>(new Set());
-  const [photoPriceInput, setPhotoPriceInput] = useState('');
-  const [priceSavingMode, setPriceSavingMode] = useState<'future' | 'retroactive' | null>(null);
-  const [priceMessage, setPriceMessage] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -95,7 +79,6 @@ export default function Settings() {
         slug: p.slug,
         location: null,
         timezone: 'UTC',
-        price_per_photo_cents: p.price_per_photo_cents ?? null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         attractions: attractionsByPark.get(p.id) || [],
@@ -106,11 +89,6 @@ export default function Settings() {
 
   const selectedPark = parkId ? parks.find((p) => p.id === parkId) : parks[0];
   const parksToRender = selectedPark ? [selectedPark] : parks;
-
-  useEffect(() => {
-    setPhotoPriceInput(formatEuroInputFromCents(selectedPark?.price_per_photo_cents ?? null));
-    setPriceMessage(null);
-  }, [selectedPark?.id, selectedPark?.price_per_photo_cents]);
 
   async function handleSaveProfile(e: React.FormEvent) {
     e.preventDefault();
@@ -226,44 +204,6 @@ export default function Settings() {
     }
   }
 
-  async function handleSaveKioskPrice(mode: 'future' | 'retroactive') {
-    if (!selectedPark) return;
-
-    const nextPriceCents = parseEuroInputToCents(photoPriceInput);
-    if (nextPriceCents === null) {
-      setPriceMessage('Bitte einen gültigen Bildpreis eingeben, z. B. 4,50');
-      return;
-    }
-
-    setPriceSavingMode(mode);
-    setPriceMessage(null);
-
-    const { error } = await invokeEdgeFunction('update-kiosk-price', {
-      method: 'POST',
-      useSessionAuth: true,
-      body: {
-        park_id: selectedPark.id,
-        price_cents: nextPriceCents,
-        mode,
-      },
-    });
-
-    if (error) {
-      setPriceMessage(error);
-      setPriceSavingMode(null);
-      return;
-    }
-
-    await loadData();
-    refreshKioskState();
-    setPriceSavingMode(null);
-    setPriceMessage(
-      mode === 'retroactive'
-        ? 'Bildpreis gespeichert. Frühere Umsatzwerte werden jetzt ebenfalls mit dem neuen Preis gerechnet.'
-        : 'Bildpreis gespeichert. Neue Verkäufe laufen jetzt mit dem neuen Preis weiter.',
-    );
-  }
-
   const currentRole = memberships.find((m) => m.organization_id === currentOrg?.id)?.role || 'unknown';
 
   if (loading) {
@@ -299,7 +239,6 @@ export default function Settings() {
             <option value="fr">Français</option>
             <option value="it">Italiano</option>
             <option value="nl">Nederlands</option>
-            <option value="lv">Latviešu</option>
           </select>
         </GlassCard>
         <GlassCard className="p-6">
@@ -369,7 +308,7 @@ export default function Settings() {
                   <p className="font-semibold text-slate-800">{selectedPark?.name || t('app.none')}</p>
                   <p className="text-xs text-slate-500">{t('settings.slug')}: {selectedPark?.slug || '-'}</p>
                   {parkName && (
-                    <p className="text-xs text-slate-500">{t('settings.active_park')}: {parkName}</p>
+                    <p className="text-xs text-slate-500">Active Park: {parkName}</p>
                   )}
                 </div>
               </div>
@@ -414,104 +353,15 @@ export default function Settings() {
             <p className="text-sm text-slate-500">{t('app.none')}</p>
           )}
         </GlassCard>
-
-        <GlassCard className="p-6 xl:col-span-2">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <h3 className="text-base font-semibold text-slate-800">{t('settings.kiosk_price.title')}</h3>
-              <p className="mt-1 text-sm text-slate-500">
-                {t('settings.kiosk_price.desc')}
-              </p>
-            </div>
-            <div className="rounded-xl bg-white/30 px-4 py-3">
-              <p className="text-xs uppercase tracking-[0.24em] text-slate-400">{t('settings.kiosk_price.current')}</p>
-              <p className="mt-1 text-lg font-semibold text-slate-800">
-                {selectedPark?.price_per_photo_cents != null
-                  ? `${formatEuroInputFromCents(selectedPark.price_per_photo_cents)} €`
-                  : t('settings.kiosk_price.not_set')}
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,280px)_1fr]">
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                {t('settings.kiosk_price.label')}
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={photoPriceInput}
-                  onChange={(e) => setPhotoPriceInput(e.target.value)}
-                  placeholder="5,00"
-                  className="glass-input pr-12"
-                />
-                <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">
-                  EUR
-                </span>
-              </div>
-            </div>
-
-            <div className="rounded-2xl bg-white/30 p-4">
-              <p className="text-sm font-medium text-slate-700">{t('settings.kiosk_price.scope')}</p>
-              <div className="mt-3 flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  onClick={() => void handleSaveKioskPrice('future')}
-                  disabled={!selectedPark || priceSavingMode !== null}
-                  className="glass-button-primary"
-                >
-                  {priceSavingMode === 'future' ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Save className="h-4 w-4" />
-                  )}
-                  {t('settings.kiosk_price.future')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void handleSaveKioskPrice('retroactive')}
-                  disabled={!selectedPark || priceSavingMode !== null}
-                  className="glass-button-secondary"
-                >
-                  {priceSavingMode === 'retroactive' ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Save className="h-4 w-4" />
-                  )}
-                  {t('settings.kiosk_price.retroactive')}
-                </button>
-              </div>
-              <div className="mt-4 grid gap-3 md:grid-cols-2">
-                <div className="rounded-xl bg-slate-50 px-4 py-3">
-                  <p className="text-sm font-medium text-slate-700">{t('settings.kiosk_price.future')}</p>
-                  <p className="mt-1 text-sm text-slate-500">
-                    {t('settings.kiosk_price.future_desc')}
-                  </p>
-                </div>
-                <div className="rounded-xl bg-amber-50 px-4 py-3">
-                  <p className="text-sm font-medium text-amber-900">{t('settings.kiosk_price.retroactive')}</p>
-                  <p className="mt-1 text-sm text-amber-700">
-                    {t('settings.kiosk_price.retroactive_desc')}
-                  </p>
-                </div>
-              </div>
-              {priceMessage && (
-                <p className="mt-4 text-sm text-slate-600">{priceMessage}</p>
-              )}
-            </div>
-          </div>
-        </GlassCard>
       </div>
 
       {showProductModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm">
           <div className="relative mx-4 max-h-[90vh] w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl">
             <div className="border-b border-slate-200 p-6">
-              <h3 className="text-xl font-semibold text-slate-800">{t('settings.product_modal.title')}</h3>
+              <h3 className="text-xl font-semibold text-slate-800">Select Stripe Products</h3>
               <p className="mt-1 text-sm text-slate-500">
-                {t('settings.product_modal.subtitle')}
+                Choose which products to track in your dashboard
               </p>
             </div>
 
@@ -524,10 +374,10 @@ export default function Settings() {
 
               {productsError && (
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-6">
-                  <h4 className="mb-2 text-lg font-semibold text-amber-900">{t('settings.product_modal.unavailable')}</h4>
+                  <h4 className="mb-2 text-lg font-semibold text-amber-900">Stripe products unavailable</h4>
                   <p className="mb-4 text-sm text-amber-700">{productsError}</p>
                   <button onClick={loadProducts} className="glass-button-secondary">
-                    {t('app.retry')}
+                    Retry
                   </button>
                 </div>
               )}
@@ -535,9 +385,9 @@ export default function Settings() {
               {!productsLoading && !productsError && products.length === 0 && (
                 <div className="py-12 text-center">
                   <Package className="mx-auto h-12 w-12 text-slate-300" />
-                  <p className="mt-4 text-sm text-slate-500">{t('settings.product_modal.no_products')}</p>
+                  <p className="mt-4 text-sm text-slate-500">No products available</p>
                   <p className="mt-1 text-xs text-slate-400">
-                    {t('settings.product_modal.no_products_desc')}
+                    Create products in your Stripe dashboard first
                   </p>
                 </div>
               )}
@@ -560,13 +410,13 @@ export default function Settings() {
                               : 'bg-slate-100 text-slate-500'
                           }`}
                         >
-                          {product.active ? t('settings.product_modal.active') : t('settings.product_modal.inactive')}
+                          {product.active ? 'Active' : 'Inactive'}
                         </span>
                       </div>
 
                       {product.prices.length > 0 && (
                         <div className="space-y-2">
-                          <p className="text-xs font-medium text-slate-500">{t('settings.product_modal.prices')}:</p>
+                          <p className="text-xs font-medium text-slate-500">Prices:</p>
                           {product.prices.map((price) => (
                             <label
                               key={price.id}
@@ -583,11 +433,11 @@ export default function Settings() {
                                   <p className="text-sm font-medium text-slate-700">
                                     {price.unit_amount
                                       ? `${(price.unit_amount / 100).toFixed(2)} ${price.currency.toUpperCase()}`
-                                      : t('settings.product_modal.free')}
+                                      : 'Free'}
                                   </p>
                                   {price.recurring_interval && (
                                     <p className="text-xs text-slate-500">
-                                      {t('settings.product_modal.billed')} {price.recurring_interval}
+                                      Billed {price.recurring_interval}
                                     </p>
                                   )}
                                 </div>
@@ -599,7 +449,7 @@ export default function Settings() {
                                     : 'bg-slate-100 text-slate-500'
                                 }`}
                               >
-                                {price.active ? t('settings.product_modal.active') : t('settings.product_modal.inactive')}
+                                {price.active ? 'Active' : 'Inactive'}
                               </span>
                             </label>
                           ))}
@@ -607,7 +457,7 @@ export default function Settings() {
                       )}
 
                       {product.prices.length === 0 && (
-                        <p className="text-xs text-slate-400">{t('settings.product_modal.no_prices')}</p>
+                        <p className="text-xs text-slate-400">No prices configured</p>
                       )}
                     </div>
                   ))}
@@ -618,25 +468,21 @@ export default function Settings() {
             <div className="border-t border-slate-200 bg-slate-50 p-6">
               <div className="flex items-center justify-between">
                 <p className="text-sm text-slate-600">
-                  {selectedPriceIds.size} {t(
-                    selectedPriceIds.size === 1
-                      ? 'settings.product_modal.selected_one'
-                      : 'settings.product_modal.selected_many'
-                  )}
+                  {selectedPriceIds.size} price{selectedPriceIds.size !== 1 ? 's' : ''} selected
                 </p>
                 <div className="flex gap-3">
                   <button
                     onClick={() => setShowProductModal(false)}
                     className="glass-button-secondary"
                   >
-                    {t('settings.product_modal.cancel')}
+                    Cancel
                   </button>
                   <button
                     onClick={handleSaveProductSelection}
                     className="glass-button-primary"
                     disabled={selectedPriceIds.size === 0}
                   >
-                    {t('settings.product_modal.save_selection')}
+                    Save Selection
                   </button>
                 </div>
               </div>

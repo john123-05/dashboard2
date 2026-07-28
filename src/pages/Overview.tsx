@@ -37,13 +37,11 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { usePark } from '../contexts/ParkContext';
 import { useI18n } from '../lib/i18n';
-import { getOperatorUiText } from '../lib/operatorUiText';
 import {
   formatCurrency,
   formatNumber,
   formatPercent,
   formatRelative,
-  getFormatterLocale,
   severityColor,
   statusColor,
 } from '../lib/utils';
@@ -97,7 +95,7 @@ export default function Overview() {
   const navigate = useNavigate();
   const { profile } = useAuth();
   const { parkId, parkName, isKioskPark, kioskTimezone, kioskCheckLoading } = usePark();
-  const { t, language } = useI18n();
+  const { t } = useI18n();
   const [kioskDays, setKioskDays] = useState<AggregatedDay[]>([]);
   const [parkData, setParkData] = useState<ParkDashboardData | null>(null);
   const [combinedDaily, setCombinedDaily] = useState<CombinedDailyPoint[]>([]);
@@ -142,7 +140,7 @@ export default function Overview() {
 
   async function loadData() {
     if (!parkId) {
-      setError(t('app.unknown'));
+      setError('No park selected');
       setLoading(false);
       return;
     }
@@ -179,14 +177,7 @@ export default function Overview() {
             }),
           ]);
 
-        setKioskDays(
-          aggregateByDate(
-            kioskResult.days,
-            kioskResult.priceCents ?? 0,
-            kioskResult.priceHistory ?? [],
-            kioskResult.timezone ?? kioskTimezone,
-          ),
-        );
+        setKioskDays(aggregateByDate(kioskResult.days, kioskResult.priceCents ?? 0));
         const kioskParkData =
           parkDashboardResult.data ?? createEmptyParkDashboardData(parkId, parkName || 'Selected park');
         setParkData({
@@ -207,10 +198,8 @@ export default function Overview() {
           .map((purchase) => ({
             id: `kiosk-${purchase.id}`,
             source: 'kiosk' as const,
-            title: getOperatorUiText(language, 'overview.kiosk.sale_title'),
-            description: purchase.email
-              ? getOperatorUiText(language, 'overview.kiosk.sale_claimed', { email: purchase.email })
-              : getOperatorUiText(language, 'overview.kiosk.sale_unknown'),
+            title: 'Foto am Automaten verkauft',
+            description: purchase.email ? `Später abgeholt: ${purchase.email}` : 'Kein Abholstatus bekannt',
             created_at: purchase.capturedAt,
           }));
         setRecentTransactions(kioskActivity);
@@ -219,9 +208,7 @@ export default function Overview() {
           .map((reply) => ({
             id: `support-reply-${reply.id}`,
             source: 'support' as const,
-            title: reply.ticket_subject
-              ? getOperatorUiText(language, 'overview.support_reply', { subject: reply.ticket_subject })
-              : getOperatorUiText(language, 'overview.activity.support'),
+            title: reply.ticket_subject ? `Support-Antwort: ${reply.ticket_subject}` : 'Support-Antwort',
             description: reply.message,
             created_at: reply.created_at,
           }))
@@ -321,7 +308,7 @@ export default function Overview() {
         const key = date.toISOString().slice(0, 10);
         days.set(key, {
           date: key,
-          label: date.toLocaleDateString(getFormatterLocale(), { month: 'short', day: 'numeric' }),
+          label: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
           onlineRevenue: 0,
           localRevenue: 0,
           totalRevenue: 0,
@@ -333,7 +320,7 @@ export default function Overview() {
       for (const point of dashboard.sales.daily || []) {
         const entry = days.get(point.date) || {
           date: point.date,
-          label: new Date(point.date).toLocaleDateString(getFormatterLocale(), { month: 'short', day: 'numeric' }),
+          label: new Date(point.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
           onlineRevenue: 0,
           localRevenue: 0,
           totalRevenue: 0,
@@ -348,7 +335,7 @@ export default function Overview() {
       for (const point of stripeRevenue?.revenue_by_day || []) {
         const entry = days.get(point.date) || {
           date: point.date,
-          label: new Date(point.date).toLocaleDateString(getFormatterLocale(), { month: 'short', day: 'numeric' }),
+          label: new Date(point.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
           onlineRevenue: 0,
           localRevenue: 0,
           totalRevenue: 0,
@@ -379,8 +366,8 @@ export default function Overview() {
           id: `local-${event.id}`,
           source: 'ops' as const,
           title: event.payment_method
-            ? getOperatorUiText(language, 'overview.local_sale', { method: event.payment_method.toUpperCase() })
-            : getOperatorUiText(language, 'overview.local_transaction'),
+            ? `${event.payment_method.toUpperCase()} sale`
+            : 'Local transaction',
           description: event.description,
           created_at: event.occurred_at,
           severity: event.severity,
@@ -389,11 +376,11 @@ export default function Overview() {
         ...succeededStripePayments.slice(0, 12).map((payment) => ({
           id: `stripe-${payment.id}`,
           source: 'stripe' as const,
-          title: getOperatorUiText(language, 'overview.online_payment'),
+          title: 'Online payment',
           description:
             payment.description ||
             payment.customer_email ||
-            getOperatorUiText(language, 'overview.stripe_payment_fallback', { id: payment.id.slice(0, 10) }),
+            `Stripe payment ${payment.id.slice(0, 10)}`,
           created_at: payment.created_at,
           status: 'completed',
         })),
@@ -415,9 +402,7 @@ export default function Overview() {
         ...(supportRepliesResult.error ? [] : supportRepliesResult.data?.messages || []).map((reply) => ({
           id: `support-reply-${reply.id}`,
           source: 'support' as const,
-          title: reply.ticket_subject
-            ? getOperatorUiText(language, 'overview.support_reply', { subject: reply.ticket_subject })
-            : getOperatorUiText(language, 'overview.activity.support'),
+          title: reply.ticket_subject ? `Support-Antwort: ${reply.ticket_subject}` : 'Support-Antwort',
           description: reply.message,
           created_at: reply.created_at,
         })),
@@ -429,7 +414,7 @@ export default function Overview() {
       setError(null);
       setLoading(false);
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : t('app.unknown'));
+      setError(loadError instanceof Error ? loadError.message : 'Unknown error');
       setLoading(false);
     }
   }
@@ -467,10 +452,10 @@ export default function Overview() {
   const systemStatus = parkData?.health.communication_status ?? 'degraded';
   const systemStatusLabel =
     systemStatus === 'operational'
-      ? t('status.operational')
+      ? 'Operational'
       : systemStatus === 'down'
-        ? t('status.down')
-        : t('status.degraded');
+        ? 'Offline'
+        : 'Degraded';
   const visibleActivityItems = useMemo(
     () => activityItems.filter((item) => !dismissedActivityIds.includes(item.id)),
     [activityItems, dismissedActivityIds],
@@ -479,18 +464,18 @@ export default function Overview() {
     localRevenueCents > 0
       ? formatCurrency(localRevenueCents)
       : localUnconfirmedCents > 0
-        ? getOperatorUiText(language, 'revenue.local_display.detected', { value: formatCurrency(localUnconfirmedCents) })
+        ? `${formatCurrency(localUnconfirmedCents)} detected`
         : localUnknownAmountCount > 0
-          ? getOperatorUiText(language, 'revenue.local_display.unknown')
+          ? 'Unknown'
           : formatCurrency(0);
   const localRevenueFootnote =
     localRevenueCents > 0
-      ? getOperatorUiText(language, 'revenue.local_display.confirmed_only')
+      ? 'Confirmed local revenue only'
       : localUnconfirmedCents > 0
-        ? getOperatorUiText(language, 'revenue.local_display.detected_only')
+        ? 'Detected in machine data, not confirmed as revenue'
         : localUnknownAmountCount > 0
-          ? getOperatorUiText(language, 'revenue.local_display.unknown_only')
-          : getOperatorUiText(language, 'revenue.local_display.none_yet');
+          ? 'Local sales activity exists without a confirmed amount'
+          : 'No confirmed local revenue yet';
 
   if (loading) {
     return (
@@ -514,7 +499,7 @@ export default function Overview() {
         </h2>
         <div className="rounded-2xl border border-red-200 bg-red-50 p-6">
           <h3 className="mb-2 text-lg font-semibold text-red-800">{t('overview.error_title')}</h3>
-          <p className="mb-4 text-sm text-red-600">{error || t('app.unknown')}</p>
+          <p className="mb-4 text-sm text-red-600">{error || 'Unknown error'}</p>
           <button onClick={loadData} className="glass-button-secondary">
             {t('app.retry')}
           </button>
@@ -536,11 +521,11 @@ export default function Overview() {
       : [
           {
             id: 'last-activity',
-            label: getOperatorUiText(language, 'overview.widget.last_activity'),
+            label: 'Last activity',
             value: parkData.summary.last_activity_at
               ? formatRelative(parkData.summary.last_activity_at)
               : '-',
-            helper: getOperatorUiText(language, 'overview.widget.open_system_health'),
+            helper: 'Open system health',
             route: '/health',
             icon: Activity,
             iconColor: 'text-emerald-600',
@@ -548,9 +533,9 @@ export default function Overview() {
           },
           {
             id: 'data-files',
-            label: getOperatorUiText(language, 'overview.widget.data_files_scanned'),
+            label: 'Data files scanned',
             value: formatNumber(parkData.sources.files_scanned || 0),
-            helper: getOperatorUiText(language, 'overview.widget.open_operations'),
+            helper: 'Open operations',
             route: '/operations',
             icon: Receipt,
             iconColor: 'text-sky-600',
@@ -558,9 +543,9 @@ export default function Overview() {
           },
           {
             id: 'recognized-ops',
-            label: getOperatorUiText(language, 'overview.widget.recognized_ops_files'),
+            label: 'Recognized ops files',
             value: formatNumber(parkData.sources.recognized_files || 0),
-            helper: getOperatorUiText(language, 'overview.widget.open_operations'),
+            helper: 'Open operations',
             route: '/operations',
             icon: FileWarning,
             iconColor: 'text-amber-600',
@@ -571,9 +556,9 @@ export default function Overview() {
       ? [
           {
             id: 'users',
-            label: getOperatorUiText(language, 'overview.widget.users'),
+            label: 'Users',
             value: formatNumber(totalUsers),
-            helper: getOperatorUiText(language, 'overview.widget.open_users'),
+            helper: 'Open users',
             route: '/users',
             icon: Users,
             iconColor: 'text-cyan-600',
@@ -585,9 +570,9 @@ export default function Overview() {
       ? [
           {
             id: 'photos',
-            label: getOperatorUiText(language, 'overview.widget.photos'),
+            label: 'Photos',
             value: formatNumber(totalPhotos),
-            helper: getOperatorUiText(language, 'overview.widget.open_photos'),
+            helper: 'Open photos',
             route: '/photos',
             icon: Camera,
             iconColor: 'text-violet-600',
@@ -599,9 +584,9 @@ export default function Overview() {
       ? [
           {
             id: 'attractions',
-            label: getOperatorUiText(language, 'overview.widget.active_attractions'),
+            label: 'Active attractions',
             value: formatNumber(activeAttractions),
-            helper: getOperatorUiText(language, 'overview.widget.open_photos'),
+            helper: 'Open photos',
             route: '/photos',
             icon: Activity,
             iconColor: 'text-rose-600',
@@ -613,12 +598,12 @@ export default function Overview() {
       ? [
           {
             id: 'conversion-today',
-            label: getOperatorUiText(language, 'overview.widget.conversion_today'),
+            label: 'Conversion heute',
             value:
               kioskKpis.today.expected && kioskKpis.today.expected > 0
                 ? formatPercent((kioskKpis.today.sold / kioskKpis.today.expected) * 100)
                 : '-',
-            helper: getOperatorUiText(language, 'overview.widget.sold_per_ride'),
+            helper: 'Verkauft je Fahrt',
             route: '/revenue',
             icon: Percent,
             iconColor: 'text-fuchsia-600',
@@ -626,7 +611,7 @@ export default function Overview() {
           },
           {
             id: 'rides-today',
-            label: getOperatorUiText(language, 'overview.widget.rides_today'),
+            label: 'Fahrten heute',
             value: kioskKpis.today.expected !== null ? formatNumber(kioskKpis.today.expected) : '-',
             helper: '',
             route: '/revenue',
@@ -665,7 +650,7 @@ export default function Overview() {
             {parkName || parkData.park_name}
             {profile ? ` · ${profile.full_name}` : ''}
             {!isKioskPark && parkData.summary.last_data_at
-              ? ` · ${getOperatorUiText(language, 'overview.last_data', { time: formatRelative(parkData.summary.last_data_at) })}`
+              ? ` · Last data ${formatRelative(parkData.summary.last_data_at)}`
               : ''}
           </p>
         </div>
@@ -673,17 +658,17 @@ export default function Overview() {
         <div className="flex flex-wrap gap-2">
           {parkData.features.stripe && (
             <span className="rounded-full bg-sky-50 px-3 py-1 text-xs font-medium text-sky-700">
-              {getOperatorUiText(language, 'overview.badge.stripe_enabled')}
+              Stripe enabled
             </span>
           )}
           {parkData.features.local_sales && (
             <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
-              {getOperatorUiText(language, 'overview.badge.local_sales_active')}
+              Local sales active
             </span>
           )}
           {parkData.features.printer && (
             <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
-              {getOperatorUiText(language, 'overview.badge.printer_telemetry')}
+              Printer telemetry
             </span>
           )}
         </div>
@@ -692,7 +677,7 @@ export default function Overview() {
 
       {issues.length > 0 && (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-          <p className="text-sm font-medium text-amber-900">{getOperatorUiText(language, 'overview.partial_data')}</p>
+          <p className="text-sm font-medium text-amber-900">Some data sources are currently unavailable.</p>
           <p className="mt-1 text-sm text-amber-700">{issues.join(' ')}</p>
         </div>
       )}
@@ -700,21 +685,21 @@ export default function Overview() {
       {isKioskPark && kioskKpis && (
         <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-6">
           <KPICard
-            title={getOperatorUiText(language, 'overview.kiosk.revenue_today')}
+            title="Umsatz heute"
             value={formatCurrency(kioskKpis.today.revenueCents, 'eur')}
             icon={CreditCard}
             iconColor="text-sky-600"
             iconBg="bg-sky-50"
           />
           <KPICard
-            title={getOperatorUiText(language, 'overview.kiosk.photos_sold_today')}
+            title="Fotos verkauft heute"
             value={formatNumber(kioskKpis.today.sold)}
             icon={Ticket}
             iconColor="text-amber-600"
             iconBg="bg-amber-50"
           />
           <KPICard
-            title={getOperatorUiText(language, 'overview.kiosk.photo_paper')}
+            title="Fotopapier"
             value={
               parkData.summary.printer_paper_remaining !== null
                 ? formatNumber(parkData.summary.printer_paper_remaining)
@@ -725,21 +710,21 @@ export default function Overview() {
             iconBg="bg-cyan-50"
           />
           <KPICard
-            title={getOperatorUiText(language, 'overview.kiosk.photos_sold_month')}
+            title="Fotos verkauft (Monat)"
             value={formatNumber(kioskKpis.month.sold)}
             icon={Receipt}
             iconColor="text-slate-700"
             iconBg="bg-slate-100"
           />
           <KPICard
-            title={getOperatorUiText(language, 'overview.kiosk.revenue_month')}
+            title="Umsatz (Monat)"
             value={formatCurrency(kioskKpis.month.revenueCents, 'eur')}
             icon={Wallet}
             iconColor="text-emerald-600"
             iconBg="bg-emerald-50"
           />
           <KPICard
-            title={getOperatorUiText(language, 'overview.kiosk.photos_sold_total')}
+            title="Fotos verkauft (gesamt)"
             value={formatNumber(kioskDays.reduce((sum, day) => sum + day.soldCount, 0))}
             icon={Camera}
             iconColor="text-violet-600"
@@ -752,7 +737,7 @@ export default function Overview() {
       <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-6">
         {parkData.features.stripe && (
           <KPICard
-            title={getOperatorUiText(language, 'overview.online_revenue')}
+            title="Online Revenue"
             value={formatCurrency(onlineRevenueCents)}
             icon={CreditCard}
             iconColor="text-sky-600"
@@ -761,7 +746,7 @@ export default function Overview() {
         )}
         {parkData.features.local_sales && (
           <KPICard
-            title={getOperatorUiText(language, 'overview.local_revenue')}
+            title="Local Revenue"
             value={localRevenueDisplay}
             subtitle={localRevenueFootnote}
             icon={Wallet}
@@ -770,21 +755,21 @@ export default function Overview() {
           />
         )}
         <KPICard
-          title={getOperatorUiText(language, 'overview.transactions')}
+          title="Transactions"
           value={formatNumber(totalTransactions)}
           icon={Receipt}
           iconColor="text-slate-700"
           iconBg="bg-slate-100"
         />
         <KPICard
-          title={getOperatorUiText(language, 'overview.errors')}
+          title="Errors"
           value={formatNumber(parkData.summary.error_count)}
           icon={FileWarning}
           iconColor="text-rose-600"
           iconBg="bg-rose-50"
         />
         <KPICard
-          title={getOperatorUiText(language, 'overview.warnings')}
+          title="Warnings"
           value={formatNumber(parkData.summary.warning_count)}
           icon={AlertTriangle}
           iconColor="text-amber-600"
@@ -793,8 +778,8 @@ export default function Overview() {
         <KPICard
           title={
             parkData.features.printer && parkData.summary.printer_paper_remaining !== null
-              ? getOperatorUiText(language, 'overview.paper_remaining')
-              : getOperatorUiText(language, 'overview.print_count')
+              ? 'Paper Remaining'
+              : 'Print Count'
           }
           value={
             parkData.features.printer && parkData.summary.printer_paper_remaining !== null
@@ -834,8 +819,8 @@ export default function Overview() {
         <GlassCard className="p-6">
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <h3 className="text-base font-semibold text-slate-800">{getOperatorUiText(language, 'overview.kiosk.chart_title')}</h3>
-              <p className="text-sm text-slate-500">{getOperatorUiText(language, 'overview.kiosk.chart_subtitle')}</p>
+              <h3 className="text-base font-semibold text-slate-800">Umsatz</h3>
+              <p className="text-sm text-slate-500">Tägliche Einnahmen am Automaten</p>
             </div>
           </div>
           <div className="h-80">
@@ -863,7 +848,7 @@ export default function Overview() {
                     borderRadius: '12px',
                     boxShadow: '0 8px 32px rgba(15,23,42,0.08)',
                   }}
-                  formatter={(value) => [`€${Number(value ?? 0).toFixed(2)}`, getOperatorUiText(language, 'overview.kiosk.chart_revenue')]}
+                  formatter={(value) => [`€${Number(value ?? 0).toFixed(2)}`, 'Umsatz']}
                 />
                 <Area
                   type="monotone"
@@ -882,14 +867,14 @@ export default function Overview() {
         <GlassCard className="p-6">
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <h3 className="text-base font-semibold text-slate-800">{getOperatorUiText(language, 'overview.flow.title')}</h3>
+              <h3 className="text-base font-semibold text-slate-800">Revenue Flow</h3>
               <p className="text-sm text-slate-500">
-                {getOperatorUiText(language, 'overview.flow.subtitle')}
+                Online and local sales combined over the last 30 days
               </p>
             </div>
             {(parkData.summary.success_rate ?? null) !== null && (
               <div className="text-right">
-                <p className="text-xs uppercase tracking-wide text-slate-400">{getOperatorUiText(language, 'overview.flow.payment_success')}</p>
+                <p className="text-xs uppercase tracking-wide text-slate-400">Payment Success</p>
                 <p className="text-sm font-semibold text-slate-800">
                   {formatPercent(parkData.summary.success_rate ?? 0)}
                 </p>
@@ -920,12 +905,7 @@ export default function Overview() {
                     borderRadius: '12px',
                     boxShadow: '0 8px 32px rgba(15,23,42,0.08)',
                   }}
-                  formatter={(value, name) => [
-                    `$${Number(value ?? 0).toFixed(2)}`,
-                    name === 'onlineRevenue'
-                      ? getOperatorUiText(language, 'revenue.legend.online')
-                      : getOperatorUiText(language, 'revenue.legend.local'),
-                  ]}
+                  formatter={(value, name) => [`$${Number(value ?? 0).toFixed(2)}`, name === 'onlineRevenue' ? 'Online' : 'Local']}
                 />
                 {parkData.features.stripe && (
                   <Area
@@ -954,18 +934,16 @@ export default function Overview() {
         <GlassCard className="p-6">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
-              <h3 className="text-base font-semibold text-slate-800">{getOperatorUiText(language, 'overview.activity.title')}</h3>
+              <h3 className="text-base font-semibold text-slate-800">Alerts & Activity</h3>
               <p className="mt-1 text-sm text-slate-500">
-                {getOperatorUiText(language, 'overview.activity.subtitle')}
+                Live warnings, support updates and recent operational signals
               </p>
             </div>
           </div>
           <div className="max-h-[360px] space-y-3 overflow-y-auto pr-1">
             {visibleActivityItems.length === 0 ? (
               <p className="text-sm text-slate-500">
-                {activityItems.length === 0
-                  ? getOperatorUiText(language, 'overview.activity.none')
-                  : getOperatorUiText(language, 'overview.activity.cleared')}
+                {activityItems.length === 0 ? 'No alerts or activity found.' : 'All alerts have been cleared.'}
               </p>
             ) : (
               visibleActivityItems.map((item) => (
@@ -979,11 +957,7 @@ export default function Overview() {
                           </span>
                         ) : (
                           <span className="status-badge bg-slate-50 text-slate-600 ring-slate-200">
-                            {item.source === 'support'
-                              ? getOperatorUiText(language, 'overview.activity.support')
-                              : item.source === 'stripe'
-                                ? getOperatorUiText(language, 'overview.activity.stripe')
-                                : getOperatorUiText(language, 'overview.activity.ops')}
+                            {item.source === 'support' ? 'Support' : item.source === 'stripe' ? 'Stripe' : 'Ops'}
                           </span>
                         )}
                         {item.status && (
@@ -999,8 +973,8 @@ export default function Overview() {
                         type="button"
                         onClick={() => dismissActivityItem(item.id)}
                         className="rounded-lg p-1 text-slate-300 transition-colors hover:bg-white/60 hover:text-slate-500"
-                        aria-label={`${getOperatorUiText(language, 'overview.activity.clear')} ${item.title}`}
-                        title={getOperatorUiText(language, 'overview.activity.clear')}
+                        aria-label={`Clear ${item.title}`}
+                        title="Clear"
                       >
                         <X className="h-4 w-4" />
                       </button>
@@ -1014,10 +988,10 @@ export default function Overview() {
       </div>
 
       <GlassCard className="p-6">
-        <h3 className="mb-4 text-base font-semibold text-slate-800">{getOperatorUiText(language, 'overview.recent_transactions')}</h3>
+        <h3 className="mb-4 text-base font-semibold text-slate-800">Recent Transactions</h3>
         <div className="space-y-3">
           {recentTransactions.length === 0 ? (
-            <p className="text-sm text-slate-500">{getOperatorUiText(language, 'overview.recent_transactions.none')}</p>
+            <p className="text-sm text-slate-500">No recent transactions available.</p>
           ) : (
             (showAllTransactions ? recentTransactions : recentTransactions.slice(0, 3)).map((item) => (
               <div key={item.id} className="rounded-xl bg-white/30 p-4">
@@ -1033,11 +1007,7 @@ export default function Overview() {
                               : 'bg-emerald-50 text-emerald-700 ring-emerald-200'
                         }`}
                       >
-                        {item.source === 'stripe'
-                          ? getOperatorUiText(language, 'purchases.source.online')
-                          : item.source === 'kiosk'
-                            ? getOperatorUiText(language, 'purchases.source.automaton')
-                            : getOperatorUiText(language, 'purchases.source.local')}
+                        {item.source === 'stripe' ? 'Online' : item.source === 'kiosk' ? 'Automat' : 'Local'}
                       </span>
                       {item.status && (
                         <span className={`status-badge ${statusColor(item.status)}`}>{item.status}</span>
@@ -1062,11 +1032,11 @@ export default function Overview() {
           >
             {showAllTransactions ? (
               <>
-                {getOperatorUiText(language, 'overview.recent_transactions.show_less')} <ChevronUp className="h-4 w-4" />
+                Show less <ChevronUp className="h-4 w-4" />
               </>
             ) : (
               <>
-                {getOperatorUiText(language, 'overview.recent_transactions.show_all', { count: recentTransactions.length })} <ChevronDown className="h-4 w-4" />
+                Show all {recentTransactions.length} <ChevronDown className="h-4 w-4" />
               </>
             )}
           </button>

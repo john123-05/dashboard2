@@ -1,17 +1,13 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, DELETE, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
 const APP_SUPABASE_URL = Deno.env.get("APP_SUPABASE_URL");
 const APP_SUPABASE_SERVICE_KEY = Deno.env.get("APP_SUPABASE_SERVICE_KEY");
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
 function requireEnv() {
   if (!APP_SUPABASE_URL || !APP_SUPABASE_SERVICE_KEY) {
@@ -26,16 +22,13 @@ function requireEnv() {
   return null;
 }
 
-async function fetchExternal(path: string, init?: RequestInit) {
+async function fetchExternal(path: string) {
   const res = await fetch(`${APP_SUPABASE_URL}/rest/v1/${path}`, {
-    method: init?.method ?? "GET",
     headers: {
       apikey: APP_SUPABASE_SERVICE_KEY as string,
       Authorization: `Bearer ${APP_SUPABASE_SERVICE_KEY}`,
       "Content-Type": "application/json",
-      ...(init?.headers ?? {}),
     },
-    body: init?.body,
   });
 
   if (!res.ok) {
@@ -47,42 +40,6 @@ async function fetchExternal(path: string, init?: RequestInit) {
   return { ok: true, data };
 }
 
-async function requireAuthenticatedNonStaff(req: Request) {
-  const authHeader = req.headers.get("Authorization") ?? "";
-  const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
-  if (!token || !SUPABASE_URL || !SUPABASE_ANON_KEY || !SUPABASE_SERVICE_ROLE_KEY) {
-    return { ok: false as const, status: 401, message: "Authentication required" };
-  }
-
-  const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    global: { headers: { Authorization: authHeader } },
-    auth: { persistSession: false },
-  });
-  const {
-    data: { user },
-    error: userError,
-  } = await userClient.auth.getUser();
-
-  if (userError || !user) {
-    return { ok: false as const, status: 401, message: "Authentication required" };
-  }
-
-  const serviceClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-    auth: { persistSession: false },
-  });
-  const { data: membership } = await serviceClient
-    .from("organization_memberships")
-    .select("role")
-    .eq("user_id", user.id)
-    .maybeSingle();
-
-  if (membership?.role === "staff") {
-    return { ok: false as const, status: 403, message: "Mitarbeiter duerfen Leads nicht loeschen." };
-  }
-
-  return { ok: true as const, userId: user.id };
-}
-
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
@@ -92,66 +49,6 @@ Deno.serve(async (req: Request) => {
   if (envError) return envError;
 
   try {
-    if (req.method === "DELETE") {
-      const auth = await requireAuthenticatedNonStaff(req);
-      if (!auth.ok) {
-        return new Response(JSON.stringify({ error: auth.message }), {
-          status: auth.status,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      const payload = await req.json().catch(() => null);
-      const parkId = typeof payload?.park_id === "string" ? payload.park_id.trim() : "";
-      const ids = Array.isArray(payload?.ids)
-        ? payload.ids.filter((id: unknown): id is string => typeof id === "string" && id.trim().length > 0)
-        : [];
-
-      if (!parkId) {
-        return new Response(JSON.stringify({ error: "park_id is required" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      if (ids.length === 0) {
-        return new Response(JSON.stringify({ error: "ids[] is required" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      if (ids.length > 100) {
-        return new Response(JSON.stringify({ error: "Too many ids. Maximum 100 per request." }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      const encodedIds = ids.map((id) => `"${id.replace(/"/g, "")}"`).join(",");
-      const deleteRes = await fetchExternal(
-        `photo_claims?id=in.(${encodedIds})&park_id=eq.${parkId}`,
-        { method: "DELETE", headers: { Prefer: "return=representation" } },
-      );
-
-      if (!deleteRes.ok) {
-        return new Response(JSON.stringify({ error: "Failed to delete leads", details: deleteRes.details }), {
-          status: deleteRes.status,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      const deletedRows = Array.isArray(deleteRes.data) ? deleteRes.data : [];
-      return new Response(JSON.stringify({
-        ok: true,
-        deletedIds: deletedRows
-          .map((row) => (row && typeof row.id === "string" ? row.id : null))
-          .filter((id): id is string => Boolean(id)),
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const url = new URL(req.url);
     const parkId = url.searchParams.get("park_id");
     const parkFilter = parkId ? `&park_id=eq.${parkId}` : "";
@@ -163,7 +60,7 @@ Deno.serve(async (req: Request) => {
       // Imst (and any future shop-less park) doesn't create a `users` row at all —
       // claiming a photo there only ever writes to `photo_claims` (service-role
       // only table, by design). Without this, those leads never show up here.
-      fetchExternal(`photo_claims?select=id,photo_id,full_name,email,park_id,marketing_opt_in,claimed_at,created_at,locale,country_code&order=created_at.desc${parkFilter}`),
+      fetchExternal(`photo_claims?select=id,full_name,email,park_id,marketing_opt_in,claimed_at,created_at,locale,country_code&order=created_at.desc${parkFilter}`),
     ]);
 
     if (!usersRes.ok) {
@@ -239,7 +136,6 @@ Deno.serve(async (req: Request) => {
           const parkName = parkId ? parkNames.get(parkId) || "Unknown" : "Unknown";
           return {
             id: c.id,
-            photo_id: c.photo_id,
             email: c.email,
             full_name: c.full_name,
             source: "photo_claim",

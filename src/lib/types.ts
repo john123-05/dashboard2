@@ -14,7 +14,6 @@ export interface Park {
   slug: string;
   location: string | null;
   timezone: string;
-  price_per_photo_cents?: number | null;
   created_at: string;
   updated_at: string;
 }

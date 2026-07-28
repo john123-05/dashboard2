@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Camera, ShoppingBag, Eye, Clock, RefreshCw, Search, CalendarClock, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { getOptionalSourceWarning, invokeEdgeFunction, isEdgeSourceUnavailable } from '../lib/edgeFunctions';
-import { formatNumber, formatPercent, formatRelative, formatDateTime, getFormatterLocale } from '../lib/utils';
+import { formatNumber, formatPercent, formatRelative, formatDateTime } from '../lib/utils';
 import GlassCard from '../components/ui/GlassCard';
 import KPICard from '../components/ui/KPICard';
 import { useI18n } from '../lib/i18n';
@@ -10,7 +10,6 @@ import { usePark } from '../contexts/ParkContext';
 import { useAuth } from '../contexts/AuthContext';
 import { fetchRecentPhotos, searchPhotosByCode, searchPhotosByDateTime, claimLinkFor, type BrowsablePhoto } from '../lib/photoBrowser';
 import { fetchKioskSales, fetchKioskPhotosForDay, aggregateByDate, todayInTimezone, type AggregatedDay } from '../lib/kioskSales';
-import { getOperatorUiText } from '../lib/operatorUiText';
 
 // Local "YYYY-MM-DDTHH:MM" for a datetime-local input, defaulted to now so
 // staff can just tweak the time (date is today by default).
@@ -30,7 +29,7 @@ interface AttractionPhotoStats {
 const CHART_COLORS = ['#0ea5e9', '#10b981', '#f59e0b', '#94a3b8'];
 
 export default function Photos() {
-  const { t, language } = useI18n();
+  const { t } = useI18n();
   const { parkId, isKioskPark, parkName, kioskTimezone } = usePark();
   // Staff must not see purchase/conversion numbers (sales data).
   const { isStaff } = useAuth();
@@ -40,7 +39,7 @@ export default function Photos() {
   const [kioskConv, setKioskConv] = useState<{ sold: number; taken: number; soldLifetime: number } | null>(null);
   const [kioskDays, setKioskDays] = useState<AggregatedDay[]>([]);
   const [soldLifetime, setSoldLifetime] = useState(0);
-  const [attrName, setAttrName] = useState(getOperatorUiText(language, 'purchases.source.automaton'));
+  const [attrName, setAttrName] = useState('Automat');
   const [selectedDate, setSelectedDate] = useState('');
   // Kiosk-only: of the day's buyers, how many left an email (E-Mail-Erfassung).
   const [emailDay, setEmailDay] = useState<{ given: number; total: number } | null>(null);
@@ -62,7 +61,7 @@ export default function Photos() {
     try {
       await navigator.clipboard.writeText(url);
     } catch {
-      window.prompt(getOperatorUiText(language, kind === 'claim' ? 'photos.browser.copy_claim' : 'photos.browser.copy_image'), url);
+      window.prompt('Link kopieren:', url);
     }
     setCopiedLink(kind);
     setTimeout(() => setCopiedLink((k) => (k === kind ? null : k)), 2000);
@@ -123,7 +122,7 @@ export default function Photos() {
 
   const todayStr = isKioskPark ? todayInTimezone(kioskTimezone) : '';
   const selectedDateLabel = selectedDate
-    ? new Intl.DateTimeFormat(getFormatterLocale(), { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' }).format(
+    ? new Intl.DateTimeFormat('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' }).format(
         new Date(`${selectedDate}T00:00:00`),
       )
     : '';
@@ -152,7 +151,7 @@ export default function Photos() {
       setBrowsePhotos(results);
       setActiveSearch(mode);
     } catch (err) {
-      setBrowseError(err instanceof Error ? err.message : t('app.unknown'));
+      setBrowseError(err instanceof Error ? err.message : 'Unbekannter Fehler beim Laden der Fotos.');
     } finally {
       setBrowseLoading(false);
     }
@@ -192,16 +191,11 @@ export default function Photos() {
     if (isKioskPark && parkId && !isStaff) {
       try {
         const kiosk = await fetchKioskSales(parkId);
-        const days = aggregateByDate(
-          kiosk.days,
-          kiosk.priceCents ?? 0,
-          kiosk.priceHistory ?? [],
-          kiosk.timezone ?? 'Europe/Vienna',
-        );
+        const days = aggregateByDate(kiosk.days, kiosk.priceCents ?? 0);
         setKioskDays(days);
         setSoldLifetime(days.reduce((sum, d) => sum + d.soldCount, 0));
 
-        let name = parkName || getOperatorUiText(language, 'purchases.source.automaton');
+        let name = parkName || 'Automat';
         const attrRes = await invokeEdgeFunction<{ attractions: { name: string; is_active?: boolean }[] }>(
           'external-attractions',
           { query: { park_id: parkId } },
@@ -286,9 +280,9 @@ export default function Photos() {
         ]
       : [{ key: 'empty', value: 1, fill: '#e2e8f0' }];
   const pieData = [
-    { name: t('photos.purchased'), value: stats.purchased },
-    { name: t('photos.available'), value: stats.available },
-    { name: getOperatorUiText(language, 'photos.expired'), value: stats.expired },
+    { name: 'Gekauft', value: stats.purchased },
+    { name: 'Verfügbar', value: stats.available },
+    { name: 'Abgelaufen', value: stats.expired },
   ].filter((d) => d.value > 0);
 
   if (loading) {
@@ -309,7 +303,7 @@ export default function Photos() {
       <div className="space-y-6">
         <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('photos.title')}</h2>
         <div className="rounded-2xl bg-red-50 border border-red-200 p-6">
-          <h3 className="text-lg font-semibold text-red-800 mb-2">{getOperatorUiText(language, 'photos.error_loading')}</h3>
+          <h3 className="text-lg font-semibold text-red-800 mb-2">Error Loading Photos</h3>
           <p className="text-sm text-red-600 mb-4">{error}</p>
           <button onClick={loadData} className="glass-button-secondary">
             {t('app.retry')}
@@ -328,7 +322,7 @@ export default function Photos() {
 
       {notice && (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-          <p className="text-sm font-medium text-amber-900">{getOperatorUiText(language, 'photos.data_unavailable')}</p>
+          <p className="text-sm font-medium text-amber-900">Photo data is currently unavailable.</p>
           <p className="mt-1 text-sm text-amber-700">{notice}</p>
         </div>
       )}
@@ -336,13 +330,11 @@ export default function Photos() {
       {isKioskPark && !isStaff && selectedDate && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/40 bg-white/40 px-4 py-3 backdrop-blur-xl">
           <div>
-            <p className="text-sm font-semibold text-slate-700">
-              {getOperatorUiText(language, 'photos.for_day', { date: selectedDateLabel })}
-            </p>
-            <p className="text-xs text-slate-400">{getOperatorUiText(language, 'photos.for_day_desc')}</p>
+            <p className="text-sm font-semibold text-slate-700">Auswertung für {selectedDateLabel}</p>
+            <p className="text-xs text-slate-400">Kacheln und Kreise beziehen sich auf diesen Tag</p>
           </div>
           <div className="flex items-center gap-2">
-            <button type="button" onClick={() => stepDay(-1)} className="glass-button-secondary p-2" aria-label={getOperatorUiText(language, 'photos.previous_day')}>
+            <button type="button" onClick={() => stepDay(-1)} className="glass-button-secondary p-2" aria-label="Vorheriger Tag">
               <ChevronLeft className="h-4 w-4" />
             </button>
             <input
@@ -357,13 +349,13 @@ export default function Photos() {
               onClick={() => stepDay(1)}
               disabled={selectedDate >= todayStr}
               className="glass-button-secondary p-2 disabled:opacity-40"
-              aria-label={getOperatorUiText(language, 'photos.next_day')}
+              aria-label="Nächster Tag"
             >
               <ChevronRight className="h-4 w-4" />
             </button>
             {selectedDate !== todayStr && (
               <button type="button" onClick={() => setSelectedDate(todayStr)} className="glass-button-secondary px-3 py-2 text-sm">
-                {getOperatorUiText(language, 'photos.today')}
+                Heute
               </button>
             )}
           </div>
@@ -374,14 +366,14 @@ export default function Photos() {
         <KPICard
           title={t('photos.total')}
           value={formatNumber(stats.total)}
-          subtitle={kioskConv ? getOperatorUiText(language, 'photos.subtitle.day_captures', { date: selectedDateLabel }) : undefined}
+          subtitle={kioskConv ? `Aufnahmen · ${selectedDateLabel}` : undefined}
           icon={Camera}
         />
         {!isStaff && (
           <KPICard
             title={t('photos.purchased')}
             value={formatNumber(stats.purchased)}
-            subtitle={kioskConv ? getOperatorUiText(language, 'photos.subtitle.sold_total', { count: formatNumber(kioskConv.soldLifetime) }) : undefined}
+            subtitle={kioskConv ? `${formatNumber(kioskConv.soldLifetime)} gesamt` : undefined}
             icon={ShoppingBag}
             iconColor="text-emerald-600"
             iconBg="bg-emerald-100"
@@ -392,7 +384,7 @@ export default function Photos() {
           <KPICard
             title={t('photos.conversion')}
             value={formatPercent(conversionRate)}
-            subtitle={kioskConv ? getOperatorUiText(language, 'photos.subtitle.on_that_day') : undefined}
+            subtitle={kioskConv ? 'an diesem Tag' : undefined}
             icon={Clock}
             iconColor="text-cyan-600"
             iconBg="bg-cyan-100"
@@ -427,7 +419,7 @@ export default function Photos() {
                       <div className="h-3 w-3 rounded-full" style={{ backgroundColor: CHART_COLORS[i] }} />
                       <div>
                         <p className="text-sm font-medium text-slate-700">{d.name}</p>
-                        <p className="text-xs text-slate-400">{formatNumber(d.value)}</p>
+                        <p className="text-xs text-slate-400">{formatNumber(d.value)} Fotos</p>
                       </div>
                     </div>
                   ))}
@@ -437,15 +429,15 @@ export default function Photos() {
 
             {kioskConv && kioskConv.taken > 0 && (
               <div>
-                <h3 className="mb-4 text-base font-semibold text-slate-800">{getOperatorUiText(language, 'photos.conversion_chart')}</h3>
+                <h3 className="mb-4 text-base font-semibold text-slate-800">Conversion</h3>
                 <div className="flex flex-col items-center gap-4">
                   <div className="relative h-40 w-40">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
                           data={[
-                            { name: getOperatorUiText(language, 'photos.purchased'), value: kioskConv.sold },
-                            { name: getOperatorUiText(language, 'photos.not_purchased'), value: Math.max(0, kioskConv.taken - kioskConv.sold) },
+                            { name: 'Verkauft', value: kioskConv.sold },
+                            { name: 'Nicht gekauft', value: Math.max(0, kioskConv.taken - kioskConv.sold) },
                           ]}
                           cx="50%"
                           cy="50%"
@@ -466,27 +458,25 @@ export default function Photos() {
                     </ResponsiveContainer>
                     <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
                       <span className="text-xl font-bold text-slate-800">{formatPercent(conversionRate)}</span>
-                      <span className="text-[10px] text-slate-400">{t('photos.purchased')}</span>
+                      <span className="text-[10px] text-slate-400">verkauft</span>
                     </div>
                   </div>
                   <div className="w-full space-y-2">
                     <div className="flex items-center gap-3">
                       <div className="h-3 w-3 rounded-full" style={{ backgroundColor: '#0ea5e9' }} />
                       <div>
-                        <p className="text-sm font-medium text-slate-700">{t('photos.purchased')}</p>
-                        <p className="text-xs text-slate-400">{formatNumber(kioskConv.sold)}</p>
+                        <p className="text-sm font-medium text-slate-700">Verkauft</p>
+                        <p className="text-xs text-slate-400">{formatNumber(kioskConv.sold)} Fotos</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="h-3 w-3 rounded-full" style={{ backgroundColor: '#f43f5e' }} />
                       <div>
-                        <p className="text-sm font-medium text-slate-700">{getOperatorUiText(language, 'photos.rides_without_purchase')}</p>
-                        <p className="text-xs text-slate-400">{formatNumber(Math.max(0, kioskConv.taken - kioskConv.sold))}</p>
+                        <p className="text-sm font-medium text-slate-700">Fahrten ohne Kauf</p>
+                        <p className="text-xs text-slate-400">{formatNumber(Math.max(0, kioskConv.taken - kioskConv.sold))} Fotos</p>
                       </div>
                     </div>
-                    <p className="pt-1 text-xs text-slate-500">
-                      {getOperatorUiText(language, 'photos.of_rides', { count: formatNumber(kioskConv.taken) })}
-                    </p>
+                    <p className="pt-1 text-xs text-slate-500">von {formatNumber(kioskConv.taken)} Fahrten</p>
                   </div>
                 </div>
               </div>
@@ -500,7 +490,7 @@ export default function Photos() {
           <div className="space-y-3">
             {attractionStats.length === 0 && (
               <div className="rounded-xl bg-white/30 p-4 text-sm text-slate-500">
-                {getOperatorUiText(language, 'photos.by_attraction.none')}
+                Für diesen Tag liegen noch keine Attraktions-Daten vor.
               </div>
             )}
             {attractionStats.map((a) => {
@@ -510,8 +500,7 @@ export default function Photos() {
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-slate-700">{a.name}</p>
                     <p className="mt-1 text-xs text-slate-400">
-                      {getOperatorUiText(language, 'photos.by_attraction.captures', { count: formatNumber(a.total) })}
-                      {!isStaff ? ` · ${getOperatorUiText(language, 'photos.by_attraction.sold', { count: formatNumber(a.purchased) })}` : ''}
+                      {formatNumber(a.total)} Aufnahmen{!isStaff ? ` · ${formatNumber(a.purchased)} verkauft` : ''}
                     </p>
                   </div>
                   {!isStaff && (
@@ -520,8 +509,8 @@ export default function Photos() {
                         <PieChart>
                           <Pie
                             data={[
-                              { name: t('photos.purchased'), value: a.purchased },
-                              { name: getOperatorUiText(language, 'photos.not_purchased'), value: Math.max(0, a.total - a.purchased) },
+                              { name: 'Gekauft', value: a.purchased },
+                              { name: 'Rest', value: Math.max(0, a.total - a.purchased) },
                             ]}
                             cx="50%"
                             cy="50%"
@@ -549,11 +538,11 @@ export default function Photos() {
             {!isStaff && emailDay && (
               <div className="flex items-center justify-between gap-4 rounded-xl bg-white/30 p-4">
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-slate-700">{getOperatorUiText(language, 'photos.email_capture')}</p>
+                  <p className="text-sm font-medium text-slate-700">E-Mail-Erfassung</p>
                   <p className="mt-1 text-xs text-slate-400">
                     {emailDay.total > 0
-                      ? getOperatorUiText(language, 'photos.email_capture.buyers', { given: formatNumber(emailDay.given), total: formatNumber(emailDay.total) })
-                      : getOperatorUiText(language, 'photos.email_capture.none')}
+                      ? `${formatNumber(emailDay.given)} von ${formatNumber(emailDay.total)} Käufern`
+                      : 'Keine Käufe an diesem Tag'}
                   </p>
                 </div>
                 <div className="relative h-20 w-20 shrink-0">
@@ -590,14 +579,14 @@ export default function Photos() {
 
       <GlassCard className="p-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <h3 className="text-base font-semibold text-slate-800">{getOperatorUiText(language, 'photos.browser.title')}</h3>
+          <h3 className="text-base font-semibold text-slate-800">Foto-Browser</h3>
           <button
             onClick={handleRefreshBrowse}
             disabled={browseLoading}
             className="glass-button-secondary flex items-center gap-2 text-sm"
           >
             <RefreshCw className={`h-4 w-4 ${browseLoading ? 'animate-spin' : ''}`} />
-            {getOperatorUiText(language, 'photos.browser.refresh')}
+            Aktualisieren
           </button>
         </div>
 
@@ -607,12 +596,12 @@ export default function Photos() {
               type="text"
               value={codeQuery}
               onChange={(e) => setCodeQuery(e.target.value)}
-              placeholder={getOperatorUiText(language, 'photos.browser.search_code')}
+              placeholder="Bildnummer eingeben…"
               className="glass-input w-48 text-sm"
             />
             <button type="submit" className="glass-button-secondary flex items-center gap-1.5 text-sm">
               <Search className="h-4 w-4" />
-              {getOperatorUiText(language, 'photos.browser.search')}
+              Suchen
             </button>
           </form>
 
@@ -625,7 +614,7 @@ export default function Photos() {
             />
             <button type="submit" className="glass-button-secondary flex items-center gap-1.5 text-sm">
               <CalendarClock className="h-4 w-4" />
-              {getOperatorUiText(language, 'photos.browser.search')}
+              Suchen
             </button>
           </form>
 
@@ -635,7 +624,7 @@ export default function Photos() {
               className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm text-slate-500 hover:text-slate-700"
             >
               <X className="h-4 w-4" />
-              {getOperatorUiText(language, 'photos.browser.reset')}
+              Suche zurücksetzen
             </button>
           )}
         </div>
@@ -650,7 +639,7 @@ export default function Photos() {
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4">
             {!browseLoading && browsePhotos.length === 0 && (
               <div className="col-span-full rounded-xl bg-white/30 p-6 text-center text-sm text-slate-500">
-                {getOperatorUiText(language, 'photos.browser.none')}
+                Keine Fotos gefunden.
               </div>
             )}
             {browsePhotos.map((p) => (
@@ -665,7 +654,7 @@ export default function Photos() {
                   {p.imageUrl && (
                     <img
                       src={p.imageUrl}
-                      alt={getOperatorUiText(language, 'photos.browser.photo_alt')}
+                      alt="Photo"
                       className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                       loading="lazy"
                     />
@@ -680,9 +669,7 @@ export default function Photos() {
                         p.isPaid ? 'bg-emerald-50 text-emerald-700' : 'bg-sky-50 text-sky-700'
                       }`}
                     >
-                      {p.isPaid
-                        ? getOperatorUiText(language, 'photos.browser.status.purchased')
-                        : getOperatorUiText(language, 'photos.browser.status.available')}
+                      {p.isPaid ? 'purchased' : 'available'}
                     </span>
                   </div>
                   {p.speedKmh !== null && (
@@ -699,7 +686,7 @@ export default function Photos() {
                 {selectedPhoto.imageUrl && (
                   <img
                     src={selectedPhoto.imageUrl}
-                    alt={getOperatorUiText(language, 'photos.browser.selected_alt')}
+                    alt="Ausgewähltes Foto"
                     className="w-full rounded-lg object-cover"
                   />
                 )}
@@ -722,9 +709,7 @@ export default function Photos() {
                           onClick={() => copyLink('claim', claimLink)}
                           className="glass-button-primary flex w-full items-center justify-center gap-1.5 text-sm"
                         >
-                          {copiedLink === 'claim'
-                            ? getOperatorUiText(language, 'photos.browser.copied')
-                            : getOperatorUiText(language, 'photos.browser.copy_claim')}
+                          {copiedLink === 'claim' ? 'Kopiert!' : 'Claim-Link kopieren'}
                         </button>
                       )}
                       {imageLink && (
@@ -732,13 +717,12 @@ export default function Photos() {
                           onClick={() => copyLink('image', imageLink)}
                           className="glass-button-secondary flex w-full items-center justify-center gap-1.5 text-sm"
                         >
-                          {copiedLink === 'image'
-                            ? getOperatorUiText(language, 'photos.browser.copied')
-                            : getOperatorUiText(language, 'photos.browser.copy_image')}
+                          {copiedLink === 'image' ? 'Kopiert!' : 'Bild-Link kopieren'}
                         </button>
                       )}
                       <p className="text-center text-[11px] leading-relaxed text-slate-400">
-                        {getOperatorUiText(language, 'photos.browser.claim_explainer')}
+                        Claim-Link: der Kunde öffnet ihn und holt sein Foto per E-Mail (auch wenn der gedruckte QR
+                        falsch war). Bild-Link: direkter Download.
                       </p>
                     </div>
                   );
@@ -746,7 +730,7 @@ export default function Photos() {
               </div>
             ) : (
               <div className="flex h-full min-h-[220px] items-center justify-center rounded-xl bg-white/20 p-6 text-center text-sm text-slate-400">
-                {getOperatorUiText(language, 'photos.browser.select_prompt')}
+                Foto auswählen, um es hier groß anzuzeigen.
               </div>
             )}
           </div>

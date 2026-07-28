@@ -13,7 +13,6 @@ import {
   daysAgoInTimezone,
   fetchKioskPhotosForDay,
   fetchKioskSales,
-  getPriceCentsForTimestamp,
   fetchRideSnapshots,
   getOpeningHourRangeForDate,
   ridesByHour,
@@ -21,28 +20,26 @@ import {
   todayInTimezone,
   toChartSeries,
   type AggregatedDay,
-  type KioskPriceHistoryEntry,
   type KioskPurchaseRow,
   type RideSnapshot,
 } from '../lib/kioskSales';
-import { formatCurrency, formatNumber, formatPercent, exportToCSV, getFormatterLocale } from '../lib/utils';
+import { formatCurrency, formatNumber, formatPercent, exportToCSV } from '../lib/utils';
 import GlassCard from '../components/ui/GlassCard';
 import KPICard from '../components/ui/KPICard';
 import { useI18n } from '../lib/i18n';
 import { usePark } from '../contexts/ParkContext';
-import { getOperatorUiText } from '../lib/operatorUiText';
 
 function formatDateLabel(iso: string): string {
   const date = new Date(`${iso}T00:00:00`);
   if (Number.isNaN(date.getTime())) return iso;
-  return new Intl.DateTimeFormat(getFormatterLocale(), { weekday: 'short', day: '2-digit', month: '2-digit' }).format(date);
+  return new Intl.DateTimeFormat('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' }).format(date);
 }
 
-function formatSoldRideSubtitle(sold: number, expected: number | null, language: Parameters<typeof getOperatorUiText>[0]): string {
+function formatSoldRideSubtitle(sold: number, expected: number | null): string {
   if (expected !== null) {
-    return `${formatNumber(sold)} / ${formatNumber(expected)} ${getOperatorUiText(language, 'revenue.legend.rides')}`;
+    return `${formatNumber(sold)} verkauft / ${formatNumber(expected)} Fahrten`;
   }
-  return getOperatorUiText(language, 'revenue.photos_sold', { count: formatNumber(sold) });
+  return `${formatNumber(sold)} Foto${sold === 1 ? '' : 's'} verkauft`;
 }
 
 interface StripeRevenuePoint {
@@ -66,7 +63,7 @@ interface RevenueSeriesRow {
 }
 
 export default function Revenue() {
-  const { t, language } = useI18n();
+  const { t } = useI18n();
   const { parkId, isKioskPark, kioskPriceCents, kioskTimezone, kioskOpeningHours, kioskCheckLoading } = usePark();
   const [parkData, setParkData] = useState<ParkDashboardData | null>(null);
   const [dailyRevenue, setDailyRevenue] = useState<RevenueSeriesRow[]>([]);
@@ -75,8 +72,6 @@ export default function Revenue() {
   const [error, setError] = useState<string | null>(null);
   const [issues, setIssues] = useState<string[]>([]);
   const [kioskDays, setKioskDays] = useState<AggregatedDay[]>([]);
-  const [kioskLivePriceCents, setKioskLivePriceCents] = useState<number | null>(null);
-  const [kioskPriceHistory, setKioskPriceHistory] = useState<KioskPriceHistoryEntry[]>([]);
 
   const [chartMode, setChartMode] = useState<'trend' | 'day'>('trend');
   // Explicit, not purely derived from selectedDate — "Anderer Tag" needs to
@@ -118,7 +113,7 @@ export default function Revenue() {
 
   async function loadData() {
     if (!parkId) {
-      setError(t('app.unknown'));
+      setError('No park selected');
       setLoading(false);
       return;
     }
@@ -132,16 +127,7 @@ export default function Revenue() {
       // unavailable" warnings for feeds that were never going to apply.
       if (isKioskPark) {
         const kioskResult = await fetchKioskSales(parkId);
-        setKioskLivePriceCents(kioskResult.priceCents ?? 0);
-        setKioskPriceHistory(kioskResult.priceHistory ?? []);
-        setKioskDays(
-          aggregateByDate(
-            kioskResult.days,
-            kioskResult.priceCents ?? 0,
-            kioskResult.priceHistory ?? [],
-            kioskResult.timezone ?? kioskTimezone,
-          ),
-        );
+        setKioskDays(aggregateByDate(kioskResult.days, kioskResult.priceCents ?? 0));
         setParkData(createEmptyParkDashboardData(parkId));
         setError(null);
         setLoading(false);
@@ -205,7 +191,7 @@ export default function Revenue() {
         const key = date.toISOString().slice(0, 10);
         days.set(key, {
           date: key,
-          label: date.toLocaleDateString(getFormatterLocale(), { month: 'short', day: 'numeric' }),
+          label: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
           online: 0,
           local: 0,
           total: 0,
@@ -217,7 +203,7 @@ export default function Revenue() {
       for (const point of dashboard.sales.daily || []) {
         const entry = days.get(point.date) || {
           date: point.date,
-          label: new Date(point.date).toLocaleDateString(getFormatterLocale(), { month: 'short', day: 'numeric' }),
+          label: new Date(point.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
           online: 0,
           local: 0,
           total: 0,
@@ -233,7 +219,7 @@ export default function Revenue() {
       for (const point of stripeRevenue) {
         const entry = days.get(point.date) || {
           date: point.date,
-          label: new Date(point.date).toLocaleDateString(getFormatterLocale(), { month: 'short', day: 'numeric' }),
+          label: new Date(point.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
           online: 0,
           local: 0,
           total: 0,
@@ -256,7 +242,7 @@ export default function Revenue() {
       setError(null);
       setLoading(false);
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : t('app.unknown'));
+      setError(loadError instanceof Error ? loadError.message : 'Unknown error');
       setLoading(false);
     }
   }
@@ -305,13 +291,11 @@ export default function Revenue() {
       .then((result) => {
         if (cancelled) return;
         setDayPurchases(result.purchases);
-        setKioskLivePriceCents(result.priceCents ?? 0);
-        setKioskPriceHistory(result.priceHistory ?? []);
         setDayLoading(false);
       })
       .catch((loadError) => {
         if (cancelled) return;
-        setDayError(loadError instanceof Error ? loadError.message : t('app.unknown'));
+        setDayError(loadError instanceof Error ? loadError.message : 'Unknown error');
         setDayLoading(false);
       });
 
@@ -335,31 +319,12 @@ export default function Revenue() {
     [kioskOpeningHours, selectedDate],
   );
   const hourlyBuckets = useMemo(() => {
-    const buckets = bucketPurchasesByHour(
-      dayPurchases,
-      kioskLivePriceCents ?? kioskPriceCents ?? 0,
-      kioskTimezone,
-      dayHourRange,
-      kioskPriceHistory,
-    );
+    const buckets = bucketPurchasesByHour(dayPurchases, kioskPriceCents ?? 0, kioskTimezone, dayHourRange);
     const rideMap = ridesByHour(daySnapshots, kioskTimezone);
     return buckets.map((bucket) => ({ ...bucket, rides: rideMap.get(bucket.hour) ?? 0 }));
-  }, [dayPurchases, daySnapshots, kioskLivePriceCents, kioskPriceCents, kioskTimezone, dayHourRange, kioskPriceHistory]);
+  }, [dayPurchases, daySnapshots, kioskPriceCents, kioskTimezone, dayHourRange]);
   const hasRideData = useMemo(() => hourlyBuckets.some((bucket) => (bucket.rides ?? 0) > 0), [hourlyBuckets]);
-  const dayTotalRevenueCents = useMemo(
-    () =>
-      dayPurchases.reduce(
-        (sum, purchase) =>
-          sum +
-          getPriceCentsForTimestamp(
-            purchase.capturedAt,
-            kioskLivePriceCents ?? kioskPriceCents ?? 0,
-            kioskPriceHistory,
-          ),
-        0,
-      ),
-    [dayPurchases, kioskLivePriceCents, kioskPriceCents, kioskPriceHistory],
-  );
+  const dayTotalRevenueCents = dayPurchases.length * (kioskPriceCents ?? 0);
   const selectedDateLabel = selectedDate ? formatDateLabel(selectedDate) : '';
 
   const todayStr = useMemo(() => (isKioskPark ? todayInTimezone(kioskTimezone) : ''), [isKioskPark, kioskTimezone]);
@@ -410,11 +375,9 @@ export default function Revenue() {
     confirmedLocalRevenueCents > 0
       ? formatCurrency(confirmedLocalRevenueCents)
       : detectedLocalRevenueCents > 0
-        ? getOperatorUiText(language, 'revenue.local_display.detected', {
-            value: formatCurrency(detectedLocalRevenueCents),
-          })
+        ? `${formatCurrency(detectedLocalRevenueCents)} detected`
         : unknownLocalAmountCount > 0
-          ? getOperatorUiText(language, 'revenue.local_display.unknown')
+          ? 'Unknown'
           : formatCurrency(0);
 
   function handleExport() {
@@ -450,7 +413,7 @@ export default function Revenue() {
         <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('revenue.title')}</h2>
         <div className="rounded-2xl border border-red-200 bg-red-50 p-6">
           <h3 className="mb-2 text-lg font-semibold text-red-800">{t('overview.error_title')}</h3>
-          <p className="mb-4 text-sm text-red-600">{error || t('app.unknown')}</p>
+          <p className="mb-4 text-sm text-red-600">{error || 'Unknown error'}</p>
           <button onClick={loadData} className="glass-button-secondary">
             {t('app.retry')}
           </button>
@@ -465,7 +428,7 @@ export default function Revenue() {
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('revenue.title')}</h2>
           <p className="mt-1 text-sm text-slate-500">
-            {getOperatorUiText(language, 'revenue.subtitle_unified')}
+            Unified revenue view for online and local sales
           </p>
         </div>
         <button onClick={handleExport} className="glass-button-secondary">
@@ -476,16 +439,16 @@ export default function Revenue() {
 
       {issues.length > 0 && (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-          <p className="text-sm font-medium text-amber-900">{getOperatorUiText(language, 'revenue.partial_available')}</p>
+          <p className="text-sm font-medium text-amber-900">Revenue is partially available.</p>
           <p className="mt-1 text-sm text-amber-700">{issues.join(' ')}</p>
         </div>
       )}
 
       {!parkData.features.stripe && !parkData.features.local_sales && !isKioskPark && (
         <GlassCard className="p-6">
-          <h3 className="text-base font-semibold text-slate-800">{getOperatorUiText(language, 'revenue.no_feed_title')}</h3>
+          <h3 className="text-base font-semibold text-slate-800">No active revenue feed</h3>
           <p className="mt-2 text-sm text-slate-500">
-            {getOperatorUiText(language, 'revenue.no_feed_desc')}
+            This park currently has no reachable Stripe or local sales source. The page will populate automatically as soon as one of the feeds is available.
           </p>
         </GlassCard>
       )}
@@ -493,43 +456,42 @@ export default function Revenue() {
       {isKioskPark && kioskKpis && (
         <>
           <GlassCard className="p-6">
-            <h3 className="text-base font-semibold text-slate-800">{getOperatorUiText(language, 'revenue.kiosk.title')}</h3>
+            <h3 className="text-base font-semibold text-slate-800">Selbstbedienungs-Automat</h3>
             <p className="mt-2 text-sm text-slate-500">
-              {getOperatorUiText(language, 'revenue.kiosk.desc', {
-                price: formatCurrency(kioskLivePriceCents ?? kioskPriceCents ?? 0, 'eur'),
-              })}
+              Kein eigener Webshop hier — jedes gespeicherte Foto ist bereits ein bezahlter Kauf am Automaten
+              ({formatCurrency(kioskPriceCents ?? 0, 'eur')} pro Foto).
             </p>
           </GlassCard>
 
           <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
             <KPICard
-              title={getOperatorUiText(language, 'revenue.kpi.today')}
+              title="Heute"
               value={formatCurrency(kioskKpis.today.revenueCents, 'eur')}
-              subtitle={formatSoldRideSubtitle(kioskKpis.today.sold, kioskKpis.today.expected, language)}
+              subtitle={formatSoldRideSubtitle(kioskKpis.today.sold, kioskKpis.today.expected)}
               icon={Ticket}
               iconColor="text-brand-600"
               iconBg="bg-brand-50"
             />
             <KPICard
-              title={getOperatorUiText(language, 'revenue.kpi.last_7_days')}
+              title="Letzte 7 Tage"
               value={formatCurrency(kioskKpis.week.revenueCents, 'eur')}
-              subtitle={formatSoldRideSubtitle(kioskKpis.week.sold, kioskKpis.week.expected, language)}
+              subtitle={formatSoldRideSubtitle(kioskKpis.week.sold, kioskKpis.week.expected)}
               icon={Camera}
               iconColor="text-sky-600"
               iconBg="bg-sky-50"
             />
             <KPICard
-              title={getOperatorUiText(language, 'revenue.kpi.this_month')}
+              title="Dieser Monat"
               value={formatCurrency(kioskKpis.month.revenueCents, 'eur')}
-              subtitle={formatSoldRideSubtitle(kioskKpis.month.sold, kioskKpis.month.expected, language)}
+              subtitle={formatSoldRideSubtitle(kioskKpis.month.sold, kioskKpis.month.expected)}
               icon={Receipt}
               iconColor="text-emerald-600"
               iconBg="bg-emerald-50"
             />
             <KPICard
-              title={getOperatorUiText(language, 'revenue.kpi.total_since_records')}
+              title="Gesamt (seit Aufzeichnung)"
               value={formatCurrency(kioskKpis.total.revenueCents, 'eur')}
-              subtitle={formatSoldRideSubtitle(kioskKpis.total.sold, kioskKpis.total.expected, language)}
+              subtitle={formatSoldRideSubtitle(kioskKpis.total.sold, kioskKpis.total.expected)}
               icon={Wallet}
               iconColor="text-slate-700"
               iconBg="bg-slate-100"
@@ -538,21 +500,21 @@ export default function Revenue() {
 
           <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
             <KPICard
-              title={getOperatorUiText(language, 'revenue.kpi.rides_today')}
+              title="Fahrten heute"
               value={kioskKpis.today.expected !== null ? formatNumber(kioskKpis.today.expected) : '-'}
-              subtitle={getOperatorUiText(language, 'revenue.kpi.camera_captures_today')}
+              subtitle="Kamera-Aufnahmen heute"
               icon={Gauge}
               iconColor="text-indigo-600"
               iconBg="bg-indigo-50"
             />
             <KPICard
-              title={getOperatorUiText(language, 'revenue.kpi.conversion_today')}
+              title="Conversion heute"
               value={
                 kioskKpis.today.expected && kioskKpis.today.expected > 0
                   ? formatPercent((kioskKpis.today.sold / kioskKpis.today.expected) * 100)
                   : '-'
               }
-              subtitle={getOperatorUiText(language, 'revenue.kpi.sold_per_ride')}
+              subtitle="Verkauft je Fahrt"
               icon={Percent}
               iconColor="text-fuchsia-600"
               iconBg="bg-fuchsia-50"
@@ -562,11 +524,9 @@ export default function Revenue() {
           <GlassCard className="p-6">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h3 className="text-base font-semibold text-slate-800">{getOperatorUiText(language, 'revenue.section.revenue')}</h3>
+                <h3 className="text-base font-semibold text-slate-800">Umsatz</h3>
                 <p className="text-sm text-slate-500">
-                  {chartMode === 'trend'
-                    ? getOperatorUiText(language, 'revenue.section.daily_machine')
-                    : getOperatorUiText(language, 'revenue.section.hourly')}
+                  {chartMode === 'trend' ? 'Tägliche Einnahmen am Automaten' : 'Einnahmen nach Uhrzeit'}
                 </p>
               </div>
               <div className="flex flex-wrap rounded-xl bg-white/40 p-1">
@@ -577,7 +537,7 @@ export default function Revenue() {
                     chartMode === 'trend' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
                   }`}
                 >
-                  {getOperatorUiText(language, 'revenue.tab.total')}
+                  Gesamt
                 </button>
                 <button
                   type="button"
@@ -591,7 +551,7 @@ export default function Revenue() {
                       : 'text-slate-500 hover:text-slate-700'
                   }`}
                 >
-                  {getOperatorUiText(language, 'revenue.tab.today')}
+                  Heute
                 </button>
                 <button
                   type="button"
@@ -605,7 +565,7 @@ export default function Revenue() {
                       : 'text-slate-500 hover:text-slate-700'
                   }`}
                 >
-                  {getOperatorUiText(language, 'revenue.tab.yesterday')}
+                  Gestern
                 </button>
                 <button
                   type="button"
@@ -619,7 +579,7 @@ export default function Revenue() {
                       : 'text-slate-500 hover:text-slate-700'
                   }`}
                 >
-                  {getOperatorUiText(language, 'revenue.tab.other_day')}
+                  Anderer Tag
                 </button>
               </div>
             </div>
@@ -650,7 +610,7 @@ export default function Revenue() {
                         borderRadius: '12px',
                         boxShadow: '0 8px 32px rgba(15,23,42,0.08)',
                       }}
-                      formatter={(value) => [`€${Number(value ?? 0).toFixed(2)}`, getOperatorUiText(language, 'revenue.legend.revenue')]}
+                      formatter={(value) => [`€${Number(value ?? 0).toFixed(2)}`, 'Umsatz']}
                     />
                     <Area
                       type="monotone"
@@ -676,13 +636,13 @@ export default function Revenue() {
                         onClick={() => stepDay(-1)}
                         disabled={selectedDate <= minSelectableDate}
                         className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-white/60 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
-                        aria-label={getOperatorUiText(language, 'revenue.previous_day')}
+                        aria-label="Vorheriger Tag"
                       >
                         <ChevronLeft className="h-4 w-4" />
                       </button>
                       <div>
                         <label className="mb-1 block text-xs uppercase tracking-wide text-slate-400">
-                          {getOperatorUiText(language, 'revenue.select_day')}
+                          Tag auswählen
                         </label>
                         <input
                           ref={dateInputRef}
@@ -699,7 +659,7 @@ export default function Revenue() {
                         onClick={() => stepDay(1)}
                         disabled={selectedDate >= maxSelectableDate}
                         className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-white/60 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
-                        aria-label={getOperatorUiText(language, 'revenue.next_day')}
+                        aria-label="Nächster Tag"
                       >
                         <ChevronRight className="h-4 w-4" />
                       </button>
@@ -707,14 +667,12 @@ export default function Revenue() {
                   )}
                   <div className="text-right">
                     <p className="text-xs uppercase tracking-wide text-slate-400">
-                      {getOperatorUiText(language, 'revenue.day_revenue', { date: selectedDateLabel })}
+                      Am {selectedDateLabel} eingenommen
                     </p>
                     <p className="text-2xl font-bold text-slate-800">
                       {formatCurrency(dayTotalRevenueCents, 'eur')}
                     </p>
-                    <p className="text-xs text-slate-500">
-                      {getOperatorUiText(language, 'revenue.photos_sold', { count: dayPurchases.length })}
-                    </p>
+                    <p className="text-xs text-slate-500">{dayPurchases.length} Fotos verkauft</p>
                   </div>
                 </div>
 
@@ -723,11 +681,11 @@ export default function Revenue() {
                 <div className="h-80">
                   {dayLoading ? (
                     <div className="flex h-full items-center justify-center text-sm text-slate-500">
-                      {getOperatorUiText(language, 'revenue.loading')}
+                      Lädt...
                     </div>
                   ) : dayPurchases.length === 0 && !dayError ? (
                     <div className="flex h-full items-center justify-center text-sm text-slate-500">
-                      {getOperatorUiText(language, 'revenue.no_sales')}
+                      Keine Verkäufe an diesem Tag.
                     </div>
                   ) : (
                     <ResponsiveContainer width="100%" height="100%">
@@ -759,9 +717,9 @@ export default function Revenue() {
                             boxShadow: '0 8px 32px rgba(15,23,42,0.08)',
                           }}
                           formatter={(value, name) =>
-                            name === getOperatorUiText(language, 'revenue.legend.rides')
-                              ? [formatNumber(Number(value ?? 0)), getOperatorUiText(language, 'revenue.legend.rides')]
-                              : [`€${Number(value ?? 0).toFixed(2)}`, getOperatorUiText(language, 'revenue.legend.revenue')]
+                            name === 'Fahrten'
+                              ? [formatNumber(Number(value ?? 0)), 'Fahrten']
+                              : [`€${Number(value ?? 0).toFixed(2)}`, 'Umsatz']
                           }
                         />
                         {hasRideData && <Legend wrapperStyle={{ fontSize: 12 }} />}
@@ -769,7 +727,7 @@ export default function Revenue() {
                           yAxisId="rev"
                           type="monotone"
                           dataKey="revenueEur"
-                          name={getOperatorUiText(language, 'revenue.legend.revenue')}
+                          name="Umsatz"
                           stroke="#0ea5e9"
                           strokeWidth={2}
                           fill="url(#kioskRevenueHourly)"
@@ -779,7 +737,7 @@ export default function Revenue() {
                             yAxisId="rides"
                             type="monotone"
                             dataKey="rides"
-                            name={getOperatorUiText(language, 'revenue.legend.rides')}
+                            name="Fahrten"
                             stroke="#10b981"
                             strokeWidth={2}
                             dot={false}
@@ -794,19 +752,19 @@ export default function Revenue() {
           </GlassCard>
 
           <GlassCard className="p-6">
-            <h3 className="mb-4 text-base font-semibold text-slate-800">{getOperatorUiText(language, 'revenue.daily_overview')}</h3>
+            <h3 className="mb-4 text-base font-semibold text-slate-800">Tagesübersicht</h3>
             {kioskDays.length === 0 ? (
-              <p className="text-sm text-slate-500">{getOperatorUiText(language, 'revenue.no_sales_data')}</p>
+              <p className="text-sm text-slate-500">Noch keine Verkaufsdaten erfasst.</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
                   <thead>
                     <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-400">
-                      <th className="py-2 pr-4">{getOperatorUiText(language, 'revenue.table.day')}</th>
-                      <th className="py-2 pr-4">{getOperatorUiText(language, 'revenue.table.sold')}</th>
-                      <th className="py-2 pr-4">{getOperatorUiText(language, 'revenue.table.rides')}</th>
-                      <th className="py-2 pr-4">{getOperatorUiText(language, 'revenue.table.rate')}</th>
-                      <th className="py-2">{getOperatorUiText(language, 'revenue.table.revenue')}</th>
+                      <th className="py-2 pr-4">Tag</th>
+                      <th className="py-2 pr-4">Verkauft</th>
+                      <th className="py-2 pr-4">Fahrten</th>
+                      <th className="py-2 pr-4">Quote</th>
+                      <th className="py-2">Umsatz</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -843,7 +801,7 @@ export default function Revenue() {
       <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
         {parkData.features.stripe && (
           <KPICard
-            title={getOperatorUiText(language, 'overview.online_revenue')}
+            title="Online Revenue"
             value={formatCurrency(Math.round(totals.online * 100))}
             icon={CreditCard}
             iconColor="text-sky-600"
@@ -852,7 +810,7 @@ export default function Revenue() {
         )}
         {parkData.features.local_sales && (
           <KPICard
-            title={getOperatorUiText(language, 'overview.local_revenue')}
+            title="Local Revenue"
             value={localRevenueDisplay}
             icon={Wallet}
             iconColor="text-emerald-600"
@@ -860,14 +818,14 @@ export default function Revenue() {
           />
         )}
         <KPICard
-          title={getOperatorUiText(language, 'revenue.kpi.total_revenue')}
+          title="Total Revenue"
           value={formatCurrency(totalConfirmedRevenueCents)}
           icon={Receipt}
           iconColor="text-slate-700"
           iconBg="bg-slate-100"
         />
         <KPICard
-          title={getOperatorUiText(language, 'revenue.kpi.total_transactions')}
+          title="Total Transactions"
           value={formatNumber(parkData.summary.local_transaction_count + onlinePaymentCount)}
           icon={Receipt}
           iconColor="text-cyan-600"
@@ -878,34 +836,31 @@ export default function Revenue() {
       <GlassCard className="p-6">
         <div className="grid gap-4 xl:grid-cols-2">
           <div>
-            <h3 className="text-base font-semibold text-slate-800">{getOperatorUiText(language, 'revenue.online_commerce.title')}</h3>
+            <h3 className="text-base font-semibold text-slate-800">Online Commerce Domain</h3>
             <p className="mt-2 text-sm text-slate-500">
-              {getOperatorUiText(language, 'revenue.online_commerce.subtitle')}
+              Stripe revenue and online purchase counts stay separate from machine-side telemetry.
             </p>
             <div className="mt-4 space-y-2 rounded-2xl bg-white/30 p-4 text-sm text-slate-600">
-              <p>{getOperatorUiText(language, 'revenue.online_commerce.confirmed_revenue', { value: formatCurrency(Math.round(totals.online * 100)) })}</p>
-              <p>{getOperatorUiText(language, 'revenue.online_commerce.successful_payments', { value: formatNumber(onlinePaymentCount) })}</p>
+              <p>Confirmed online revenue: {formatCurrency(Math.round(totals.online * 100))}</p>
+              <p>Online successful payments: {formatNumber(onlinePaymentCount)}</p>
             </div>
           </div>
           <div>
-            <h3 className="text-base font-semibold text-slate-800">{getOperatorUiText(language, 'revenue.local_operations.title')}</h3>
+            <h3 className="text-base font-semibold text-slate-800">Local Operations Domain</h3>
             <p className="mt-2 text-sm text-slate-500">
-              {getOperatorUiText(language, 'revenue.local_operations.subtitle')}
+              Only confirmed local amounts count as revenue. Detected or unknown amounts stay outside totals.
             </p>
             <div className="mt-4 space-y-2 rounded-2xl bg-white/30 p-4 text-sm text-slate-600">
-              <p>{getOperatorUiText(language, 'revenue.local_operations.confirmed_revenue', { value: formatCurrency(parkData.summary.local_sales_cents) })}</p>
+              <p>Confirmed local revenue: {formatCurrency(parkData.summary.local_sales_cents)}</p>
               <p>
-                {getOperatorUiText(language, 'revenue.local_operations.detected_unconfirmed', {
-                  value:
-                    (parkData.summary.local_unconfirmed_amount_cents ?? 0) > 0
-                      ? formatCurrency(parkData.summary.local_unconfirmed_amount_cents)
-                      : '-',
-                })}
+                Detected but unconfirmed local amount:{' '}
+                {(parkData.summary.local_unconfirmed_amount_cents ?? 0) > 0
+                  ? formatCurrency(parkData.summary.local_unconfirmed_amount_cents)
+                  : '-'}
               </p>
               <p>
-                {getOperatorUiText(language, 'revenue.local_operations.unknown_signals', {
-                  value: formatNumber(parkData.summary.local_unknown_amount_transaction_count),
-                })}
+                Unknown local amount signals:{' '}
+                {formatNumber(parkData.summary.local_unknown_amount_transaction_count)}
               </p>
             </div>
           </div>
@@ -915,16 +870,16 @@ export default function Revenue() {
       <GlassCard className="p-6">
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <h3 className="text-base font-semibold text-slate-800">{getOperatorUiText(language, 'revenue.trend.title')}</h3>
+            <h3 className="text-base font-semibold text-slate-800">Revenue Trend</h3>
             <p className="text-sm text-slate-500">
-              {getOperatorUiText(language, 'revenue.trend.subtitle')}
+              Last 30 days, confirmed online and confirmed local revenue only
             </p>
           </div>
           <div className="text-right text-xs text-slate-500">
-            <p>{getOperatorUiText(language, 'revenue.cash')}: {formatCurrency(Math.round(totals.cash * 100))}</p>
-            <p>{getOperatorUiText(language, 'revenue.terminal')}: {formatCurrency(Math.round(totals.terminal * 100))}</p>
+            <p>Cash: {formatCurrency(Math.round(totals.cash * 100))}</p>
+            <p>Terminal: {formatCurrency(Math.round(totals.terminal * 100))}</p>
             {(parkData.summary.local_unconfirmed_amount_cents ?? 0) > 0 && (
-              <p>{getOperatorUiText(language, 'revenue.detected_unconfirmed', { value: formatCurrency(parkData.summary.local_unconfirmed_amount_cents) })}</p>
+              <p>Detected, unconfirmed: {formatCurrency(parkData.summary.local_unconfirmed_amount_cents)}</p>
             )}
           </div>
         </div>
@@ -952,10 +907,7 @@ export default function Revenue() {
                   borderRadius: '12px',
                   boxShadow: '0 8px 32px rgba(15,23,42,0.08)',
                 }}
-                formatter={(value, name) => [
-                  `$${Number(value ?? 0).toFixed(2)}`,
-                  name === 'online' ? getOperatorUiText(language, 'revenue.legend.online') : getOperatorUiText(language, 'revenue.legend.local'),
-                ]}
+                formatter={(value, name) => [`$${Number(value ?? 0).toFixed(2)}`, name === 'online' ? 'Online' : 'Local']}
               />
               {parkData.features.stripe && (
                 <Area type="monotone" dataKey="online" stroke="#0ea5e9" strokeWidth={2} fill="url(#revOnline)" />
@@ -970,9 +922,9 @@ export default function Revenue() {
 
       <div className="grid gap-6 xl:grid-cols-[1.3fr_1fr]">
         <GlassCard className="p-6">
-          <h3 className="mb-4 text-base font-semibold text-slate-800">{getOperatorUiText(language, 'revenue.breakdown.title')}</h3>
+          <h3 className="mb-4 text-base font-semibold text-slate-800">Local Sales Breakdown</h3>
           <p className="mb-4 text-sm text-slate-500">
-            {getOperatorUiText(language, 'revenue.breakdown.subtitle')}
+            Only confirmed local cash and terminal amounts are charted here.
           </p>
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
@@ -988,10 +940,7 @@ export default function Revenue() {
                     borderRadius: '12px',
                     boxShadow: '0 8px 32px rgba(15,23,42,0.08)',
                   }}
-                  formatter={(value, name) => [
-                    `$${Number(value ?? 0).toFixed(2)}`,
-                    name === 'cash' ? `${getOperatorUiText(language, 'revenue.cash')} / Coin` : getOperatorUiText(language, 'revenue.terminal'),
-                  ]}
+                  formatter={(value, name) => [`$${Number(value ?? 0).toFixed(2)}`, name === 'cash' ? 'Cash / Coin' : 'Terminal']}
                 />
                 <Bar dataKey="cash" stackId="local" fill="#14b8a6" radius={[6, 6, 0, 0]} />
                 <Bar dataKey="terminal" stackId="local" fill="#22c55e" radius={[6, 6, 0, 0]} />
@@ -1001,16 +950,16 @@ export default function Revenue() {
         </GlassCard>
 
         <GlassCard className="p-6">
-          <h3 className="mb-4 text-base font-semibold text-slate-800">{getOperatorUiText(language, 'revenue.signals.title')}</h3>
+          <h3 className="mb-4 text-base font-semibold text-slate-800">Sales Signals</h3>
           <div className="space-y-3">
             <div className="rounded-xl bg-white/30 p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-400">{getOperatorUiText(language, 'revenue.signals.payment_attempts')}</p>
+              <p className="text-xs uppercase tracking-wide text-slate-400">Payment attempts</p>
               <p className="mt-1 text-sm font-semibold text-slate-800">
                 {formatNumber(parkData.summary.payment_attempt_count)}
               </p>
             </div>
             <div className="rounded-xl bg-white/30 p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-400">{getOperatorUiText(language, 'revenue.signals.success_rate')}</p>
+              <p className="text-xs uppercase tracking-wide text-slate-400">Success rate</p>
               <p className="mt-1 text-sm font-semibold text-slate-800">
                 {parkData.summary.success_rate !== null
                   ? formatPercent(parkData.summary.success_rate)
@@ -1018,7 +967,7 @@ export default function Revenue() {
               </p>
             </div>
             <div className="rounded-xl bg-white/30 p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-400">{getOperatorUiText(language, 'revenue.signals.cancel_rate')}</p>
+              <p className="text-xs uppercase tracking-wide text-slate-400">Cancel rate</p>
               <p className="mt-1 text-sm font-semibold text-slate-800">
                 {parkData.summary.cancel_rate !== null
                   ? formatPercent(parkData.summary.cancel_rate)
@@ -1026,25 +975,25 @@ export default function Revenue() {
               </p>
             </div>
             <div className="rounded-xl bg-white/30 p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-400">{getOperatorUiText(language, 'revenue.signals.cash_transactions')}</p>
+              <p className="text-xs uppercase tracking-wide text-slate-400">Cash / Coin transactions</p>
               <p className="mt-1 text-sm font-semibold text-slate-800">
                 {formatNumber(parkData.summary.cash_transaction_count)}
               </p>
             </div>
             <div className="rounded-xl bg-white/30 p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-400">{getOperatorUiText(language, 'revenue.signals.terminal_transactions')}</p>
+              <p className="text-xs uppercase tracking-wide text-slate-400">Terminal transactions</p>
               <p className="mt-1 text-sm font-semibold text-slate-800">
                 {formatNumber(parkData.summary.terminal_transaction_count)}
               </p>
             </div>
             <div className="rounded-xl bg-white/30 p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-400">{getOperatorUiText(language, 'revenue.signals.unconfirmed_local_sales')}</p>
+              <p className="text-xs uppercase tracking-wide text-slate-400">Unconfirmed local sales</p>
               <p className="mt-1 text-sm font-semibold text-slate-800">
                 {formatNumber(parkData.summary.local_unconfirmed_transaction_count)}
               </p>
             </div>
             <div className="rounded-xl bg-white/30 p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-400">{getOperatorUiText(language, 'revenue.signals.unknown_local_amounts')}</p>
+              <p className="text-xs uppercase tracking-wide text-slate-400">Unknown local amounts</p>
               <p className="mt-1 text-sm font-semibold text-slate-800">
                 {formatNumber(parkData.summary.local_unknown_amount_transaction_count)}
               </p>

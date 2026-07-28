@@ -1,11 +1,11 @@
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import GlassCard from './GlassCard';
 import { useI18n } from '../../lib/i18n';
 
 interface Column<T> {
   key: string;
-  label: ReactNode;
+  label: string;
   render?: (item: T) => React.ReactNode;
   className?: string;
 }

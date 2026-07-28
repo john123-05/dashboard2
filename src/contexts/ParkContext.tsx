@@ -5,7 +5,6 @@ interface ParkState {
   parkId: string | null;
   parkName: string | null;
   setPark: (id: string | null, name: string | null) => void;
-  refreshKioskState: () => void;
   // Self-service/kiosk parks (no webshop, e.g. Imst) have parks.price_per_photo_cents
   // set on the shared project — every consumer that needs to branch on this
   // reads it from here instead of each re-fetching/re-checking independently.
@@ -27,7 +26,6 @@ export function ParkProvider({ children }: { children: ReactNode }) {
   const [kioskTimezone, setKioskTimezone] = useState('Europe/Vienna');
   const [kioskOpeningHours, setKioskOpeningHours] = useState<OpeningHours | null>(null);
   const [kioskCheckLoading, setKioskCheckLoading] = useState(true);
-  const [kioskRefreshNonce, setKioskRefreshNonce] = useState(0);
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -75,7 +73,7 @@ export function ParkProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [parkId, kioskRefreshNonce]);
+  }, [parkId]);
 
   const setPark = (id: string | null, name: string | null) => {
     setParkId(id);
@@ -87,17 +85,12 @@ export function ParkProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const refreshKioskState = () => {
-    setKioskRefreshNonce((prev) => prev + 1);
-  };
-
   return (
     <ParkContext.Provider
       value={{
         parkId,
         parkName,
         setPark,
-        refreshKioskState,
         isKioskPark,
         kioskPriceCents,
         kioskTimezone,

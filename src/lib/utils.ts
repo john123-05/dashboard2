@@ -1,64 +1,22 @@
-const LOCALE_BY_LANGUAGE: Record<string, string> = {
-  de: 'de-DE',
-  en: 'en-US',
-  es: 'es-ES',
-  fr: 'fr-FR',
-  it: 'it-IT',
-  nl: 'nl-NL',
-  lv: 'lv-LV',
-};
-
-let formatterLanguage = 'de';
-
-export function setFormatterLanguage(language: string): void {
-  formatterLanguage = LOCALE_BY_LANGUAGE[language] ? language : 'de';
-}
-
-export function getFormatterLocale(): string {
-  return LOCALE_BY_LANGUAGE[formatterLanguage] || 'de-DE';
-}
-
-function justNowLabel(): string {
-  switch (formatterLanguage) {
-    case 'en':
-      return 'Just now';
-    case 'es':
-      return 'Justo ahora';
-    case 'fr':
-      return 'À l’instant';
-    case 'it':
-      return 'Proprio ora';
-    case 'nl':
-      return 'Zojuist';
-    case 'lv':
-      return 'Tikko';
-    default:
-      return 'Gerade eben';
-  }
-}
-
 export function formatCurrency(cents: number, currency = 'usd'): string {
-  return new Intl.NumberFormat(getFormatterLocale(), {
+  return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: currency.toUpperCase(),
   }).format(cents / 100);
 }
 
 export function formatNumber(n: number): string {
-  return new Intl.NumberFormat(getFormatterLocale()).format(n);
+  return new Intl.NumberFormat('en-US').format(n);
 }
 
 export function formatPercent(n: number): string {
-  return `${new Intl.NumberFormat(getFormatterLocale(), {
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 1,
-  }).format(n)}%`;
+  return `${n.toFixed(1)}%`;
 }
 
 export function formatDate(date: string): string {
   const parsed = new Date(date);
   if (Number.isNaN(parsed.getTime())) return '-';
-  return new Intl.DateTimeFormat(getFormatterLocale(), {
+  return new Intl.DateTimeFormat('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -68,7 +26,7 @@ export function formatDate(date: string): string {
 export function formatDateTime(date: string): string {
   const parsed = new Date(date);
   if (Number.isNaN(parsed.getTime())) return '-';
-  return new Intl.DateTimeFormat(getFormatterLocale(), {
+  return new Intl.DateTimeFormat('en-US', {
     month: 'short',
     day: 'numeric',
     hour: 'numeric',
@@ -84,12 +42,11 @@ export function formatRelative(date: string): string {
   const minutes = Math.floor(diff / 60000);
   const hours = Math.floor(diff / 3600000);
   const days = Math.floor(diff / 86400000);
-  const formatter = new Intl.RelativeTimeFormat(getFormatterLocale(), { numeric: 'auto' });
 
-  if (minutes < 1) return justNowLabel();
-  if (minutes < 60) return formatter.format(-minutes, 'minute');
-  if (hours < 24) return formatter.format(-hours, 'hour');
-  if (days < 7) return formatter.format(-days, 'day');
+  if (minutes < 1) return 'Just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  if (days < 7) return `${days}d ago`;
   return formatDate(date);
 }
 
