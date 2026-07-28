@@ -163,7 +163,7 @@ Deno.serve(async (req: Request) => {
       // Imst (and any future shop-less park) doesn't create a `users` row at all —
       // claiming a photo there only ever writes to `photo_claims` (service-role
       // only table, by design). Without this, those leads never show up here.
-      fetchExternal(`photo_claims?select=id,full_name,email,park_id,marketing_opt_in,claimed_at,created_at,locale,country_code&order=created_at.desc${parkFilter}`),
+      fetchExternal(`photo_claims?select=id,photo_id,full_name,email,park_id,marketing_opt_in,claimed_at,created_at,locale,country_code&order=created_at.desc${parkFilter}`),
     ]);
 
     if (!usersRes.ok) {
@@ -239,6 +239,7 @@ Deno.serve(async (req: Request) => {
           const parkName = parkId ? parkNames.get(parkId) || "Unknown" : "Unknown";
           return {
             id: c.id,
+            photo_id: c.photo_id,
             email: c.email,
             full_name: c.full_name,
             source: "photo_claim",

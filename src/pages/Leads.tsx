@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Clock3, Download, Mail, Minus, Plus, Trash2, UserPlus } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { getOptionalSourceWarning, invokeEdgeFunction, isEdgeSourceUnavailable } from '../lib/edgeFunctions';
+import { fetchKioskPhotosForDay, type KioskPurchaseRow, type OpeningHours } from '../lib/kioskSales';
 import { formatDate, formatNumber, exportToCSV } from '../lib/utils';
 import GlassCard from '../components/ui/GlassCard';
 import DataTable from '../components/ui/DataTable';
@@ -16,13 +16,28 @@ type CountryStat = {
   y: number | null;
 };
 
-type HourBucket = {
-  hour: number;
-  count: number;
-  label: string;
+type ClaimDelayMatch = {
+  leadId: string;
+  email: string;
+  purchasedAt: Date;
+  claimedAt: Date;
+  delayMs: number;
+  claimedAfterClose: boolean;
+  claimedOnLaterDay: boolean;
+  afterCloseMs: number | null;
 };
 
 type SvgViewBox = { minX: number; minY: number; width: number; height: number };
+
+const WEEKDAY_SHORT_TO_KEY: Record<string, keyof OpeningHours> = {
+  Sun: 'sun',
+  Mon: 'mon',
+  Tue: 'tue',
+  Wed: 'wed',
+  Thu: 'thu',
+  Fri: 'fri',
+  Sat: 'sat',
+};
 
 function getCountryName(countryCode: string): string {
   try {
@@ -33,8 +48,66 @@ function getCountryName(countryCode: string): string {
   }
 }
 
-function formatHourRange(hour: number): string {
-  return `${String(hour).padStart(2, '0')}:00 - ${String(hour).padStart(2, '0')}:59`;
+function normalizeEmail(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim().toLowerCase();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function localDateKey(date: Date, timezone: string): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
+}
+
+function localMinutes(date: Date, timezone: string): number {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: timezone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(date);
+
+  const hour = Number(parts.find((part) => part.type === 'hour')?.value ?? '0');
+  const minute = Number(parts.find((part) => part.type === 'minute')?.value ?? '0');
+  return hour * 60 + minute;
+}
+
+function shiftDateKey(dateKey: string, days: number): string {
+  const date = new Date(`${dateKey}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+function closingMinutesForDate(date: Date, timezone: string, openingHours: OpeningHours | null): number | null {
+  if (!openingHours) return null;
+  const weekday = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    weekday: 'short',
+  }).format(date);
+
+  const key = WEEKDAY_SHORT_TO_KEY[weekday];
+  const hours = key ? openingHours[key] : null;
+  if (!hours) return null;
+
+  const [, close] = hours;
+  const [closeHour, closeMinute] = close.split(':').map(Number);
+  if (Number.isNaN(closeHour) || Number.isNaN(closeMinute)) return null;
+  return closeHour * 60 + closeMinute;
+}
+
+function formatDelay(ms: number): string {
+  const totalMinutes = Math.max(0, Math.round(ms / 60000));
+  const days = Math.floor(totalMinutes / (60 * 24));
+  const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
+  const minutes = totalMinutes % 60;
+
+  if (days > 0) return `${days} Tg ${hours} Std`;
+  if (hours > 0) return `${hours} Std ${minutes} Min`;
+  return `${minutes} Min`;
 }
 
 function CompactMetricCard({
@@ -113,6 +186,81 @@ function parseSvgViewBox(svgMarkup: string): SvgViewBox | null {
   return { minX, minY, width, height };
 }
 
+function resolveLeadMapPoints(points: CountryStat[], svgMarkup: string): CountryStat[] {
+  if (typeof document === 'undefined' || !svgMarkup) return points;
+
+  const viewBox = parseSvgViewBox(svgMarkup);
+  if (!viewBox) return points;
+
+  const container = document.createElement('div');
+  container.style.position = 'fixed';
+  container.style.left = '-99999px';
+  container.style.top = '0';
+  container.style.width = `${viewBox.width}px`;
+  container.style.height = `${viewBox.height}px`;
+  container.style.visibility = 'hidden';
+  container.style.pointerEvents = 'none';
+  container.innerHTML = svgMarkup;
+  document.body.appendChild(container);
+
+  try {
+    const svg = container.querySelector('svg');
+    if (!svg) return points;
+
+    return points.map((point) => {
+      const countryClass = point.countryCode.toLowerCase();
+      const countryElement = svg.querySelector<SVGGraphicsElement>(`#${countryClass}`);
+      if (!countryElement) return point;
+
+      try {
+        const pathCandidates = Array.from(
+          countryElement.querySelectorAll<SVGGraphicsElement>(`path.landxx.${countryClass}, path.${countryClass}`),
+        );
+
+        const candidateElements = [
+          ...(countryElement.tagName.toLowerCase() === 'path' ? [countryElement] : []),
+          ...pathCandidates,
+        ];
+
+        const bestMatch = candidateElements.reduce<{
+          x: number;
+          y: number;
+          area: number;
+        } | null>((best, element) => {
+          const bbox = element.getBBox();
+          const area = bbox.width * bbox.height;
+          if (area <= 0) return best;
+
+          if (!best || area > best.area) {
+            return {
+              x: bbox.x + bbox.width / 2,
+              y: bbox.y + bbox.height / 2,
+              area,
+            };
+          }
+
+          return best;
+        }, null);
+
+        if (!bestMatch) {
+          const bbox = countryElement.getBBox();
+          return {
+            ...point,
+            x: bbox.x + bbox.width / 2,
+            y: bbox.y + bbox.height / 2,
+          };
+        }
+
+        return { ...point, x: bestMatch.x, y: bestMatch.y };
+      } catch {
+        return point;
+      }
+    });
+  } finally {
+    container.remove();
+  }
+}
+
 function LeadWorldMap({
   svgMarkup,
   points,
@@ -149,66 +297,8 @@ function LeadWorldMap({
   const mapRef = useRef<HTMLDivElement | null>(null);
   const dragStateRef = useRef<{ startX: number; startY: number; originX: number; originY: number } | null>(null);
   const viewBox = useMemo(() => parseSvgViewBox(svgMarkup), [svgMarkup]);
-  const [resolvedPoints, setResolvedPoints] = useState(points);
   const effectiveScale = zoom;
-
-  useEffect(() => {
-    if (!mapRef.current || !viewBox) {
-      setResolvedPoints(points);
-      return;
-    }
-
-    const svg = mapRef.current.querySelector('svg');
-    if (!svg) {
-      setResolvedPoints(points);
-      return;
-    }
-
-    const next = points.map((point) => {
-      const countryClass = point.countryCode.toLowerCase();
-      const countryElement = svg.querySelector<SVGGraphicsElement>(`#${point.countryCode.toLowerCase()}`);
-      if (!countryElement) return point;
-
-      try {
-        const candidateElements = [
-          countryElement,
-          ...Array.from(countryElement.querySelectorAll<SVGGraphicsElement>(`.landxx.${countryClass}`)),
-        ];
-
-        const bestMatch = candidateElements.reduce<{
-          x: number;
-          y: number;
-          area: number;
-        } | null>((best, element) => {
-          const bbox = element.getBBox();
-          const area = bbox.width * bbox.height;
-          if (area <= 0) return best;
-
-          if (!best || area > best.area) {
-            return {
-              x: bbox.x + bbox.width / 2,
-              y: bbox.y + bbox.height / 2,
-              area,
-            };
-          }
-
-          return best;
-        }, null);
-
-        if (!bestMatch) return point;
-
-        const x = bestMatch.x;
-        const y = bestMatch.y;
-        return { ...point, x, y };
-      } catch {
-        return point;
-      }
-    });
-
-    setResolvedPoints(next);
-  }, [points, svgMarkup, viewBox]);
-
-  const visiblePoints = resolvedPoints.filter((point) => point.x !== null && point.y !== null);
+  const visiblePoints = points.filter((point) => point.x !== null && point.y !== null);
   const maxCount = Math.max(...visiblePoints.map((point) => point.count), 1);
 
   function getCountryFromEventTarget(target: EventTarget | null): string | null {
@@ -407,9 +497,10 @@ function leadLocaleBadge(item: Record<string, unknown>): string | null {
 
 export default function Leads() {
   const { t } = useI18n();
-  const { parkId } = usePark();
+  const { parkId, isKioskPark, kioskTimezone, kioskOpeningHours, kioskCheckLoading } = usePark();
   const locationDetailsRef = useRef<HTMLDivElement | null>(null);
   const [leads, setLeads] = useState<Record<string, unknown>[]>([]);
+  const [kioskPurchases, setKioskPurchases] = useState<KioskPurchaseRow[]>([]);
   const [stats, setStats] = useState({ total: 0, optedIn: 0 });
   const [filterOptIn, setFilterOptIn] = useState<boolean | null>(null);
   const [countryFilter, setCountryFilter] = useState('all');
@@ -453,6 +544,73 @@ export default function Leads() {
       locationDetailsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   }, [showLocationDetails]);
+
+  useEffect(() => {
+    let active = true;
+
+    if (kioskCheckLoading || !parkId || !isKioskPark) {
+      setKioskPurchases([]);
+      return () => {
+        active = false;
+      };
+    }
+
+    const claimDateKeys = Array.from(
+      new Set(
+        leads
+          .filter((lead) => lead.source === 'photo_claim')
+          .map((lead) => {
+            const createdAt = typeof lead.created_at === 'string' ? new Date(lead.created_at) : null;
+            return createdAt && !Number.isNaN(createdAt.getTime()) ? localDateKey(createdAt, kioskTimezone) : null;
+          })
+          .filter((value): value is string => Boolean(value)),
+      ),
+    ).sort();
+
+    if (claimDateKeys.length === 0) {
+      setKioskPurchases([]);
+      return () => {
+        active = false;
+      };
+    }
+
+    const earliestClaimDate = claimDateKeys[0];
+    const latestClaimDate = claimDateKeys[claimDateKeys.length - 1];
+    const requestedDates: string[] = [];
+    let cursor = shiftDateKey(earliestClaimDate, -30);
+    while (cursor <= latestClaimDate) {
+      requestedDates.push(cursor);
+      cursor = shiftDateKey(cursor, 1);
+    }
+
+    Promise.all(requestedDates.map((businessDate) => fetchKioskPhotosForDay(parkId, businessDate)))
+      .then((results) => {
+        if (!active) return;
+        const deduped = new Map<string, KioskPurchaseRow>();
+        results.forEach((result) => {
+          (result.purchases ?? []).forEach((purchase) => {
+            if (typeof purchase.id === 'string' && purchase.id.length > 0) {
+              deduped.set(purchase.id, purchase);
+            }
+          });
+        });
+
+        setKioskPurchases(
+          Array.from(deduped.values()).sort(
+            (left, right) => new Date(right.capturedAt).getTime() - new Date(left.capturedAt).getTime(),
+          ),
+        );
+      })
+      .catch((loadError) => {
+        if (!active) return;
+        setKioskPurchases([]);
+        console.warn('Kaufdaten für Verzögerungsanalyse nicht verfügbar:', loadError);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [isKioskPark, kioskCheckLoading, kioskTimezone, leads, parkId]);
 
   async function loadData() {
     setLoading(true);
@@ -533,62 +691,186 @@ export default function Leads() {
       .sort((a, b) => b.count - a.count || a.countryName.localeCompare(b.countryName));
   }, [leads]);
 
-  const topCountries = countryStats.slice(0, 6);
-
-  const hourlyData = useMemo<HourBucket[]>(() => {
-    const counts = Array.from({ length: 24 }, (_, hour) => ({ hour, count: 0, label: `${String(hour).padStart(2, '0')}:00` }));
-    leads.forEach((lead) => {
-      const createdAt = typeof lead.created_at === 'string' ? lead.created_at : '';
-      const date = createdAt ? new Date(createdAt) : null;
-      if (!date || Number.isNaN(date.getTime())) return;
-      counts[date.getHours()].count += 1;
-    });
-    return counts;
-  }, [leads]);
-
-  const peakHour = useMemo(
-    () => hourlyData.reduce((best, bucket) => (bucket.count > best.count ? bucket : best), hourlyData[0] || { hour: 0, count: 0, label: '00:00' }),
-    [hourlyData],
-  );
-
-  const leadsWithTimestamps = useMemo(
-    () =>
-      leads
-        .map((lead) => {
-          const createdAt = typeof lead.created_at === 'string' ? lead.created_at : '';
-          const date = createdAt ? new Date(createdAt) : null;
-          return date && !Number.isNaN(date.getTime()) ? date : null;
-        })
-        .filter((date): date is Date => date !== null),
-    [leads],
-  );
-
-  const latestLeadLabel = useMemo(() => {
-    const latestLead = leadsWithTimestamps.reduce<Date | null>((latest, current) => {
-      if (!latest || current.getTime() > latest.getTime()) return current;
-      return latest;
-    }, null);
-
-    if (!latestLead) return 'Noch keine Zeitdaten';
-    return latestLead.toLocaleString('de-DE', {
-      day: '2-digit',
-      month: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  }, [leadsWithTimestamps]);
-
   const optInRate = stats.total > 0 ? Math.round((stats.optedIn / stats.total) * 100) : 0;
   const worldMapMarkup = useMemo(
     () => buildWorldMapMarkup(worldMapSvg, countryStats, hoveredCountryInfo?.countryCode || selectedCountry),
     [countryStats, hoveredCountryInfo?.countryCode, selectedCountry, worldMapSvg],
   );
+  const resolvedCountryStats = useMemo(
+    () => resolveLeadMapPoints(countryStats, worldMapMarkup),
+    [countryStats, worldMapMarkup],
+  );
+  const topCountries = resolvedCountryStats.slice(0, 6);
   const hoveredCountryStat = hoveredCountryInfo?.countryCode
-    ? countryStats.find((country) => country.countryCode === hoveredCountryInfo.countryCode) || null
+    ? resolvedCountryStats.find((country) => country.countryCode === hoveredCountryInfo.countryCode) || null
     : null;
   const hoveredCountryLabel = hoveredCountryStat
     ? `${hoveredCountryStat.count} aus ${hoveredCountryStat.countryName}`
     : null;
+
+  const claimDelayMatches = useMemo<ClaimDelayMatch[]>(() => {
+    if (!isKioskPark || kioskPurchases.length === 0) return [];
+
+    const purchasesByPhotoId = new Map<string, { id: string; purchasedAt: Date }>();
+    kioskPurchases.forEach((purchase) => {
+      if (typeof purchase.id !== 'string' || purchase.id.length === 0) return;
+      const purchasedAt = new Date(purchase.capturedAt);
+      if (Number.isNaN(purchasedAt.getTime())) return;
+      purchasesByPhotoId.set(purchase.id, { id: purchase.id, purchasedAt });
+    });
+
+    const purchasesByEmail = new Map<string, { id: string; purchasedAt: Date }[]>();
+    kioskPurchases.forEach((purchase) => {
+      const email = normalizeEmail(purchase.email);
+      if (!email) return;
+      const purchasedAt = new Date(purchase.capturedAt);
+      if (Number.isNaN(purchasedAt.getTime())) return;
+
+      const bucket = purchasesByEmail.get(email) ?? [];
+      bucket.push({ id: purchase.id, purchasedAt });
+      purchasesByEmail.set(email, bucket);
+    });
+
+    purchasesByEmail.forEach((bucket) => {
+      bucket.sort((left, right) => left.purchasedAt.getTime() - right.purchasedAt.getTime());
+    });
+
+    const leadsByEmail = new Map<string, { leadId: string; claimedAt: Date }[]>();
+    const directMatches: ClaimDelayMatch[] = [];
+    leads.forEach((lead) => {
+      if (lead.source !== 'photo_claim') return;
+      const claimedAt = typeof lead.created_at === 'string' ? new Date(lead.created_at) : null;
+      if (!claimedAt || Number.isNaN(claimedAt.getTime())) return;
+      const photoId = typeof lead.photo_id === 'string' ? lead.photo_id : null;
+
+      if (photoId && purchasesByPhotoId.has(photoId)) {
+        const purchaseEntry = purchasesByPhotoId.get(photoId)!;
+        if (purchaseEntry.purchasedAt.getTime() <= claimedAt.getTime()) {
+          const delayMs = Math.max(0, claimedAt.getTime() - purchaseEntry.purchasedAt.getTime());
+          const claimedOnLaterDay =
+            localDateKey(purchaseEntry.purchasedAt, kioskTimezone) !== localDateKey(claimedAt, kioskTimezone);
+          const closingMinutes = closingMinutesForDate(purchaseEntry.purchasedAt, kioskTimezone, kioskOpeningHours);
+          const claimedAfterClose =
+            !claimedOnLaterDay &&
+            closingMinutes !== null &&
+            localMinutes(claimedAt, kioskTimezone) > closingMinutes;
+          const afterCloseMs =
+            claimedAfterClose && closingMinutes !== null
+              ? Math.max(0, localMinutes(claimedAt, kioskTimezone) - closingMinutes) * 60000
+              : null;
+
+          directMatches.push({
+            leadId: String(lead.id ?? `${photoId}-${claimedAt.toISOString()}`),
+            email: normalizeEmail(lead.email) ?? '',
+            purchasedAt: purchaseEntry.purchasedAt,
+            claimedAt,
+            delayMs,
+            claimedAfterClose,
+            claimedOnLaterDay,
+            afterCloseMs,
+          });
+          return;
+        }
+      }
+
+      const email = normalizeEmail(lead.email);
+      if (!email) return;
+
+      const bucket = leadsByEmail.get(email) ?? [];
+      bucket.push({ leadId: String(lead.id ?? `${email}-${claimedAt.toISOString()}`), claimedAt });
+      leadsByEmail.set(email, bucket);
+    });
+
+    const matches: ClaimDelayMatch[] = [...directMatches];
+
+    leadsByEmail.forEach((leadBucket, email) => {
+      const purchaseBucket = purchasesByEmail.get(email);
+      if (!purchaseBucket || purchaseBucket.length === 0) return;
+
+      leadBucket.sort((left, right) => left.claimedAt.getTime() - right.claimedAt.getTime());
+      const usedPurchaseIndexes = new Set<number>();
+
+      leadBucket.forEach((leadEntry) => {
+        let matchedPurchaseIndex = -1;
+        for (let index = purchaseBucket.length - 1; index >= 0; index -= 1) {
+          if (usedPurchaseIndexes.has(index)) continue;
+          if (purchaseBucket[index].purchasedAt.getTime() <= leadEntry.claimedAt.getTime()) {
+            matchedPurchaseIndex = index;
+            break;
+          }
+        }
+
+        if (matchedPurchaseIndex === -1) return;
+
+        usedPurchaseIndexes.add(matchedPurchaseIndex);
+        const purchaseEntry = purchaseBucket[matchedPurchaseIndex];
+        const delayMs = Math.max(0, leadEntry.claimedAt.getTime() - purchaseEntry.purchasedAt.getTime());
+        const claimedOnLaterDay =
+          localDateKey(purchaseEntry.purchasedAt, kioskTimezone) !== localDateKey(leadEntry.claimedAt, kioskTimezone);
+        const closingMinutes = closingMinutesForDate(purchaseEntry.purchasedAt, kioskTimezone, kioskOpeningHours);
+        const claimedAfterClose =
+          !claimedOnLaterDay &&
+          closingMinutes !== null &&
+          localMinutes(leadEntry.claimedAt, kioskTimezone) > closingMinutes;
+        const afterCloseMs =
+          claimedAfterClose && closingMinutes !== null
+            ? Math.max(0, localMinutes(leadEntry.claimedAt, kioskTimezone) - closingMinutes) * 60000
+            : null;
+
+        matches.push({
+          leadId: leadEntry.leadId,
+          email,
+          purchasedAt: purchaseEntry.purchasedAt,
+          claimedAt: leadEntry.claimedAt,
+          delayMs,
+          claimedAfterClose,
+          claimedOnLaterDay,
+          afterCloseMs,
+        });
+      });
+    });
+
+    return matches.sort((left, right) => right.delayMs - left.delayMs);
+  }, [isKioskPark, kioskOpeningHours, kioskPurchases, kioskTimezone, leads]);
+
+  const delayInsights = useMemo(() => {
+    const matchedCount = claimDelayMatches.length;
+    if (matchedCount === 0) {
+      return {
+        matchedCount: 0,
+        avgDelayLabel: '—',
+        maxDelayLabel: '—',
+        minDelayLabel: '—',
+        afterCloseAvgLabel: '—',
+        afterCloseCount: 0,
+        afterCloseRate: 0,
+        laterDayCount: 0,
+        laterDayRate: 0,
+      };
+    }
+
+    const totalDelayMs = claimDelayMatches.reduce((sum, match) => sum + match.delayMs, 0);
+    const maxDelayMs = Math.max(...claimDelayMatches.map((match) => match.delayMs));
+    const minDelayMs = Math.min(...claimDelayMatches.map((match) => match.delayMs));
+    const afterCloseCount = claimDelayMatches.filter((match) => match.claimedAfterClose).length;
+    const laterDayCount = claimDelayMatches.filter((match) => match.claimedOnLaterDay).length;
+    const afterCloseMatches = claimDelayMatches.filter((match) => typeof match.afterCloseMs === 'number');
+    const afterCloseAvgMs = afterCloseMatches.length > 0
+      ? afterCloseMatches.reduce((sum, match) => sum + (match.afterCloseMs ?? 0), 0) / afterCloseMatches.length
+      : null;
+
+    return {
+      matchedCount,
+      avgDelayLabel: formatDelay(totalDelayMs / matchedCount),
+      maxDelayLabel: formatDelay(maxDelayMs),
+      minDelayLabel: formatDelay(minDelayMs),
+      afterCloseAvgLabel: afterCloseAvgMs === null ? '—' : formatDelay(afterCloseAvgMs),
+      afterCloseCount,
+      afterCloseRate: Math.round((afterCloseCount / matchedCount) * 100),
+      laterDayCount,
+      laterDayRate: Math.round((laterDayCount / matchedCount) * 100),
+    };
+  }, [claimDelayMatches]);
 
   function zoomDetailMapIn() {
     setDetailMapZoom((current) => {
@@ -720,8 +1002,8 @@ export default function Leads() {
   }
 
   const selectedCountryStat =
-    countryStats.find((country) => country.countryCode === selectedCountry) || topCountries[0] || null;
-  const totalMappedLeads = countryStats.reduce((sum, country) => sum + country.count, 0);
+    resolvedCountryStats.find((country) => country.countryCode === selectedCountry) || topCountries[0] || null;
+  const totalMappedLeads = resolvedCountryStats.reduce((sum, country) => sum + country.count, 0);
 
   const columns = [
     ...(selectionMode ? [{
@@ -882,11 +1164,11 @@ export default function Leads() {
             <div className="px-6 py-5 lg:border-r lg:border-slate-100/90">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <h3 className="text-base font-semibold text-slate-800">Besucher nach Standort</h3>
-                <span className="text-sm text-slate-400">{countryStats.length} Länder</span>
+                <span className="text-sm text-slate-400">{resolvedCountryStats.length} Länder</span>
               </div>
               <LeadWorldMap
                 svgMarkup={worldMapMarkup}
-                points={countryStats}
+                points={resolvedCountryStats}
                 selectedCountry={selectedCountryStat?.countryCode || null}
                 onSelectCountry={setSelectedCountry}
                 offset={{ x: 0, y: 0 }}
@@ -911,39 +1193,46 @@ export default function Leads() {
 
             <div className="px-6 py-5">
               <div className="mb-3 flex items-center justify-between gap-3">
-                <h3 className="text-base font-semibold text-slate-800">Wann Besucher ihre E-Mail-Adressen abgeben</h3>
-                <div className="rounded-full bg-amber-50 p-2">
-                  <Clock3 className="h-4 w-4 text-amber-600" />
+                <div>
+                  <h3 className="text-base font-semibold text-slate-800">Zeit zwischen Kauf und Einlösung</h3>
+                  <p className="mt-1 text-sm text-slate-500">{delayInsights.matchedCount} eindeutige Zuordnungen</p>
+                </div>
+                <div className="rounded-full bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700">
+                  <span className="inline-flex items-center gap-1.5">
+                    <Clock3 className="h-4 w-4" />
+                    Ø {delayInsights.avgDelayLabel}
+                  </span>
                 </div>
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-2xl border border-slate-100 bg-white/70 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Stärkste Stunde</p>
-                  <p className="mt-2 text-base font-semibold text-slate-800">{formatHourRange(peakHour.hour)}</p>
-                  <p className="mt-1 text-sm text-slate-500">{peakHour.count} Leads</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Durchschnittlich später</p>
+                  <p className="mt-2 text-base font-semibold text-slate-800">{delayInsights.avgDelayLabel}</p>
+                  <p className="mt-1 text-sm text-slate-500">zwischen Kauf und Einlösung</p>
                 </div>
                 <div className="rounded-2xl border border-slate-100 bg-white/70 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Letzte Abgabe</p>
-                  <p className="mt-2 text-base font-semibold text-slate-800">{latestLeadLabel}</p>
-                  <p className="mt-1 text-sm text-slate-500">Zuletzt erkannt</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Nach Parkschluss</p>
+                  <p className="mt-2 text-base font-semibold text-slate-800">{delayInsights.afterCloseAvgLabel}</p>
+                  <p className="mt-1 text-sm text-slate-500">{delayInsights.afterCloseRate}% der Einlösungen</p>
+                </div>
+                <div className="rounded-2xl border border-slate-100 bg-white/70 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Schnellste Einlösung</p>
+                  <p className="mt-2 text-base font-semibold text-slate-800">{delayInsights.minDelayLabel}</p>
+                  <p className="mt-1 text-sm text-slate-500">frühester gemessener Abstand</p>
+                </div>
+                <div className="rounded-2xl border border-slate-100 bg-white/70 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Nächster Tag oder später</p>
+                  <p className="mt-2 text-base font-semibold text-slate-800">{delayInsights.laterDayRate}%</p>
+                  <p className="mt-1 text-sm text-slate-500">{delayInsights.laterDayCount} von {delayInsights.matchedCount}</p>
                 </div>
               </div>
 
-              <div className="mt-4 h-[150px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={hourlyData}>
-                    <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} interval={2} />
-                    <YAxis hide />
-                    <Tooltip
-                      formatter={(value: number) => [`${value} Leads`, 'Eingänge']}
-                      labelFormatter={(label) => `${label} Uhr`}
-                      contentStyle={{ background: 'rgba(255,255,255,0.95)', border: '1px solid rgba(226,232,240,0.9)', borderRadius: '14px', boxShadow: '0 18px 40px rgba(15,23,42,0.08)' }}
-                    />
-                    <Bar dataKey="count" fill="#f59e0b" radius={[5, 5, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+              {delayInsights.matchedCount === 0 && (
+                <div className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 px-5 py-4 text-sm text-slate-500">
+                  Für die aktuelle Auswahl konnten Kauf und Einlösung noch nicht eindeutig verknüpft werden.
+                </div>
+              )}
             </div>
           </div>
         </GlassCard>
@@ -964,7 +1253,7 @@ export default function Leads() {
             <div className="space-y-4">
               <LeadWorldMap
                 svgMarkup={worldMapMarkup}
-                points={countryStats}
+                points={resolvedCountryStats}
                 selectedCountry={selectedCountryStat?.countryCode || null}
                 onSelectCountry={setSelectedCountry}
                 hoveredCountry={hoveredCountryInfo?.countryCode || null}
@@ -981,21 +1270,25 @@ export default function Leads() {
               <div className="grid gap-4 sm:grid-cols-3">
                 <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Länder</p>
-                  <p className="mt-2 text-2xl font-bold text-slate-800">{countryStats.length}</p>
+                  <p className="mt-2 text-2xl font-bold text-slate-800">{resolvedCountryStats.length}</p>
                 </div>
                 <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Leads mit Land</p>
                   <p className="mt-2 text-2xl font-bold text-slate-800">{formatNumber(totalMappedLeads)}</p>
                 </div>
                 <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Stärkste Stunde</p>
-                  <p className="mt-2 text-lg font-bold text-slate-800">{formatHourRange(peakHour.hour)}</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                    {delayInsights.matchedCount > 0 ? 'Ø Kauf bis digital' : 'Digitale Zuordnungen'}
+                  </p>
+                  <p className="mt-2 text-lg font-bold text-slate-800">
+                    {delayInsights.matchedCount > 0 ? delayInsights.avgDelayLabel : '—'}
+                  </p>
                 </div>
               </div>
             </div>
 
-            <div className="space-y-3">
-              {countryStats.map((country) => {
+            <div className="max-h-[420px] space-y-3 overflow-y-auto pr-2">
+              {resolvedCountryStats.map((country) => {
                 const share = totalMappedLeads > 0 ? Math.round((country.count / totalMappedLeads) * 100) : 0;
                 const active = country.countryCode === selectedCountryStat?.countryCode;
                 return (
