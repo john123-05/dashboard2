@@ -7,10 +7,11 @@ import {
   type ParkDashboardData,
   type ParkDashboardEvent,
 } from '../lib/parkDashboard';
-import { fetchKioskPurchases } from '../lib/kioskSales';
+import { fetchKioskPurchases, getPriceCentsForTimestamp } from '../lib/kioskSales';
 import { formatCurrency, formatDateTime, statusColor, exportToCSV } from '../lib/utils';
 import DataTable, { type DataTableColumn } from '../components/ui/DataTable';
 import { useI18n } from '../lib/i18n';
+import { getOperatorUiText } from '../lib/operatorUiText';
 import { usePark } from '../contexts/ParkContext';
 
 interface PurchaseRow {
@@ -39,7 +40,7 @@ interface StripePayment {
 }
 
 export default function Purchases() {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const { parkId, isKioskPark, kioskCheckLoading } = usePark();
   const [parkData, setParkData] = useState<ParkDashboardData | null>(null);
   const [purchases, setPurchases] = useState<PurchaseRow[]>([]);
@@ -56,7 +57,7 @@ export default function Purchases() {
 
   async function loadData() {
     if (!parkId) {
-      setError('No park selected');
+      setError(t('app.none'));
       setLoading(false);
       return;
     }
@@ -74,20 +75,21 @@ export default function Purchases() {
       if (isKioskPark) {
         const kioskResult = await fetchKioskPurchases(parkId);
         const priceCents = kioskResult.priceCents ?? 0;
+        const priceHistory = kioskResult.priceHistory ?? [];
         const kioskRows: PurchaseRow[] = kioskResult.purchases.map((purchase) => ({
           id: purchase.id,
           source: 'kiosk' as const,
-          amount_cents: priceCents,
+          amount_cents: getPriceCentsForTimestamp(purchase.capturedAt, priceCents, priceHistory),
           amount_kind: 'confirmed' as const,
           currency: 'EUR',
           status: purchase.email ? 'claimed' : 'unknown',
           payment_method: 'kiosk',
           reference: purchase.cameraCode,
           purchased_at: purchase.capturedAt,
-          customer_or_device: purchase.email || purchase.fullName || 'Unbekannt',
+          customer_or_device: purchase.email || purchase.fullName || t('app.unknown'),
           description: purchase.email
-            ? `Foto am Automaten gekauft, später per QR-Code abgeholt (${purchase.email})`
-            : 'Foto am Automaten gekauft',
+            ? getOperatorUiText(language, 'purchases.description.kiosk_claimed', { email: purchase.email })
+            : getOperatorUiText(language, 'purchases.description.kiosk_bought'),
         }));
         setPurchases(kioskRows);
         setParkData(createEmptyParkDashboardData(parkId));
@@ -147,7 +149,7 @@ export default function Purchases() {
           payment_method: 'stripe',
           reference: payment.id,
           purchased_at: payment.created_at,
-          customer_or_device: payment.customer_email || payment.customer_name || 'Stripe customer',
+          customer_or_device: payment.customer_email || payment.customer_name || getOperatorUiText(language, 'purchases.customer.stripe'),
           description: payment.description || 'Stripe payment',
         }))
         .sort((left, right) => new Date(right.purchased_at).getTime() - new Date(left.purchased_at).getTime());
@@ -159,7 +161,7 @@ export default function Purchases() {
       setError(null);
       setLoading(false);
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : 'Unknown error');
+      setError(loadError instanceof Error ? loadError.message : t('app.unknown'));
       setLoading(false);
     }
   }
@@ -177,7 +179,7 @@ export default function Purchases() {
         (event.purchase_signal === 'manual_print' ? 'local_unknown' : 'local'),
       reference: event.source_file,
       purchased_at: event.occurred_at,
-      customer_or_device: event.device || 'Local device',
+      customer_or_device: event.device || getOperatorUiText(language, 'purchases.customer.local_device'),
       description: event.description,
     };
   }
@@ -223,7 +225,7 @@ export default function Purchases() {
         <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('purchases.title')}</h2>
         <div className="rounded-2xl border border-red-200 bg-red-50 p-6">
           <h3 className="mb-2 text-lg font-semibold text-red-800">{t('overview.error_title')}</h3>
-          <p className="mb-4 text-sm text-red-600">{error || 'Unknown error'}</p>
+          <p className="mb-4 text-sm text-red-600">{error || t('app.unknown')}</p>
           <button onClick={loadData} className="glass-button-secondary">
             {t('app.retry')}
           </button>
@@ -242,7 +244,7 @@ export default function Purchases() {
     },
     {
       key: 'source',
-      label: 'Source',
+      label: getOperatorUiText(language, 'purchases.table.source'),
       render: (item: PurchaseRow) => (
         <span
           className={`status-badge ${
@@ -253,23 +255,31 @@ export default function Purchases() {
                 : 'bg-emerald-50 text-emerald-700 ring-emerald-200'
           }`}
         >
-          {item.source === 'online' ? 'Online' : item.source === 'kiosk' ? 'Automat' : 'Local'}
+          {item.source === 'online'
+            ? getOperatorUiText(language, 'purchases.source.online')
+            : item.source === 'kiosk'
+              ? getOperatorUiText(language, 'purchases.source.automaton')
+              : getOperatorUiText(language, 'purchases.source.local')}
         </span>
       ),
     },
     {
       key: 'customer_or_device',
-      label: 'Customer / Device',
+      label: getOperatorUiText(language, 'purchases.table.customer_device'),
       render: (item: PurchaseRow) => (
         <span className="font-medium text-slate-700">{item.customer_or_device}</span>
       ),
     },
     {
       key: 'payment_method',
-      label: 'Payment',
+      label: getOperatorUiText(language, 'purchases.table.payment'),
       render: (item: PurchaseRow) => (
         <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
-          {item.payment_method}
+          {item.payment_method === 'kiosk'
+            ? getOperatorUiText(language, 'purchases.source.kiosk')
+            : item.payment_method === 'local'
+              ? getOperatorUiText(language, 'purchases.source.local')
+              : item.payment_method}
         </span>
       ),
     },
@@ -279,13 +289,13 @@ export default function Purchases() {
       render: (item: PurchaseRow) => (
         <div>
           <span className="font-semibold text-slate-800">
-            {item.amount_cents === null ? 'Unknown' : formatCurrency(item.amount_cents, item.currency)}
+            {item.amount_cents === null ? t('app.unknown') : formatCurrency(item.amount_cents, item.currency)}
           </span>
           {item.amount_cents !== null && item.amount_kind === 'detected' && (
-            <p className="mt-0.5 text-xs text-amber-600">Detected, not confirmed</p>
+            <p className="mt-0.5 text-xs text-amber-600">{getOperatorUiText(language, 'purchases.amount.detected')}</p>
           )}
           {item.amount_cents === null && (
-            <p className="mt-0.5 text-xs text-slate-500">No confirmed amount</p>
+            <p className="mt-0.5 text-xs text-slate-500">{getOperatorUiText(language, 'purchases.amount.none')}</p>
           )}
         </div>
       ),
@@ -294,12 +304,18 @@ export default function Purchases() {
       key: 'status',
       label: t('purchases.table.status'),
       render: (item: PurchaseRow) => (
-        <span className={`status-badge ${statusColor(item.status)}`}>{item.status}</span>
+        <span className={`status-badge ${statusColor(item.status)}`}>
+          {item.status === 'unknown'
+            ? t('app.unknown')
+            : item.status === 'claimed'
+              ? getOperatorUiText(language, 'purchases.status.claimed')
+              : item.status}
+        </span>
       ),
     },
     {
       key: 'description',
-      label: 'Description',
+      label: getOperatorUiText(language, 'purchases.table.description'),
       render: (item: PurchaseRow) => (
         <span className="text-slate-600">{item.description}</span>
       ),
@@ -313,8 +329,8 @@ export default function Purchases() {
           <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('purchases.title')}</h2>
           <p className="mt-1 text-sm text-slate-500">
             {isKioskPark
-              ? 'Jedes Foto der letzten ~30 Tage, das am Automaten gekauft wurde'
-              : 'Unified transaction log for Stripe and on-site sales'}
+              ? getOperatorUiText(language, 'purchases.subtitle_kiosk')
+              : getOperatorUiText(language, 'purchases.subtitle_unified')}
           </p>
         </div>
         <button onClick={handleExport} className="glass-button-secondary">
@@ -325,7 +341,7 @@ export default function Purchases() {
 
       {issues.length > 0 && (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-          <p className="text-sm font-medium text-amber-900">Transaction data is partially available.</p>
+          <p className="text-sm font-medium text-amber-900">{getOperatorUiText(language, 'purchases.partial_available')}</p>
           <p className="mt-1 text-sm text-amber-700">{issues.join(' ')}</p>
         </div>
       )}
@@ -347,9 +363,9 @@ export default function Purchases() {
                 }}
                 className="rounded-lg border border-slate-200/60 bg-white/60 px-3 py-1.5 text-sm text-slate-700"
               >
-                <option value="all">All sources</option>
-                <option value="online">Online only</option>
-                <option value="local">Local only</option>
+                <option value="all">{getOperatorUiText(language, 'purchases.filter.all')}</option>
+                <option value="online">{getOperatorUiText(language, 'purchases.filter.online')}</option>
+                <option value="local">{getOperatorUiText(language, 'purchases.filter.local')}</option>
               </select>
             </div>
           )

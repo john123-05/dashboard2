@@ -65,9 +65,14 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const parkRes = await fetchExternal(
-      `parks?select=id,name,price_per_photo_cents,timezone,opening_hours&id=eq.${parkId}`
-    );
+    const [parkRes, historyRes] = await Promise.all([
+      fetchExternal(
+        `parks?select=id,name,price_per_photo_cents,timezone,opening_hours&id=eq.${parkId}`
+      ),
+      fetchExternal(
+        `park_price_history?select=effective_from,price_per_photo_cents,change_mode&park_id=eq.${parkId}&order=effective_from.asc`
+      ),
+    ]);
     if (!parkRes.ok) {
       return new Response(
         JSON.stringify({ error: "Failed to fetch park", details: parkRes.details }),
@@ -148,6 +153,7 @@ Deno.serve(async (req: Request) => {
       JSON.stringify({
         isKioskPark: true,
         priceCents,
+        priceHistory: historyRes.ok ? historyRes.data : [],
         timezone: (park.timezone as string) ?? "Europe/Vienna",
         openingHours: park.opening_hours ?? null,
         days: mergedDays,

@@ -1,6 +1,8 @@
 import type { LucideIcon } from 'lucide-react';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import GlassCard from './GlassCard';
+import { useI18n } from '../../lib/i18n';
+import { getOperatorUiText } from '../../lib/operatorUiText';
 
 interface KPICardProps {
   title: string;
@@ -21,6 +23,7 @@ export default function KPICard({
   iconColor = 'text-brand-600',
   iconBg = 'bg-brand-50',
 }: KPICardProps) {
+  const { language } = useI18n();
   const isPositive = change !== undefined && change >= 0;
 
   return (
@@ -47,7 +50,9 @@ export default function KPICard({
                 {isPositive ? '+' : ''}
                 {change.toFixed(1)}%
               </span>
-              <span className="font-normal text-slate-400">vs last week</span>
+              <span className="font-normal text-slate-400">
+                {getOperatorUiText(language, 'kpi.vs_last_week')}
+              </span>
             </div>
           )}
         </div>

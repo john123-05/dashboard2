@@ -15,9 +15,16 @@ export interface DailySalesRow {
 // set_imst_opening_hours migration.
 export type OpeningHours = Record<string, [string, string] | null>;
 
+export interface KioskPriceHistoryEntry {
+  effective_from: string;
+  price_per_photo_cents: number;
+  change_mode?: 'future' | 'retroactive';
+}
+
 export interface KioskSalesResponse {
   isKioskPark: boolean;
   priceCents: number | null;
+  priceHistory?: KioskPriceHistoryEntry[];
   timezone: string | null;
   openingHours: OpeningHours | null;
   days: DailySalesRow[];
@@ -55,6 +62,7 @@ export interface KioskPurchaseRow {
 export interface KioskPurchasesResponse {
   isKioskPark: boolean;
   priceCents: number | null;
+  priceHistory?: KioskPriceHistoryEntry[];
   purchases: KioskPurchaseRow[];
 }
 
@@ -104,6 +112,62 @@ export interface HourlyBucket {
 export interface RideSnapshot {
   captured_at: string;
   rides_today: number;
+}
+
+function normalizePriceHistory(
+  history: KioskPriceHistoryEntry[] | null | undefined,
+): KioskPriceHistoryEntry[] {
+  return [...(history ?? [])]
+    .filter(
+      (entry) =>
+        typeof entry?.effective_from === 'string' &&
+        Number.isFinite(Number(entry?.price_per_photo_cents)),
+    )
+    .sort((left, right) => left.effective_from.localeCompare(right.effective_from));
+}
+
+function localBusinessDateFromTimestamp(isoString: string, timezone: string): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(new Date(isoString));
+}
+
+export function getPriceCentsForTimestamp(
+  isoString: string,
+  fallbackPriceCents: number,
+  priceHistory?: KioskPriceHistoryEntry[] | null,
+): number {
+  const normalized = normalizePriceHistory(priceHistory);
+  if (normalized.length === 0) return fallbackPriceCents;
+
+  let selected = fallbackPriceCents;
+  for (const entry of normalized) {
+    if (entry.effective_from <= isoString) {
+      selected = Number(entry.price_per_photo_cents) || fallbackPriceCents;
+    } else {
+      break;
+    }
+  }
+  return selected;
+}
+
+export function getPriceCentsForBusinessDate(
+  businessDate: string,
+  fallbackPriceCents: number,
+  timezone: string,
+  priceHistory?: KioskPriceHistoryEntry[] | null,
+): number {
+  const normalized = normalizePriceHistory(priceHistory);
+  if (normalized.length === 0) return fallbackPriceCents;
+
+  let selected = fallbackPriceCents;
+  for (const entry of normalized) {
+    const effectiveBusinessDate = localBusinessDateFromTimestamp(entry.effective_from, timezone);
+    if (effectiveBusinessDate <= businessDate) {
+      selected = Number(entry.price_per_photo_cents) || fallbackPriceCents;
+    } else {
+      break;
+    }
+  }
+  return selected;
 }
 
 // The running daily ride count with timestamps for one local day. Written
@@ -187,25 +251,35 @@ export function bucketPurchasesByHour(
   priceCents: number,
   timezone: string,
   hourRange?: { startHour: number; endHour: number } | null,
+  priceHistory?: KioskPriceHistoryEntry[] | null,
 ): HourlyBucket[] {
   const startHour = hourRange?.startHour ?? 0;
   const endHour = hourRange?.endHour ?? 23;
   const hours = Array.from({ length: endHour - startHour + 1 }, (_, i) => startHour + i);
 
   const counts = new Map<number, number>(hours.map((hour) => [hour, 0]));
+  const revenueByHour = new Map<number, number>(hours.map((hour) => [hour, 0]));
   for (const purchase of purchases) {
     const hour = localHour(purchase.capturedAt, timezone);
-    if (counts.has(hour)) counts.set(hour, (counts.get(hour) ?? 0) + 1);
+    if (counts.has(hour)) {
+      counts.set(hour, (counts.get(hour) ?? 0) + 1);
+      revenueByHour.set(
+        hour,
+        (revenueByHour.get(hour) ?? 0) +
+          getPriceCentsForTimestamp(purchase.capturedAt, priceCents, priceHistory),
+      );
+    }
   }
 
   return hours.map((hour) => {
     const soldCount = counts.get(hour) ?? 0;
+    const revenueCents = revenueByHour.get(hour) ?? 0;
     return {
       hour,
       label: `${String(hour).padStart(2, '0')}:00`,
       soldCount,
-      revenueCents: soldCount * priceCents,
-      revenueEur: (soldCount * priceCents) / 100,
+      revenueCents,
+      revenueEur: revenueCents / 100,
     };
   });
 }
@@ -213,7 +287,12 @@ export function bucketPurchasesByHour(
 // Multiple cameras at one park have independent sequence counters. Prefer the
 // uploader's real ride/photo-taken telemetry; fall back to the old max-min+1
 // estimate when older parks have not rolled out liftpic-sync counters yet.
-export function aggregateByDate(rows: DailySalesRow[], priceCents: number): AggregatedDay[] {
+export function aggregateByDate(
+  rows: DailySalesRow[],
+  priceCents: number,
+  priceHistory?: KioskPriceHistoryEntry[] | null,
+  timezone = 'Europe/Vienna',
+): AggregatedDay[] {
   const byDate = new Map<string, { sold: number; expected: number; hasExpected: boolean }>();
 
   for (const row of rows) {
@@ -235,7 +314,8 @@ export function aggregateByDate(rows: DailySalesRow[], priceCents: number): Aggr
       soldCount: v.sold,
       expectedCount: v.hasExpected ? v.expected : null,
       conversionRate: v.hasExpected && v.expected > 0 ? v.sold / v.expected : null,
-      revenueCents: v.sold * priceCents,
+      revenueCents:
+        v.sold * getPriceCentsForBusinessDate(businessDate, priceCents, timezone, priceHistory),
     }))
     .sort((a, b) => b.businessDate.localeCompare(a.businessDate));
 }

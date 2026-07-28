@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Clock3, Download, Mail, Minus, Plus, Trash2, UserPlus } from 'lucide-react';
+import { Download, Mail, Minus, Plus, Trash2, UserPlus } from 'lucide-react';
 import { getOptionalSourceWarning, invokeEdgeFunction, isEdgeSourceUnavailable } from '../lib/edgeFunctions';
 import { fetchKioskPhotosForDay, type KioskPurchaseRow, type OpeningHours } from '../lib/kioskSales';
 import { formatDate, formatNumber, exportToCSV } from '../lib/utils';
@@ -126,16 +126,16 @@ function CompactMetricCard({
   iconWrapClassName: string;
 }) {
   return (
-    <GlassCard className="h-full min-h-[172px] p-5">
-      <div className="space-y-3">
+    <GlassCard className="h-full min-h-[146px] p-4">
+      <div className="space-y-2.5">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">{title}</p>
         <div className="flex items-center gap-3">
-          <p className="text-3xl font-bold tracking-tight text-slate-800">{value}</p>
-          <div className={`rounded-xl p-2.5 ${iconWrapClassName}`}>
+          <p className="text-[2rem] font-bold tracking-tight text-slate-800">{value}</p>
+          <div className={`rounded-xl p-2 ${iconWrapClassName}`}>
             <Icon className={`h-4.5 w-4.5 ${iconClassName}`} />
           </div>
         </div>
-        <p className="max-w-[11rem] text-sm leading-6 text-slate-500">{subtitle}</p>
+        <p className="max-w-[10rem] text-sm leading-5 text-slate-500">{subtitle}</p>
       </div>
     </GlassCard>
   );
@@ -516,6 +516,7 @@ export default function Leads() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [claimDelayLoading, setClaimDelayLoading] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -550,6 +551,7 @@ export default function Leads() {
 
     if (kioskCheckLoading || !parkId || !isKioskPark) {
       setKioskPurchases([]);
+      setClaimDelayLoading(false);
       return () => {
         active = false;
       };
@@ -569,26 +571,29 @@ export default function Leads() {
 
     if (claimDateKeys.length === 0) {
       setKioskPurchases([]);
+      setClaimDelayLoading(false);
       return () => {
         active = false;
       };
     }
 
-    const earliestClaimDate = claimDateKeys[0];
-    const latestClaimDate = claimDateKeys[claimDateKeys.length - 1];
-    const requestedDates: string[] = [];
-    let cursor = shiftDateKey(earliestClaimDate, -30);
-    while (cursor <= latestClaimDate) {
-      requestedDates.push(cursor);
-      cursor = shiftDateKey(cursor, 1);
-    }
+    const requestedDates = Array.from(
+      new Set(
+        claimDateKeys.flatMap((dateKey) =>
+          Array.from({ length: 8 }, (_, offset) => shiftDateKey(dateKey, -offset)),
+        ),
+      ),
+    ).sort();
 
-    Promise.all(requestedDates.map((businessDate) => fetchKioskPhotosForDay(parkId, businessDate)))
+    setClaimDelayLoading(true);
+
+    Promise.allSettled(requestedDates.map((businessDate) => fetchKioskPhotosForDay(parkId, businessDate)))
       .then((results) => {
         if (!active) return;
         const deduped = new Map<string, KioskPurchaseRow>();
         results.forEach((result) => {
-          (result.purchases ?? []).forEach((purchase) => {
+          if (result.status !== 'fulfilled') return;
+          (result.value.purchases ?? []).forEach((purchase) => {
             if (typeof purchase.id === 'string' && purchase.id.length > 0) {
               deduped.set(purchase.id, purchase);
             }
@@ -600,10 +605,12 @@ export default function Leads() {
             (left, right) => new Date(right.capturedAt).getTime() - new Date(left.capturedAt).getTime(),
           ),
         );
+        setClaimDelayLoading(false);
       })
       .catch((loadError) => {
         if (!active) return;
         setKioskPurchases([]);
+        setClaimDelayLoading(false);
         console.warn('Kaufdaten für Verzögerungsanalyse nicht verfügbar:', loadError);
       });
 
@@ -1137,7 +1144,7 @@ export default function Leads() {
         </div>
       )}
 
-      <div className="grid gap-4 xl:grid-cols-[240px_240px_minmax(0,1fr)]">
+      <div className="grid gap-4 xl:grid-cols-[210px_210px_minmax(0,1fr)]">
         <CompactMetricCard
           title={t('leads.total')}
           value={formatNumber(stats.total)}
@@ -1160,7 +1167,7 @@ export default function Leads() {
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-500">Deine Besucher kennenlernen</p>
           </div>
 
-          <div className="grid gap-0 lg:grid-cols-[1.05fr_0.95fr]">
+          <div className="grid gap-0 lg:grid-cols-[1.15fr_0.85fr]">
             <div className="px-6 py-5 lg:border-r lg:border-slate-100/90">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <h3 className="text-base font-semibold text-slate-800">Besucher nach Standort</h3>
@@ -1192,43 +1199,40 @@ export default function Leads() {
             </div>
 
             <div className="px-6 py-5">
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <div>
-                  <h3 className="text-base font-semibold text-slate-800">Zeit zwischen Kauf und Einlösung</h3>
-                  <p className="mt-1 text-sm text-slate-500">{delayInsights.matchedCount} eindeutige Zuordnungen</p>
+              <div className="mb-3">
+                <h3 className="text-base font-semibold text-slate-800">Zeit zwischen Kauf und Einlösung</h3>
+              </div>
+
+              <div className="grid gap-2.5 sm:grid-cols-2">
+                <div className="rounded-2xl border border-slate-100 bg-white/70 p-3">
+                  <p className="text-[11px] font-bold tracking-[0.08em] text-slate-500">Durchschnittlich später</p>
+                  <p className="mt-1.5 text-base font-bold text-slate-800">{delayInsights.avgDelayLabel}</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-500">zwischen Kauf und Einlösung</p>
                 </div>
-                <div className="rounded-full bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700">
-                  <span className="inline-flex items-center gap-1.5">
-                    <Clock3 className="h-4 w-4" />
-                    Ø {delayInsights.avgDelayLabel}
-                  </span>
+                <div className="rounded-2xl border border-slate-100 bg-white/70 p-3">
+                  <p className="text-[11px] font-bold tracking-[0.08em] text-slate-500">Nach Parkschluss</p>
+                  <p className="mt-1.5 text-base font-bold text-slate-800">{delayInsights.afterCloseAvgLabel}</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-500">{delayInsights.afterCloseRate}% der Einlösungen</p>
+                </div>
+                <div className="rounded-2xl border border-slate-100 bg-white/70 p-3">
+                  <p className="text-[11px] font-bold tracking-[0.08em] text-slate-500">Schnellste Einlösung</p>
+                  <p className="mt-1.5 text-base font-bold text-slate-800">{delayInsights.minDelayLabel}</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-500">frühester gemessener Abstand</p>
+                </div>
+                <div className="rounded-2xl border border-slate-100 bg-white/70 p-3">
+                  <p className="text-[11px] font-bold tracking-[0.08em] text-slate-500">Nächster Tag oder später</p>
+                  <p className="mt-1.5 text-base font-bold text-slate-800">{delayInsights.laterDayRate}%</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-500">{delayInsights.laterDayCount} von {delayInsights.matchedCount}</p>
                 </div>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-2xl border border-slate-100 bg-white/70 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Durchschnittlich später</p>
-                  <p className="mt-2 text-base font-semibold text-slate-800">{delayInsights.avgDelayLabel}</p>
-                  <p className="mt-1 text-sm text-slate-500">zwischen Kauf und Einlösung</p>
+              {claimDelayLoading && (
+                <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/70 px-5 py-4 text-sm text-slate-500">
+                  Kauf und Einlösung werden gerade verknüpft…
                 </div>
-                <div className="rounded-2xl border border-slate-100 bg-white/70 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Nach Parkschluss</p>
-                  <p className="mt-2 text-base font-semibold text-slate-800">{delayInsights.afterCloseAvgLabel}</p>
-                  <p className="mt-1 text-sm text-slate-500">{delayInsights.afterCloseRate}% der Einlösungen</p>
-                </div>
-                <div className="rounded-2xl border border-slate-100 bg-white/70 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Schnellste Einlösung</p>
-                  <p className="mt-2 text-base font-semibold text-slate-800">{delayInsights.minDelayLabel}</p>
-                  <p className="mt-1 text-sm text-slate-500">frühester gemessener Abstand</p>
-                </div>
-                <div className="rounded-2xl border border-slate-100 bg-white/70 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Nächster Tag oder später</p>
-                  <p className="mt-2 text-base font-semibold text-slate-800">{delayInsights.laterDayRate}%</p>
-                  <p className="mt-1 text-sm text-slate-500">{delayInsights.laterDayCount} von {delayInsights.matchedCount}</p>
-                </div>
-              </div>
+              )}
 
-              {delayInsights.matchedCount === 0 && (
+              {!claimDelayLoading && delayInsights.matchedCount === 0 && (
                 <div className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 px-5 py-4 text-sm text-slate-500">
                   Für die aktuelle Auswahl konnten Kauf und Einlösung noch nicht eindeutig verknüpft werden.
                 </div>

@@ -68,9 +68,14 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const parkRes = await fetchExternal(
-      `parks?select=id,price_per_photo_cents&id=eq.${parkId}`
-    );
+    const [parkRes, historyRes] = await Promise.all([
+      fetchExternal(
+        `parks?select=id,price_per_photo_cents&id=eq.${parkId}`
+      ),
+      fetchExternal(
+        `park_price_history?select=effective_from,price_per_photo_cents,change_mode&park_id=eq.${parkId}&order=effective_from.asc`
+      ),
+    ]);
     if (!parkRes.ok) {
       return new Response(
         JSON.stringify({ error: "Failed to fetch park", details: parkRes.details }),
@@ -83,7 +88,7 @@ Deno.serve(async (req: Request) => {
 
     if (!park || priceCents === null) {
       return new Response(
-        JSON.stringify({ isKioskPark: false, priceCents: null, purchases: [] }),
+        JSON.stringify({ isKioskPark: false, priceCents: null, priceHistory: [], purchases: [] }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -138,7 +143,12 @@ Deno.serve(async (req: Request) => {
     });
 
     return new Response(
-      JSON.stringify({ isKioskPark: true, priceCents, purchases }),
+      JSON.stringify({
+        isKioskPark: true,
+        priceCents,
+        priceHistory: historyRes.ok ? historyRes.data : [],
+        purchases,
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
