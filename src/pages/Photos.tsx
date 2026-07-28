@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Camera, ShoppingBag, Eye, Clock, RefreshCw, Search, CalendarClock, ChevronLeft, ChevronRight, X } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { getOptionalSourceWarning, invokeEdgeFunction, isEdgeSourceUnavailable } from '../lib/edgeFunctions';
 import { formatNumber, formatPercent, formatRelative, formatDateTime } from '../lib/utils';
@@ -28,6 +27,10 @@ interface AttractionPhotoStats {
 }
 
 const CHART_COLORS = ['#0ea5e9', '#10b981', '#f59e0b', '#94a3b8'];
+
+function qrImageUrlFor(value: string): string {
+  return `https://api.qrserver.com/v1/create-qr-code/?size=168x168&margin=12&data=${encodeURIComponent(value)}`;
+}
 
 export default function Photos() {
   const { t } = useI18n();
@@ -247,13 +250,11 @@ export default function Photos() {
           <div className="mt-4 rounded-2xl border border-slate-200/70 bg-white/70 p-3 sm:p-4">
             <div className="flex flex-col items-center gap-3">
               <div className="rounded-2xl bg-white p-3 shadow-sm">
-                <QRCodeSVG
-                  value={claimLink}
-                  size={168}
-                  bgColor="#ffffff"
-                  fgColor="#0f172a"
-                  includeMargin
-                  level="M"
+                <img
+                  src={qrImageUrlFor(claimLink)}
+                  alt="QR-Code zum Claim-Link"
+                  className="h-[168px] w-[168px] max-w-full"
+                  loading="lazy"
                 />
               </div>
               <div className="space-y-1 text-center">
