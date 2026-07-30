@@ -95,12 +95,18 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const [daysRes, rideRes] = await Promise.all([
+    const [daysRes, rideRes, printsRes] = await Promise.all([
       fetchExternal(
         `park_photo_sales_daily?select=camera_code,business_date,photos_sold_count,min_file_code,max_file_code&park_id=eq.${parkId}&order=business_date.desc`
       ),
       fetchExternal(
         `park_photo_ride_daily?select=machine_id,camera_code,business_date,photos_taken_count,photos_sold_count&park_id=eq.${parkId}&order=business_date.desc`
+      ),
+      // Real sold count = physical prints (PrintCount.txt), derived server-side
+      // from the ride snapshots. Immune to a polluted qrcode folder / upload
+      // queue. Used as the authoritative "sold" for every day it has data.
+      fetchExternal(
+        `park_photo_prints_daily?select=business_date,prints_sold&park_id=eq.${parkId}&order=business_date.desc`
       ),
     ]);
     if (!daysRes.ok) {
@@ -138,11 +144,25 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    const allDates = new Set<string>([...salesByDate.keys(), ...ridesByDate.keys()]);
+    // Print-based sold (the truth). Overrides everything for days it covers.
+    const printsByDate = new Map<string, number>();
+    if (printsRes.ok) {
+      for (const row of printsRes.data as Record<string, unknown>[]) {
+        const date = String(row.business_date ?? "");
+        if (date) printsByDate.set(date, numericValue(row.prints_sold));
+      }
+    }
+
+    const allDates = new Set<string>([...salesByDate.keys(), ...ridesByDate.keys(), ...printsByDate.keys()]);
     const mergedDays = Array.from(allDates)
       .map((date) => {
         const rides = ridesByDate.get(date);
-        const sold = salesByDate.has(date) ? (salesByDate.get(date) as number) : (rides?.sold ?? 0);
+        // Prefer real prints; fall back to the sales rollup, then the ride sold.
+        const sold = printsByDate.has(date)
+          ? (printsByDate.get(date) as number)
+          : salesByDate.has(date)
+            ? (salesByDate.get(date) as number)
+            : (rides?.sold ?? 0);
         return {
           camera_code: "all",
           business_date: date,
