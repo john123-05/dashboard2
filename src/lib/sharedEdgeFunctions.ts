@@ -30,6 +30,19 @@ export async function invokeSharedEdgeFunction<T = any>(
       data: { session },
     } = await supabase.auth.getSession();
 
+    // Ohne Sitzung gar nicht erst losschicken.
+    //
+    // Frueher ging ersatzweise der anonyme Schluessel des GETEILTEN Projekts
+    // raus - an eine Function, die gegen das OPERATOR-Projekt prueft. Die
+    // antwortete dann voellig zu Recht "Invalid operator auth token", und man
+    // suchte den Fehler beim Schluessel statt bei der fehlenden Anmeldung.
+    // Besonders irrefuehrend auf localhost: eigener Ursprung, eigener
+    // Sitzungsspeicher - dort ist man abgemeldet, waehrend die
+    // veroeffentlichte Seite laengst angemeldet ist.
+    if (!session?.access_token) {
+      return { data: null, error: 'Nicht angemeldet - bitte neu einloggen.' };
+    }
+
     const qs =
       query && Object.keys(query).length > 0
         ? `?${new URLSearchParams(
@@ -43,7 +56,7 @@ export async function invokeSharedEdgeFunction<T = any>(
       method,
       headers: {
         apikey: EXTERNAL_SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${session?.access_token ?? EXTERNAL_SUPABASE_ANON_KEY}`,
+        Authorization: `Bearer ${session.access_token}`,
         'Content-Type': 'application/json',
       },
       body: body && method !== 'GET' ? JSON.stringify(body) : undefined,
