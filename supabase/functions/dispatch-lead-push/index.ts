@@ -93,21 +93,6 @@ function buildParkInactivityNotification(record: Record<string, unknown>): { tit
   const minutesRaw = record.minutes_since_last_photo;
   const minutes = typeof minutesRaw === 'number' ? minutesRaw : Number(minutesRaw) || 60;
 
-  // check_park_inactivity() tells these two apart by comparing photos against
-  // the machine's own heartbeat: a PC that's still checking in but genuinely
-  // has no riders is a different problem from one that can't reach us at all
-  // (photos also stop then, but for a completely different, PC/network
-  // reason) - see the 2026-08-07 Imst outage this was built for.
-  if (record.reason === 'uploader_disconnected') {
-    const heartbeatMinutesRaw = record.minutes_since_heartbeat;
-    const heartbeatMinutes =
-      typeof heartbeatMinutesRaw === 'number' ? heartbeatMinutesRaw : Number(heartbeatMinutesRaw) || minutes;
-    return {
-      title: `Verbindung zu ${parkName} verloren`,
-      body: `Uploader meldet sich seit ${formatSinceDuration(heartbeatMinutes)} nicht mehr – PC/Netzwerk prüfen.`,
-    };
-  }
-
   return {
     title: `Keine neuen Bilder bei ${parkName}`,
     body: `Seit ${formatSinceDuration(minutes)} – einen Blick wert.`,

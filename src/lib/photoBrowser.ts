@@ -7,17 +7,10 @@ export interface BrowsablePhoto {
   capturedAt: string;
   isPaid: boolean;
   speedKmh: number | null;
-  /**
-   * Vom Dashboard ausgelöstes Testfoto.
-   *
-   * Sieht aus wie jedes andere Foto, zählt aber nirgends als Verkauf - der
-   * Umsatz lässt diese Zeilen bewusst aus.
-   */
-  isTest: boolean;
 }
 
 const SELECT_COLUMNS =
-  'id, external_code, storage_bucket, storage_path, captured_at, created_at, is_paid, speed_kmh, is_test';
+  'id, external_code, storage_bucket, storage_path, captured_at, created_at, is_paid, speed_kmh';
 
 function toImageUrl(bucket: string | null, path: string | null): string | null {
   if (!bucket || !path) return null;
@@ -36,7 +29,6 @@ function toBrowsablePhoto(row: Record<string, unknown>): BrowsablePhoto {
     // tracking, or the camera doesn't do speed matching) - only show a value
     // when it's an actual positive reading.
     speedKmh: typeof speed === 'number' && speed > 0 ? speed : null,
-    isTest: row.is_test === true,
   };
 }
 

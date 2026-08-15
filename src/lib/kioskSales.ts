@@ -56,11 +56,6 @@ export interface KioskPurchaseRow {
   id: string;
   capturedAt: string;
   cameraCode: string;
-  // Die Bildnummer des Automaten ("0043"). Verbindet diesen Kauf mit dem
-  // Zahlungseintrag, den der Automat lokal aufgezeichnet hat - über die
-  // Uhrzeit ginge es nicht, denn capturedAt ist der Aufnahme- und nicht der
-  // Kaufzeitpunkt. Fehlt bei der Tagesansicht, die über eine SQL-Funktion läuft.
-  fileCode?: string | null;
   email: string | null;
   fullName: string | null;
 }

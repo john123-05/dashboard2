@@ -221,11 +221,6 @@ export default function Photos() {
           {selectedPhoto.externalCode || selectedPhoto.id}
         </p>
         <p className="mt-1 text-center text-xs text-slate-500">{formatDateTime(selectedPhoto.capturedAt)}</p>
-        {selectedPhoto.isTest && (
-          <p className="mt-1 text-center text-xs font-medium text-amber-700">
-            Testfoto &ndash; zählt nicht als Verkauf
-          </p>
-        )}
         {selectedPhoto.speedKmh !== null && (
           <p className="mt-1 text-center text-xs font-medium text-sky-600">
             {selectedPhoto.speedKmh.toFixed(1)} km/h
@@ -763,13 +758,6 @@ export default function Photos() {
                       loading="lazy"
                     />
                   )}
-                  {/* Testfotos sind auf den ersten Blick als solche erkennbar -
-                      sonst haelt man sie fuer einen Verkauf, den es nie gab. */}
-                  {p.isTest && (
-                    <span className="absolute left-1.5 top-1.5 rounded-full bg-amber-500/90 px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm">
-                      Testfoto
-                    </span>
-                  )}
                 </div>
                 <div className="p-2.5">
                   <p className="truncate text-[11px] font-medium text-slate-700">{p.externalCode || p.id}</p>
@@ -777,12 +765,10 @@ export default function Photos() {
                     <span className="text-[10px] text-slate-400">{formatRelative(p.capturedAt)}</span>
                     <span
                       className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                        p.isTest ? 'bg-amber-50 text-amber-700'
-                          : p.isPaid ? 'bg-emerald-50 text-emerald-700'
-                            : 'bg-sky-50 text-sky-700'
+                        p.isPaid ? 'bg-emerald-50 text-emerald-700' : 'bg-sky-50 text-sky-700'
                       }`}
                     >
-                      {p.isTest ? 'kein Umsatz' : p.isPaid ? 'purchased' : 'available'}
+                      {p.isPaid ? 'purchased' : 'available'}
                     </span>
                   </div>
                   {p.speedKmh !== null && (

@@ -10,7 +10,6 @@ import {
 import { fetchKioskPurchases } from '../lib/kioskSales';
 import { formatCurrency, formatDateTime, statusColor, exportToCSV } from '../lib/utils';
 import DataTable, { type DataTableColumn } from '../components/ui/DataTable';
-import { euro, ladeZahlungen, nachBildnummer, type Zahlungsbefund } from '../lib/zahlungen';
 import { useI18n } from '../lib/i18n';
 import { usePark } from '../contexts/ParkContext';
 
@@ -75,46 +74,21 @@ export default function Purchases() {
       if (isKioskPark) {
         const kioskResult = await fetchKioskPurchases(parkId);
         const priceCents = kioskResult.priceCents ?? 0;
-
-        // Wie bezahlt wurde, weiss nur der Automat - er hat Muenz- und
-        // Kartenprotokoll. Verknuepft ueber die Bildnummer; scheitert der
-        // Abruf, bleibt die Liste wie bisher, statt ganz auszufallen.
-        let zahlungen = new Map<number, Zahlungsbefund>();
-        try {
-          zahlungen = nachBildnummer(await ladeZahlungen(parkId));
-        } catch {
-          zahlungen = new Map();
-        }
-
-        const kioskRows: PurchaseRow[] = kioskResult.purchases.map((purchase) => {
-          const nummer = purchase.fileCode ? Number(purchase.fileCode) : NaN;
-          const zahlung = Number.isFinite(nummer) ? zahlungen.get(nummer) : undefined;
-          const art = zahlung?.zahlungsart;
-
-          const abgeholt = purchase.email
-            ? `, später per QR-Code abgeholt (${purchase.email})`
-            : '';
-          // Bei Bargeld gehoert dazu, was der Gast gegeben und zurueckbekommen
-          // hat - genau das laesst sich sonst nirgends nachsehen.
-          const bar = art === 'bar' && zahlung
-            ? `, ${euro(zahlung.eingeworfen_cent)} gegeben, ${euro(zahlung.ausgezahlt_cent)} zurück`
-            : '';
-
-          return {
-            id: purchase.id,
-            source: 'kiosk' as const,
-            amount_cents: priceCents,
-            amount_kind: 'confirmed' as const,
-            currency: 'EUR',
-            status: purchase.email ? 'claimed' : 'unknown',
-            payment_method:
-              art === 'bar' ? 'Bar' : art === 'karte' ? 'Karte' : 'unbekannt',
-            reference: purchase.cameraCode,
-            purchased_at: purchase.capturedAt,
-            customer_or_device: purchase.email || purchase.fullName || 'Unbekannt',
-            description: `Foto am Automaten gekauft${abgeholt}${bar}`,
-          };
-        });
+        const kioskRows: PurchaseRow[] = kioskResult.purchases.map((purchase) => ({
+          id: purchase.id,
+          source: 'kiosk' as const,
+          amount_cents: priceCents,
+          amount_kind: 'confirmed' as const,
+          currency: 'EUR',
+          status: purchase.email ? 'claimed' : 'unknown',
+          payment_method: 'kiosk',
+          reference: purchase.cameraCode,
+          purchased_at: purchase.capturedAt,
+          customer_or_device: purchase.email || purchase.fullName || 'Unbekannt',
+          description: purchase.email
+            ? `Foto am Automaten gekauft, später per QR-Code abgeholt (${purchase.email})`
+            : 'Foto am Automaten gekauft',
+        }));
         setPurchases(kioskRows);
         setParkData(createEmptyParkDashboardData(parkId));
         setError(null);

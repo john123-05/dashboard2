@@ -4,7 +4,6 @@ import { invokeEdgeFunction } from '../lib/edgeFunctions';
 import { supabase } from '../lib/supabase';
 import GlassCard from '../components/ui/GlassCard';
 import OverlayBuilder from '../components/OverlayBuilder';
-import AutomatBranding from '../components/AutomatBranding';
 import { useI18n } from '../lib/i18n';
 import { usePark } from '../contexts/ParkContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -529,8 +528,6 @@ export default function Personalization() {
         <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('personalization.title')}</h2>
         <p className="mt-1 text-sm text-slate-500">{t('personalization.subtitle')}</p>
       </div>
-
-      <AutomatBranding />
 
       {!parkId && (
         <GlassCard className="p-4">
