@@ -25,6 +25,7 @@ import {
 } from '../lib/kioskSales';
 import { formatCurrency, formatNumber, formatPercent, exportToCSV } from '../lib/utils';
 import GlassCard from '../components/ui/GlassCard';
+import ZahlungsUebersicht from '../components/ZahlungsUebersicht';
 import KPICard from '../components/ui/KPICard';
 import { useI18n } from '../lib/i18n';
 import { usePark } from '../contexts/ParkContext';
@@ -556,6 +557,12 @@ export default function Revenue() {
               iconBg="bg-fuchsia-50"
             />
           </div>
+
+          {/* Wie bezahlt wurde. Steht direkt unter den Kennzahlen, weil die
+              Frage "wie viel davon war bar?" unmittelbar aus ihnen folgt - und
+              weil hier auch auffaellt, wenn der Muenzwechsler falsch herausgibt
+              oder das Wechselgeld ausgeht. */}
+          <ZahlungsUebersicht />
 
           <GlassCard className="p-5 sm:p-6">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
