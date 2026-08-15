@@ -25,6 +25,10 @@ type Device = {
   tech?: string; purpose?: string;
   // Klartext-Übersetzung, getrennt vom Rohtext in `detail`.
   plain?: string;
+  // Der Schlüssel, mit dem der Automat selbst zwei Quellen unterscheidet.
+  // Fehlt bei älteren Ständen — dann wird wie bisher über den Klarnamen
+  // zusammengeführt.
+  merge_key?: string | null;
 };
 export type HistoryEntry = {
   id: number; machine_id: string; occurred_at: string;
@@ -194,14 +198,26 @@ type Eintrag = {
 
 function zusammenfuehren(m: Machine): Eintrag[] {
   const nach = new Map<string, Eintrag>();
+  // Zweiter Index über den Klarnamen. Gebraucht, weil die Neustart-Ziele nur
+  // ihren Namen mitschicken und keinen merge_key - ohne diesen Index fänden
+  // sie ihren Eintrag nicht mehr, sobald der Hauptschlüssel ein merge_key ist.
+  const nachKlarname = new Map<string, Eintrag>();
 
   // Über das Verzeichnis, nicht über den rohen Namen: solange der Automat noch
   // die alte Fassung des Agents fährt, heisst dieselbe Sache in der Messung
   // "Kamera" und im Protokoll "3GerTis Steuerung". Ohne diese Übersetzung
   // stünden sie als zwei Kacheln da - genau die doppelte Lichtschranke.
-  const anlegen = (rohname: string, kind: string): Eintrag => {
+  // `eigen` ist der `merge_key` des Automaten, wenn er einen mitschickt.
+  //
+  // Der Agent unterscheidet zwei unbekannte Protokolle derselben Kategorie
+  // sauber - beide heissen „Sonstige Protokolle", getrennt werden sie über
+  // `merge_key`, der den Dateinamen enthält. Das Dashboard bekam den Schlüssel
+  // bisher nicht und führte beide über den Klarnamen wieder zusammen: das
+  // zweite überschrieb das erste. Der Test auf Agentenseite war erfüllt, in der
+  // Anzeige war er aufgehoben.
+  const anlegen = (rohname: string, kind: string, eigen?: string | null): Eintrag => {
     const b = benenne(rohname);
-    const schluessel = b.klar.toLowerCase();
+    const schluessel = (eigen || b.klar).toLowerCase();
     const vorhanden = nach.get(schluessel);
     if (vorhanden) return vorhanden;
     const neu: Eintrag = {
@@ -209,6 +225,11 @@ function zusammenfuehren(m: Machine): Eintrag[] {
       ton: 'unklar', gemessen: null, protokoll: null, neustart: null,
     };
     nach.set(schluessel, neu);
+    // Der erste Eintrag eines Klarnamens gewinnt: bei zwei unbekannten
+    // Protokollen soll ein Neustart-Ziel nicht willkürlich beim zweiten landen.
+    if (!nachKlarname.has(b.klar.toLowerCase())) {
+      nachKlarname.set(b.klar.toLowerCase(), neu);
+    }
     return neu;
   };
 
@@ -224,7 +245,7 @@ function zusammenfuehren(m: Machine): Eintrag[] {
     if (e.kind === 'process' && p.kind !== 'process') e.kind = p.kind;
   }
   for (const d of m.devices || []) {
-    const e = anlegen(d.name, d.kind);
+    const e = anlegen(d.name, d.kind, d.merge_key);
     e.protokoll = d;
     if (d.tech) e.tech = d.tech;
     if (d.purpose) e.purpose = d.purpose;
@@ -235,7 +256,7 @@ function zusammenfuehren(m: Machine): Eintrag[] {
   // über den Klarnamen, damit "Kamera-Software" vom Agent und "Kamera-Software"
   // aus dem Verzeichnis zusammenfinden.
   for (const r of m.restartable || []) {
-    const eintrag = nach.get(benenne(r.name).klar.toLowerCase());
+    const eintrag = nachKlarname.get(benenne(r.name).klar.toLowerCase());
     if (eintrag) eintrag.neustart = r;
   }
 
@@ -344,7 +365,12 @@ function phasen(m: Machine, n: LaufenderNeustart, jetzt: number): Phase[] {
     && seit <= vergangenMin + 1;
 
   const abgeholt = !wartetNochAufAbholung;
-  const wartezeit = Math.round(m.restart_poll_seconds ?? 20);
+  // Nur nennen, wenn der Automat den Abstand wirklich gemeldet hat. Die frühere
+  // Voreinstellung von 20 Sekunden war eine erfundene Zahl — bei
+  // abgeschalteten Neustarts sind es in Wahrheit 300, und der Satz „Der Automat
+  // fragt alle 20 Sekunden nach" stand trotzdem da.
+  const wartezeit = typeof m.restart_poll_seconds === 'number'
+    ? Math.round(m.restart_poll_seconds) : null;
   const nacht = m.night_window;
 
   return [
@@ -359,7 +385,9 @@ function phasen(m: Machine, n: LaufenderNeustart, jetzt: number): Phase[] {
         ? undefined
         : n.mode === 'tonight'
           ? `Wird in der Ruhezeit ausgeführt${nacht ? ` (${nacht[0]}–${nacht[1]})` : ''}.`
-          : `Der Automat fragt alle ${wartezeit} Sekunden nach.`,
+          : wartezeit !== null
+            ? `Der Automat fragt alle ${wartezeit} Sekunden nach.`
+            : 'Der Automat holt den Auftrag beim nächsten Abruf.',
     },
     {
       titel: 'Programm wird neu gestartet',
@@ -756,8 +784,13 @@ function Automat({ m, detailed, busyKey, laufend, jetzt, onRestart, onTestfoto }
         </span>
         {m.photos_taken_today !== null && (
           <span className="ml-auto text-xs text-slate-500">
-            heute <b className="tabular-nums text-slate-700">{m.photos_taken_today}</b> Fotos ·
-            <b className="tabular-nums text-slate-700"> {m.photos_sold_today ?? 0}</b> verkauft
+            heute <b className="tabular-nums text-slate-700">{m.photos_taken_today}</b> Fotos
+            {/* „0 verkauft" wäre eine Aussage über etwas, das niemand gezählt
+                hat — die Bedingung oben prüft nur die aufgenommenen Fotos.
+                Meldet der Automat die Verkäufe nicht, bleibt die Angabe weg. */}
+            {m.photos_sold_today !== null && m.photos_sold_today !== undefined && (
+              <> · <b className="tabular-nums text-slate-700">{m.photos_sold_today}</b> verkauft</>
+            )}
           </span>
         )}
       </div>
@@ -871,7 +904,11 @@ function Automat({ m, detailed, busyKey, laufend, jetzt, onRestart, onTestfoto }
         )}
         {detailed && (
           <p className="mt-2 text-[11px] text-slate-400">
-            {m.monitored_sources ?? 0} Quellen überwacht
+            {/* „0 Quellen überwacht" klingt wie ein Ausfall, ist aber eine
+                Wissenslücke, wenn der Automat das Feld gar nicht schickt. */}
+            {typeof m.monitored_sources === 'number'
+              ? `${m.monitored_sources} Quellen überwacht`
+              : 'Anzahl überwachter Quellen unbekannt'}
             {m.agent_version && <> · Version {m.agent_version}</>}
             {(m.pending_health_events || 0) > 0 && <> · {m.pending_health_events} Meldung(en) warten</>}
             {m.last_restart_at && <> · zuletzt neu gestartet {new Date(m.last_restart_at).toLocaleString()}</>}
@@ -1169,7 +1206,12 @@ function Zahlungen({ uebersicht, tage }: {
   uebersicht: Zahlungsuebersicht; tage: number | null | undefined;
 }) {
   const gesamt = uebersicht.bar_anzahl + uebersicht.karte_anzahl;
-  const barAnteil = uebersicht.bar_anteil ?? 0;
+  // Der Automat liefert die Anteile bewusst als `null`, wenn nichts gezahlt
+  // wurde. Sie auf 0 zu setzen ergab einen Balken mit 0 % bar und 100 % Karte —
+  // eine erfundene Aufteilung. Ohne Anteile wird der Balken weggelassen.
+  const barAnteil = uebersicht.bar_anteil;
+  const karteAnteil = uebersicht.karte_anteil;
+  const anteileBekannt = typeof barAnteil === 'number' && typeof karteAnteil === 'number';
 
   return (
     <div className="rounded-lg bg-white/60 px-2.5 py-2">
@@ -1181,23 +1223,27 @@ function Zahlungen({ uebersicht, tage }: {
         <p className="text-slate-500">Keine Zahlungen in diesem Zeitraum.</p>
       ) : (
         <>
-          <div className="flex h-2.5 overflow-hidden rounded-full bg-slate-200">
-            <span className="bg-emerald-500" style={{ width: `${barAnteil * 100}%` }} />
-            <span className="bg-sky-500" style={{ width: `${(1 - barAnteil) * 100}%` }} />
-          </div>
+          {anteileBekannt && (
+            <div className="flex h-2.5 overflow-hidden rounded-full bg-slate-200">
+              <span className="bg-emerald-500" style={{ width: `${barAnteil * 100}%` }} />
+              <span className="bg-sky-500" style={{ width: `${karteAnteil * 100}%` }} />
+            </div>
+          )}
           <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-0.5">
             <span className="flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-emerald-500" />
               Bar <b className="tabular-nums">{uebersicht.bar_anzahl}</b>
               <span className="text-slate-400">
-                ({Math.round(barAnteil * 100)} %, {euro(uebersicht.bar_cent)})
+                ({anteileBekannt && `${Math.round(barAnteil * 100)} %, `}
+                {euro(uebersicht.bar_cent)})
               </span>
             </span>
             <span className="flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-sky-500" />
               Karte <b className="tabular-nums">{uebersicht.karte_anzahl}</b>
               <span className="text-slate-400">
-                ({Math.round((uebersicht.karte_anteil ?? 0) * 100)} %, {euro(uebersicht.karte_cent)})
+                ({anteileBekannt && `${Math.round(karteAnteil * 100)} %, `}
+                {euro(uebersicht.karte_cent)})
               </span>
             </span>
           </div>
