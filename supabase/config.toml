@@ -44,3 +44,10 @@ verify_jwt = false
 [functions.operator-test-push]
 # Same cross-project operator auth pattern as operator-notification-settings.
 verify_jwt = false
+
+[functions.operator-liftpic-assets]
+# Same cross-project operator auth pattern as operator-notification-settings:
+# the park operator uploads kiosk branding images from the customer dashboard,
+# so the caller's token comes from the operator project and must be validated
+# by the function itself via _shared/operatorAuth.ts.
+verify_jwt = false
