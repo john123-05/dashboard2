@@ -19,6 +19,9 @@ const HEALTH_URL = `${EXTERNAL_SUPABASE_URL}/functions/v1/operator-liftpic-healt
 
 type Muenzbestand = {
   gemessen_am: string | null;
+  // `undefined` heißt "nicht prüfbar" - ältere Automaten melden es nicht.
+  verlaesslich?: boolean;
+  hinweis?: string | null;
   sorten: { cent: number; anzahl: number; wert_cent: number }[];
   summe_cent: number;
 };
@@ -178,10 +181,21 @@ function AutomatBlock({ a }: { a: Automat }) {
         <div className="mt-4 rounded-xl bg-white/40 px-4 py-3">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <span className="text-sm font-medium text-slate-700">Wechselgeld im Gerät</span>
-            <span className="text-lg font-semibold tabular-nums text-slate-800">
+            <span className={`text-lg font-semibold tabular-nums ${
+              a.coin_inventory.verlaesslich === false
+                ? 'text-slate-400 line-through' : 'text-slate-800'
+            }`}>
               {euro(a.coin_inventory.summe_cent)}
             </span>
           </div>
+
+          {a.coin_inventory.verlaesslich === false && a.coin_inventory.hinweis && (
+            <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs leading-snug text-amber-900">
+              <b className="font-semibold">Betrag nicht gesichert:</b>{' '}
+              {a.coin_inventory.hinweis}
+            </p>
+          )}
+
           <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
             {a.coin_inventory.sorten.map((s) => {
               const w = warnungen.find((x) => x.cent === s.cent);

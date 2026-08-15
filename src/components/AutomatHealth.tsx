@@ -46,6 +46,13 @@ type Neustartbar = {
 /** Das Wechselgeld, das der Automat noch ausgeben kann. */
 type Muenzbestand = {
   gemessen_am: string | null;
+  // Ob dem Betrag zu trauen ist. Der Automat schreibt seine Buchführung nach
+  // Plan weg, auch wenn der Münzprüfer stillsteht - dann sieht ein toter Wert
+  // taggenau frisch aus. Ältere Automaten melden das Feld nicht; `undefined`
+  // heißt "nicht prüfbar" und darf nicht als Warnung erscheinen.
+  verlaesslich?: boolean;
+  hinweis?: string | null;
+  unveraendert_stunden?: number | null;
   sorten: { cent: number; anzahl: number; wert_cent: number }[];
   summe_cent: number;
 };
@@ -1093,10 +1100,21 @@ function Muenzbestand({ bestand, warnungen }: {
         <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
           Wechselgeld im Gerät
         </span>
-        <span className="text-sm font-semibold tabular-nums text-slate-800">
+        <span className={`text-sm font-semibold tabular-nums ${
+          bestand.verlaesslich === false ? 'text-slate-400 line-through' : 'text-slate-800'
+        }`}>
           {euro(bestand.summe_cent)}
         </span>
       </div>
+
+      {/* Steht der Münzprüfer still, ist der Betrag eine Behauptung des
+          Verkaufsprogramms, keine Messung. Dann wird er durchgestrichen und
+          der Grund genannt, statt ihn als Tatsache zu zeigen. */}
+      {bestand.verlaesslich === false && bestand.hinweis && (
+        <p className="mb-1.5 rounded-md bg-amber-50 px-2 py-1.5 text-[11px] leading-snug text-amber-900">
+          <b className="font-semibold">Betrag nicht gesichert:</b> {bestand.hinweis}
+        </p>
+      )}
 
       <div className="space-y-1">
         {bestand.sorten.map((sorte) => {
