@@ -16,7 +16,7 @@ interface AuthState {
   isOwner: boolean;
 }
 
-interface AuthContextType extends AuthState {
+export interface AuthContextType extends AuthState {
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
@@ -24,7 +24,7 @@ interface AuthContextType extends AuthState {
   refreshProfile: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | null>(null);
+export const AuthContext = createContext<AuthContextType | null>(null);
 
 export function useAuth() {
   const ctx = useContext(AuthContext);
@@ -45,6 +45,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isStaff: false,
     isOwner: false,
   });
+
+  function clearAuthState() {
+    setState((prev) => ({
+      ...prev,
+      session: null,
+      user: null,
+      profile: null,
+      memberships: [],
+      currentOrg: null,
+      hasOrg: false,
+      role: null,
+      isStaff: false,
+      isOwner: false,
+      loading: false,
+    }));
+  }
+
+  async function validateSession(session: Session | null): Promise<User | null> {
+    if (!session) return null;
+    const { data, error } = await supabase.auth.getUser();
+    if (error || !data.user) {
+      await supabase.auth.signOut().catch(() => undefined);
+      clearAuthState();
+      return null;
+    }
+    return data.user;
+  }
 
   async function loadProfile(userId: string) {
     const { data: profile } = await supabase
@@ -81,10 +108,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setState((prev) => ({ ...prev, session, user: session?.user ?? null }));
-      if (session?.user) {
-        loadProfile(session.user.id);
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      const validUser = await validateSession(session);
+      setState((prev) => ({ ...prev, session: validUser ? session : null, user: validUser }));
+      if (validUser) {
+        loadProfile(validUser.id);
       } else {
         setState((prev) => ({ ...prev, loading: false }));
       }
@@ -92,22 +120,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setState((prev) => ({ ...prev, session, user: session?.user ?? null }));
-      if (session?.user) {
-        loadProfile(session.user.id);
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      const validUser = await validateSession(session);
+      setState((prev) => ({ ...prev, session: validUser ? session : null, user: validUser }));
+      if (validUser) {
+        loadProfile(validUser.id);
       } else {
-        setState((prev) => ({
-          ...prev,
-          profile: null,
-          memberships: [],
-          currentOrg: null,
-          hasOrg: false,
-          role: null,
-          isStaff: false,
-          isOwner: false,
-          loading: false,
-        }));
+        clearAuthState();
       }
     });
 

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowLeft, CheckCheck, Inbox, LifeBuoy, SendHorizontal } from 'lucide-react';
 import { supabaseBrowser } from '../lib/supabase';
 import { edgeFetch } from '../lib/edge-fetch';
 import { getApiErrorMessage } from '../lib/api-error';
@@ -71,6 +72,12 @@ export default function SupportTicketKundenPage() {
     [tickets],
   );
   const visibleTickets = viewingArchived ? archivedTickets : activeTickets;
+  const openTickets = useMemo(() => tickets.filter((ticket) => ticket.status === 'open'), [tickets]);
+  const inProgressTickets = useMemo(() => tickets.filter((ticket) => ticket.status === 'in_progress'), [tickets]);
+  const criticalTickets = useMemo(
+    () => tickets.filter((ticket) => ticket.priority === 'critical' && !isArchivedStatus(ticket.status)),
+    [tickets],
+  );
 
   const selectedTicket = useMemo(
     () => tickets.find((ticket) => ticket.id === selectedTicketId) || null,
@@ -283,152 +290,217 @@ export default function SupportTicketKundenPage() {
   }, [selectedTicket, messages]);
 
   return (
-    <div className="grid">
-      <div className="card">
-        <h2>Support Ticket Kunden</h2>
-        <p className="note">Tickets verwalten und als erledigt markieren.</p>
-      </div>
-
-      <div className="support-layout" data-mobile-view={mobileDetailOpen ? 'detail' : 'list'}>
-        <div className="card support-list-panel">
-          <div className="support-panel-header">
-            <h3>Tickets</h3>
-            {!ticketsLoading && <span className="note">{visibleTickets.length}</span>}
+    <div className="customer-management-page">
+      <div className="card customer-directory-shell support-shell">
+        <div className="customer-directory-head support-page-head">
+          <div>
+            <h2>Support</h2>
+            <p className="note">Tickets sichten, im Thread antworten und Fälle sauber abschließen.</p>
           </div>
-
-          <div className="support-tabs">
+          <div className="customer-directory-view-switch" role="tablist" aria-label="Ticketansicht">
             <button
               type="button"
-              className={!viewingArchived ? 'active' : ''}
+              className={`customer-directory-view-btn ${!viewingArchived ? 'active' : ''}`}
               onClick={() => setViewingArchived(false)}
             >
-              Aktiv ({activeTickets.length})
+              Aktiv
             </button>
             <button
               type="button"
-              className={viewingArchived ? 'active' : ''}
+              className={`customer-directory-view-btn ${viewingArchived ? 'active' : ''}`}
               onClick={() => setViewingArchived(true)}
             >
-              Archiviert ({archivedTickets.length})
+              Archiviert
             </button>
           </div>
-
-          {ticketsLoading && <p className="support-loading">Tickets werden geladen...</p>}
-          {!ticketsLoading && ticketsError && <p className="support-error">{ticketsError}</p>}
-          {!ticketsLoading && !ticketsError && visibleTickets.length === 0 && (
-            <p className="support-empty">
-              {viewingArchived ? 'Keine archivierten Tickets.' : 'Keine offenen Tickets.'}
-            </p>
-          )}
-
-          {!ticketsLoading && !ticketsError && visibleTickets.length > 0 && (
-            <ul className="ticket-list">
-              {visibleTickets.map((ticket) => (
-                <li key={ticket.id} className="ticket-item">
-                  <button
-                    type="button"
-                    className={`ticket-item-btn ${ticket.id === selectedTicketId ? 'active' : ''}`}
-                    onClick={() => selectTicket(ticket.id)}
-                  >
-                    <div className="ticket-item-top">
-                      <span className="ticket-item-subject">{ticket.subject}</span>
-                    </div>
-                    <div className="ticket-item-meta">
-                      <span className={`badge status-${ticket.status}`}>{statusLabelMap[ticket.status]}</span>
-                      <span className={`badge priority-${ticket.priority}`}>{priorityLabelMap[ticket.priority]}</span>
-                      <span className="note">{parkNameById[ticket.organization_id] || '–'}</span>
-                      <span className="note">{formatDateTime(ticket.created_at)}</span>
-                    </div>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
         </div>
 
-        <div className="card support-detail-panel">
-          <button type="button" className="mobile-back-button" onClick={() => setMobileDetailOpen(false)}>
-            ← Zurück zu Tickets
-          </button>
-          <h3>Nachrichten-Thread</h3>
+        <div className="customer-overview-grid support-overview-grid">
+          <div className="customer-overview-item support-overview-item">
+            <span>Aktive Tickets</span>
+            <strong>{activeTickets.length}</strong>
+            <p className="note">
+              {criticalTickets.length > 0 ? `${criticalTickets.length} davon kritisch priorisiert.` : 'Alles, was noch offen oder in Bearbeitung ist.'}
+            </p>
+          </div>
+          <div className="customer-overview-item support-overview-item">
+            <span>Offen</span>
+            <strong>{openTickets.length}</strong>
+            <p className="note">Noch ohne Abschluss.</p>
+          </div>
+          <div className="customer-overview-item support-overview-item">
+            <span>In Bearbeitung</span>
+            <strong>{inProgressTickets.length}</strong>
+            <p className="note">Laufende Vorgänge im Team.</p>
+          </div>
+          <div className="customer-overview-item support-overview-item">
+            <span>Archiviert</span>
+            <strong>{archivedTickets.length}</strong>
+            <p className="note">Erledigte oder geschlossene Fälle.</p>
+          </div>
+        </div>
 
-          {!selectedTicket && !ticketsLoading && !ticketsError && (
-            <p className="support-empty">Bitte ein Ticket auswählen.</p>
-          )}
+        <div className="support-layout support-shell-layout" data-mobile-view={mobileDetailOpen ? 'detail' : 'list'}>
+          <section className="customer-detail-canvas support-list-panel support-panel-canvas">
+            <div className="customer-inline-head support-list-head">
+              <div>
+                <strong>{viewingArchived ? 'Archivierte Tickets' : 'Aktive Tickets'}</strong>
+                <small>
+                  {viewingArchived ? 'Erledigte und geschlossene Fälle.' : 'Offene und laufende Anfragen im Überblick.'}
+                </small>
+              </div>
+              {!ticketsLoading && <span className="support-count-pill">{visibleTickets.length} Tickets</span>}
+            </div>
 
-          {selectedTicket && (
-            <>
-              <div className="ticket-thread-header">
-                <h4>{selectedTicket.subject}</h4>
-                <div className="ticket-thread-badges">
-                  <span className={`badge status-${selectedTicket.status}`}>{statusLabelMap[selectedTicket.status]}</span>
-                  <span className={`badge priority-${selectedTicket.priority}`}>{priorityLabelMap[selectedTicket.priority]}</span>
+            {ticketsLoading && <p className="support-loading">Tickets werden geladen...</p>}
+            {!ticketsLoading && ticketsError && <p className="support-error">{ticketsError}</p>}
+            {!ticketsLoading && !ticketsError && visibleTickets.length === 0 && (
+              <p className="support-empty">
+                {viewingArchived ? 'Keine archivierten Tickets.' : 'Keine offenen Tickets.'}
+              </p>
+            )}
+
+            {!ticketsLoading && !ticketsError && visibleTickets.length > 0 && (
+              <ul className="ticket-list">
+                {visibleTickets.map((ticket) => (
+                  <li key={ticket.id} className="ticket-item">
+                    <button
+                      type="button"
+                      className={`ticket-item-btn ${ticket.id === selectedTicketId ? 'active' : ''}`}
+                      onClick={() => selectTicket(ticket.id)}
+                    >
+                      <div className="ticket-item-top">
+                        <div className="ticket-item-copy">
+                          <span className="ticket-item-subject">{ticket.subject}</span>
+                          <p className="ticket-item-preview">{ticket.description}</p>
+                        </div>
+                        <span className="ticket-item-date">{formatDateTime(ticket.updated_at)}</span>
+                      </div>
+                      <div className="ticket-item-meta">
+                        <span className={`badge status-${ticket.status}`}>{statusLabelMap[ticket.status]}</span>
+                        <span className={`badge priority-${ticket.priority}`}>{priorityLabelMap[ticket.priority]}</span>
+                        <span className="note">{parkNameById[ticket.organization_id] || '–'}</span>
+                      </div>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section className="customer-detail-canvas support-detail-panel support-panel-canvas">
+            <button type="button" className="mobile-back-button" onClick={() => setMobileDetailOpen(false)}>
+              <ArrowLeft size={14} />
+              Zurück zu Tickets
+            </button>
+
+            {!selectedTicket && !ticketsLoading && !ticketsError && (
+              <div className="support-empty support-empty-detail">
+                <LifeBuoy size={18} />
+                <div>
+                  <strong>Kein Ticket ausgewählt</strong>
+                  <p className="note">Wähle links ein Ticket aus, um den Verlauf und die Antworten zu sehen.</p>
                 </div>
               </div>
-              <p className="note">
-                Park: {parkNameById[selectedTicket.organization_id] || selectedTicket.organization_id}
-              </p>
+            )}
 
-              <div className="support-actions-row">
-                <button
-                  type="button"
-                  className="secondary"
-                  onClick={() =>
-                    void updateTicketStatus(isArchivedStatus(selectedTicket.status) ? 'open' : 'resolved')
-                  }
-                  disabled={updatingStatus}
-                >
-                  {updatingStatus
-                    ? 'Speichern...'
-                    : isArchivedStatus(selectedTicket.status)
-                      ? 'Ticket wieder öffnen'
-                      : 'Als erledigt markieren'}
-                </button>
-              </div>
-              {actionError && <p className="support-error">{actionError}</p>}
-
-              <div className="chat-thread">
-                {threadEntries.map((entry) => (
-                  <div
-                    key={entry.id}
-                    className={`chat-row ${entry.author_role === 'support' ? 'chat-row-mine' : 'chat-row-theirs'}`}
-                  >
-                    <div className="chat-bubble">
-                      <p className="chat-bubble-author">
-                        {entry.author_role === 'support' ? 'Du' : 'Operator'}
-                      </p>
-                      <p className="chat-bubble-text">{entry.message}</p>
-                      <p className="chat-bubble-time">{formatDateTime(entry.created_at)}</p>
-                    </div>
+            {selectedTicket && (
+              <>
+                <div className="customer-inline-head support-thread-head">
+                  <div>
+                    <strong>{selectedTicket.subject}</strong>
+                    <small>{threadEntries.length} Einträge im Verlauf</small>
                   </div>
-                ))}
-                {messagesLoading && <p className="support-loading">Nachrichten werden geladen...</p>}
-                {!messagesLoading && messagesError && <p className="support-error">{messagesError}</p>}
-              </div>
+                  <div className="ticket-thread-badges">
+                    <span className={`badge status-${selectedTicket.status}`}>{statusLabelMap[selectedTicket.status]}</span>
+                    <span className={`badge priority-${selectedTicket.priority}`}>{priorityLabelMap[selectedTicket.priority]}</span>
+                  </div>
+                </div>
 
-              <div className="support-reply-form">
-                <label htmlFor="support-reply-textarea">Antworten im Thread</label>
-                <textarea
-                  id="support-reply-textarea"
-                  value={replyMessage}
-                  onChange={(event) => setReplyMessage(event.target.value)}
-                  placeholder="Antwort schreiben..."
-                  rows={3}
-                  disabled={replySending}
-                />
-                {replyError && <p className="support-error">{replyError}</p>}
-                <div className="support-actions-row">
+                <div className="customer-row-meta support-ticket-meta">
+                  <span>{parkNameById[selectedTicket.organization_id] || selectedTicket.organization_id}</span>
+                  <span>Erstellt {formatDateTime(selectedTicket.created_at)}</span>
+                  <span>Zuletzt aktualisiert {formatDateTime(selectedTicket.updated_at)}</span>
+                </div>
+
+                <div className="support-actions-row support-status-row">
                   <button
                     type="button"
-                    onClick={() => void submitReply()}
-                    disabled={replySending || !replyMessage.trim()}
+                    className="customer-quiet-btn support-status-btn"
+                    onClick={() =>
+                      void updateTicketStatus(isArchivedStatus(selectedTicket.status) ? 'open' : 'resolved')
+                    }
+                    disabled={updatingStatus}
                   >
-                    {replySending ? 'Wird gesendet...' : 'Antwort senden'}
+                    {isArchivedStatus(selectedTicket.status) ? <Inbox size={14} /> : <CheckCheck size={14} />}
+                    {updatingStatus
+                      ? 'Speichern...'
+                      : isArchivedStatus(selectedTicket.status)
+                        ? 'Wieder öffnen'
+                        : 'Als erledigt markieren'}
                   </button>
                 </div>
-              </div>
-            </>
-          )}
+                {actionError && <p className="support-error">{actionError}</p>}
+
+                <div className="customer-simple-card support-thread-stage">
+                  <div className="chat-thread">
+                    {threadEntries.map((entry, index) => (
+                      <div
+                        key={entry.id}
+                        className={`chat-row ${entry.author_role === 'support' ? 'chat-row-mine' : 'chat-row-theirs'} ${index === 0 ? 'chat-row-opening' : ''}`}
+                      >
+                        <div className="chat-bubble">
+                          <p className="chat-bubble-author">
+                            {entry.author_role === 'support'
+                              ? 'Du'
+                              : index === 0
+                                ? 'Anfrage'
+                                : 'Operator'}
+                          </p>
+                          <p className="chat-bubble-text">{entry.message}</p>
+                          <p className="chat-bubble-time">{formatDateTime(entry.created_at)}</p>
+                        </div>
+                      </div>
+                    ))}
+                    {messagesLoading && <p className="support-loading">Nachrichten werden geladen...</p>}
+                    {!messagesLoading && messagesError && <p className="support-error">{messagesError}</p>}
+                  </div>
+                </div>
+
+                <div className="customer-simple-card support-reply-card">
+                  <div className="customer-inline-head support-reply-head">
+                    <div>
+                      <strong>Antworten</strong>
+                      <small>Direkt im bestehenden Thread antworten.</small>
+                    </div>
+                  </div>
+                  <div className="support-reply-form">
+                    <label htmlFor="support-reply-textarea">Nachricht</label>
+                    <textarea
+                      id="support-reply-textarea"
+                      value={replyMessage}
+                      onChange={(event) => setReplyMessage(event.target.value)}
+                      placeholder="Antwort schreiben..."
+                      rows={3}
+                      disabled={replySending}
+                    />
+                    {replyError && <p className="support-error">{replyError}</p>}
+                    <div className="support-actions-row">
+                      <button
+                        type="button"
+                        className="customer-open-btn support-send-btn"
+                        onClick={() => void submitReply()}
+                        disabled={replySending || !replyMessage.trim()}
+                      >
+                        <SendHorizontal size={14} />
+                        {replySending ? 'Wird gesendet...' : 'Antwort senden'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </section>
         </div>
       </div>
     </div>

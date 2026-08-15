@@ -25,7 +25,6 @@ import Team from './pages/Team';
 import StaffAdminLayout from './staff/components/AdminLayout';
 import StaffLoginPage from './staff/pages/StaffLoginPage';
 import StaffSupportTicketKundenPage from './staff/pages/SupportTicketKundenPage';
-import StaffWebsiteAnfragenPage from './staff/pages/WebsiteAnfragenPage';
 import StaffSystemHealthPage from './staff/pages/StaffSystemHealthPage';
 import StaffSettingsPage from './staff/pages/StaffSettingsPage';
 import StaffHelpPage from './staff/pages/HelpPage';
@@ -36,6 +35,8 @@ import StaffMediaLibraryPage from './staff/pages/MediaLibraryPage';
 import StaffCostsPage from './staff/pages/CostsPage';
 import StaffCustomerManagementPage from './staff/pages/CustomerManagementPage';
 import StaffOverviewPage from './staff/pages/OverviewPage';
+import StaffOfferBuilderPage from './staff/pages/OfferBuilderPage';
+import StaffWebsiteAnfragenPage from './staff/pages/WebsiteAnfragenPage';
 
 function AppShellMetaController() {
   const location = useLocation();
@@ -43,7 +44,27 @@ function AppShellMetaController() {
   useEffect(() => {
     const isStaffRoute = location.pathname.startsWith('/staff');
     const manifestHref = isStaffRoute ? '/manifest-staff.webmanifest' : '/manifest-operator.webmanifest';
-    const title = isStaffRoute ? 'Liftpictures Super Admin' : 'Liftpictures Operator Dashboard';
+    const staffTitle = (() => {
+      if (location.pathname === '/staff/kunden-management') {
+        return 'Kunden Management';
+      }
+
+      if (location.pathname === '/staff/website-anfragen') return 'Interessenten & Anfragen';
+      if (location.pathname === '/staff/angebot-erstellen') return 'Angebot erstellen';
+      if (location.pathname === '/staff/uebersicht') return 'Übersicht';
+      if (location.pathname === '/staff/werbematerialien') return 'Werbematerialien';
+      if (location.pathname === '/staff/kosten') return 'Kosten';
+      if (location.pathname === '/staff/passwoerter') return 'Passwörter';
+      if (location.pathname === '/staff/medien') return 'Medien';
+      if (location.pathname === '/staff/support-ticket-kunden') return 'Support';
+      if (location.pathname === '/staff/system-health') return 'Health';
+      if (location.pathname === '/staff/hilfe') return 'Hilfe';
+      if (location.pathname === '/staff/einstellungen') return 'Einstellungen';
+      if (location.pathname === '/staff/login') return 'Staff Login';
+
+      return 'Liftpictures Super Admin';
+    })();
+    const title = isStaffRoute ? `${staffTitle} - Liftpictures Super Admin` : 'Liftpictures Operator Dashboard';
     const appTitle = isStaffRoute ? 'Liftpictures Super Admin' : 'Liftpictures Operator';
 
     document.title = title;
@@ -62,7 +83,7 @@ function AppShellMetaController() {
     if (applicationNameMeta) {
       applicationNameMeta.setAttribute('content', appTitle);
     }
-  }, [location.pathname]);
+  }, [location.pathname, location.search]);
 
   return null;
 }
@@ -142,6 +163,7 @@ export default function App() {
                 <Route path="/staff/liftpic-setup" element={<Navigate to="/staff/kunden-management?tab=liftpic" replace />} />
                 <Route path="/staff/support-ticket-kunden" element={<StaffSupportTicketKundenPage />} />
                 <Route path="/staff/website-anfragen" element={<StaffWebsiteAnfragenPage />} />
+                <Route path="/staff/angebot-erstellen" element={<StaffOfferBuilderPage />} />
                 <Route path="/staff/system-health" element={<StaffSystemHealthPage />} />
                 <Route path="/staff/einstellungen" element={<StaffSettingsPage />} />
                 <Route path="/staff/hilfe" element={<StaffHelpPage />} />

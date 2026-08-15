@@ -1,6 +1,6 @@
 import { ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { RefreshCw } from 'lucide-react';
+import { BarChart3, BellRing, ChevronRight, FileText, Flame, Globe, LayoutGrid, RefreshCw, Search, SlidersHorizontal, Snowflake, SunMedium, Trash2, Upload, X } from 'lucide-react';
 import { edgeFetch } from '../lib/edge-fetch';
 import { getApiErrorMessage } from '../lib/api-error';
 import { appendActivityEvent } from '../lib/activity-feed';
@@ -108,11 +108,65 @@ type ProductFinderImportRow = {
   answers: ProductFinderAnswer[];
 };
 
+type CombinedLeadEntry =
+  | {
+      sourceTable: 'email_leads';
+      id: string;
+      temperature: LeadTemperature;
+      sortDate: string;
+      sortName: string;
+      row: EmailLead;
+    }
+  | {
+      sourceTable: 'website_requests';
+      id: string;
+      temperature: LeadTemperature;
+      sortDate: string;
+      sortName: string;
+      row: WebsiteRequest;
+    }
+  | {
+      sourceTable: 'german_website_requests';
+      id: string;
+      temperature: LeadTemperature;
+      sortDate: string;
+      sortName: string;
+      row: GermanWebsiteRequest;
+    }
+  | {
+      sourceTable: 'product_finder_submissions';
+      id: string;
+      temperature: LeadTemperature;
+      sortDate: string;
+      sortName: string;
+      row: ProductFinderSubmission;
+    };
+
 function formatDate(value: string | null | undefined) {
   if (!value) return null;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;
   return new Intl.DateTimeFormat('de-DE', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
+}
+
+function formatFollowUpRelative(value: string | null | undefined) {
+  if (!value) return null;
+  const target = new Date(value);
+  if (Number.isNaN(target.getTime())) return null;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const targetDay = new Date(target);
+  targetDay.setHours(0, 0, 0, 0);
+
+  const diffDays = Math.round((targetDay.getTime() - today.getTime()) / 86400000);
+
+  if (diffDays === 0) return 'Heute';
+  if (diffDays === 1) return 'Morgen';
+  if (diffDays === -1) return 'Gestern';
+  if (diffDays > 1) return `In ${diffDays} Tagen`;
+  return `Vor ${Math.abs(diffDays)} Tagen`;
 }
 
 function matchesQuery(query: string, fields: Array<string | null | undefined>): boolean {
@@ -360,27 +414,67 @@ function TemperatureSelect({
   value: LeadTemperature;
   onChange: (next: LeadTemperature) => void;
 }) {
+  const iconMap = {
+    heiss: Flame,
+    warm: SunMedium,
+    kalt: Snowflake,
+  } satisfies Record<LeadTemperature, typeof Flame>;
+
   return (
-    <select
-      className={`lead-temp-select lead-temp-${value}`}
-      value={value}
-      onChange={(e) => onChange(e.target.value as LeadTemperature)}
-    >
+    <div className="lead-temp-group" role="group" aria-label="Priorität">
       {LEAD_TEMPERATURES.map((t) => (
-        <option key={t} value={t}>
-          {LEAD_TEMPERATURE_LABELS[t]}
-        </option>
+        <button
+          key={t}
+          type="button"
+          className={`lead-temp-chip lead-temp-${t} ${value === t ? 'active' : ''}`}
+          onClick={() => onChange(t)}
+          title={LEAD_TEMPERATURE_LABELS[t]}
+          aria-label={LEAD_TEMPERATURE_LABELS[t]}
+          aria-pressed={value === t}
+        >
+          {(() => {
+            const Icon = iconMap[t];
+            return <Icon size={13} />;
+          })()}
+        </button>
       ))}
-    </select>
+    </div>
   );
+}
+
+function flagForValue(input: string | null | undefined): string | null {
+  const value = (input || '').trim().toLowerCase();
+  if (!value) return null;
+
+  if (['de', 'de-de', 'deutsch', 'deutschland', 'german', 'germany'].includes(value)) return '🇩🇪';
+  if (['en', 'en-gb', 'engb', 'english', 'gb', 'uk', 'great britain', 'united kingdom'].includes(value)) return '🇬🇧';
+  if (['en-us', 'enus', 'us', 'usa', 'united states'].includes(value)) return '🇺🇸';
+  if (['nl', 'nl-nl', 'nederland', 'netherlands', 'dutch'].includes(value)) return '🇳🇱';
+  if (['fr', 'france', 'french'].includes(value)) return '🇫🇷';
+  if (['it', 'italy', 'italian'].includes(value)) return '🇮🇹';
+  if (['es', 'spain', 'spanish'].includes(value)) return '🇪🇸';
+  if (['at', 'austria'].includes(value)) return '🇦🇹';
+  if (['ch', 'switzerland'].includes(value)) return '🇨🇭';
+
+  return null;
 }
 
 function LangBadge({ text }: { text: string }) {
   const lang = detectLanguageHint(text);
-  if (!lang || lang === 'DE') return null;
+  if (!lang) return null;
   return (
-    <span className="lead-lang-badge" title="Automatisch erkannt aus dem Text">
-      {lang}
+    <span className="lead-lang-badge lead-lang-badge-flag" title={`Automatisch erkannt: ${lang}`}>
+      {flagForValue(lang) || lang}
+    </span>
+  );
+}
+
+function FlagBadge({ value, title }: { value: string | null | undefined; title?: string }) {
+  const flag = flagForValue(value);
+  if (!flag) return null;
+  return (
+    <span className="lead-lang-badge lead-lang-badge-flag" title={title || value || undefined}>
+      {flag}
     </span>
   );
 }
@@ -390,8 +484,8 @@ function LeadAvatar({ label }: { label: string }) {
   return <div className="lead-avatar">{initial}</div>;
 }
 
-type LeadTab = 'leads' | 'website' | 'germanWebsite' | 'productFinder' | 'followUps' | 'statistik';
-const VALID_LEAD_TABS: LeadTab[] = ['leads', 'website', 'germanWebsite', 'productFinder', 'followUps', 'statistik'];
+type LeadTab = 'all' | 'leads' | 'website' | 'germanWebsite' | 'productFinder' | 'followUps' | 'statistik';
+const VALID_LEAD_TABS: LeadTab[] = ['all', 'leads', 'website', 'germanWebsite', 'productFinder', 'followUps', 'statistik'];
 
 interface ResolvedLeadRef {
   sourceTable: LeadSourceTable;
@@ -450,11 +544,14 @@ export default function WebsiteAnfragenPage() {
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<LeadTab>(() => {
     const tab = searchParams.get('tab');
-    return VALID_LEAD_TABS.includes(tab as LeadTab) ? (tab as LeadTab) : 'leads';
+    return VALID_LEAD_TABS.includes(tab as LeadTab) ? (tab as LeadTab) : 'all';
   });
   const [query, setQuery] = useState(() => searchParams.get('q') ?? '');
+  const [searchFocused, setSearchFocused] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<LeadCategory | ''>('');
+  const [temperatureFilter, setTemperatureFilter] = useState<LeadTemperature | ''>('');
   const [languageFilter, setLanguageFilter] = useState('');
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [sortKey, setSortKey] = useState<LeadSortKey>('date');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [websiteRows, setWebsiteRows] = useState<WebsiteRequest[]>([]);
@@ -660,6 +757,7 @@ export default function WebsiteAnfragenPage() {
 
   function matchesFilters(sourceTable: LeadSourceTable, row: Parameters<typeof normalizeAttractionCategory>[1]): boolean {
     if (categoryFilter && normalizeAttractionCategory(sourceTable, row) !== categoryFilter) return false;
+    if (temperatureFilter && 'temperature' in row && row.temperature !== temperatureFilter) return false;
     if (languageFilter && resolveLeadLanguage(sourceTable, row) !== languageFilter) return false;
     return true;
   }
@@ -684,7 +782,7 @@ export default function WebsiteAnfragenPage() {
       (row) => row.spalte_1 || row.submitted_at,
       (row) => row.name || row.firma || row.email,
     );
-  }, [leadRows, query, categoryFilter, languageFilter, sortKey, sortDirection]);
+  }, [leadRows, query, categoryFilter, temperatureFilter, languageFilter, sortKey, sortDirection]);
 
   const filteredWebsiteRows = useMemo(() => {
     const filtered = websiteRows.filter(
@@ -699,7 +797,7 @@ export default function WebsiteAnfragenPage() {
       (row) => row.submitted_at,
       (row) => row.name || row.company || row.email,
     );
-  }, [websiteRows, query, categoryFilter, languageFilter, sortKey, sortDirection]);
+  }, [websiteRows, query, categoryFilter, temperatureFilter, languageFilter, sortKey, sortDirection]);
 
   const filteredGermanRows = useMemo(() => {
     const filtered = germanRows.filter(
@@ -722,7 +820,7 @@ export default function WebsiteAnfragenPage() {
       (row) => row.submitted_at,
       (row) => row.name || row.company || row.email,
     );
-  }, [germanRows, query, categoryFilter, languageFilter, sortKey, sortDirection]);
+  }, [germanRows, query, categoryFilter, temperatureFilter, languageFilter, sortKey, sortDirection]);
 
   const filteredProductFinderRows = useMemo(() => {
     const filtered = productFinderRows.filter(
@@ -745,7 +843,46 @@ export default function WebsiteAnfragenPage() {
       (row) => row.submitted_at,
       (row) => row.name || row.company || row.email,
     );
-  }, [productFinderRows, query, categoryFilter, languageFilter, sortKey, sortDirection]);
+  }, [productFinderRows, query, categoryFilter, temperatureFilter, languageFilter, sortKey, sortDirection]);
+
+  const combinedLeadRows = useMemo(() => {
+    const rows: CombinedLeadEntry[] = [
+      ...filteredLeadRows.map((row) => ({
+        sourceTable: 'email_leads' as const,
+        id: row.id,
+        temperature: row.temperature,
+        sortDate: row.spalte_1 || row.submitted_at,
+        sortName: row.name || row.firma || row.email,
+        row,
+      })),
+      ...filteredWebsiteRows.map((row) => ({
+        sourceTable: 'website_requests' as const,
+        id: row.id,
+        temperature: row.temperature,
+        sortDate: row.submitted_at,
+        sortName: row.name || row.company || row.email,
+        row,
+      })),
+      ...filteredGermanRows.map((row) => ({
+        sourceTable: 'german_website_requests' as const,
+        id: row.id,
+        temperature: row.temperature,
+        sortDate: row.submitted_at,
+        sortName: row.name || row.company || row.email,
+        row,
+      })),
+      ...filteredProductFinderRows.map((row) => ({
+        sourceTable: 'product_finder_submissions' as const,
+        id: row.id,
+        temperature: row.temperature,
+        sortDate: row.submitted_at,
+        sortName: row.name || row.company || row.email,
+        row,
+      })),
+    ];
+
+    return sortLeadRows(rows, sortKey, sortDirection, (row) => row.sortDate, (row) => row.sortName);
+  }, [filteredLeadRows, filteredWebsiteRows, filteredGermanRows, filteredProductFinderRows, sortKey, sortDirection]);
 
   const loadWebsiteRows = useCallback(async () => {
     setWebsiteLoading(true);
@@ -848,6 +985,338 @@ export default function WebsiteAnfragenPage() {
   );
 
   const nextDueEntry = followUpEntries[0] ?? null;
+  const tabCounts = {
+    all: String(combinedLeadRows.length),
+    leads: leadLoading ? '...' : String(filteredLeadRows.length),
+    website: websiteLoading ? '...' : String(filteredWebsiteRows.length),
+    germanWebsite: germanLoading ? '...' : String(filteredGermanRows.length),
+    productFinder: productFinderLoading ? '...' : String(filteredProductFinderRows.length),
+    followUps: String(followUpCounts.total),
+  };
+  const activeFilterCount =
+    (categoryFilter ? 1 : 0) +
+    (temperatureFilter ? 1 : 0) +
+    (languageFilter ? 1 : 0) +
+    (sortKey !== 'date' ? 1 : 0) +
+    (sortDirection !== 'desc' ? 1 : 0);
+
+  function resetLeadFilters() {
+    setCategoryFilter('');
+    setTemperatureFilter('');
+    setLanguageFilter('');
+    setSortKey('date');
+    setSortDirection('desc');
+  }
+
+  const allLeadLoading = leadLoading || websiteLoading || germanLoading || productFinderLoading;
+  const allLeadErrors = [leadError, websiteError, germanError, productFinderError].filter(Boolean) as string[];
+
+  function renderCombinedLeadCard(entry: CombinedLeadEntry) {
+    const sourceLabel = LEAD_SOURCE_TABLE_SHORT_LABELS[entry.sourceTable];
+
+    if (entry.sourceTable === 'email_leads') {
+      const row = entry.row;
+      const langSource = `${row.frage} ${row.antwort}`.trim();
+      const capturedAt = row.spalte_1 || row.submitted_at;
+      const pdfLabel = attractionMaterialLabel(row.attractionstyp);
+      const expanded = expandedLeadIds.has(row.id);
+      const statsExpanded = expandedStatsIds.has(row.id);
+      const ownContactEvents = eventsForEmail(contactEvents, row.email);
+
+      return (
+        <div key={`${entry.sourceTable}-${row.id}`} className={`lead-card lead-card-${row.temperature}`}>
+          <LeadAvatar label={row.name || row.firma || row.email} />
+          <div className="lead-card-main">
+            <div className="lead-card-head">
+              <span className="lead-card-name">{row.name || row.email || 'Unbekannt'}</span>
+              {row.firma && <span className="lead-card-company">{row.firma}</span>}
+              <span className="lead-lang-badge">{sourceLabel}</span>
+              {pdfLabel && <span className="lead-pdf-badge">PDF: {pdfLabel}</span>}
+            </div>
+            {row.email && (
+              <a className="lead-card-email" href={`mailto:${row.email}`}>
+                {row.email}
+              </a>
+            )}
+            <div className="lead-detail-toggles">
+              {row.frage && (
+                <button type="button" className="lead-qa-toggle" onClick={() => toggleLeadExpanded(row.id)}>
+                  {expanded ? 'Weniger' : 'Details'}
+                </button>
+              )}
+              {ownContactEvents.length > 0 && (
+                <button type="button" className="lead-qa-toggle" onClick={() => toggleStatsExpanded(row.id)}>
+                  {statsExpanded ? 'Weniger' : `Verlauf (${ownContactEvents.length})`}
+                </button>
+              )}
+            </div>
+            {row.frage && expanded && (
+              <div className="lead-qa">
+                <div className="lead-qa-head">{langSource && <LangBadge text={langSource} />}</div>
+                <span className="lead-qa-q">{row.frage}</span>
+                <span className="lead-qa-a">{row.antwort || '-'}</span>
+              </div>
+            )}
+            {statsExpanded && (
+              <ContactTimeline
+                events={ownContactEvents}
+                attachments={contactAttachments}
+                onDelete={onDeleteContact}
+                onDeleteAttachment={onDeleteAttachment}
+              />
+            )}
+            <span className="lead-card-date">{formatDate(capturedAt) || '-'}</span>
+          </div>
+          <div className="lead-card-actions">
+            <TemperatureSelect value={row.temperature} onChange={(temperature) => onLeadFieldChange(row.id, { temperature })} />
+            <ContactQuickAdd onAdd={(iso, note, files) => onAddContact(row.email, 'email_leads', row.id, iso, note, files)} />
+            <FollowUpControl
+              followUp={followUpForEmail(followUps, row.email)}
+              onSet={(date, cadence, note) => onSetFollowUp(row.email, date, cadence, note)}
+              onClear={onClearFollowUp}
+            />
+            <button
+              type="button"
+              className="lead-delete-btn lead-delete-icon-btn"
+              onClick={() => onLeadDelete(row.id)}
+              disabled={deletingId === row.id}
+              title="Eintrag löschen"
+              aria-label="Eintrag löschen"
+            >
+              {deletingId === row.id ? '...' : <Trash2 size={14} />}
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    if (entry.sourceTable === 'website_requests') {
+      const row = entry.row;
+      const expanded = expandedWebsiteIds.has(row.id);
+      const statsExpanded = expandedStatsIds.has(row.id);
+      const ownContactEvents = eventsForEmail(contactEvents, row.email);
+
+      return (
+        <div key={`${entry.sourceTable}-${row.id}`} className={`lead-card lead-card-${row.temperature}`}>
+          <LeadAvatar label={row.name || row.company || row.email} />
+          <div className="lead-card-main">
+            <div className="lead-card-head">
+              <span className="lead-card-name">{row.name || row.email || 'Unbekannt'}</span>
+              {row.company && <span className="lead-card-company">{row.company}</span>}
+              <span className="lead-lang-badge">{sourceLabel}</span>
+              {row.country && <span className="material-lang-badge lang-en">{row.country}</span>}
+              {row.project_type && <span className="material-lang-badge lang-de">{row.project_type}</span>}
+              {row.message && <LangBadge text={row.message} />}
+            </div>
+            {row.email && (
+              <a className="lead-card-email" href={`mailto:${row.email}`}>
+                {row.email}
+              </a>
+            )}
+            <div className="lead-detail-toggles">
+              {row.message && (
+                <button type="button" className="lead-qa-toggle" onClick={() => toggleWebsiteExpanded(row.id)}>
+                  {expanded ? 'Weniger' : 'Nachricht'}
+                </button>
+              )}
+              {ownContactEvents.length > 0 && (
+                <button type="button" className="lead-qa-toggle" onClick={() => toggleStatsExpanded(row.id)}>
+                  {statsExpanded ? 'Weniger' : `Verlauf (${ownContactEvents.length})`}
+                </button>
+              )}
+            </div>
+            {row.message && expanded && <p className="lead-card-message">{row.message}</p>}
+            {statsExpanded && (
+              <ContactTimeline
+                events={ownContactEvents}
+                attachments={contactAttachments}
+                onDelete={onDeleteContact}
+                onDeleteAttachment={onDeleteAttachment}
+              />
+            )}
+            <div className="lead-card-meta">
+              <span className="lead-card-date">{formatDate(row.submitted_at) || '-'}</span>
+              {row.source && <span>{row.source}</span>}
+              {row.url && (
+                <a href={row.url} target="_blank" rel="noreferrer">
+                  {row.url}
+                </a>
+              )}
+            </div>
+          </div>
+          <div className="lead-card-actions">
+            <TemperatureSelect value={row.temperature} onChange={(temperature) => onWebsiteFieldChange(row.id, { temperature })} />
+            <ContactQuickAdd onAdd={(iso, note, files) => onAddContact(row.email, 'website_requests', row.id, iso, note, files)} />
+            <FollowUpControl
+              followUp={followUpForEmail(followUps, row.email)}
+              onSet={(date, cadence, note) => onSetFollowUp(row.email, date, cadence, note)}
+              onClear={onClearFollowUp}
+            />
+            <button
+              type="button"
+              className="lead-delete-btn lead-delete-icon-btn"
+              onClick={() => onWebsiteDelete(row.id)}
+              disabled={deletingId === row.id}
+              title="Eintrag löschen"
+              aria-label="Eintrag löschen"
+            >
+              {deletingId === row.id ? '...' : <Trash2 size={14} />}
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    if (entry.sourceTable === 'german_website_requests') {
+      const row = entry.row;
+      const statsExpanded = expandedStatsIds.has(row.id);
+      const ownContactEvents = eventsForEmail(contactEvents, row.email);
+
+      return (
+        <div key={`${entry.sourceTable}-${row.id}`} className={`lead-card lead-card-${row.temperature}`}>
+          <LeadAvatar label={row.name || row.company || row.email} />
+          <div className="lead-card-main">
+            <div className="lead-card-head">
+              <span className="lead-card-name">{row.name || row.email || 'Unbekannt'}</span>
+              {row.company && <span className="lead-card-company">{row.company}</span>}
+              <span className="lead-lang-badge">{sourceLabel}</span>
+              {row.attraction_type && <span className="material-lang-badge lang-en">{row.attraction_type}</span>}
+              {row.interest && <span className="material-lang-badge lang-de">{row.interest}</span>}
+            </div>
+            <div className="lead-card-meta">
+              {row.email && (
+                <a className="lead-card-email" href={`mailto:${row.email}`}>
+                  {row.email}
+                </a>
+              )}
+              {row.phone && <a href={`tel:${row.phone.replace(/\s+/g, '')}`}>{row.phone}</a>}
+            </div>
+            {row.comment && <p className="lead-card-message">{row.comment}</p>}
+            {ownContactEvents.length > 0 && (
+              <div className="lead-detail-toggles">
+                <button type="button" className="lead-qa-toggle" onClick={() => toggleStatsExpanded(row.id)}>
+                  {statsExpanded ? 'Weniger' : `Verlauf (${ownContactEvents.length})`}
+                </button>
+              </div>
+            )}
+            {statsExpanded && (
+              <ContactTimeline
+                events={ownContactEvents}
+                attachments={contactAttachments}
+                onDelete={onDeleteContact}
+                onDeleteAttachment={onDeleteAttachment}
+              />
+            )}
+            <div className="lead-card-meta">
+              <span className="lead-card-date">{formatDate(row.submitted_at) || '-'}</span>
+              {row.referral_source && <span>{row.referral_source}</span>}
+            </div>
+          </div>
+          <div className="lead-card-actions">
+            <TemperatureSelect value={row.temperature} onChange={(temperature) => onGermanFieldChange(row.id, { temperature })} />
+            <ContactQuickAdd
+              onAdd={(iso, note, files) => onAddContact(row.email, 'german_website_requests', row.id, iso, note, files)}
+            />
+            <FollowUpControl
+              followUp={followUpForEmail(followUps, row.email)}
+              onSet={(date, cadence, note) => onSetFollowUp(row.email, date, cadence, note)}
+              onClear={onClearFollowUp}
+            />
+            <button
+              type="button"
+              className="lead-delete-btn lead-delete-icon-btn"
+              onClick={() => onGermanDelete(row.id)}
+              disabled={deletingId === row.id}
+              title="Eintrag löschen"
+              aria-label="Eintrag löschen"
+            >
+              {deletingId === row.id ? '...' : <Trash2 size={14} />}
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    const row = entry.row;
+    const expanded = expandedProductFinderIds.has(row.id);
+    const statsExpanded = expandedStatsIds.has(row.id);
+    const ownContactEvents = eventsForEmail(contactEvents, row.email);
+
+    return (
+      <div key={`${entry.sourceTable}-${row.id}`} className={`lead-card lead-card-${row.temperature}`}>
+        <LeadAvatar label={row.name || row.company || row.email} />
+        <div className="lead-card-main">
+          <div className="lead-card-head">
+            <span className="lead-card-name">{row.name || row.email || 'Unbekannt'}</span>
+            {row.company && <span className="lead-card-company">{row.company}</span>}
+            <span className="lead-lang-badge">{sourceLabel}</span>
+            {row.attraction_type && <span className="material-lang-badge lang-en">{row.attraction_type}</span>}
+            {row.language && <FlagBadge value={row.language} title={row.language} />}
+            {row.target_country && <FlagBadge value={row.target_country} title={row.target_country} />}
+          </div>
+          {row.email && (
+            <a className="lead-card-email" href={`mailto:${row.email}`}>
+              {row.email}
+            </a>
+          )}
+          <div className="lead-detail-toggles">
+            {row.answers.length > 0 && (
+              <button type="button" className="lead-qa-toggle" onClick={() => toggleProductFinderExpanded(row.id)}>
+                {expanded ? 'Weniger' : `Antworten (${row.answers.length})`}
+              </button>
+            )}
+            {ownContactEvents.length > 0 && (
+              <button type="button" className="lead-qa-toggle" onClick={() => toggleStatsExpanded(row.id)}>
+                {statsExpanded ? 'Weniger' : `Verlauf (${ownContactEvents.length})`}
+              </button>
+            )}
+          </div>
+          {row.answers.length > 0 && expanded && (
+            <div className="lead-qa">
+              {row.answers.map((a) => (
+                <div key={a.id}>
+                  <span className="lead-qa-q">{a.title}</span>
+                  <span className="lead-qa-a">{a.answer}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {statsExpanded && (
+            <ContactTimeline
+              events={ownContactEvents}
+              attachments={contactAttachments}
+              onDelete={onDeleteContact}
+              onDeleteAttachment={onDeleteAttachment}
+            />
+          )}
+          <div className="lead-card-meta">
+            <span className="lead-card-date">{formatDate(row.submitted_at) || '-'}</span>
+          </div>
+        </div>
+        <div className="lead-card-actions">
+          <TemperatureSelect value={row.temperature} onChange={(temperature) => onProductFinderFieldChange(row.id, { temperature })} />
+          <ContactQuickAdd
+            onAdd={(iso, note, files) => onAddContact(row.email, 'product_finder_submissions', row.id, iso, note, files)}
+          />
+          <FollowUpControl
+            followUp={followUpForEmail(followUps, row.email)}
+            onSet={(date, cadence, note) => onSetFollowUp(row.email, date, cadence, note)}
+            onClear={onClearFollowUp}
+          />
+          <button
+            type="button"
+            className="lead-delete-btn lead-delete-icon-btn"
+            onClick={() => onProductFinderDelete(row.id)}
+            disabled={deletingId === row.id}
+            title="Eintrag löschen"
+            aria-label="Eintrag löschen"
+          >
+            {deletingId === row.id ? '...' : <Trash2 size={14} />}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   async function onQuickCompleteFollowUp(followUp: LeadFollowUp) {
     const rescheduled = nextFollowUpAfterCompletion(followUp);
@@ -1210,169 +1679,269 @@ export default function WebsiteAnfragenPage() {
   };
 
   return (
-    <div className="grid" style={{ gap: 16 }}>
-      <div className="card">
-        <h2>Interessenten und Anfragen</h2>
-        <p className="note">
-          PDF-Leads, internationale und deutsche Website-Anfragen an einem Ort — Status setzen, als kontaktiert
-          markieren, Details einsehen.
-        </p>
-      </div>
+    <div className="lead-page-shell">
+      <div className="card lead-dashboard-card">
+        <div className="lead-dashboard-heading">
+          <h2>Interessenten und Anfragen</h2>
+        </div>
 
-      {totalLeadsCount > 0 && (
-        <div className="card follow-up-summary">
-          <div className="follow-up-summary-stats">
-            <div className="follow-up-summary-item">
-              <span className="follow-up-summary-value">{totalLeadsCount}</span>
-              <span className="follow-up-summary-label">Interessenten insgesamt</span>
+        {totalLeadsCount > 0 && (
+          <div className="lead-overview-row">
+            <div className="lead-overview-item">
+              <span>Gesamt</span>
+              <strong>{totalLeadsCount}</strong>
             </div>
-            <div className="follow-up-summary-item">
-              <span className="follow-up-summary-value">{contactedTodayCount}</span>
-              <span className="follow-up-summary-label">Kontaktiert heute</span>
+            <div className="lead-overview-item" title="Kontaktiert heute">
+              <span>Kontaktiert</span>
+              <strong>{contactedTodayCount}</strong>
             </div>
-            <div className="follow-up-summary-item">
-              <span className="follow-up-summary-value">{followUpCounts.dueToday}</span>
-              <span className="follow-up-summary-label">Follow-up heute fällig</span>
+            <div className="lead-overview-item" title="Heute fällig">
+              <span>Heute</span>
+              <strong>{followUpCounts.dueToday}</strong>
             </div>
-            <div className="follow-up-summary-item follow-up-summary-overdue">
-              <span className="follow-up-summary-value">{followUpCounts.overdue}</span>
-              <span className="follow-up-summary-label">Überfällig</span>
+            <div className="lead-overview-item" title="Fällig in den nächsten 7 Tagen">
+              <span>Fällig</span>
+              <strong>{followUpCounts.dueSoon}</strong>
             </div>
-            <div className="follow-up-summary-item">
-              <span className="follow-up-summary-value">{followUpCounts.dueSoon}</span>
-              <span className="follow-up-summary-label">Diese Woche</span>
+            <div className="lead-overview-item lead-overview-item-alert">
+              <span>Überfällig</span>
+              <strong>{followUpCounts.overdue}</strong>
             </div>
+            {nextDueEntry && (
+              <div className="lead-overview-item lead-overview-item-next" title="Nächstes Follow-up">
+                <span>Nächstes</span>
+                <strong className="lead-overview-next-name">
+                  {nextDueEntry.lead?.displayName || nextDueEntry.followUp.email}
+                </strong>
+                <div className="lead-next-meta">
+                  <span>{formatFollowUpRelative(nextDueEntry.followUp.next_due_at)}</span>
+                  <span>{formatFollowUpDate(nextDueEntry.followUp.next_due_at)}</span>
+                </div>
+              </div>
+            )}
             {followUpCounts.total > 0 && (
               <button
                 type="button"
-                className="secondary inline follow-up-summary-btn"
+                className={`lead-overview-item lead-followups-btn ${activeTab === 'followUps' ? 'active' : ''}`}
                 onClick={() => setActiveTab('followUps')}
               >
-                Follow-ups ansehen ({followUpCounts.total})
+                <span className="lead-followups-btn-label">Follow-Up</span>
+                <span className="lead-followups-btn-meta">
+                  <BellRing size={12} />
+                  <strong>{tabCounts.followUps}</strong>
+                  <ChevronRight size={12} className="lead-followups-btn-chevron" />
+                </span>
               </button>
             )}
           </div>
+        )}
 
-          {nextDueEntry && (
-            <div className="follow-up-next-highlight">
-              <div>
-                <p className="eyebrow">Als nächstes fällig</p>
-                <p className="follow-up-next-name">
-                  {nextDueEntry.lead?.displayName || nextDueEntry.followUp.email}
-                </p>
-                <p className="note">{formatFollowUpDate(nextDueEntry.followUp.next_due_at)}</p>
-              </div>
-              <button type="button" onClick={() => onQuickCompleteFollowUp(nextDueEntry.followUp)}>
-                ✓ Erledigt
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
-      <div className="lead-toolbar">
-        <div className="lead-tabbar widget-scroll-x">
+        <div className="customer-detail-tabs lead-source-tabs widget-scroll-x" role="tablist" aria-label="Lead-Quellen">
           <button
             type="button"
-            className={`lead-tab ${activeTab === 'leads' ? 'active' : ''}`}
+            className={`customer-detail-tab ${activeTab === 'all' ? 'active' : ''}`}
+            onClick={() => setActiveTab('all')}
+          >
+            <span className="customer-detail-tab-icon">
+              <LayoutGrid size={15} />
+            </span>
+            <span className="customer-detail-tab-label">Alle</span>
+            <span className="marketing-block-count lead-source-count">{tabCounts.all}</span>
+          </button>
+          <button
+            type="button"
+            className={`customer-detail-tab ${activeTab === 'leads' ? 'active' : ''}`}
             onClick={() => setActiveTab('leads')}
           >
-            PDF E-Mails
-            <span className="lead-tab-count">{leadLoading ? '...' : filteredLeadRows.length}</span>
+            <span className="customer-detail-tab-icon">
+              <FileText size={15} />
+            </span>
+            <span className="customer-detail-tab-label">PDF</span>
+            <span className="marketing-block-count lead-source-count">{tabCounts.leads}</span>
           </button>
           <button
             type="button"
-            className={`lead-tab ${activeTab === 'website' ? 'active' : ''}`}
+            className={`customer-detail-tab ${activeTab === 'website' ? 'active' : ''}`}
             onClick={() => setActiveTab('website')}
           >
-            Website (International)
-            <span className="lead-tab-count">{websiteLoading ? '...' : filteredWebsiteRows.length}</span>
+            <span className="customer-detail-tab-icon">
+              <Globe size={15} />
+            </span>
+            <span className="customer-detail-tab-label">International</span>
+            <span className="marketing-block-count lead-source-count">{tabCounts.website}</span>
           </button>
           <button
             type="button"
-            className={`lead-tab ${activeTab === 'germanWebsite' ? 'active' : ''}`}
+            className={`customer-detail-tab ${activeTab === 'germanWebsite' ? 'active' : ''}`}
             onClick={() => setActiveTab('germanWebsite')}
           >
-            Website (Deutschland)
-            <span className="lead-tab-count">{germanLoading ? '...' : filteredGermanRows.length}</span>
+            <span className="customer-detail-tab-icon">
+              <Globe size={15} />
+            </span>
+            <span className="customer-detail-tab-label">Deutschland</span>
+            <span className="marketing-block-count lead-source-count">{tabCounts.germanWebsite}</span>
           </button>
           <button
             type="button"
-            className={`lead-tab ${activeTab === 'productFinder' ? 'active' : ''}`}
+            className={`customer-detail-tab ${activeTab === 'productFinder' ? 'active' : ''}`}
             onClick={() => setActiveTab('productFinder')}
           >
-            Produktfinder
-            <span className="lead-tab-count">{productFinderLoading ? '...' : filteredProductFinderRows.length}</span>
+            <span className="customer-detail-tab-icon">
+              <Search size={15} />
+            </span>
+            <span className="customer-detail-tab-label">Produktfinder</span>
+            <span className="marketing-block-count lead-source-count">{tabCounts.productFinder}</span>
           </button>
           <button
             type="button"
-            className={`lead-tab ${activeTab === 'followUps' ? 'active' : ''}`}
-            onClick={() => setActiveTab('followUps')}
-          >
-            Follow-ups
-            {followUpCounts.total > 0 && <span className="lead-tab-count">{followUpCounts.total}</span>}
-          </button>
-          <button
-            type="button"
-            className={`lead-tab ${activeTab === 'statistik' ? 'active' : ''}`}
+            className={`customer-detail-tab ${activeTab === 'statistik' ? 'active' : ''}`}
             onClick={() => setActiveTab('statistik')}
           >
-            Statistik
+            <span className="customer-detail-tab-icon">
+              <BarChart3 size={15} />
+            </span>
+            <span className="customer-detail-tab-label">Statistik</span>
           </button>
         </div>
-        <input
-          type="search"
-          className="lead-search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Suche nach Name, E-Mail, Firma ..."
-        />
+
+        {activeTab !== 'followUps' && activeTab !== 'statistik' && (
+          <div className="lead-toolbar-crm">
+            <label
+              className={`customer-directory-search lead-search-shell ${searchFocused ? 'is-focused' : ''} ${query.trim() ? '' : 'is-empty'}`}
+            >
+              <Search size={16} />
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onFocus={() => setSearchFocused(true)}
+                onBlur={() => setSearchFocused(false)}
+                placeholder="Suche nach Name, E-Mail, Firma ..."
+              />
+            </label>
+
+            <button
+              type="button"
+              className="customer-quiet-btn lead-filter-toggle-btn"
+              onClick={() => setFiltersOpen((open) => !open)}
+              aria-expanded={filtersOpen}
+            >
+              <SlidersHorizontal size={14} />
+              Filter
+              {activeFilterCount > 0 && <span className="marketing-block-count lead-filter-toggle-count">{activeFilterCount}</span>}
+            </button>
+          </div>
+        )}
+
+        {activeTab !== 'followUps' && activeTab !== 'statistik' && filtersOpen && (
+          <div className="lead-filter-drawer">
+            <div className="lead-filter-drawer-head">
+              <strong>Filter & Sortierung</strong>
+              <div className="lead-filter-drawer-controls">
+                <div className="lead-filter-row lead-filter-row-crm">
+                  <LeadFilterBar
+                    category={categoryFilter}
+                    onCategoryChange={setCategoryFilter}
+                    temperature={temperatureFilter}
+                    onTemperatureChange={setTemperatureFilter}
+                    language={languageFilter}
+                    onLanguageChange={setLanguageFilter}
+                    availableLanguages={availableLanguages}
+                  />
+                  <LeadSortControl
+                    sortKey={sortKey}
+                    direction={sortDirection}
+                    onChange={(key, direction) => {
+                      setSortKey(key);
+                      setSortDirection(direction);
+                    }}
+                  />
+                </div>
+                <div className="lead-filter-drawer-actions">
+                  {activeFilterCount > 0 && (
+                    <button type="button" className="customer-quiet-btn" onClick={resetLeadFilters}>
+                      Zurücksetzen
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="customer-icon-btn"
+                    onClick={() => setFiltersOpen(false)}
+                    aria-label="Filter schließen"
+                    title="Schließen"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      {activeTab !== 'followUps' && activeTab !== 'statistik' && (
-        <div className="lead-filter-row">
-          <LeadFilterBar
-            category={categoryFilter}
-            onCategoryChange={setCategoryFilter}
-            language={languageFilter}
-            onLanguageChange={setLanguageFilter}
-            availableLanguages={availableLanguages}
-          />
-          <LeadSortControl
-            sortKey={sortKey}
-            direction={sortDirection}
-            onChange={(key, direction) => {
-              setSortKey(key);
-              setSortDirection(direction);
-            }}
-          />
+      {activeTab === 'all' && (
+      <div className="marketing-block lead-section-block">
+        <div className="lead-section-head">
+          <div className="lead-section-title">
+            <h3>Alle Interessenten & Anfragen</h3>
+            <span className="marketing-block-count">{tabCounts.all}</span>
+          </div>
+          <div className="lead-section-actions">
+            <button
+              type="button"
+              className="customer-icon-btn"
+              onClick={() => {
+                void loadLeadRows();
+                void loadWebsiteRows();
+                void loadGermanRows();
+                void loadProductFinderRows();
+              }}
+              disabled={allLeadLoading}
+              title="Aktualisieren"
+            >
+              <RefreshCw size={14} className={allLeadLoading ? 'spin' : ''} />
+            </button>
+          </div>
         </div>
+
+        {allLeadErrors.length > 0 && <p className="error">{allLeadErrors[0]}</p>}
+        {allLeadLoading && combinedLeadRows.length === 0 && <p className="note">Lade Daten...</p>}
+        {!allLeadLoading && combinedLeadRows.length === 0 && (
+          <p className="note">{query.trim() ? `Keine Treffer für "${query.trim()}".` : 'Noch keine Eintraege.'}</p>
+        )}
+
+        <div className="lead-list">
+          {combinedLeadRows.map((entry) => renderCombinedLeadCard(entry))}
+        </div>
+      </div>
       )}
 
       {activeTab === 'leads' && (
-      <div className="card">
-        <div className="marketing-section-title">
-          <h3>PDF E-Mails ({leadLoading ? '...' : filteredLeadRows.length})</h3>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div className="marketing-block lead-section-block">
+        <div className="lead-section-head">
+          <div className="lead-section-title">
+            <h3>PDF-Interessenten</h3>
+            <span className="marketing-block-count">{leadLoading ? '...' : filteredLeadRows.length}</span>
+          </div>
+          <div className="lead-section-actions">
             <button
               type="button"
-              className="secondary inline"
+              className="customer-icon-btn"
               onClick={() => loadLeadRows()}
               disabled={leadLoading}
               title="Aktualisieren"
-              style={{ width: 'auto' }}
             >
               <RefreshCw size={14} className={leadLoading ? 'spin' : ''} />
             </button>
-            <button type="button" className="secondary inline" onClick={() => setShowLeadImport((v) => !v)}>
-              {showLeadImport ? 'Import ausblenden' : 'CSV importieren'}
+            <button type="button" className="customer-quiet-btn" onClick={() => setShowLeadImport((v) => !v)}>
+              <Upload size={14} />
+              {showLeadImport ? 'Schließen' : 'Import'}
             </button>
           </div>
         </div>
 
         {showLeadImport && (
           <div className="lead-import-panel">
-            <p className="note">Spalten wie im Sheet: email, name, firma, attractionstyp, frage, antwort, Spalte 1.</p>
             <div className="upload-row">
               <div className="upload-file-col">
                 <label>CSV Datei</label>
@@ -1380,7 +1949,7 @@ export default function WebsiteAnfragenPage() {
               </div>
               <div className="upload-btn-col">
                 <button type="button" onClick={onLeadImport} disabled={!pendingLeadRows.length || leadImporting}>
-                  {leadImporting ? 'Import laeuft...' : 'CSV importieren'}
+                  {leadImporting ? 'Import läuft...' : 'Importieren'}
                 </button>
               </div>
             </div>
@@ -1422,12 +1991,12 @@ export default function WebsiteAnfragenPage() {
                     <div className="lead-detail-toggles">
                       {row.frage && (
                         <button type="button" className="lead-qa-toggle" onClick={() => toggleLeadExpanded(row.id)}>
-                          {expanded ? 'Details ausblenden' : 'Details anzeigen'}
+                          {expanded ? 'Weniger' : 'Details'}
                         </button>
                       )}
                       {ownContactEvents.length > 0 && (
                         <button type="button" className="lead-qa-toggle" onClick={() => toggleStatsExpanded(row.id)}>
-                          {statsExpanded ? 'Statistik ausblenden' : `Statistik anzeigen (${ownContactEvents.length})`}
+                          {statsExpanded ? 'Weniger' : `Verlauf (${ownContactEvents.length})`}
                         </button>
                       )}
                     </div>
@@ -1463,11 +2032,13 @@ export default function WebsiteAnfragenPage() {
                     />
                     <button
                       type="button"
-                      className="lead-delete-btn"
+                      className="lead-delete-btn lead-delete-icon-btn"
                       onClick={() => onLeadDelete(row.id)}
                       disabled={deletingId === row.id}
+                      title="Eintrag löschen"
+                      aria-label="Eintrag löschen"
                     >
-                      {deletingId === row.id ? 'Löscht...' : 'Löschen'}
+                      {deletingId === row.id ? '...' : <Trash2 size={14} />}
                     </button>
                   </div>
                 </div>
@@ -1478,22 +2049,25 @@ export default function WebsiteAnfragenPage() {
       )}
 
       {activeTab === 'website' && (
-      <div className="card">
-        <div className="marketing-section-title">
-          <h3>Website-Anfragen ({websiteLoading ? '...' : filteredWebsiteRows.length})</h3>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div className="marketing-block lead-section-block">
+        <div className="lead-section-head">
+          <div className="lead-section-title">
+            <h3>International</h3>
+            <span className="marketing-block-count">{websiteLoading ? '...' : filteredWebsiteRows.length}</span>
+          </div>
+          <div className="lead-section-actions">
             <button
               type="button"
-              className="secondary inline"
+              className="customer-icon-btn"
               onClick={() => loadWebsiteRows()}
               disabled={websiteLoading}
               title="Aktualisieren"
-              style={{ width: 'auto' }}
             >
               <RefreshCw size={14} className={websiteLoading ? 'spin' : ''} />
             </button>
-            <button type="button" className="secondary inline" onClick={() => setShowWebsiteImport((v) => !v)}>
-              {showWebsiteImport ? 'Import ausblenden' : 'CSV importieren'}
+            <button type="button" className="customer-quiet-btn" onClick={() => setShowWebsiteImport((v) => !v)}>
+              <Upload size={14} />
+              {showWebsiteImport ? 'Schließen' : 'Import'}
             </button>
           </div>
         </div>
@@ -1507,7 +2081,7 @@ export default function WebsiteAnfragenPage() {
               </div>
               <div className="upload-btn-col">
                 <button type="button" onClick={onWebsiteImport} disabled={!pendingWebsiteRows.length || websiteImporting}>
-                  {websiteImporting ? 'Import laeuft...' : 'CSV importieren'}
+                  {websiteImporting ? 'Import läuft...' : 'Importieren'}
                 </button>
               </div>
             </div>
@@ -1548,12 +2122,12 @@ export default function WebsiteAnfragenPage() {
                   <div className="lead-detail-toggles">
                     {row.message && (
                       <button type="button" className="lead-qa-toggle" onClick={() => toggleWebsiteExpanded(row.id)}>
-                        {expanded ? 'Details ausblenden' : 'Details anzeigen'}
+                        {expanded ? 'Weniger' : 'Nachricht'}
                       </button>
                     )}
                     {ownContactEvents.length > 0 && (
                       <button type="button" className="lead-qa-toggle" onClick={() => toggleStatsExpanded(row.id)}>
-                        {statsExpanded ? 'Statistik ausblenden' : `Statistik anzeigen (${ownContactEvents.length})`}
+                        {statsExpanded ? 'Weniger' : `Verlauf (${ownContactEvents.length})`}
                       </button>
                     )}
                   </div>
@@ -1591,11 +2165,13 @@ export default function WebsiteAnfragenPage() {
                   />
                   <button
                     type="button"
-                    className="lead-delete-btn"
+                    className="lead-delete-btn lead-delete-icon-btn"
                     onClick={() => onWebsiteDelete(row.id)}
                     disabled={deletingId === row.id}
+                    title="Eintrag löschen"
+                    aria-label="Eintrag löschen"
                   >
-                    {deletingId === row.id ? 'Löscht...' : 'Löschen'}
+                    {deletingId === row.id ? '...' : <Trash2 size={14} />}
                   </button>
                 </div>
               </div>
@@ -1606,29 +2182,31 @@ export default function WebsiteAnfragenPage() {
       )}
 
       {activeTab === 'germanWebsite' && (
-      <div className="card">
-        <div className="marketing-section-title">
-          <h3>Website (Deutschland) ({germanLoading ? '...' : filteredGermanRows.length})</h3>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div className="marketing-block lead-section-block">
+        <div className="lead-section-head">
+          <div className="lead-section-title">
+            <h3>Deutschland</h3>
+            <span className="marketing-block-count">{germanLoading ? '...' : filteredGermanRows.length}</span>
+          </div>
+          <div className="lead-section-actions">
             <button
               type="button"
-              className="secondary inline"
+              className="customer-icon-btn"
               onClick={() => loadGermanRows()}
               disabled={germanLoading}
               title="Aktualisieren"
-              style={{ width: 'auto' }}
             >
               <RefreshCw size={14} className={germanLoading ? 'spin' : ''} />
             </button>
-            <button type="button" className="secondary inline" onClick={() => setShowGermanImport((v) => !v)}>
-              {showGermanImport ? 'Import ausblenden' : 'CSV importieren'}
+            <button type="button" className="customer-quiet-btn" onClick={() => setShowGermanImport((v) => !v)}>
+              <Upload size={14} />
+              {showGermanImport ? 'Schließen' : 'Import'}
             </button>
           </div>
         </div>
 
         {showGermanImport && (
           <div className="lead-import-panel">
-            <p className="note">Export aus dem Wix-Formular (liftpictures.com).</p>
             <div className="upload-row">
               <div className="upload-file-col">
                 <label>CSV Datei</label>
@@ -1636,7 +2214,7 @@ export default function WebsiteAnfragenPage() {
               </div>
               <div className="upload-btn-col">
                 <button type="button" onClick={onGermanImport} disabled={!pendingGermanRows.length || germanImporting}>
-                  {germanImporting ? 'Import laeuft...' : 'CSV importieren'}
+                  {germanImporting ? 'Import läuft...' : 'Importieren'}
                 </button>
               </div>
             </div>
@@ -1679,7 +2257,7 @@ export default function WebsiteAnfragenPage() {
                   {ownContactEvents.length > 0 && (
                     <div className="lead-detail-toggles">
                       <button type="button" className="lead-qa-toggle" onClick={() => toggleStatsExpanded(row.id)}>
-                        {statsExpanded ? 'Statistik ausblenden' : `Statistik anzeigen (${ownContactEvents.length})`}
+                        {statsExpanded ? 'Weniger' : `Verlauf (${ownContactEvents.length})`}
                       </button>
                     </div>
                   )}
@@ -1713,11 +2291,13 @@ export default function WebsiteAnfragenPage() {
                   />
                   <button
                     type="button"
-                    className="lead-delete-btn"
+                    className="lead-delete-btn lead-delete-icon-btn"
                     onClick={() => onGermanDelete(row.id)}
                     disabled={deletingId === row.id}
+                    title="Eintrag löschen"
+                    aria-label="Eintrag löschen"
                   >
-                    {deletingId === row.id ? 'Löscht...' : 'Löschen'}
+                    {deletingId === row.id ? '...' : <Trash2 size={14} />}
                   </button>
                 </div>
               </div>
@@ -1728,32 +2308,31 @@ export default function WebsiteAnfragenPage() {
       )}
 
       {activeTab === 'productFinder' && (
-      <div className="card">
-        <div className="marketing-section-title">
-          <h3>Produktfinder ({productFinderLoading ? '...' : filteredProductFinderRows.length})</h3>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div className="marketing-block lead-section-block">
+        <div className="lead-section-head">
+          <div className="lead-section-title">
+            <h3>Produktfinder</h3>
+            <span className="marketing-block-count">{productFinderLoading ? '...' : filteredProductFinderRows.length}</span>
+          </div>
+          <div className="lead-section-actions">
             <button
               type="button"
-              className="secondary inline"
+              className="customer-icon-btn"
               onClick={() => loadProductFinderRows()}
               disabled={productFinderLoading}
               title="Aktualisieren"
-              style={{ width: 'auto' }}
             >
               <RefreshCw size={14} className={productFinderLoading ? 'spin' : ''} />
             </button>
-            <button type="button" className="secondary inline" onClick={() => setShowProductFinderImport((v) => !v)}>
-              {showProductFinderImport ? 'Import ausblenden' : 'CSV importieren'}
+            <button type="button" className="customer-quiet-btn" onClick={() => setShowProductFinderImport((v) => !v)}>
+              <Upload size={14} />
+              {showProductFinderImport ? 'Schließen' : 'Import'}
             </button>
           </div>
         </div>
 
         {showProductFinderImport && (
           <div className="lead-import-panel">
-            <p className="note">
-              Export aus dem Liftpictures-Produktfinder-Quiz. Hinweis: dieser Export enthält kein Einreichungsdatum —
-              importierte Einträge werden mit dem heutigen Datum gespeichert.
-            </p>
             <div className="upload-row">
               <div className="upload-file-col">
                 <label>CSV Datei</label>
@@ -1765,7 +2344,7 @@ export default function WebsiteAnfragenPage() {
                   onClick={onProductFinderImport}
                   disabled={!pendingProductFinderRows.length || productFinderImporting}
                 >
-                  {productFinderImporting ? 'Import laeuft...' : 'CSV importieren'}
+                  {productFinderImporting ? 'Import läuft...' : 'Importieren'}
                 </button>
               </div>
             </div>
@@ -1795,8 +2374,8 @@ export default function WebsiteAnfragenPage() {
                       <span className="lead-card-name">{row.name || row.email || 'Unbekannt'}</span>
                       {row.company && <span className="lead-card-company">{row.company}</span>}
                       {row.attraction_type && <span className="material-lang-badge lang-en">{row.attraction_type}</span>}
-                      {row.language && <span className="lead-lang-badge">{row.language.toUpperCase()}</span>}
-                      {row.target_country && <span className="lead-lang-badge">{row.target_country}</span>}
+                      {row.language && <FlagBadge value={row.language} title={row.language} />}
+                      {row.target_country && <FlagBadge value={row.target_country} title={row.target_country} />}
                     </div>
                     {row.email && (
                       <a className="lead-card-email" href={`mailto:${row.email}`}>
@@ -1810,12 +2389,12 @@ export default function WebsiteAnfragenPage() {
                           className="lead-qa-toggle"
                           onClick={() => toggleProductFinderExpanded(row.id)}
                         >
-                          {expanded ? 'Antworten ausblenden' : `Antworten anzeigen (${row.answers.length})`}
+                          {expanded ? 'Weniger' : `Antworten (${row.answers.length})`}
                         </button>
                       )}
                       {ownContactEvents.length > 0 && (
                         <button type="button" className="lead-qa-toggle" onClick={() => toggleStatsExpanded(row.id)}>
-                          {statsExpanded ? 'Statistik ausblenden' : `Statistik anzeigen (${ownContactEvents.length})`}
+                          {statsExpanded ? 'Weniger' : `Verlauf (${ownContactEvents.length})`}
                         </button>
                       )}
                     </div>
@@ -1856,11 +2435,13 @@ export default function WebsiteAnfragenPage() {
                     />
                     <button
                       type="button"
-                      className="lead-delete-btn"
+                      className="lead-delete-btn lead-delete-icon-btn"
                       onClick={() => onProductFinderDelete(row.id)}
                       disabled={deletingId === row.id}
+                      title="Eintrag löschen"
+                      aria-label="Eintrag löschen"
                     >
-                      {deletingId === row.id ? 'Löscht...' : 'Löschen'}
+                      {deletingId === row.id ? '...' : <Trash2 size={14} />}
                     </button>
                   </div>
                 </div>
@@ -1871,15 +2452,16 @@ export default function WebsiteAnfragenPage() {
       )}
 
       {activeTab === 'followUps' && (
-      <div className="card">
-        <div className="marketing-section-title">
-          <h3>Follow-ups ({followUpEntries.length})</h3>
+      <div className="marketing-block lead-section-block">
+        <div className="lead-section-head">
+          <div className="lead-section-title">
+            <h3>Follow-ups</h3>
+            <span className="marketing-block-count">{followUpEntries.length}</span>
+          </div>
         </div>
 
         {followUpEntries.length === 0 && (
-          <p className="note">
-            Keine offenen Follow-ups. Auf einer Anfrage auf "Follow-up setzen" klicken, um eine hinzuzufügen.
-          </p>
+          <p className="note">Keine offenen Follow-ups.</p>
         )}
 
         <div className="lead-list">

@@ -117,13 +117,13 @@ export const socialLinks: SocialLink[] = [
   {
     id: 'linkedin-tom',
     platform: 'LinkedIn',
-    label: 'Tom Nolting (persönlich)',
+    label: 'Tom Nolting',
     url: 'https://www.linkedin.com/in/tom-nolting-1278703a2/',
   },
   {
     id: 'linkedin-company',
     platform: 'LinkedIn',
-    label: 'LiftPictures Fotosysteme (Unternehmensseite)',
+    label: 'Liftpictures Fotosysteme',
     url: 'https://www.linkedin.com/company/liftpictures',
   },
   {
@@ -143,6 +143,7 @@ export const socialLinks: SocialLink[] = [
 export interface HelpfulLink {
   id: string;
   label: string;
+  shortLabel?: string;
   description: string;
   url: string;
   // true for template/example URLs that aren't meant to be opened as-is.
@@ -157,42 +158,49 @@ export const helpfulLinks: HelpfulLink[] = [
   {
     id: 'contact',
     label: 'liftpictures-contact.com',
+    shortLabel: 'PDF',
     description: 'Kontaktseite – Interessenten erhalten darüber automatisch Info-PDFs per E-Mail zugeschickt.',
     url: 'https://liftpictures-contact.com/',
   },
   {
     id: 'main-de',
     label: 'liftpictures.com',
+    shortLabel: 'Deutschland',
     description: 'Hauptdomain für den deutschen Markt.',
     url: 'https://liftpictures.com',
   },
   {
     id: 'main-world',
     label: 'onridepictures.com',
+    shortLabel: 'International',
     description: 'Hauptdomain für den weltweiten/internationalen Markt.',
     url: 'https://onridepictures.com',
   },
   {
     id: 'demo',
     label: 'attraktionsfotos.de',
+    shortLabel: 'Demo',
     description: 'Demo-Seite: laufende Bildergalerie mit QR-Code zum Freischalten aufs Handy – guter Live-Eindruck für Interessenten.',
     url: 'https://attraktionsfotos.de',
   },
   {
     id: 'calendly',
     label: 'Termin buchen (Calendly)',
+    shortLabel: 'Call',
     description: 'Schnellster Weg, ein Videocall-Gespräch zu vereinbaren.',
     url: 'https://calendly.com/kontakt-liftpictures-fotosysteme/30min',
   },
   {
     id: 'schausteller',
     label: 'onridebilder.de',
+    shortLabel: 'Schausteller',
     description: 'Website speziell für Schausteller (Kirmes-/Volksfest-Betreiber).',
     url: 'https://onridebilder.de',
   },
   {
     id: 'imst-claim',
     label: 'liftpictures-fotos.de/claim?code=…',
+    shortLabel: 'QR Vorlage',
     description: 'Muster-Link für die QR-Code-Bilder in Imst. In echt steht nach "code=" die jeweilige Bildnummer – kein fertiger Link zum Anklicken, nur zum Kopieren als Vorlage.',
     url: 'https://liftpictures-fotos.de/claim?code=',
     copyOnly: true,
@@ -201,6 +209,7 @@ export const helpfulLinks: HelpfulLink[] = [
   {
     id: 'tarzans-claim',
     label: 'liftpictures-fotos-tarzans.de/claim?code=…',
+    shortLabel: 'QR Vorlage',
     description: 'Muster-Link für die QR-Code-Bilder bei Tarzāns Sigulda. Noch kein echtes Hosting/Domain live – Code liegt im selben Repo wie Imst, Unterordner tarzans/. In echt steht nach "code=" die jeweilige Bildnummer – kein fertiger Link zum Anklicken, nur zum Kopieren als Vorlage.',
     url: 'https://liftpictures-fotos-tarzans.de/claim?code=',
     copyOnly: true,

@@ -130,7 +130,7 @@ export default function LeadStatsCharts({ website, german, leads, productFinder,
 
   if (!hasAnyData) {
     return (
-      <div className="card">
+      <div className="marketing-block lead-section-block">
         <h3>Statistik</h3>
         <p className="note">Noch keine Daten für die Statistik.</p>
       </div>
@@ -139,9 +139,11 @@ export default function LeadStatsCharts({ website, german, leads, productFinder,
 
   return (
     <>
-      <div className="card">
-        <div className="marketing-section-title">
-          <h3>Statistik</h3>
+      <div className="marketing-block lead-section-block">
+        <div className="lead-section-head">
+          <div className="lead-section-title">
+            <h3>Statistik</h3>
+          </div>
           <div className="stats-range-toggle">
             <button type="button" className={range === '30d' ? 'active' : ''} onClick={() => setRange('30d')}>
               30 Tage
@@ -154,10 +156,9 @@ export default function LeadStatsCharts({ website, german, leads, productFinder,
             </button>
           </div>
         </div>
-        <p className="note">Eingehende Anfragen pro Kanal und kontaktierte Leads über Zeit.</p>
       </div>
 
-      <div className="card">
+      <div className="marketing-block lead-section-block">
         <h3>Eingehende Anfragen pro Kanal</h3>
         <div className="stats-chart-wrap">
           <ResponsiveContainer width="100%" height="100%">
@@ -203,7 +204,7 @@ export default function LeadStatsCharts({ website, german, leads, productFinder,
         </div>
       </div>
 
-      <div className="card">
+      <div className="marketing-block lead-section-block">
         <h3>Kontaktierte Leads</h3>
         <div className="stats-chart-wrap">
           <ResponsiveContainer width="100%" height="100%">

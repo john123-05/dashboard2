@@ -470,7 +470,7 @@ function leadLocaleBadge(item: Record<string, unknown>): string | null {
   return parts.length > 0 ? parts.join(' ') : null;
 }
 
-export default function Leads() {
+export default function Leads({ embedded = false }: { embedded?: boolean } = {}) {
   const { t } = useI18n();
   const {
     parkId,
@@ -1113,8 +1113,8 @@ export default function Leads() {
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className={embedded ? 'customer-embedded-root preview-leads space-y-5' : 'space-y-6'}>
+      <div className={`flex items-center justify-between gap-3 ${embedded ? 'customer-operator-pagehead' : ''}`}>
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('leads.title')}</h2>
           <p className="mt-1 text-sm text-slate-500">{t('leads.subtitle')}</p>
@@ -1333,17 +1333,22 @@ export default function Leads() {
         title={t('leads.title')}
         searchable
         searchKeys={['email', 'full_name', 'source', 'park_name', 'country_code', 'locale']}
-        pageSize={10}
+        pageSize={embedded ? 8 : 10}
+        embeddedOperator={embedded}
         actions={
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={toggleSelectionMode}
-              className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
-                selectionMode
-                  ? 'border-sky-200 bg-sky-50 text-sky-700'
-                  : 'border-slate-200/60 bg-white/60 text-slate-600 hover:bg-white/80'
-              }`}
+              className={
+                embedded
+                  ? `customer-operator-btn ${selectionMode ? 'active' : ''}`
+                  : `rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
+                      selectionMode
+                        ? 'border-sky-200 bg-sky-50 text-sky-700'
+                        : 'border-slate-200/60 bg-white/60 text-slate-600 hover:bg-white/80'
+                    }`
+              }
             >
               {selectionMode ? 'Fertig' : 'Auswählen'}
             </button>

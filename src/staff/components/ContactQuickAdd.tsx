@@ -32,38 +32,46 @@ export default function ContactQuickAdd({ onAdd }: ContactQuickAddProps) {
   }
 
   return (
-    <div className="contact-quick-add">
-      <div className="contact-quick-add-row">
-        <input type="date" value={dateInput} max={todayIsoDate()} onChange={(e) => setDateInput(e.target.value)} />
-        <button type="button" className="secondary inline" onClick={handleAdd} disabled={adding || !dateInput}>
-          {adding ? '...' : '+ Kontakt'}
+    <div className={`contact-quick-add ${expanded ? 'is-expanded' : 'is-collapsed'}`}>
+      {!expanded ? (
+        <button type="button" className="contact-quick-add-compact-btn" onClick={() => setExpanded(true)}>
+          Kontaktiert
         </button>
-      </div>
-      <button type="button" className="contact-quick-add-toggle" onClick={() => setExpanded((v) => !v)}>
-        <Paperclip size={12} />
-        {expanded
-          ? 'Notiz/Datei ausblenden'
-          : note || files.length > 0
-            ? `Notiz/Datei (${files.length || (note ? 1 : 0)})`
-            : 'Notiz oder Datei hinzufügen'}
-      </button>
-      {expanded && (
+      ) : (
         <div className="contact-quick-add-details">
+          <div className="contact-quick-add-row">
+            <input type="date" value={dateInput} max={todayIsoDate()} onChange={(e) => setDateInput(e.target.value)} />
+            <button type="button" className="secondary inline" onClick={handleAdd} disabled={adding || !dateInput}>
+              {adding ? '...' : 'Speichern'}
+            </button>
+            <button type="button" className="secondary inline" onClick={() => setExpanded(false)} disabled={adding}>
+              Abbrechen
+            </button>
+          </div>
+
           <textarea
             className="contact-quick-add-note"
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="Notiz (optional) ..."
+            placeholder="Notiz"
             rows={2}
           />
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*,application/pdf"
-            multiple
-            onChange={(e) => setFiles(Array.from(e.target.files || []))}
-          />
-          {files.length > 0 && <p className="note">{files.length} Datei(en) ausgewählt</p>}
+
+          <div className="contact-quick-add-files">
+            <button type="button" className="contact-quick-add-toggle" onClick={() => fileInputRef.current?.click()}>
+              <Paperclip size={12} />
+              Datei
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*,application/pdf"
+              multiple
+              onChange={(e) => setFiles(Array.from(e.target.files || []))}
+              style={{ display: 'none' }}
+            />
+            {files.length > 0 && <span className="note">{files.length} Datei(en)</span>}
+          </div>
         </div>
       )}
     </div>

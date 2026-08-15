@@ -9,6 +9,25 @@
 # it handles auth itself rather than relying on the platform JWT gate.
 verify_jwt = false
 
+[functions.admin-operator-users]
+# Super-admin bridge from the shared staff dashboard into the operator
+# project's auth + organization memberships. Verifies the real staff admin via
+# the shared-session bearer inside the function, so the platform JWT gate must
+# not reject that foreign-project token first.
+verify_jwt = false
+
+[functions.admin-cost-items]
+# Browser calls from the staff dashboard authenticate inside the function via
+# the shared-project bearer and should not be blocked by the platform gate
+# before CORS / auth handling runs.
+verify_jwt = false
+
+[functions.admin-set-park-password]
+# Super-admin sets park passwords from the shared staff dashboard and passes
+# the real shared-project staff session in the request body. The operator
+# project's JWT gateway must not reject that cross-project flow first.
+verify_jwt = false
+
 [functions.email-lead-intake]
 # Called by Make.com (no Supabase session), authenticated via its own
 # X-Intake-Secret header instead of a platform JWT.

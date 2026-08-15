@@ -32,7 +32,7 @@ function qrImageUrlFor(value: string): string {
   return `https://api.qrserver.com/v1/create-qr-code/?size=168x168&margin=12&data=${encodeURIComponent(value)}`;
 }
 
-export default function Photos() {
+export default function Photos({ embedded = false }: { embedded?: boolean } = {}) {
   const { t } = useI18n();
   const { parkId, isKioskPark, parkName, kioskTimezone } = usePark();
   // Staff must not see purchase/conversion numbers (sales data).
@@ -391,7 +391,7 @@ export default function Photos() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
+      <div className={embedded ? 'space-y-4 customer-embedded-root preview-photos' : 'space-y-6'}>
         <div className="h-8 w-32 animate-pulse rounded-lg bg-white/40" />
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 sm:gap-6">
           {[...Array(4)].map((_, i) => (
@@ -404,7 +404,7 @@ export default function Photos() {
 
   if (error) {
     return (
-      <div className="space-y-6">
+      <div className={embedded ? 'space-y-4 customer-embedded-root preview-photos' : 'space-y-6'}>
         <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('photos.title')}</h2>
         <div className="rounded-2xl bg-red-50 border border-red-200 p-6">
           <h3 className="text-lg font-semibold text-red-800 mb-2">Error Loading Photos</h3>
@@ -418,8 +418,8 @@ export default function Photos() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
+    <div className={embedded ? 'space-y-4 customer-embedded-root preview-photos' : 'space-y-6'}>
+      <div className="customer-operator-pagehead">
         <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('photos.title')}</h2>
         <p className="mt-1 text-sm text-slate-500">{t('photos.subtitle')}</p>
       </div>
@@ -438,7 +438,7 @@ export default function Photos() {
             <p className="text-xs text-slate-400">Kacheln und Kreise beziehen sich auf diesen Tag</p>
           </div>
           <div className="flex items-center gap-2">
-            <button type="button" onClick={() => stepDay(-1)} className="glass-button-secondary p-2" aria-label="Vorheriger Tag">
+            <button type="button" onClick={() => stepDay(-1)} className="glass-button-secondary customer-operator-btn p-2" aria-label="Vorheriger Tag">
               <ChevronLeft className="h-4 w-4" />
             </button>
             <input
@@ -446,19 +446,19 @@ export default function Photos() {
               value={selectedDate}
               max={todayStr}
               onChange={(e) => e.target.value && setSelectedDate(e.target.value)}
-              className="rounded-xl border border-white/50 bg-white/70 px-3 py-2 text-sm text-slate-700"
+              className="rounded-xl border border-white/50 bg-white/70 px-3 py-2 text-sm text-slate-700 customer-operator-input"
             />
             <button
               type="button"
               onClick={() => stepDay(1)}
               disabled={selectedDate >= todayStr}
-              className="glass-button-secondary p-2 disabled:opacity-40"
+              className="glass-button-secondary customer-operator-btn p-2 disabled:opacity-40"
               aria-label="Nächster Tag"
             >
               <ChevronRight className="h-4 w-4" />
             </button>
             {selectedDate !== todayStr && (
-              <button type="button" onClick={() => setSelectedDate(todayStr)} className="glass-button-secondary px-3 py-2 text-sm">
+              <button type="button" onClick={() => setSelectedDate(todayStr)} className="glass-button-secondary customer-operator-btn px-3 py-2 text-sm">
                 Heute
               </button>
             )}
@@ -687,7 +687,7 @@ export default function Photos() {
           <button
             onClick={handleRefreshBrowse}
             disabled={browseLoading}
-            className="glass-button-secondary flex items-center gap-2 text-sm"
+            className="glass-button-secondary customer-operator-btn flex items-center gap-2 text-sm"
           >
             <RefreshCw className={`h-4 w-4 ${browseLoading ? 'animate-spin' : ''}`} />
             Aktualisieren
@@ -701,9 +701,9 @@ export default function Photos() {
               value={codeQuery}
               onChange={(e) => setCodeQuery(e.target.value)}
               placeholder="Bildnummer eingeben…"
-              className="glass-input w-full text-sm sm:w-48"
+              className="glass-input customer-operator-input w-full text-sm sm:w-48"
             />
-            <button type="submit" className="glass-button-secondary flex items-center gap-1.5 text-sm">
+            <button type="submit" className="glass-button-secondary customer-operator-btn flex items-center gap-1.5 text-sm">
               <Search className="h-4 w-4" />
               Suchen
             </button>
@@ -714,9 +714,9 @@ export default function Photos() {
               type="datetime-local"
               value={dateTimeQuery}
               onChange={(e) => setDateTimeQuery(e.target.value)}
-              className="glass-input w-full text-sm"
+              className="glass-input customer-operator-input w-full text-sm"
             />
-            <button type="submit" className="glass-button-secondary flex items-center gap-1.5 text-sm">
+            <button type="submit" className="glass-button-secondary customer-operator-btn flex items-center gap-1.5 text-sm">
               <CalendarClock className="h-4 w-4" />
               Suchen
             </button>
@@ -725,7 +725,7 @@ export default function Photos() {
           {activeSearch !== 'recent' && (
             <button
               onClick={handleClearSearch}
-              className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm text-slate-500 hover:text-slate-700"
+              className="customer-operator-reset-btn flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm text-slate-500 hover:text-slate-700"
             >
               <X className="h-4 w-4" />
               Suche zurücksetzen
@@ -739,8 +739,10 @@ export default function Photos() {
           </div>
         )}
 
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-          <div className="order-2 grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4 lg:order-1">
+        {embedded && selectedPhoto && <div className="customer-embedded-selected-card">{renderSelectedPhotoCard()}</div>}
+
+        <div className={embedded ? 'space-y-4' : 'grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]'}>
+          <div className={`grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4 ${embedded ? '2xl:grid-cols-5' : 'order-2 lg:order-1'}`}>
             {!browseLoading && browsePhotos.length === 0 && (
               <div className="col-span-full rounded-xl bg-white/30 p-6 text-center text-sm text-slate-500">
                 Keine Fotos gefunden.
@@ -750,7 +752,7 @@ export default function Photos() {
               <button
                 key={p.id}
                 onClick={() => setSelectedPhoto(p)}
-                className={`group overflow-hidden rounded-xl bg-white/30 text-left transition-all hover:bg-white/50 hover:shadow-md ${
+                className={`embedded-photo-tile group overflow-hidden rounded-xl bg-white/30 text-left transition-all hover:bg-white/50 hover:shadow-md ${
                   selectedPhoto?.id === p.id ? 'ring-2 ring-brand-500' : ''
                 }`}
               >
@@ -793,9 +795,11 @@ export default function Photos() {
             ))}
           </div>
 
-          <div className="order-1 lg:order-2 lg:sticky lg:top-6 lg:self-start">
-            {renderSelectedPhotoCard()}
-          </div>
+          {!embedded && (
+            <div className="order-1 lg:order-2 lg:sticky lg:top-6 lg:self-start">
+              {renderSelectedPhotoCard()}
+            </div>
+          )}
         </div>
       </GlassCard>
     </div>
