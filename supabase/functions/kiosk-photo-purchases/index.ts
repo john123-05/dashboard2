@@ -68,9 +68,14 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const parkRes = await fetchExternal(
-      `parks?select=id,price_per_photo_cents&id=eq.${parkId}`
-    );
+    const [parkRes, historyRes] = await Promise.all([
+      fetchExternal(
+        `parks?select=id,price_per_photo_cents&id=eq.${parkId}`
+      ),
+      fetchExternal(
+        `park_price_history?select=effective_from,price_per_photo_cents,change_mode&park_id=eq.${parkId}&order=effective_from.asc`
+      ),
+    ]);
     if (!parkRes.ok) {
       return new Response(
         JSON.stringify({ error: "Failed to fetch park", details: parkRes.details }),
@@ -83,7 +88,7 @@ Deno.serve(async (req: Request) => {
 
     if (!park || priceCents === null) {
       return new Response(
-        JSON.stringify({ isKioskPark: false, priceCents: null, purchases: [] }),
+        JSON.stringify({ isKioskPark: false, priceCents: null, priceHistory: [], purchases: [] }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -91,13 +96,21 @@ Deno.serve(async (req: Request) => {
     // A single busy day can exceed the recency limit above (Imst has hit
     // ~400 photos/day), so an explicit date asks for that whole day instead
     // via a timezone-correct SQL function rather than "last N overall".
+    //
+    // `source_file_code` is the kiosk's own picture number ("0043"). It is the
+    // only dependable key between a photo here and the sale the machine
+    // recorded locally: matching on time would be wrong, because captured_at
+    // is when the picture was taken, not when it was bought — in between lies
+    // however long the guest stood at the screen. The day view goes through a
+    // SQL function that does not return it; those rows simply have no code,
+    // which the dashboard handles.
     const photosRes = businessDate
       ? await fetchExternal("rpc/get_kiosk_photos_for_day", {
           method: "POST",
           body: JSON.stringify({ p_park_id: parkId, p_business_date: businessDate }),
         })
       : await fetchExternal(
-          `photos?select=id,captured_at,created_at,camera_code&park_id=eq.${parkId}&order=captured_at.desc&limit=${limit}`
+          `photos?select=id,captured_at,created_at,camera_code,source_file_code&park_id=eq.${parkId}&order=captured_at.desc&limit=${limit}`
         );
     if (!photosRes.ok) {
       return new Response(
@@ -132,13 +145,19 @@ Deno.serve(async (req: Request) => {
         id: p.id,
         capturedAt: (p.captured_at ?? p.created_at) as string,
         cameraCode: (p.camera_code as string) ?? "unknown",
+        fileCode: (p.source_file_code as string | null) ?? null,
         email: claim?.email ?? null,
         fullName: claim?.fullName ?? null,
       };
     });
 
     return new Response(
-      JSON.stringify({ isKioskPark: true, priceCents, purchases }),
+      JSON.stringify({
+        isKioskPark: true,
+        priceCents,
+        priceHistory: historyRes.ok ? historyRes.data : [],
+        purchases,
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
