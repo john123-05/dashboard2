@@ -589,6 +589,20 @@ export default function AutomatHealth({ onVerlauf }: {
         text: `Betroffen: ${warn.map((e) => e.name).join(', ')}. Der Verkauf läuft weiter.`,
       };
     }
+    // Kein einziger Eintrag heisst NICHT "alles in Ordnung", sondern "wir
+    // wissen nichts". Ein Automat mit älterem Stand meldet weder Messungen
+    // noch Geräte; ihn deshalb grün zu färben wäre eine Behauptung über etwas,
+    // das niemand geprüft hat.
+    if (eintraege.length === 0) {
+      return {
+        ton: 'unklar' as Ton,
+        titel: 'Keine Gerätedaten',
+        text: 'Dieser Automat meldet noch keinen Zustand seiner Programme. '
+          + 'Das ist bei einer älteren Version der Automaten-Software normal – '
+          + 'Fotos und Umsatz laufen davon unberührt weiter.',
+      };
+    }
+
     return {
       ton: 'ok' as Ton,
       titel: 'Alles in Ordnung',
@@ -648,12 +662,14 @@ export default function AutomatHealth({ onVerlauf }: {
       {urteil && (
         <div className={`mb-4 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 rounded-xl px-3 py-2.5 ${
           urteil.ton === 'bad' ? 'bg-rose-50/80'
-            : urteil.ton === 'warn' ? 'bg-amber-50/80' : 'bg-emerald-50/80'
+            : urteil.ton === 'warn' ? 'bg-amber-50/80'
+              : urteil.ton === 'unklar' ? 'bg-white/50' : 'bg-emerald-50/80'
         }`}>
           <span className={`self-center h-2.5 w-2.5 shrink-0 rounded-full ${ZUSTAND[urteil.ton].punkt}`} />
           <span className={`text-sm font-semibold ${
             urteil.ton === 'bad' ? 'text-rose-800'
-              : urteil.ton === 'warn' ? 'text-amber-900' : 'text-emerald-800'
+              : urteil.ton === 'warn' ? 'text-amber-900'
+                : urteil.ton === 'unklar' ? 'text-slate-700' : 'text-emerald-800'
           }`}>
             {urteil.titel}
           </span>
@@ -765,6 +781,19 @@ function Automat({ m, detailed, busyKey, laufend, jetzt, onRestart, onTestfoto }
       {/* Zwei Spalten: die Seite hat links und rechts reichlich Platz, den eine
           einspaltige Liste verschenkt und mit Scrollweg bezahlt. `items-start`
           verhindert, dass eine aufgeklappte Kachel ihre Nachbarin mitzieht. */}
+      {/* Ein Automat mit älterem Stand meldet weder Messungen noch Geräte.
+          Dann bleibt hier bewusst eine Erklärung statt einer leeren Fläche. */}
+      {eintraege.length === 0 && (
+        <p className="rounded-xl bg-white/40 px-3 py-3 text-sm text-slate-500">
+          Dieser Automat meldet noch keine einzelnen Programme und Geräte, und
+          deshalb auch keine Neustart-Knöpfe. Das ist bei einem älteren Stand
+          der Automaten-Software normal
+          {m.agent_version && <> (hier Version {m.agent_version})</>} &ndash;
+          beides erscheint von selbst, sobald dort die neue Version läuft.
+          Fotos, Verkäufe und Umsatz laufen davon unberührt weiter.
+        </p>
+      )}
+
       <div className="grid items-start gap-2 lg:grid-cols-2">
         {sichtbar.map((e) => (
           <Zeile
@@ -822,7 +851,9 @@ function Automat({ m, detailed, busyKey, laufend, jetzt, onRestart, onTestfoto }
       )}
 
       <div className="mt-3">
-        {keinNeustartMoeglich && (
+        {/* Meldet der Automat gar nichts, steht die Erklärung schon oben statt
+            der Kacheln - hier wäre sie nur eine Wiederholung. */}
+        {keinNeustartMoeglich && eintraege.length > 0 && (
           <p className="rounded-lg bg-white/40 px-3 py-2 text-xs text-slate-500">
             <b className="font-semibold text-slate-700">Keine Neustart-Knöpfe:</b>{' '}
             dieser Automat meldet nicht, welche Programme er neu starten kann.
