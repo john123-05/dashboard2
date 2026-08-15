@@ -1,14 +1,30 @@
-const OPERATOR_SUPABASE_URL =
-  Deno.env.get('OPERATOR_SUPABASE_URL') ?? 'https://xcrxltiiovpoladpaewd.supabase.co';
-const OPERATOR_SUPABASE_ANON_KEY =
-  Deno.env.get('OPERATOR_SUPABASE_ANON_KEY') ??
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhjcnhsdGlpb3Zwb2xhZHBhZXdkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5MTIxODEsImV4cCI6MjA4MjQ4ODE4MX0.qScZ_Uk6q68KHd35VloDuwb3DnC9iAktMx6xt17YWoQ';
+const OPERATOR_SUPABASE_URL = Deno.env.get("OPERATOR_SUPABASE_URL") ??
+  "https://xcrxltiiovpoladpaewd.supabase.co";
+const OPERATOR_SUPABASE_ANON_KEY = Deno.env.get("OPERATOR_SUPABASE_ANON_KEY") ??
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhjcnhsdGlpb3Zwb2xhZHBhZXdkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5MTIxODEsImV4cCI6MjA4MjQ4ODE4MX0.qScZ_Uk6q68KHd35VloDuwb3DnC9iAktMx6xt17YWoQ";
 
 export type OperatorAuthResult =
   | { ok: true; userId: string; parkId: string; organizationId: string | null }
   | { ok: false; status: number; message: string };
 
-async function fetchOperatorUser(token: string): Promise<{ id: string } | null> {
+type OperatorUser = {
+  id: string;
+  app_metadata?: Record<string, unknown> | null;
+};
+
+function normalizeParkIds(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => String(item ?? "").trim())
+    .filter(Boolean);
+}
+
+function getAllowedParkIds(user: OperatorUser | null): string[] {
+  const metadata = user?.app_metadata ?? {};
+  return normalizeParkIds(metadata.allowed_park_ids ?? metadata.park_ids);
+}
+
+async function fetchOperatorUser(token: string): Promise<OperatorUser | null> {
   const response = await fetch(`${OPERATOR_SUPABASE_URL}/auth/v1/user`, {
     headers: {
       apikey: OPERATOR_SUPABASE_ANON_KEY,
@@ -18,7 +34,9 @@ async function fetchOperatorUser(token: string): Promise<{ id: string } | null> 
 
   if (!response.ok) return null;
   const user = await response.json().catch(() => null);
-  return user?.id ? { id: String(user.id) } : null;
+  return user?.id
+    ? { id: String(user.id), app_metadata: user.app_metadata ?? null }
+    : null;
 }
 
 async function fetchAccessiblePark(
@@ -26,7 +44,9 @@ async function fetchAccessiblePark(
   parkId: string,
 ): Promise<{ id: string; organization_id: string | null } | null> {
   const response = await fetch(
-    `${OPERATOR_SUPABASE_URL}/rest/v1/parks?select=id,organization_id&id=eq.${encodeURIComponent(parkId)}`,
+    `${OPERATOR_SUPABASE_URL}/rest/v1/parks?select=id,organization_id&id=eq.${
+      encodeURIComponent(parkId)
+    }`,
     {
       headers: {
         apikey: OPERATOR_SUPABASE_ANON_KEY,
@@ -38,25 +58,38 @@ async function fetchAccessiblePark(
   if (!response.ok) return null;
   const rows = await response.json().catch(() => []);
   const row = Array.isArray(rows) ? rows[0] : null;
-  return row?.id ? { id: String(row.id), organization_id: row.organization_id ? String(row.organization_id) : null } : null;
+  return row?.id
+    ? {
+      id: String(row.id),
+      organization_id: row.organization_id ? String(row.organization_id) : null,
+    }
+    : null;
 }
 
-export async function requireOperatorForPark(req: Request, parkId: string): Promise<OperatorAuthResult> {
-  const authHeader = req.headers.get('authorization') || '';
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+export async function requireOperatorForPark(
+  req: Request,
+  parkId: string,
+): Promise<OperatorAuthResult> {
+  const authHeader = req.headers.get("authorization") || "";
+  const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
 
   if (!token) {
-    return { ok: false, status: 401, message: 'Missing bearer token' };
+    return { ok: false, status: 401, message: "Missing bearer token" };
   }
 
   const user = await fetchOperatorUser(token);
   if (!user) {
-    return { ok: false, status: 401, message: 'Invalid operator auth token' };
+    return { ok: false, status: 401, message: "Invalid operator auth token" };
+  }
+
+  const allowedParkIds = getAllowedParkIds(user);
+  if (allowedParkIds.length > 0 && !allowedParkIds.includes(parkId)) {
+    return { ok: false, status: 403, message: "No access to this park" };
   }
 
   const park = await fetchAccessiblePark(token, parkId);
   if (!park) {
-    return { ok: false, status: 403, message: 'No access to this park' };
+    return { ok: false, status: 403, message: "No access to this park" };
   }
 
   return {

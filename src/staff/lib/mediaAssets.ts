@@ -31,6 +31,25 @@ export async function fetchCategories(): Promise<string[]> {
   return Array.from(new Set((data ?? []).map((row) => row.category))).sort();
 }
 
+export async function fetchSubcategories(category?: string): Promise<string[]> {
+  let query = supabase.from('media_assets').select('subcategory');
+
+  if (category) {
+    query = query.eq('category', category);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  return Array.from(
+    new Set(
+      (data ?? [])
+        .map((row) => row.subcategory?.trim())
+        .filter((value): value is string => Boolean(value)),
+    ),
+  ).sort();
+}
+
 const MEDIA_PAGE_SIZE = 200;
 
 export interface MediaSearchResult {
@@ -41,6 +60,7 @@ export interface MediaSearchResult {
 export async function searchMediaAssets(params: {
   query?: string;
   category?: string;
+  subcategory?: string;
   limit?: number;
   offset?: number;
 }): Promise<MediaSearchResult> {
@@ -55,6 +75,10 @@ export async function searchMediaAssets(params: {
 
   if (params.category) {
     q = q.eq('category', params.category);
+  }
+
+  if (params.subcategory) {
+    q = q.eq('subcategory', params.subcategory);
   }
 
   if (params.query && params.query.trim()) {

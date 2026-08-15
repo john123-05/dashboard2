@@ -20,6 +20,7 @@ interface DataTableProps<T extends object> {
   searchKeys?: string[];
   pageSize?: number;
   actions?: React.ReactNode;
+  embeddedOperator?: boolean;
 }
 
 export default function DataTable<T extends object>({
@@ -30,6 +31,7 @@ export default function DataTable<T extends object>({
   searchKeys = [],
   pageSize = 10,
   actions,
+  embeddedOperator = false,
 }: DataTableProps<T>) {
   const { t } = useI18n();
   const [search, setSearch] = useState('');
@@ -122,7 +124,11 @@ export default function DataTable<T extends object>({
             <button
               onClick={() => setPage(Math.max(0, page - 1))}
               disabled={page === 0}
-              className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-white/60 hover:text-slate-700 disabled:opacity-30"
+              className={
+                embeddedOperator
+                  ? 'customer-operator-table-nav'
+                  : 'rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-white/60 hover:text-slate-700 disabled:opacity-30'
+              }
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
@@ -132,7 +138,11 @@ export default function DataTable<T extends object>({
             <button
               onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
               disabled={page >= totalPages - 1}
-              className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-white/60 hover:text-slate-700 disabled:opacity-30"
+              className={
+                embeddedOperator
+                  ? 'customer-operator-table-nav'
+                  : 'rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-white/60 hover:text-slate-700 disabled:opacity-30'
+              }
             >
               <ChevronRight className="h-4 w-4" />
             </button>

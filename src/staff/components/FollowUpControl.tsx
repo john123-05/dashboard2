@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { BellRing, Check, Pencil, X } from 'lucide-react';
 import { followUpUrgency, formatFollowUpDate, nextFollowUpAfterCompletion, type LeadFollowUp } from '../lib/leads';
 
 interface FollowUpControlProps {
@@ -16,6 +17,12 @@ const URGENCY_LABELS: Record<string, string> = {
 
 function todayIsoDate(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+function futureIsoDate(days: number): string {
+  const next = new Date();
+  next.setDate(next.getDate() + days);
+  return next.toISOString().slice(0, 10);
 }
 
 export default function FollowUpControl({ followUp, onSet, onClear }: FollowUpControlProps) {
@@ -58,28 +65,67 @@ export default function FollowUpControl({ followUp, onSet, onClear }: FollowUpCo
     setExpanded(true);
   }
 
+  function applyPreset(days: number, repeatDays?: number | null) {
+    setDateInput(futureIsoDate(days));
+    setCadence(repeatDays ? String(repeatDays) : '');
+  }
+
   if (expanded) {
     return (
-      <div className="follow-up-control follow-up-editing">
-        <input type="date" value={dateInput} onChange={(e) => setDateInput(e.target.value)} />
-        <select value={cadence} onChange={(e) => setCadence(e.target.value)}>
-          <option value="">Keine Wiederholung</option>
-          <option value="7">Alle 7 Tage</option>
-          <option value="14">Alle 14 Tage</option>
-          <option value="30">Alle 30 Tage</option>
-        </select>
-        <input
-          type="text"
-          className="follow-up-note-input"
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          placeholder="Notiz (optional)"
-        />
-        <div className="follow-up-actions">
-          <button type="button" onClick={handleSave} disabled={saving || !dateInput}>
+      <div className="follow-up-control follow-up-editing is-expanded">
+        <div className="follow-up-editing-head">
+          <div className="follow-up-editing-title">
+            <BellRing size={14} />
+            <span>Follow-up</span>
+          </div>
+          <button
+            type="button"
+            className="follow-up-editing-close"
+            onClick={() => setExpanded(false)}
+            aria-label="Follow-up schließen"
+            title="Schließen"
+          >
+            <X size={12} />
+          </button>
+        </div>
+
+        <div className="follow-up-preset-row">
+          <button type="button" className="follow-up-preset-btn" onClick={() => applyPreset(0)}>
+            Heute
+          </button>
+          <button type="button" className="follow-up-preset-btn" onClick={() => applyPreset(1)}>
+            Morgen
+          </button>
+          <button type="button" className="follow-up-preset-btn" onClick={() => applyPreset(7, 7)}>
+            7 Tage
+          </button>
+          <button type="button" className="follow-up-preset-btn" onClick={() => applyPreset(14, 14)}>
+            14 Tage
+          </button>
+        </div>
+
+        <div className="follow-up-field-grid">
+          <input type="date" value={dateInput} onChange={(e) => setDateInput(e.target.value)} />
+          <select value={cadence} onChange={(e) => setCadence(e.target.value)}>
+            <option value="">Keine Wiederholung</option>
+            <option value="7">Alle 7 Tage</option>
+            <option value="14">Alle 14 Tage</option>
+            <option value="30">Alle 30 Tage</option>
+          </select>
+          <input
+            type="text"
+            className="follow-up-note-input"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Notiz"
+          />
+        </div>
+
+        <div className="follow-up-actions follow-up-actions-editor">
+          <button type="button" className="follow-up-save-btn" onClick={handleSave} disabled={saving || !dateInput}>
             {saving ? '...' : 'Speichern'}
           </button>
-          <button type="button" className="secondary inline" onClick={() => setExpanded(false)}>
+          <button type="button" className="follow-up-cancel-btn" onClick={() => setExpanded(false)}>
             Abbrechen
           </button>
         </div>
@@ -89,26 +135,41 @@ export default function FollowUpControl({ followUp, onSet, onClear }: FollowUpCo
 
   if (!followUp) {
     return (
-      <button type="button" className="follow-up-set-btn" onClick={openEditor}>
-        Follow-up setzen
+      <button type="button" className="follow-up-set-btn" onClick={openEditor} title="Follow-up neu" aria-label="Follow-up neu">
+        <BellRing size={14} />
       </button>
     );
   }
 
   const urgency = followUpUrgency(followUp.next_due_at);
   return (
-    <div className="follow-up-control">
-      <span className={`follow-up-badge follow-up-${urgency}`}>
-        {URGENCY_LABELS[urgency]} · {formatFollowUpDate(followUp.next_due_at)}
-        {followUp.cadence_days ? ` (alle ${followUp.cadence_days}T.)` : ''}
-      </span>
+    <div className="follow-up-control is-collapsed">
+      <div className="follow-up-compact-row">
+        <span className={`follow-up-badge follow-up-${urgency}`}>
+          {URGENCY_LABELS[urgency]} · {formatFollowUpDate(followUp.next_due_at)}
+          {followUp.cadence_days ? ` · ${followUp.cadence_days}T` : ''}
+        </span>
+      </div>
       {followUp.note && <span className="follow-up-note-preview">{followUp.note}</span>}
       <div className="follow-up-actions">
-        <button type="button" className="secondary inline" onClick={handleDone} disabled={saving}>
-          {saving ? '...' : 'Erledigt'}
+        <button
+          type="button"
+          className="secondary inline"
+          onClick={handleDone}
+          disabled={saving}
+          title="Erledigt"
+          aria-label="Erledigt"
+        >
+          {saving ? '...' : <Check size={13} />}
         </button>
-        <button type="button" className="secondary inline" onClick={openEditor}>
-          Ändern
+        <button
+          type="button"
+          className="secondary inline"
+          onClick={openEditor}
+          title="Bearbeiten"
+          aria-label="Bearbeiten"
+        >
+          <Pencil size={12} />
         </button>
       </div>
     </div>

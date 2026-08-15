@@ -63,7 +63,7 @@ interface RevenueSeriesRow {
   terminal: number;
 }
 
-export default function Revenue() {
+export default function Revenue({ embedded = false }: { embedded?: boolean } = {}) {
   const { t } = useI18n();
   const {
     parkId,
@@ -433,7 +433,7 @@ export default function Revenue() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
+      <div className={embedded ? 'space-y-4 customer-embedded-root preview-revenue' : 'space-y-6'}>
         <div className="h-8 w-32 animate-pulse rounded-lg bg-white/40" />
         <div className="grid grid-cols-2 gap-4 sm:gap-6 sm:grid-cols-4">
           {[...Array(4)].map((_, index) => (
@@ -446,7 +446,7 @@ export default function Revenue() {
 
   if (error || !parkData) {
     return (
-      <div className="space-y-6">
+      <div className={embedded ? 'space-y-4 customer-embedded-root preview-revenue' : 'space-y-6'}>
         <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('revenue.title')}</h2>
         <div className="rounded-2xl border border-red-200 bg-red-50 p-6">
           <h3 className="mb-2 text-lg font-semibold text-red-800">{t('overview.error_title')}</h3>
@@ -460,15 +460,15 @@ export default function Revenue() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className={embedded ? 'space-y-4 customer-embedded-root preview-revenue' : 'space-y-6'}>
+      <div className="customer-operator-pagehead flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('revenue.title')}</h2>
           <p className="mt-1 text-sm text-slate-500">
             Unified revenue view for online and local sales
           </p>
         </div>
-        <button onClick={handleExport} className="glass-button-secondary">
+        <button onClick={handleExport} className="glass-button-secondary customer-operator-btn">
           <Download className="h-4 w-4" />
           {t('revenue.export')}
         </button>
@@ -492,6 +492,7 @@ export default function Revenue() {
 
       {isKioskPark && kioskKpis && (
         <>
+          {!embedded && (
           <GlassCard className="p-5 sm:p-6">
             <h3 className="text-base font-semibold text-slate-800">Selbstbedienungs-Automat</h3>
             <p className="mt-2 text-sm text-slate-500">
@@ -499,6 +500,7 @@ export default function Revenue() {
               ({formatCurrency(kioskPriceCents ?? 0, 'eur')} pro Foto).
             </p>
           </GlassCard>
+          )}
 
           <div className="grid grid-cols-2 gap-4 sm:gap-6 xl:grid-cols-4">
             <KPICard
@@ -572,11 +574,11 @@ export default function Revenue() {
                   {chartMode === 'trend' ? 'Tägliche Einnahmen am Automaten' : 'Einnahmen nach Uhrzeit'}
                 </p>
               </div>
-              <div className="flex flex-wrap rounded-xl bg-white/40 p-1">
+              <div className="customer-operator-segment flex flex-wrap rounded-xl bg-white/40 p-1">
                 <button
                   type="button"
                   onClick={() => setChartMode('trend')}
-                  className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                  className={`customer-operator-segment-btn rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
                     chartMode === 'trend' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
                   }`}
                 >
@@ -588,7 +590,7 @@ export default function Revenue() {
                     setChartMode('day');
                     selectDay(todayStr);
                   }}
-                  className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                  className={`customer-operator-segment-btn rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
                     chartMode === 'day' && dayTab === 'heute'
                       ? 'bg-white text-slate-800 shadow-sm'
                       : 'text-slate-500 hover:text-slate-700'
@@ -602,7 +604,7 @@ export default function Revenue() {
                     setChartMode('day');
                     selectDay(yesterdayStr);
                   }}
-                  className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                  className={`customer-operator-segment-btn rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
                     chartMode === 'day' && dayTab === 'gestern'
                       ? 'bg-white text-slate-800 shadow-sm'
                       : 'text-slate-500 hover:text-slate-700'
@@ -616,7 +618,7 @@ export default function Revenue() {
                     setChartMode('day');
                     setDayTab('other');
                   }}
-                  className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                  className={`customer-operator-segment-btn rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
                     chartMode === 'day' && dayTab === 'other'
                       ? 'bg-white text-slate-800 shadow-sm'
                       : 'text-slate-500 hover:text-slate-700'
@@ -687,7 +689,7 @@ export default function Revenue() {
                         type="button"
                         onClick={() => stepDay(-1)}
                         disabled={selectedDate <= minSelectableDate}
-                        className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-white/60 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
+                        className="customer-operator-icon-btn rounded-lg p-2 text-slate-500 transition-colors hover:bg-white/60 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
                         aria-label="Vorheriger Tag"
                       >
                         <ChevronLeft className="h-4 w-4" />
@@ -703,14 +705,14 @@ export default function Revenue() {
                           min={minSelectableDate}
                           max={maxSelectableDate}
                           onChange={(event) => selectDay(event.target.value)}
-                          className="glass-input"
+                          className="glass-input customer-operator-input"
                         />
                       </div>
                       <button
                         type="button"
                         onClick={() => stepDay(1)}
                         disabled={selectedDate >= maxSelectableDate}
-                        className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-white/60 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
+                        className="customer-operator-icon-btn rounded-lg p-2 text-slate-500 transition-colors hover:bg-white/60 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
                         aria-label="Nächster Tag"
                       >
                         <ChevronRight className="h-4 w-4" />
@@ -827,7 +829,7 @@ export default function Revenue() {
                     </tr>
                   </thead>
                   <tbody>
-                    {kioskDays.map((day) => (
+                    {(embedded ? kioskDays.slice(0, 3) : kioskDays).map((day) => (
                       <tr
                         key={day.businessDate}
                         onClick={() => {

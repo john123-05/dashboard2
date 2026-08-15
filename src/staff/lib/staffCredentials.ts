@@ -44,6 +44,22 @@ export async function createStaffCredential(input: NewStaffCredential): Promise<
   if (error) throw error;
 }
 
+export async function updateStaffCredential(id: string, input: NewStaffCredential): Promise<void> {
+  const { error } = await supabaseBrowser
+    .from('staff_credentials')
+    .update({
+      label: input.label,
+      category: input.category || null,
+      person_name: input.person_name || null,
+      login: input.login || null,
+      password: input.password,
+      notes: input.notes || null,
+    })
+    .eq('id', id);
+
+  if (error) throw error;
+}
+
 export async function deleteStaffCredential(id: string): Promise<void> {
   const { error } = await supabaseBrowser.from('staff_credentials').delete().eq('id', id);
   if (error) throw error;

@@ -127,7 +127,7 @@ function mapLegacySystemHealth(
   };
 }
 
-export default function SystemHealth() {
+export default function SystemHealth({ embedded = false }: { embedded?: boolean } = {}) {
   const { t } = useI18n();
   const { parkId } = usePark();
   const [data, setData] = useState<ParkDashboardData | null>(null);
@@ -196,7 +196,7 @@ export default function SystemHealth() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
+      <div className={embedded ? 'space-y-4 customer-embedded-root preview-health' : 'space-y-6'}>
         <div className="h-8 w-32 animate-pulse rounded-lg bg-white/40" />
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 sm:gap-6 xl:grid-cols-3">
           {[...Array(6)].map((_, index) => (
@@ -209,12 +209,15 @@ export default function SystemHealth() {
 
   if (error || !data) {
     return (
-      <div className="space-y-6">
+      <div className={embedded ? 'space-y-4 customer-embedded-root preview-health' : 'space-y-6'}>
         <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('health.title')}</h2>
         <div className="rounded-2xl border border-red-200 bg-red-50 p-6">
           <h3 className="mb-2 text-lg font-semibold text-red-800">{t('overview.error_title')}</h3>
           <p className="mb-4 text-sm text-red-600">{error || 'Unknown error'}</p>
-          <button onClick={() => loadHealth(true)} className="glass-button-secondary">
+          <button
+            onClick={() => loadHealth(true)}
+            className={embedded ? 'glass-button-secondary customer-operator-btn' : 'glass-button-secondary'}
+          >
             {t('app.retry')}
           </button>
         </div>
@@ -311,15 +314,15 @@ export default function SystemHealth() {
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className={embedded ? 'space-y-4 customer-embedded-root preview-health' : 'space-y-6'}>
+      <div className="customer-operator-pagehead flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('health.title')}</h2>
           <p className="mt-1 text-sm text-slate-500">
             Live operational health based on uploaded machine and system files
           </p>
         </div>
-        <button onClick={handleRefresh} disabled={refreshing} className="glass-button-secondary">
+        <button onClick={handleRefresh} disabled={refreshing} className="glass-button-secondary customer-operator-btn">
           <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
           {t('app.refresh')}
         </button>
@@ -510,8 +513,12 @@ export default function SystemHealth() {
               searchable
               searchKeys={['category', 'device', 'description', 'source_file', 'severity']}
               pageSize={14}
+              embeddedOperator={embedded}
               actions={
-                <button onClick={handleExport} className="glass-button-secondary">
+                <button
+                  onClick={handleExport}
+                  className={embedded ? 'glass-button-secondary customer-operator-btn' : 'glass-button-secondary'}
+                >
                   <Download className="h-4 w-4" />
                   Als CSV speichern
                 </button>

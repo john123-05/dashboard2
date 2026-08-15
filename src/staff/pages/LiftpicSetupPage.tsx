@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { Cable, Copy, Download, Edit3, Eye, EyeOff, FileImage, Monitor, Power, RotateCcw, Trash2, UploadCloud } from 'lucide-react';
+import { Copy, Download, Edit3, Eye, EyeOff, Monitor, Power, RotateCcw } from 'lucide-react';
 import { edgeFetch } from '../lib/edge-fetch';
 import { getApiErrorMessage } from '../lib/api-error';
 import { appendActivityEvent } from '../lib/activity-feed';
@@ -72,9 +72,9 @@ const defaultForm: MachineForm = {
 };
 
 const modeLabels: Record<LiftpicMachineMode, string> = {
-  sold_only: 'Nur verkaufte QR-Fotos',
-  all_photos: 'Alle Fotos hochladen',
-  count_only: 'Nur Fahrten zaehlen',
+  sold_only: 'Nur verkauft',
+  all_photos: 'Alle Fotos',
+  count_only: 'Nur Fahrten',
 };
 
 const assetSlots = [
@@ -145,6 +145,17 @@ const defaultAssetForm: AssetForm = {
 
 const bootstrapInstallerUrl =
   'https://raw.githubusercontent.com/john123-05/testsoftware/main/scripts/install_liftpic_sync_bootstrap.ps1';
+
+function slugifyValue(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .replace(/-{2,}/g, '-');
+}
 
 function formatDate(value: string | null) {
   if (!value) return '-';
@@ -219,10 +230,27 @@ export default function LiftpicSetupPage() {
     () => new Map(attractions.map((attraction) => [attraction.id, attraction.name])),
     [attractions],
   );
+  const parkById = useMemo(() => new Map(parks.map((park) => [park.id, park])), [parks]);
+  const attractionById = useMemo(() => new Map(attractions.map((attraction) => [attraction.id, attraction])), [attractions]);
   const filteredAttractions = useMemo(
     () => attractions.filter((attraction) => attraction.park_id === form.park_id),
     [attractions, form.park_id],
   );
+  const selectedPark = form.park_id ? parkById.get(form.park_id) || null : null;
+  const selectedAttraction = form.attraction_id ? attractionById.get(form.attraction_id) || null : null;
+  const parkConfigCount = useMemo(
+    () => configs.filter((config) => config.park_id === form.park_id).length,
+    [configs, form.park_id],
+  );
+  const suggestedMachineLabel = selectedAttraction?.name
+    ? `${selectedAttraction.name} PC`
+    : selectedPark?.name
+      ? `${selectedPark.name} PC`
+      : 'Liftpic PC';
+  const suggestedMachineId = `${selectedPark ? slugifyValue(selectedPark.slug || selectedPark.name) : 'liftpic'}-pc-${Math.max(1, parkConfigCount + (editingId ? 0 : 1))}`;
+  const suggestedCameraIndex = Math.max(1, parkConfigCount + (editingId ? 0 : 1));
+  const suggestedCameraLabel = selectedAttraction?.name || `Kamera ${suggestedCameraIndex}`;
+  const suggestedCameraCode = `cam${suggestedCameraIndex}`;
 
   async function load() {
     setLoading(true);
@@ -306,9 +334,18 @@ export default function LiftpicSetupPage() {
     setStatus(null);
     setError(null);
 
+    const machineLabel = form.machine_label.trim() || suggestedMachineLabel;
+    const machineId = form.machine_id.trim().toLowerCase() || suggestedMachineId;
+    const cameraLabel = form.camera_label.trim() || suggestedCameraLabel;
+    const cameraCode = form.camera_code.trim().toLowerCase() || suggestedCameraCode;
+
     const payload = {
       ...form,
       id: editingId || undefined,
+      machine_label: machineLabel,
+      machine_id: machineId,
+      camera_label: cameraLabel,
+      camera_code: cameraCode,
       legacy_customer_code: form.legacy_customer_code.replace(/\D/g, '').slice(0, 4).padStart(4, '0'),
       attraction_id: form.attraction_id || null,
     };
@@ -329,7 +366,7 @@ export default function LiftpicSetupPage() {
     setStatus(editingId ? 'Liftpic PC aktualisiert' : 'Liftpic PC angelegt');
     appendActivityEvent({
       title: editingId ? 'Liftpic PC aktualisiert' : 'Liftpic PC angelegt',
-      details: form.machine_label || form.machine_id,
+      details: machineLabel || machineId,
       level: 'success',
     });
     resetForm();
@@ -541,25 +578,21 @@ export default function LiftpicSetupPage() {
   }
 
   return (
-    <div className="grid" style={{ gap: 16 }}>
-      <div className="card">
-        <div className="support-panel-header">
+    <div className="grid setup-stack" style={{ gap: 16 }}>
+      <div className="card setup-card">
+        <div className="setup-section-head">
           <div>
-            <p className="eyebrow">Liftpic Sync</p>
-            <h2>PCs, Kameras und Upload-Modus</h2>
-            <p className="note">
-              Hier wird pro Attraktions-PC festgelegt, was der neue Uploader tun soll. Kamera und Aida bleiben separat.
-            </p>
+            <h2>PC-Setup</h2>
           </div>
-          <button type="button" className="secondary inline" onClick={() => void load()}>
+          <button type="button" className="setup-secondary-btn" onClick={() => void load()}>
             Aktualisieren
           </button>
         </div>
       </div>
 
-      <div className="grid two">
-        <div className="card">
-          <h3>{editingId ? 'Liftpic PC bearbeiten' : 'Neuen Liftpic PC vorbereiten'}</h3>
+      <div className="grid two setup-overview-grid">
+        <div className="card setup-card">
+          <h3>{editingId ? 'PC bearbeiten' : 'PC vorbereiten'}</h3>
           <form className="grid" onSubmit={submit}>
             <div className="row">
               <div>
@@ -583,51 +616,11 @@ export default function LiftpicSetupPage() {
 
             <div className="row">
               <div>
-                <label>PC-ID</label>
-                <input
-                  value={form.machine_id}
-                  onChange={(e) => patchForm({ machine_id: e.target.value.trim().toLowerCase() })}
-                  placeholder="plosebob-pc-1"
-                  required
-                />
-              </div>
-              <div>
                 <label>PC-Name</label>
                 <input
                   value={form.machine_label}
                   onChange={(e) => patchForm({ machine_label: e.target.value })}
-                  placeholder="Plosebob Kasse"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="row">
-              <div>
-                <label>Kamera</label>
-                <input
-                  value={form.camera_label}
-                  onChange={(e) => patchForm({ camera_label: e.target.value })}
-                  placeholder="Kamera 1"
-                  required
-                />
-              </div>
-              <div>
-                <label>Kamera-Code intern</label>
-                <input
-                  value={form.camera_code}
-                  onChange={(e) => patchForm({ camera_code: e.target.value.trim().toLowerCase() })}
-                  placeholder="cam1"
-                  required
-                />
-              </div>
-              <div>
-                <label>Kundencode alt</label>
-                <input
-                  value={form.legacy_customer_code}
-                  onChange={(e) => patchForm({ legacy_customer_code: e.target.value.replace(/\D/g, '').slice(0, 4) })}
-                  placeholder="1234"
-                  required
+                  placeholder={suggestedMachineLabel}
                 />
               </div>
             </div>
@@ -642,30 +635,23 @@ export default function LiftpicSetupPage() {
                     className={`liftpic-mode-option ${form.mode === mode ? 'active' : ''}`}
                     onClick={() => setMode(mode)}
                   >
-                    <strong>{modeLabels[mode]}</strong>
-                    <span>
-                      {mode === 'sold_only' && 'Standard: nur gekaufte QR-Bilder werden hochgeladen.'}
-                      {mode === 'all_photos' && 'Diagnose oder Foto-Shop: jedes fertige Bild wird gesendet.'}
-                      {mode === 'count_only' && 'Nur Zaehler und Health, keine Bild-Uploads.'}
-                    </span>
+                  <strong>{modeLabels[mode]}</strong>
                   </button>
                 ))}
               </div>
             </div>
 
             <div className="liftpic-toggle-grid">
-              <label className="liftpic-toggle-card">
-                <input type="checkbox" checked={form.qr_enabled} onChange={(e) => patchForm({ qr_enabled: e.target.checked })} />
-                <span>
-                  <strong>QR-Verkauf</strong>
-                  <small>Verkaufte Bilder aus qrcode beachten</small>
-                </span>
-              </label>
+                <label className="liftpic-toggle-card">
+                  <input type="checkbox" checked={form.qr_enabled} onChange={(e) => patchForm({ qr_enabled: e.target.checked })} />
+                  <span>
+                    <strong>QR-Verkauf</strong>
+                  </span>
+                </label>
               <label className="liftpic-toggle-card">
                 <input type="checkbox" checked={form.speed_enabled} onChange={(e) => patchForm({ speed_enabled: e.target.checked })} />
                 <span>
                   <strong>Speedmessung</strong>
-                  <small>AidaTest-Namen auswerten</small>
                 </span>
               </label>
               <label className="liftpic-toggle-card">
@@ -676,7 +662,6 @@ export default function LiftpicSetupPage() {
                 />
                 <span>
                   <strong>Fahrten zaehlen</strong>
-                  <small>Auch ohne Bild-Upload</small>
                 </span>
               </label>
               <label className="liftpic-toggle-card">
@@ -687,7 +672,6 @@ export default function LiftpicSetupPage() {
                 />
                 <span>
                   <strong>Shadow Mode</strong>
-                  <small>Erst testen, dann live schalten</small>
                 </span>
               </label>
             </div>
@@ -701,7 +685,6 @@ export default function LiftpicSetupPage() {
                   value={form.paper_capacity}
                   onChange={(e) => patchForm({ paper_capacity: Number(e.target.value) || 0 })}
                 />
-                <small>PrintCount zählt gedruckte Bilder hoch. Rest = Kapazität − PrintCount. 0 = unbekannt.</small>
               </div>
               <div>
                 <label>Warnung wenn Rest ≤</label>
@@ -714,16 +697,47 @@ export default function LiftpicSetupPage() {
               </div>
             </div>
 
-            <div className="row">
-              <div>
-                <label>RAW Ordner</label>
-                <input value={form.raw_dir} onChange={(e) => patchForm({ raw_dir: e.target.value })} />
-              </div>
-            </div>
-
             <details>
-              <summary className="note">Ordner und Statusdateien anzeigen</summary>
+              <summary className="note">Technische Felder anzeigen</summary>
               <div className="grid" style={{ gap: 10, marginTop: 10 }}>
+                <div className="row">
+                  <div>
+                    <label>PC-Kennung intern</label>
+                    <input
+                      value={form.machine_id}
+                      onChange={(e) => patchForm({ machine_id: e.target.value.trim().toLowerCase() })}
+                      placeholder={suggestedMachineId}
+                    />
+                  </div>
+                  <div>
+                    <label>Kamera-Kennung intern</label>
+                    <input
+                      value={form.camera_code}
+                      onChange={(e) => patchForm({ camera_code: e.target.value.trim().toLowerCase() })}
+                      placeholder={suggestedCameraCode}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label>Kamera-Name</label>
+                  <input
+                    value={form.camera_label}
+                    onChange={(e) => patchForm({ camera_label: e.target.value })}
+                    placeholder={suggestedCameraLabel}
+                  />
+                </div>
+                <div>
+                  <label>Alter Kundencode (nur Altbestand)</label>
+                  <input
+                    value={form.legacy_customer_code}
+                    onChange={(e) => patchForm({ legacy_customer_code: e.target.value.replace(/\D/g, '').slice(0, 4) })}
+                    placeholder="0000"
+                  />
+                </div>
+                <div>
+                  <label>RAW Ordner</label>
+                  <input value={form.raw_dir} onChange={(e) => patchForm({ raw_dir: e.target.value })} />
+                </div>
                 <div>
                   <label>Fertige Fotos</label>
                   <input value={form.processed_dir} onChange={(e) => patchForm({ processed_dir: e.target.value })} />
@@ -747,12 +761,12 @@ export default function LiftpicSetupPage() {
               </div>
             </details>
 
-            <div className="row">
-              <button type="submit" disabled={saving || !parks.length}>
+            <div className="setup-form-actions">
+              <button type="submit" className="setup-primary-btn" disabled={saving || !parks.length}>
                 {saving ? 'Speichert...' : editingId ? 'Aktualisieren' : 'PC vorbereiten'}
               </button>
               {editingId && (
-                <button type="button" className="secondary" onClick={resetForm}>
+                <button type="button" className="setup-secondary-btn" onClick={resetForm}>
                   Abbrechen
                 </button>
               )}
@@ -760,58 +774,40 @@ export default function LiftpicSetupPage() {
           </form>
         </div>
 
-        <div className="card">
-          <div className="support-panel-header">
+        <div className="card setup-card">
+          <div className="setup-section-head">
             <div>
-              <p className="eyebrow">Installation</p>
-              <h3>Einfacher Ablauf am Kunden-PC</h3>
-              <p className="note">Eine Datei herunterladen, als Administrator starten, Pairing-Code eingeben.</p>
+              <h3>2. Installation</h3>
             </div>
-            <button
-              type="button"
-              className="secondary inline"
-              onClick={() => void downloadBootstrapInstaller()}
-            >
+            <button type="button" className="setup-secondary-btn" onClick={() => void downloadBootstrapInstaller()}>
               <Download size={16} />
-              Install-Datei
+              Install-Datei laden
             </button>
           </div>
-          <div className="grid" style={{ gap: 10 }}>
-            <div className="material-card">
-              <Cable size={18} />
-              <h4>1. Park und Attraktion anlegen</h4>
-              <p className="material-desc">Erst links im Tab Kunden & Parks den Kunden/Park und die Attraktion anlegen oder pruefen.</p>
+          <div className="grid setup-mini-grid" style={{ gap: 10 }}>
+            <div className="material-card setup-mini-card">
+              <span className="setup-mini-index">1</span>
+              <Download size={18} />
+              <h4>Install-Datei laden</h4>
             </div>
-            <div className="material-card">
+            <div className="material-card setup-mini-card">
+              <span className="setup-mini-index">2</span>
               <Monitor size={18} />
-              <h4>2. Liftpic PC vorbereiten</h4>
-              <p className="material-desc">Hier Park, Kamera, Kundencode, Ordner, QR, Speed und Papierwarnung eintragen. Fuer Live-Test: Shadow Mode anlassen.</p>
+              <h4>Am Kunden-PC starten</h4>
             </div>
-            <div className="material-card">
+            <div className="material-card setup-mini-card">
+              <span className="setup-mini-index">3</span>
               <Copy size={18} />
-              <h4>3. Install-Datei auf den Kunden-PC</h4>
-              <p className="material-desc">Datei in Downloads speichern, PowerShell als Administrator oeffnen, Install-Befehl aus der PC-Zeile kopieren und starten.</p>
-            </div>
-            <div className="material-card">
-              <Power size={18} />
-              <h4>4. Kontrolle</h4>
-              <p className="material-desc">Hier sollte nach kurzer Zeit Zuletzt gesehen, Papier, Fahrten und Queue erscheinen. Erst danach live schalten.</p>
-            </div>
-            <div className="material-card">
-              <FileImage size={18} />
-              <h4>Laufende Attraktion sicher testen</h4>
-              <p className="material-desc">Kamera, Aida, PhotoViewer und Print bleiben an. Liftpic Sync liest nur mit, solange Shadow Mode aktiv ist.</p>
-            </div>
-            <div className="material-card">
-              <UploadCloud size={18} />
-              <h4>Wann alten Uploader stoppen?</h4>
-              <p className="material-desc">Erst wenn Health und Test-Uploads passen. Nicht alten und neuen Uploader gleichzeitig live auf dieselben Bilder senden lassen.</p>
+              <h4>Pairing-Code unten kopieren</h4>
             </div>
           </div>
+          <p className="note" style={{ marginTop: 12 }}>
+            Den passenden Kopplungs-Code holst du unten beim vorbereiteten PC.
+          </p>
         </div>
       </div>
 
-      <div className="card">
+      <div className="card setup-card">
         <h3>Vorbereitete PCs</h3>
         <div className="table-wrap">
           <table className="table">
@@ -851,7 +847,7 @@ export default function LiftpicSetupPage() {
                     <div style={{ marginTop: 8 }}>
                       <button
                         type="button"
-                        className={config.shadow_mode ? 'secondary inline' : 'danger inline'}
+                        className={config.shadow_mode ? 'setup-secondary-btn' : 'setup-danger-btn'}
                         onClick={() => void toggleShadowMode(config)}
                         disabled={busyId === config.id || config.mode === 'count_only'}
                         title={config.mode === 'count_only' ? 'Bei Nur Fahrten zaehlen bleibt Shadow automatisch an' : undefined}
@@ -885,7 +881,7 @@ export default function LiftpicSetupPage() {
                   <td className="actions-cell">
                     <button
                       type="button"
-                      className="secondary inline"
+                      className="setup-secondary-btn"
                       onClick={() => {
                         setEditingId(config.id);
                         setForm(toForm(config));
@@ -897,15 +893,15 @@ export default function LiftpicSetupPage() {
                     </button>
                     <button
                       type="button"
-                      className="secondary inline"
+                      className="setup-secondary-btn"
                       onClick={() => copy(`pair-${config.id}`, installCommand(config))}
                     >
                       <Copy size={14} />
-                      {copiedId === `pair-${config.id}` ? 'Kopiert' : 'Install-Befehl'}
+                      {copiedId === `pair-${config.id}` ? 'Kopiert' : 'Befehl kopieren'}
                     </button>
                     <button
                       type="button"
-                      className="secondary inline"
+                      className="setup-secondary-btn"
                       onClick={() => void rotatePairing(config)}
                       disabled={busyId === config.id}
                     >
@@ -914,7 +910,7 @@ export default function LiftpicSetupPage() {
                     </button>
                     <button
                       type="button"
-                      className="danger inline"
+                      className="setup-danger-btn"
                       onClick={() => void disableConfig(config)}
                       disabled={busyId === config.id}
                     >
@@ -933,157 +929,6 @@ export default function LiftpicSetupPage() {
           </table>
         </div>
       </div>
-
-      <div className="grid two">
-        <div className="card">
-          <div className="support-panel-header">
-            <div>
-              <p className="eyebrow">Lokale Dateien</p>
-              <h3>Automat-Logo oder Print-Overlay vorbereiten</h3>
-              <p className="note">
-                Die Datei wird in Supabase gespeichert. Der Attraktions-PC holt sie per Liftpic Sync ab und ersetzt nur
-                den erlaubten Zielpfad mit Backup.
-              </p>
-            </div>
-            <FileImage size={22} />
-          </div>
-          <form className="grid liftpic-asset-form" onSubmit={submitAsset}>
-            <div>
-              <label>PC / Kamera</label>
-              <select
-                value={assetForm.machine_config_id}
-                onChange={(e) => patchAssetForm({ machine_config_id: e.target.value })}
-                required
-              >
-                {configs.map((config) => (
-                  <option key={config.id} value={config.id}>
-                    {parkNameById.get(config.park_id) || config.park_id} - {config.machine_label} / {config.camera_label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label>Was soll ersetzt werden?</label>
-              <select value={assetForm.slot} onChange={(e) => setAssetSlot(e.target.value)}>
-                {assetSlots.map((slot) => (
-                  <option key={slot.id} value={slot.id}>{slot.label}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label>Name im Dashboard</label>
-              <input value={assetForm.label} onChange={(e) => patchAssetForm({ label: e.target.value })} />
-            </div>
-
-            <div>
-              <label>Zielpfad auf dem PC</label>
-              <input value={assetForm.target_path} onChange={(e) => patchAssetForm({ target_path: e.target.value })} />
-              <p className="note">Erlaubt sind spaeter nur samuel_neu, imageloader und jpeg4web.</p>
-            </div>
-
-            <div className="row">
-              <div>
-                <label>Hinweis nach Download</label>
-                <select value={assetForm.restart_hint} onChange={(e) => patchAssetForm({ restart_hint: e.target.value })}>
-                  <option value="restart_viewer">Verkaufsautomat neu starten</option>
-                  <option value="restart_print">Print/Viewer neu starten</option>
-                  <option value="none">Kein Neustart bekannt</option>
-                </select>
-              </div>
-              <div>
-                <label>Datei</label>
-                <input
-                  type="file"
-                  accept=".png,.jpg,.jpeg,.bmp,.gif,image/png,image/jpeg,image/bmp,image/gif"
-                  onChange={(e) => setAssetFile(e.target.files?.[0] || null)}
-                  required
-                />
-              </div>
-            </div>
-
-            <div>
-              <label>Notiz</label>
-              <input
-                value={assetForm.notes}
-                onChange={(e) => patchAssetForm({ notes: e.target.value })}
-                placeholder="z.B. Sommermotiv 2026"
-              />
-            </div>
-
-            <button type="submit" disabled={assetSaving || !configs.length}>
-              <UploadCloud size={16} />
-              {assetSaving ? 'Bereitet vor...' : 'Datei fuer PC vorbereiten'}
-            </button>
-          </form>
-        </div>
-
-        <div className="card">
-          <div className="support-panel-header">
-            <div>
-              <p className="eyebrow">Ausgerollte Slots</p>
-              <h3>Aktive lokale Dateien</h3>
-              <p className="note">Diese Liste liest der PC beim Asset-Sync als Manifest.</p>
-            </div>
-            <button type="button" className="secondary inline" onClick={() => void load()}>
-              Aktualisieren
-            </button>
-          </div>
-          <div className="table-wrap">
-            <table className="table liftpic-assets-table">
-              <thead>
-                <tr>
-                  <th>Slot</th>
-                  <th>PC</th>
-                  <th>Ziel</th>
-                  <th>Datei</th>
-                  <th>Aktion</th>
-                </tr>
-              </thead>
-              <tbody>
-                {assets.map((asset) => {
-                  const machineLabel = configLabelByMachine.get(`${asset.machine_id || ''}|${asset.camera_code || ''}`);
-                  return (
-                    <tr key={asset.id}>
-                      <td>
-                        <strong>{asset.label || slotLabelById.get(asset.slot) || asset.slot}</strong>
-                        <div className="note">{asset.slot}</div>
-                      </td>
-                      <td>
-                        {machineLabel || asset.machine_id || 'Parkweit'}
-                        {asset.camera_code && <div className="note">{asset.camera_code}</div>}
-                      </td>
-                      <td className="mono-path">{asset.target_path}</td>
-                      <td>
-                        {formatBytes(asset.file_size)}
-                        <div className="note">{formatDate(asset.updated_at)}</div>
-                      </td>
-                      <td>
-                        <button
-                          type="button"
-                          className="danger inline"
-                          onClick={() => void disableAsset(asset)}
-                          disabled={assetBusyId === asset.id}
-                        >
-                          <Trash2 size={14} />
-                          Deaktivieren
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-                {assets.length === 0 && (
-                  <tr>
-                    <td colSpan={5} className="note">Noch keine lokalen Automaten-Dateien vorbereitet.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
       {status && <p className="success">{status}</p>}
       {error && <p className="error">{error}</p>}
     </div>

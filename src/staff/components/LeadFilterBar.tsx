@@ -1,8 +1,17 @@
-import { LEAD_CATEGORIES, LEAD_CATEGORY_LABELS, type LeadCategory } from '../lib/leads';
+import {
+  LEAD_CATEGORIES,
+  LEAD_CATEGORY_LABELS,
+  LEAD_TEMPERATURE_LABELS,
+  LEAD_TEMPERATURES,
+  type LeadCategory,
+  type LeadTemperature,
+} from '../lib/leads';
 
 interface LeadFilterBarProps {
   category: LeadCategory | '';
   onCategoryChange: (value: LeadCategory | '') => void;
+  temperature: LeadTemperature | '';
+  onTemperatureChange: (value: LeadTemperature | '') => void;
   language: string;
   onLanguageChange: (value: string) => void;
   availableLanguages: string[];
@@ -11,6 +20,8 @@ interface LeadFilterBarProps {
 export default function LeadFilterBar({
   category,
   onCategoryChange,
+  temperature,
+  onTemperatureChange,
   language,
   onLanguageChange,
   availableLanguages,
@@ -27,6 +38,19 @@ export default function LeadFilterBar({
         {LEAD_CATEGORIES.map((cat) => (
           <option key={cat} value={cat}>
             {LEAD_CATEGORY_LABELS[cat]}
+          </option>
+        ))}
+      </select>
+      <select
+        className="lead-filter-select"
+        value={temperature}
+        onChange={(e) => onTemperatureChange(e.target.value as LeadTemperature | '')}
+        aria-label="Nach Priorität filtern"
+      >
+        <option value="">Alle Prioritäten</option>
+        {LEAD_TEMPERATURES.map((temperatureValue) => (
+          <option key={temperatureValue} value={temperatureValue}>
+            {LEAD_TEMPERATURE_LABELS[temperatureValue]}
           </option>
         ))}
       </select>

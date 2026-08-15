@@ -1,5 +1,6 @@
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { Trash2 } from 'lucide-react';
 import { supabaseBrowser } from '../lib/supabase';
 import { edgeFetch } from '../lib/edge-fetch';
 import { getApiErrorMessage } from '../lib/api-error';
@@ -37,7 +38,6 @@ export default function CamerasPage() {
   const [cameraPhotosLoading, setCameraPhotosLoading] = useState(false);
   const [cameraPhotosError, setCameraPhotosError] = useState<string | null>(null);
   const [customerCode, setCustomerCode] = useState('');
-  const [cameraName, setCameraName] = useState('');
   const [selectedAttractionId, setSelectedAttractionId] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
@@ -49,6 +49,18 @@ export default function CamerasPage() {
     () => cameras.find((camera) => camera.customer_code === selectedPreviewCameraCode) || null,
     [cameras, selectedPreviewCameraCode],
   );
+  const selectedPark = useMemo(
+    () => parks.find((park) => park.id === selectedParkId) || null,
+    [parks, selectedParkId],
+  );
+
+  const getCameraDisplayName = (code: string, attractionId?: string | null, savedName?: string | null) => {
+    if (savedName?.trim()) return savedName.trim();
+    const attractionName = attractionId ? attractionMap.get(attractionId)?.trim() : '';
+    if (attractionName) return attractionName;
+    if (selectedPark?.name?.trim()) return `${selectedPark.name} ${code}`;
+    return `Kamera ${code}`;
+  };
 
   const countPhotosByCode = async (parkId: string, code: string): Promise<{ count: number; scope: PhotoScope }> => {
     const { count: localCameraCount } = await supabaseBrowser
@@ -311,7 +323,7 @@ export default function CamerasPage() {
       body: JSON.stringify({
         park_id: selectedParkId,
         customer_code: customerCode,
-        camera_name: cameraName || null,
+        camera_name: getCameraDisplayName(customerCode, selectedAttractionId),
         attraction_id: selectedAttractionId || null,
         is_active: true,
       }),
@@ -326,11 +338,10 @@ export default function CamerasPage() {
     setStatus('Kamera-Mapping gespeichert');
     appendActivityEvent({
       title: 'Kamera-Zuordnung gespeichert',
-      details: `${customerCode}${cameraName ? ` (${cameraName})` : ''}`,
+      details: `${customerCode} (${getCameraDisplayName(customerCode, selectedAttractionId)})`,
       level: 'success',
     });
     setCustomerCode('');
-    setCameraName('');
     setSelectedAttractionId('');
     await loadParkData(selectedParkId);
   };
@@ -365,9 +376,9 @@ export default function CamerasPage() {
   };
 
   return (
-    <div className="grid two">
-      <div className="card" id="tour-cam-park-select">
-        <h2>Kamera-Mapping</h2>
+    <div className="grid two setup-overview-grid">
+      <div className="card setup-card" id="tour-cam-park-select">
+        <h2>1. Park wählen</h2>
         <div className="row">
           <div>
             <label>Park</label>
@@ -388,16 +399,12 @@ export default function CamerasPage() {
         </div>
       </div>
 
-      <div className="card" id="tour-cam-create">
-        <h3>Neue Kamera-Zuordnung</h3>
+      <div className="card setup-card" id="tour-cam-create">
+        <h3>2. Foto-Code anlegen</h3>
         <form className="grid" onSubmit={onCreate}>
           <div>
-            <label>Customer/Camera Code (4-stellig)</label>
+            <label>Foto-Code (4-stellig)</label>
             <input value={customerCode} onChange={(e) => setCustomerCode(e.target.value.replace(/\D/g, '').slice(0, 4))} required />
-          </div>
-          <div>
-            <label>Kamera Name (optional)</label>
-            <input value={cameraName} onChange={(e) => setCameraName(e.target.value)} />
           </div>
           <div>
             <label>Attraktion</label>
@@ -408,12 +415,12 @@ export default function CamerasPage() {
               ))}
             </select>
           </div>
-          <button type="submit">Speichern</button>
+          <button type="submit" className="setup-primary-btn">Speichern</button>
         </form>
       </div>
 
-      <div className="card camera-assignments-card">
-        <h3>Aktuelle Zuordnungen</h3>
+      <div className="card setup-card camera-assignments-card">
+        <h3>Aktive Foto-Codes</h3>
         <div className="table-wrap">
           <table className="table camera-table">
             <thead><tr><th>Code</th><th>Kamera</th><th>Attraktion</th><th>Status</th><th>Aktionen</th></tr></thead>
@@ -421,17 +428,19 @@ export default function CamerasPage() {
               {cameras.map((camera) => (
                 <tr key={camera.id}>
                   <td>{camera.customer_code}</td>
-                  <td>{camera.camera_name || '-'}</td>
+                  <td>{getCameraDisplayName(camera.customer_code, camera.attraction_id, camera.camera_name)}</td>
                   <td>{camera.attraction_id ? attractionMap.get(camera.attraction_id) || camera.attraction_id : '-'}</td>
                   <td><span className={`badge ${camera.is_active ? 'ok' : 'warn'}`}>{camera.is_active ? 'Aktiv' : 'Inaktiv'}</span></td>
                   <td className="actions-cell">
                     <button
                       type="button"
-                      className="danger inline"
+                      className="setup-icon-btn"
                       onClick={() => onDelete(camera.id, camera.customer_code)}
                       disabled={deletingId === camera.id}
+                      aria-label={`Foto-Code ${camera.customer_code} löschen`}
+                      title="Löschen"
                     >
-                      Löschen
+                      <Trash2 size={14} />
                     </button>
                   </td>
                 </tr>
@@ -441,8 +450,8 @@ export default function CamerasPage() {
         </div>
       </div>
 
-      <div className="card" style={{ gridColumn: '1 / -1' }} id="tour-cam-images">
-        <h3>Aktuelle Kamera-Bilder</h3>
+      <div className="card setup-card" style={{ gridColumn: '1 / -1' }} id="tour-cam-images">
+        <h3>3. Prüfen ob Bilder ankommen</h3>
         <div className="row" style={{ alignItems: 'end' }}>
           <div id="tour-cam-preview-select">
             <label>Kamera</label>
@@ -454,7 +463,7 @@ export default function CamerasPage() {
               {!cameras.length && <option value="">Keine Kamera verfügbar</option>}
               {cameras.map((camera) => (
                 <option key={camera.id} value={camera.customer_code}>
-                  {camera.camera_name ? `${camera.camera_name} (${camera.customer_code})` : `Kamera ${camera.customer_code}`}{' '}
+                  {getCameraDisplayName(camera.customer_code, camera.attraction_id, camera.camera_name)} ({camera.customer_code}){' '}
                   - {cameraPhotoCounts[camera.customer_code] || 0} Bilder
                   {cameraPhotoScopes[camera.customer_code] === 'global' ? ' (parkuebergreifend)' : ''}
                 </option>
@@ -464,7 +473,7 @@ export default function CamerasPage() {
           <div style={{ maxWidth: 180 }}>
             <button
               type="button"
-              className="secondary"
+              className="setup-secondary-btn"
               onClick={() => void loadCameraPhotos(selectedParkId, selectedPreviewCameraCode)}
               disabled={!selectedPreviewCameraCode || cameraPhotosLoading}
             >
@@ -473,15 +482,6 @@ export default function CamerasPage() {
           </div>
         </div>
 
-        {selectedPreviewCamera && (
-          <p className="note" style={{ marginTop: 12 }}>
-            Neueste Bilder für {selectedPreviewCamera.camera_name || `Kamera ${selectedPreviewCamera.customer_code}`}.
-            {cameraPhotoScopes[selectedPreviewCamera.customer_code] === 'global'
-              ? ' Keine Treffer im ausgewählten Park, deshalb parkuebergreifende Anzeige.'
-              : ' Treffer im ausgewählten Park.'}{' '}
-            Anzahl: {cameraPhotoCounts[selectedPreviewCamera.customer_code] || 0}.
-          </p>
-        )}
         {cameraPhotosLoading && <p className="note">Bilder werden geladen...</p>}
         {!cameraPhotosLoading && cameraPhotosError && <p className="error">{cameraPhotosError}</p>}
         {!cameraPhotosLoading && !cameraPhotosError && selectedPreviewCameraCode && cameraPhotos.length === 0 && (

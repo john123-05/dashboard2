@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import { fetchKioskSales, type OpeningHours } from '../lib/kioskSales';
 import type { OpeningHoursConfig } from '../lib/types';
 
-interface ParkState {
+export interface ParkState {
   parkId: string | null;
   parkName: string | null;
   setPark: (id: string | null, name: string | null) => void;
@@ -18,7 +18,7 @@ interface ParkState {
   kioskCheckLoading: boolean;
 }
 
-const ParkContext = createContext<ParkState | null>(null);
+export const ParkContext = createContext<ParkState | null>(null);
 const STORAGE_KEY = 'selected_park';
 
 export function ParkProvider({ children }: { children: ReactNode }) {
