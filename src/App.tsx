@@ -1,42 +1,43 @@
-import { Suspense, lazy, useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
+import { seiteNachladen, NachladeGrenze } from './lib/seiteNachladen';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import DashboardLayout from './components/layout/DashboardLayout';
 import Login from './pages/Login';
-const Register = lazy(() => import('./pages/Register'));
-const Overview = lazy(() => import('./pages/Overview'));
-const Revenue = lazy(() => import('./pages/Revenue'));
-const Purchases = lazy(() => import('./pages/Purchases'));
-const Users = lazy(() => import('./pages/Users'));
-const Photos = lazy(() => import('./pages/Photos'));
-const Leads = lazy(() => import('./pages/Leads'));
-const Personalization = lazy(() => import('./pages/Personalization'));
-const Support = lazy(() => import('./pages/Support'));
-const SystemHealth = lazy(() => import('./pages/SystemHealth'));
-const Settings = lazy(() => import('./pages/Settings'));
-const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
-const LegalSupport = lazy(() => import('./pages/LegalSupport'));
+const Register = seiteNachladen(() => import('./pages/Register'));
+const Overview = seiteNachladen(() => import('./pages/Overview'));
+const Revenue = seiteNachladen(() => import('./pages/Revenue'));
+const Purchases = seiteNachladen(() => import('./pages/Purchases'));
+const Users = seiteNachladen(() => import('./pages/Users'));
+const Photos = seiteNachladen(() => import('./pages/Photos'));
+const Leads = seiteNachladen(() => import('./pages/Leads'));
+const Personalization = seiteNachladen(() => import('./pages/Personalization'));
+const Support = seiteNachladen(() => import('./pages/Support'));
+const SystemHealth = seiteNachladen(() => import('./pages/SystemHealth'));
+const Settings = seiteNachladen(() => import('./pages/Settings'));
+const PrivacyPolicy = seiteNachladen(() => import('./pages/PrivacyPolicy'));
+const LegalSupport = seiteNachladen(() => import('./pages/LegalSupport'));
 import { I18nProvider } from './lib/i18n';
 import { ParkProvider } from './contexts/ParkContext';
 import ComingSoonOverlay from './components/ComingSoonOverlay';
 import KioskAwareOverlay from './components/KioskAwareOverlay';
 import OwnerOnly from './components/OwnerOnly';
-const Team = lazy(() => import('./pages/Team'));
-const StaffAdminLayout = lazy(() => import('./staff/components/AdminLayout'));
-const StaffLoginPage = lazy(() => import('./staff/pages/StaffLoginPage'));
-const StaffSupportTicketKundenPage = lazy(() => import('./staff/pages/SupportTicketKundenPage'));
-const StaffSystemHealthPage = lazy(() => import('./staff/pages/StaffSystemHealthPage'));
-const StaffSettingsPage = lazy(() => import('./staff/pages/StaffSettingsPage'));
-const StaffHelpPage = lazy(() => import('./staff/pages/HelpPage'));
-const StaffMarketingMaterialsPage = lazy(() => import('./staff/pages/MarketingMaterialsPage'));
-const StaffUploaderInstallPage = lazy(() => import('./staff/pages/UploaderInstallPage'));
-const StaffPasswordsPage = lazy(() => import('./staff/pages/PasswordsPage'));
-const StaffMediaLibraryPage = lazy(() => import('./staff/pages/MediaLibraryPage'));
-const StaffCostsPage = lazy(() => import('./staff/pages/CostsPage'));
-const StaffCustomerManagementPage = lazy(() => import('./staff/pages/CustomerManagementPage'));
-const StaffOverviewPage = lazy(() => import('./staff/pages/OverviewPage'));
-const StaffOfferBuilderPage = lazy(() => import('./staff/pages/OfferBuilderPage'));
-const StaffWebsiteAnfragenPage = lazy(() => import('./staff/pages/WebsiteAnfragenPage'));
+const Team = seiteNachladen(() => import('./pages/Team'));
+const StaffAdminLayout = seiteNachladen(() => import('./staff/components/AdminLayout'));
+const StaffLoginPage = seiteNachladen(() => import('./staff/pages/StaffLoginPage'));
+const StaffSupportTicketKundenPage = seiteNachladen(() => import('./staff/pages/SupportTicketKundenPage'));
+const StaffSystemHealthPage = seiteNachladen(() => import('./staff/pages/StaffSystemHealthPage'));
+const StaffSettingsPage = seiteNachladen(() => import('./staff/pages/StaffSettingsPage'));
+const StaffHelpPage = seiteNachladen(() => import('./staff/pages/HelpPage'));
+const StaffMarketingMaterialsPage = seiteNachladen(() => import('./staff/pages/MarketingMaterialsPage'));
+const StaffUploaderInstallPage = seiteNachladen(() => import('./staff/pages/UploaderInstallPage'));
+const StaffPasswordsPage = seiteNachladen(() => import('./staff/pages/PasswordsPage'));
+const StaffMediaLibraryPage = seiteNachladen(() => import('./staff/pages/MediaLibraryPage'));
+const StaffCostsPage = seiteNachladen(() => import('./staff/pages/CostsPage'));
+const StaffCustomerManagementPage = seiteNachladen(() => import('./staff/pages/CustomerManagementPage'));
+const StaffOverviewPage = seiteNachladen(() => import('./staff/pages/OverviewPage'));
+const StaffOfferBuilderPage = seiteNachladen(() => import('./staff/pages/OfferBuilderPage'));
+const StaffWebsiteAnfragenPage = seiteNachladen(() => import('./staff/pages/WebsiteAnfragenPage'));
 
 function AppShellMetaController() {
   const location = useLocation();
@@ -109,6 +110,7 @@ export default function App() {
       <I18nProvider>
         <AuthProvider>
           <ParkProvider>
+            <NachladeGrenze>
             <Suspense fallback={<Ladeanzeige />}>
             <Routes>
               <Route path="/login" element={<Login />} />
@@ -190,6 +192,7 @@ export default function App() {
               </Route>
             </Routes>
             </Suspense>
+            </NachladeGrenze>
           </ParkProvider>
         </AuthProvider>
       </I18nProvider>

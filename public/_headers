@@ -1,0 +1,18 @@
+# Warum diese Datei existiert
+# ---------------------------
+# Die App wird in einzeln nachgeladene Dateien mit Pruefsumme im Namen zerlegt
+# (assets/Photos-CskCIJ8c.js). Diese Dateien aendern bei jedem Deploy ihren
+# Namen - sie duerfen und sollen deshalb ewig im Cache liegen.
+#
+# Die index.html dagegen behaelt ihren Namen und zeigt auf genau diese Dateien.
+# Wird SIE aus dem Cache geliefert, zeigt sie nach einem Deploy auf Dateien, die
+# es nicht mehr gibt - der Browser bekommt HTML statt JavaScript und bricht ab.
+# Genau das war der Fehler "beim ersten Laden geht es, beim zweiten nicht".
+#
+# Also: index.html jedes Mal beim Server rueckfragen, alles unter /assets nie.
+
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
