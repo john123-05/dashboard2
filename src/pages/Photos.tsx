@@ -375,6 +375,18 @@ export default function Photos({ embedded = false }: { embedded?: boolean } = {}
   }
 
   const conversionRate = stats.total > 0 ? (stats.purchased / stats.total) * 100 : 0;
+
+  // Mehr verkaufte als aufgenommene Fotos kann es nicht geben - dann fehlen
+  // Aufnahmen. Das passiert, wenn der Automat zeitweise ohne Verbindung war:
+  // die verkauften Fotos liegen als DATEIEN auf dem PC und werden nachgeliefert,
+  // die blosse ZAHL der Aufnahmen meldet dagegen nur der laufende Agent und ist
+  // hinterher nicht mehr nachholbar.
+  //
+  // Am 16.08.2026 stand deshalb bei Imst "172 gekauft" neben "4 Aufnahmen" und
+  // daraus 4300 % Conversion. Statt eine solche Zahl zu zeigen, sagen wir hier,
+  // dass wir es nicht wissen - die Verkaufszahl selbst ist vollstaendig und
+  // bleibt sichtbar. (F-040)
+  const aufnahmenUnvollstaendig = stats.purchased > stats.total;
   const emailRate = emailDay && emailDay.total > 0 ? (emailDay.given / emailDay.total) * 100 : 0;
   const emailPie =
     emailDay && emailDay.total > 0
@@ -466,11 +478,37 @@ export default function Photos({ embedded = false }: { embedded?: boolean } = {}
         </div>
       )}
 
+      {aufnahmenUnvollstaendig && (
+        <div className="rounded-2xl border border-amber-200/70 bg-amber-50/70 p-4 sm:p-5">
+          <p className="text-sm font-semibold text-amber-900">
+            Für diesen Tag fehlen Aufnahmen
+          </p>
+          <p className="mt-1 text-sm leading-relaxed text-amber-800">
+            Es sind mehr Fotos verkauft als aufgenommen gemeldet worden — das kann nicht
+            stimmen. Der Automat war an diesem Tag zeitweise ohne Verbindung. Die
+            verkauften Fotos liegen als Dateien vor und wurden vollständig nachgeliefert,
+            die Zahl der Aufnahmen lässt sich nachträglich nicht mehr ermitteln.
+          </p>
+          <p className="mt-2 text-sm text-amber-800">
+            <span className="font-medium">Verlässlich ist:</span>{' '}
+            {formatNumber(stats.purchased)} verkaufte Fotos.{' '}
+            <span className="font-medium">Nicht verlässlich:</span> Aufnahmen, Verfügbar
+            und Conversion — sie werden deshalb nicht angezeigt.
+          </p>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-4 sm:gap-6 xl:grid-cols-4">
         <KPICard
           title={t('photos.total')}
-          value={formatNumber(stats.total)}
-          subtitle={kioskConv ? `Aufnahmen · ${selectedDateLabel}` : undefined}
+          value={aufnahmenUnvollstaendig ? '—' : formatNumber(stats.total)}
+          subtitle={
+            aufnahmenUnvollstaendig
+              ? 'nicht vollständig gemeldet'
+              : kioskConv
+                ? `Aufnahmen · ${selectedDateLabel}`
+                : undefined
+          }
           icon={Camera}
         />
         {!isStaff && (
@@ -483,12 +521,25 @@ export default function Photos({ embedded = false }: { embedded?: boolean } = {}
             iconBg="bg-emerald-100"
           />
         )}
-        <KPICard title={t('photos.available')} value={formatNumber(stats.available)} icon={Eye} iconColor="text-amber-600" iconBg="bg-amber-100" />
+        <KPICard
+          title={t('photos.available')}
+          value={aufnahmenUnvollstaendig ? '—' : formatNumber(stats.available)}
+          subtitle={aufnahmenUnvollstaendig ? 'nicht ermittelbar' : undefined}
+          icon={Eye}
+          iconColor="text-amber-600"
+          iconBg="bg-amber-100"
+        />
         {!isStaff && (
           <KPICard
             title={t('photos.conversion')}
-            value={formatPercent(conversionRate)}
-            subtitle={kioskConv ? 'an diesem Tag' : undefined}
+            value={aufnahmenUnvollstaendig ? '—' : formatPercent(conversionRate)}
+            subtitle={
+              aufnahmenUnvollstaendig
+                ? 'Aufnahmen fehlen'
+                : kioskConv
+                  ? 'an diesem Tag'
+                  : undefined
+            }
             icon={Clock}
             iconColor="text-cyan-600"
             iconBg="bg-cyan-100"
@@ -502,6 +553,19 @@ export default function Photos({ embedded = false }: { embedded?: boolean } = {}
           <div className="grid gap-6 sm:grid-cols-2">
             <div>
               <h3 className="mb-4 text-base font-semibold text-slate-800">{t('photos.status_distribution')}</h3>
+              {aufnahmenUnvollstaendig ? (
+                // Ohne verlaessliche Aufnahmezahl bestuende der Ring nur aus dem
+                // Segment "Gekauft" und saehe damit aus, als waere jede Fahrt
+                // gekauft worden. Lieber die eine Zahl nennen, die stimmt.
+                <div className="rounded-xl bg-white/30 p-4 text-sm leading-relaxed text-slate-500">
+                  Ohne die Zahl der Aufnahmen lässt sich die Verteilung nicht
+                  darstellen. Gesichert ist nur:{' '}
+                  <span className="font-medium text-slate-700">
+                    {formatNumber(stats.purchased)} verkaufte Fotos
+                  </span>
+                  .
+                </div>
+              ) : (
               <div className="flex flex-col items-center gap-4">
                 <div className="h-40 w-40">
                   <ResponsiveContainer width="100%" height="100%">
@@ -529,9 +593,21 @@ export default function Photos({ embedded = false }: { embedded?: boolean } = {}
                   ))}
                 </div>
               </div>
+              )}
             </div>
 
-            {kioskConv && kioskConv.taken > 0 && (
+            {kioskConv && kioskConv.taken > 0 && aufnahmenUnvollstaendig && (
+              <div>
+                <h3 className="mb-4 text-base font-semibold text-slate-800">Conversion</h3>
+                <div className="rounded-xl bg-white/30 p-4 text-sm leading-relaxed text-slate-500">
+                  Für diesen Tag nicht berechenbar. Die Conversion setzt die verkauften
+                  Fotos ins Verhältnis zu den Aufnahmen — und die Aufnahmen wurden an
+                  diesem Tag nicht vollständig gemeldet.
+                </div>
+              </div>
+            )}
+
+            {kioskConv && kioskConv.taken > 0 && !aufnahmenUnvollstaendig && (
               <div>
                 <h3 className="mb-4 text-base font-semibold text-slate-800">Conversion</h3>
                 <div className="flex flex-col items-center gap-4">
@@ -599,15 +675,26 @@ export default function Photos({ embedded = false }: { embedded?: boolean } = {}
             )}
             {attractionStats.map((a) => {
               const pct = a.total > 0 ? (a.purchased / a.total) * 100 : 0;
+              // Gleiche Lage wie oben, nur je Attraktion: mehr verkauft als
+              // aufgenommen heisst, die Aufnahmezahl fehlt - nicht, dass die
+              // Quote bei 4300 % liegt. (F-040)
+              const luecke = a.purchased > a.total;
               return (
                 <div key={a.name} className="flex items-center justify-between gap-3 rounded-xl bg-white/30 p-3.5 sm:gap-4 sm:p-4">
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-slate-700">{a.name}</p>
                     <p className="mt-1 text-xs text-slate-400">
-                      {formatNumber(a.total)} Aufnahmen{!isStaff ? ` · ${formatNumber(a.purchased)} verkauft` : ''}
+                      {luecke
+                        ? `${formatNumber(a.purchased)} verkauft · Aufnahmen unvollständig`
+                        : `${formatNumber(a.total)} Aufnahmen${!isStaff ? ` · ${formatNumber(a.purchased)} verkauft` : ''}`}
                     </p>
                   </div>
-                  {!isStaff && (
+                  {!isStaff && luecke && (
+                    <div className="flex h-16 w-16 shrink-0 items-center justify-center sm:h-20 sm:w-20">
+                      <span className="text-lg font-semibold text-slate-300">—</span>
+                    </div>
+                  )}
+                  {!isStaff && !luecke && (
                     <div className="relative h-16 w-16 shrink-0 sm:h-20 sm:w-20">
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
