@@ -1,42 +1,42 @@
-import { useEffect } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import DashboardLayout from './components/layout/DashboardLayout';
 import Login from './pages/Login';
-import Register from './pages/Register';
-import Overview from './pages/Overview';
-import Revenue from './pages/Revenue';
-import Purchases from './pages/Purchases';
-import Users from './pages/Users';
-import Photos from './pages/Photos';
-import Leads from './pages/Leads';
-import Personalization from './pages/Personalization';
-import Support from './pages/Support';
-import SystemHealth from './pages/SystemHealth';
-import Settings from './pages/Settings';
-import PrivacyPolicy from './pages/PrivacyPolicy';
-import LegalSupport from './pages/LegalSupport';
+const Register = lazy(() => import('./pages/Register'));
+const Overview = lazy(() => import('./pages/Overview'));
+const Revenue = lazy(() => import('./pages/Revenue'));
+const Purchases = lazy(() => import('./pages/Purchases'));
+const Users = lazy(() => import('./pages/Users'));
+const Photos = lazy(() => import('./pages/Photos'));
+const Leads = lazy(() => import('./pages/Leads'));
+const Personalization = lazy(() => import('./pages/Personalization'));
+const Support = lazy(() => import('./pages/Support'));
+const SystemHealth = lazy(() => import('./pages/SystemHealth'));
+const Settings = lazy(() => import('./pages/Settings'));
+const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
+const LegalSupport = lazy(() => import('./pages/LegalSupport'));
 import { I18nProvider } from './lib/i18n';
 import { ParkProvider } from './contexts/ParkContext';
 import ComingSoonOverlay from './components/ComingSoonOverlay';
 import KioskAwareOverlay from './components/KioskAwareOverlay';
 import OwnerOnly from './components/OwnerOnly';
-import Team from './pages/Team';
-import StaffAdminLayout from './staff/components/AdminLayout';
-import StaffLoginPage from './staff/pages/StaffLoginPage';
-import StaffSupportTicketKundenPage from './staff/pages/SupportTicketKundenPage';
-import StaffSystemHealthPage from './staff/pages/StaffSystemHealthPage';
-import StaffSettingsPage from './staff/pages/StaffSettingsPage';
-import StaffHelpPage from './staff/pages/HelpPage';
-import StaffMarketingMaterialsPage from './staff/pages/MarketingMaterialsPage';
-import StaffUploaderInstallPage from './staff/pages/UploaderInstallPage';
-import StaffPasswordsPage from './staff/pages/PasswordsPage';
-import StaffMediaLibraryPage from './staff/pages/MediaLibraryPage';
-import StaffCostsPage from './staff/pages/CostsPage';
-import StaffCustomerManagementPage from './staff/pages/CustomerManagementPage';
-import StaffOverviewPage from './staff/pages/OverviewPage';
-import StaffOfferBuilderPage from './staff/pages/OfferBuilderPage';
-import StaffWebsiteAnfragenPage from './staff/pages/WebsiteAnfragenPage';
+const Team = lazy(() => import('./pages/Team'));
+const StaffAdminLayout = lazy(() => import('./staff/components/AdminLayout'));
+const StaffLoginPage = lazy(() => import('./staff/pages/StaffLoginPage'));
+const StaffSupportTicketKundenPage = lazy(() => import('./staff/pages/SupportTicketKundenPage'));
+const StaffSystemHealthPage = lazy(() => import('./staff/pages/StaffSystemHealthPage'));
+const StaffSettingsPage = lazy(() => import('./staff/pages/StaffSettingsPage'));
+const StaffHelpPage = lazy(() => import('./staff/pages/HelpPage'));
+const StaffMarketingMaterialsPage = lazy(() => import('./staff/pages/MarketingMaterialsPage'));
+const StaffUploaderInstallPage = lazy(() => import('./staff/pages/UploaderInstallPage'));
+const StaffPasswordsPage = lazy(() => import('./staff/pages/PasswordsPage'));
+const StaffMediaLibraryPage = lazy(() => import('./staff/pages/MediaLibraryPage'));
+const StaffCostsPage = lazy(() => import('./staff/pages/CostsPage'));
+const StaffCustomerManagementPage = lazy(() => import('./staff/pages/CustomerManagementPage'));
+const StaffOverviewPage = lazy(() => import('./staff/pages/OverviewPage'));
+const StaffOfferBuilderPage = lazy(() => import('./staff/pages/OfferBuilderPage'));
+const StaffWebsiteAnfragenPage = lazy(() => import('./staff/pages/WebsiteAnfragenPage'));
 
 function AppShellMetaController() {
   const location = useLocation();
@@ -88,6 +88,20 @@ function AppShellMetaController() {
   return null;
 }
 
+/**
+ * Was waehrend des Nachladens einer Seite dasteht.
+ *
+ * Bewusst schlicht: sie ist meist nur Millisekunden sichtbar, und ein
+ * aufwendiger Platzhalter waere selbst wieder Ladezeit.
+ */
+function Ladeanzeige() {
+  return (
+    <div className="flex min-h-screen items-center justify-center">
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600" />
+    </div>
+  );
+}
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -95,6 +109,7 @@ export default function App() {
       <I18nProvider>
         <AuthProvider>
           <ParkProvider>
+            <Suspense fallback={<Ladeanzeige />}>
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
@@ -174,6 +189,7 @@ export default function App() {
                 <Route path="/staff/kosten" element={<StaffCostsPage />} />
               </Route>
             </Routes>
+            </Suspense>
           </ParkProvider>
         </AuthProvider>
       </I18nProvider>
