@@ -1,0 +1,26 @@
+Liftpictures Dashboard
+Stand: 2026-08-17 21:35 (Europe/Vienna)
+
+Enthalten in dieser Auslieferung
+--------------------------------
+  b0d5cf4  Seiten werden einzeln nachgeladen (1485 KB -> 439 KB)
+  5b3598d  F-040  keine 4300 % Conversion mehr, wenn Aufnahmen fehlen
+  b37451f  F-041  Nachladefehler nach einem Deploy heilt sich selbst
+  24e4d6d  F-042  "Dashboard laedt..." kann nicht mehr ewig stehen bleiben
+
+Wozu diese Datei da ist
+-----------------------
+Am 17.08.2026 lagen vier Commits auf GitHub, waehrend die Seite weiter den
+Stand vom Vortag auslieferte - bolt.new hatte sie nie geholt. Aufgefallen ist
+das erst, nachdem der Betreiber zweimal "geht immer noch nicht" gemeldet
+hatte. Zwei Reparaturen galten da schon als erledigt, ohne es zu sein.
+
+Diese Datei beantwortet die Frage in einer Sekunde:
+
+    https://dashboard-liftpictures.com/version.txt
+
+Steht dort ein alter Zeitpunkt, ist die Auslieferung nicht durchgelaufen -
+egal wie gruen es an anderer Stelle aussieht. Erst wenn hier der erwartete
+Stand steht, gilt eine Frontend-Aenderung als ausgeliefert.
+
+Siehe F-013 (Wiederkehr vom 17.08.) im Fehlerjournal des Uploader-Repos.
