@@ -759,6 +759,18 @@ function Automat({ m, detailed, busyKey, laufend, jetzt, onRestart, onTestfoto }
   const versteckt = eintraege.length - sichtbar.length;
   const keinNeustartMoeglich = !(m.restartable || []).length;
 
+  // Der Testfoto-Knopf hing bisher allein an der Kamerakachel. Die entsteht
+  // aber nur, solange das Kameraprotokoll juenger als 48 Stunden ist
+  // (OPERATIONAL_LOG_DEFUNCT_MINUTES) - und ein Protokoll altert auch dann,
+  // wenn die Kamera laeuft und blosss niemand faehrt. Ergebnis: nach zwei
+  // ruhigen Tagen verschwand ausgerechnet der Knopf, mit dem man prueft, ob
+  // die Kamera noch geht. Der Automat meldet `can_test_photo` voellig
+  // unabhaengig davon - also richtet sich der Knopf jetzt danach. (F-043)
+  const hatKameraKachel = eintraege.some(
+    (e) => e.kind === 'camera' && e.name === 'Kamera-Software',
+  );
+  const testfotoOhneKachel = Boolean(m.can_test_photo) && !hatKameraKachel;
+
   /**
    * Läuft der offene Auftrag genau für dieses Programm?
    *
@@ -832,6 +844,31 @@ function Automat({ m, detailed, busyKey, laufend, jetzt, onRestart, onTestfoto }
           beides erscheint von selbst, sobald dort die neue Version läuft.
           Fotos, Verkäufe und Umsatz laufen davon unberührt weiter.
         </p>
+      )}
+
+      {testfotoOhneKachel && (
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white/40 px-3 py-3">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-slate-700">Testfoto auslösen</p>
+            <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
+              Die Kamera meldet seit über zwei Tagen nichts &ndash; das heißt nicht,
+              dass sie defekt ist, sondern nur, dass niemand gefahren ist. Ein
+              Testfoto sagt dir, ob sie antwortet.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => onTestfoto()}
+            disabled={busyKey === `${m.id}:testphoto`}
+            className="shrink-0 rounded-xl bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50"
+          >
+            {busyKey === `${m.id}:testphoto`
+              ? 'wird ausgelöst…'
+              : m.pending_restart?.target === 'testphoto'
+                ? 'wartet auf den Automaten…'
+                : 'Testfoto auslösen'}
+          </button>
+        </div>
       )}
 
       <div className="grid items-start gap-2 lg:grid-cols-2">

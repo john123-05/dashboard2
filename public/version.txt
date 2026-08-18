@@ -1,5 +1,5 @@
 Liftpictures Dashboard
-Stand: 2026-08-17 21:35 (Europe/Vienna)
+Stand: 2026-08-18 10:45 (Europe/Vienna)
 
 Enthalten in dieser Auslieferung
 --------------------------------
@@ -7,6 +7,7 @@ Enthalten in dieser Auslieferung
   5b3598d  F-040  keine 4300 % Conversion mehr, wenn Aufnahmen fehlen
   b37451f  F-041  Nachladefehler nach einem Deploy heilt sich selbst
   24e4d6d  F-042  "Dashboard laedt..." kann nicht mehr ewig stehen bleiben
+  (neu)    F-043  Testfoto-Knopf haengt nicht mehr an der Kamerakachel
 
 Wozu diese Datei da ist
 -----------------------
