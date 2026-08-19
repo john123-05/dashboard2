@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Upload, Loader2, CheckCircle2, AlertTriangle, Monitor, Image as ImageIcon, RotateCw, Moon } from 'lucide-react';
+import { Upload, Loader2, CheckCircle2, AlertTriangle, Monitor, Image as ImageIcon, RotateCw, Moon, Trash2 } from 'lucide-react';
 import GlassCard from './ui/GlassCard';
 import { usePark } from '../contexts/ParkContext';
 // Die Automaten-Dateien liegen im geteilten Produktionsprojekt, nicht im
 // Operator-Projekt dieses Dashboards. Die Edge Function
 // `operator-liftpic-assets` ist dort deployed und prueft unseren
 // Operator-Token selbst (verify_jwt = false, siehe supabase/config.toml).
-import { supabase, EXTERNAL_SUPABASE_URL, EXTERNAL_SUPABASE_ANON_KEY } from '../lib/supabase';
+import { supabase, externalSupabase, EXTERNAL_SUPABASE_URL, EXTERNAL_SUPABASE_ANON_KEY } from '../lib/supabase';
 
 const FUNCTION_URL = `${EXTERNAL_SUPABASE_URL}/functions/v1/operator-liftpic-assets`;
 
@@ -74,9 +74,12 @@ type AssetDeployment = {
   machine_id: string | null;
   slot: string;
   label: string | null;
+  bucket: string | null;
+  storage_path: string | null;
   file_size: number | null;
   updated_at: string | null;
   created_at: string | null;
+  preview_url?: string | null;
 };
 
 function formatBytes(size: number | null) {
@@ -132,6 +135,8 @@ export default function AutomatBranding() {
   const [status, setStatus] = useState<string | null>(null);
   const [notDeployed, setNotDeployed] = useState(false);
   const [restarting, setRestarting] = useState(false);
+  const [deletingGalleryId, setDeletingGalleryId] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const selectedSlot = useMemo(
@@ -213,7 +218,18 @@ export default function AutomatBranding() {
       setSelectedMachineId((current) =>
         current && loadedMachines.some((m) => m.id === current) ? current : loadedMachines[0]?.id || '',
       );
-      setAssets((body?.data?.assets || []) as AssetDeployment[]);
+
+      const loadedAssets = (body?.data?.assets || []) as AssetDeployment[];
+      // Das aktuell hinterlegte Bild liegt im GETEILTEN Projekt (siehe Kommentar
+      // oben), daher `externalSupabase` statt des Operator-Clients `supabase`.
+      // Der Bucket ist public - getPublicUrl statt createSignedUrl, das braucht
+      // keine Storage-Berechtigung fuer den anonymen Client und laeuft nie ab.
+      const assetsWithPreviews = loadedAssets.map((asset) => {
+        if (!asset.bucket || !asset.storage_path) return asset;
+        const { data } = externalSupabase.storage.from(asset.bucket).getPublicUrl(asset.storage_path);
+        return { ...asset, preview_url: data?.publicUrl || null };
+      });
+      setAssets(assetsWithPreviews);
     } catch {
       setNotDeployed(true);
     }
@@ -253,6 +269,27 @@ export default function AutomatBranding() {
     setSelectedGalleryId((current) =>
       current && withPreviews.some((item) => item.id === current) ? current : withPreviews[0]?.id || null,
     );
+  }
+
+  /** Ungenutztes Overlay endgueltig entfernen - inklusive Datei in der Ablage
+   *  und eventuell noch daran haengenden Kampagnen-Ebenen. */
+  async function handleDeleteGalleryOverlay(overlay: GalleryOverlay, event: React.MouseEvent) {
+    event.stopPropagation();
+    setDeletingGalleryId(overlay.id);
+    setError(null);
+
+    await supabase.from('overlay_campaign_layers').delete().eq('asset_id', overlay.id);
+
+    const { error: assetError } = await supabase.from('overlay_assets').delete().eq('id', overlay.id);
+    if (assetError) {
+      setError(assetError.message);
+      setDeletingGalleryId(null);
+      return;
+    }
+
+    await supabase.storage.from(overlay.bucket).remove([overlay.path]);
+    await loadGallery();
+    setDeletingGalleryId(null);
   }
 
   /** Holt das ausgewaehlte Galerie-Overlay als echte Datei zum Hochladen.
@@ -322,7 +359,7 @@ export default function AutomatBranding() {
       setFile(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
       setStatus(
-        `"${selectedSlot.label}" wurde an ${selectedMachine.machine_label || selectedMachine.machine_id} uebergeben. Der Automat holt es sich in den naechsten Minuten.`,
+        `"${selectedSlot.label}" wurde an ${selectedMachine.machine_label || selectedMachine.machine_id} uebergeben. Damit es sichtbar wird, jetzt noch das Verkaufsprogramm neu starten.`,
       );
       await load();
     } catch (err) {
@@ -371,10 +408,15 @@ export default function AutomatBranding() {
         setError(`Auftrag konnte nicht gespeichert werden: ${detail}`);
       } else if (mode === 'cancel') {
         setStatus('Der geplante Neustart wurde zurueckgenommen.');
-      } else if (mode === 'now') {
-        setStatus('Neustart beauftragt. Der Automat fuehrt ihn innerhalb der naechsten Minute aus.');
       } else {
-        setStatus('Neustart fuer heute Nacht vorgemerkt. Der Automat fuehrt ihn in der Ruhezeit aus.');
+        setStatus(
+          mode === 'now'
+            ? 'Neustart beauftragt. Der Automat fuehrt ihn innerhalb der naechsten Minute aus.'
+            : 'Neustart fuer heute Nacht vorgemerkt. Der Automat fuehrt ihn in der Ruhezeit aus.',
+        );
+        // Erst jetzt ist der volle Ablauf (Bild senden -> live schalten)
+        // abgeschlossen - vorher wuerde die Ansicht das alte Bild zeigen.
+        setIsEditing(false);
       }
       await load();
     } catch (err) {
@@ -392,19 +434,56 @@ export default function AutomatBranding() {
   const onlineMinutes = minutesSince(selectedMachine?.last_seen_at || null);
   const isOnline = onlineMinutes !== null && onlineMinutes < 5;
 
+  function currentAssetForSlot(slotId: string) {
+    return assetsForMachine.find((item) => item.slot === slotId) || null;
+  }
+
+  function slotCaption(slotId: string) {
+    const asset = currentAssetForSlot(slotId);
+    if (!asset) return 'Noch nichts hochgeladen';
+    const when = formatWhen(asset.updated_at || asset.created_at);
+    return when ? `Zuletzt geaendert: ${when}` : 'Aktualisiert';
+  }
+
+  const currentAsset = currentAssetForSlot(selectedSlotId);
+
   return (
     <GlassCard className="p-4 sm:p-6">
-      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h3 className="text-base font-semibold text-slate-800">Am Automaten anzeigen</h3>
-          <p className="mt-1 text-sm text-slate-500">
-            Lade hier ein Bild hoch, das direkt auf deinem Foto-Automaten verwendet wird &ndash; als Overlay
-            auf dem Foto, als Logo oder als Hintergrund.
-          </p>
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <h3 className="text-base font-semibold text-slate-800">Overlays aendern</h3>
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          {machines.length > 1 && (
+            <select
+              value={selectedMachineId}
+              onChange={(e) => setSelectedMachineId(e.target.value)}
+              className="glass-input text-sm"
+            >
+              {machines.map((machine) => (
+                <option key={machine.id} value={machine.id}>
+                  {machine.machine_label || machine.machine_id}
+                </option>
+              ))}
+            </select>
+          )}
+          {selectedMachine && (
+            <span
+              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
+                isOnline ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'
+              }`}
+            >
+              <Monitor className="h-3.5 w-3.5" />
+              {machines.length === 1 && `${selectedMachine.machine_label || selectedMachine.machine_id} · `}
+              {isOnline
+                ? 'verbunden'
+                : onlineMinutes === null
+                  ? 'noch nie gesehen'
+                  : `zuletzt vor ${Math.round(onlineMinutes)} Min.`}
+            </span>
+          )}
+          <button onClick={() => void load()} className="glass-button-secondary shrink-0" disabled={loading}>
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Aktualisieren'}
+          </button>
         </div>
-        <button onClick={() => void load()} className="glass-button-secondary shrink-0" disabled={loading}>
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Aktualisieren'}
-        </button>
       </div>
 
       {notDeployed && (
@@ -439,65 +518,48 @@ export default function AutomatBranding() {
       )}
 
       {machines.length > 0 && (
-        <div className="space-y-5">
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-slate-700">Automat</label>
-            <div className="flex flex-wrap items-center gap-3">
-              <select
-                value={selectedMachineId}
-                onChange={(e) => setSelectedMachineId(e.target.value)}
-                className="glass-input max-w-xs"
-              >
-                {machines.map((machine) => (
-                  <option key={machine.id} value={machine.id}>
-                    {machine.machine_label || machine.machine_id}
-                  </option>
-                ))}
-              </select>
-              {selectedMachine && (
-                <span
-                  className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
-                    isOnline ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'
+        <div className="space-y-4">
+          <div className="inline-flex rounded-xl bg-white/40 p-1">
+            {CUSTOMER_SLOTS.map((slot) => {
+              const active = slot.id === selectedSlotId;
+              return (
+                <button
+                  key={slot.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedSlotId(slot.id);
+                    setIsEditing(false);
+                  }}
+                  className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+                    active ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
                   }`}
                 >
-                  <Monitor className="h-3.5 w-3.5" />
-                  {isOnline
-                    ? 'verbunden'
-                    : onlineMinutes === null
-                      ? 'noch nie gesehen'
-                      : `zuletzt vor ${Math.round(onlineMinutes)} Min.`}
-                </span>
-              )}
-            </div>
+                  {slot.label}
+                </button>
+              );
+            })}
           </div>
 
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-slate-700">Was moechtest du aendern?</label>
-            <div className="grid gap-2 sm:grid-cols-3">
-              {CUSTOMER_SLOTS.map((slot) => {
-                const active = slot.id === selectedSlotId;
-                return (
-                  <button
-                    key={slot.id}
-                    type="button"
-                    onClick={() => setSelectedSlotId(slot.id)}
-                    className={`rounded-2xl border px-3 py-3 text-left transition ${
-                      active
-                        ? 'border-brand-300 bg-brand-50/60 ring-1 ring-brand-200'
-                        : 'border-white/40 bg-white/40 hover:bg-white/60'
-                    }`}
-                  >
-                    <span className="block text-sm font-semibold text-slate-800">{slot.label}</span>
-                    <span className="mt-0.5 block text-xs text-slate-500">{slot.description}</span>
-                  </button>
-                );
-              })}
+          {!isEditing ? (
+            <div>
+              <div className="flex h-44 w-full items-center justify-center overflow-hidden rounded-2xl bg-[conic-gradient(#e5e7eb_90deg,#fff_90deg_180deg,#e5e7eb_180deg_270deg,#fff_270deg)] bg-[length:10px_10px] sm:max-w-xs">
+                {currentAsset?.preview_url ? (
+                  <img
+                    src={currentAsset.preview_url}
+                    alt={selectedSlot.label}
+                    className="h-full w-full object-contain"
+                  />
+                ) : (
+                  <ImageIcon className="h-6 w-6 text-slate-300" />
+                )}
+              </div>
+              <p className="mt-2 text-xs text-slate-400">{slotCaption(selectedSlotId)}</p>
+              <button type="button" onClick={() => setIsEditing(true)} className="glass-button-primary mt-3">
+                Aendern
+              </button>
             </div>
-            <p className="mt-2 text-xs text-slate-500">{selectedSlot.tip}</p>
-          </div>
-
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-slate-700">Welches Bild?</label>
+          ) : (
+            <div>
             <div className="mb-3 inline-flex rounded-xl bg-white/40 p-1">
               <button
                 type="button"
@@ -530,31 +592,49 @@ export default function AutomatBranding() {
                   <div className="flex gap-3 overflow-x-auto pb-2">
                     {gallery.map((item) => {
                       const active = item.id === selectedGalleryId;
+                      const isDeleting = deletingGalleryId === item.id;
                       return (
-                        <button
+                        <div
                           key={item.id}
-                          type="button"
-                          onClick={() => setSelectedGalleryId(item.id)}
-                          className={`w-36 shrink-0 rounded-2xl border p-2 text-left transition ${
+                          className={`w-36 shrink-0 rounded-2xl border p-2 transition ${
                             active
                               ? 'border-brand-300 bg-brand-50/60 ring-1 ring-brand-200'
                               : 'border-white/40 bg-white/40 hover:bg-white/60'
                           }`}
                         >
-                          <div className="flex h-20 items-center justify-center overflow-hidden rounded-xl bg-[conic-gradient(#e2e8f0_0_25%,#f8fafc_0_50%)] bg-[length:12px_12px]">
-                            {item.preview_url ? (
-                              <img src={item.preview_url} alt="" className="h-full w-full object-contain" />
+                          <button
+                            type="button"
+                            onClick={() => setSelectedGalleryId(item.id)}
+                            className="block w-full text-left"
+                          >
+                            <div className="flex h-20 items-center justify-center overflow-hidden rounded-xl bg-[conic-gradient(#e5e7eb_90deg,#fff_90deg_180deg,#e5e7eb_180deg_270deg,#fff_270deg)] bg-[length:10px_10px]">
+                              {item.preview_url ? (
+                                <img src={item.preview_url} alt="" className="h-full w-full object-contain" />
+                              ) : (
+                                <ImageIcon className="h-4 w-4 text-slate-300" />
+                              )}
+                            </div>
+                            <p className="mt-1.5 truncate text-xs font-medium text-slate-700">
+                              {basename(item.path)}
+                            </p>
+                            <p className="text-[11px] text-slate-400">
+                              {item.width && item.height ? `${item.width} x ${item.height}` : 'Groesse unbekannt'}
+                            </p>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => void handleDeleteGalleryOverlay(item, e)}
+                            disabled={isDeleting}
+                            className="mt-1 flex items-center gap-1 text-[11px] text-slate-400 transition hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {isDeleting ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
                             ) : (
-                              <ImageIcon className="h-4 w-4 text-slate-300" />
+                              <Trash2 className="h-3 w-3" />
                             )}
-                          </div>
-                          <p className="mt-1.5 truncate text-xs font-medium text-slate-700">
-                            {basename(item.path)}
-                          </p>
-                          <p className="text-[11px] text-slate-400">
-                            {item.width && item.height ? `${item.width} x ${item.height}` : 'Groesse unbekannt'}
-                          </p>
-                        </button>
+                            Loeschen
+                          </button>
+                        </div>
                       );
                     })}
                   </div>
@@ -595,7 +675,7 @@ export default function AutomatBranding() {
 
                 <div className="rounded-2xl bg-white/30 p-3">
                   <p className="mb-2 text-xs font-medium text-slate-600">Vorschau</p>
-                  <div className="flex h-32 items-center justify-center overflow-hidden rounded-xl bg-[conic-gradient(#e2e8f0_0_25%,#f8fafc_0_50%)] bg-[length:16px_16px]">
+                  <div className="flex h-32 items-center justify-center overflow-hidden rounded-xl bg-[conic-gradient(#e5e7eb_90deg,#fff_90deg_180deg,#e5e7eb_180deg_270deg,#fff_270deg)] bg-[length:10px_10px]">
                     {previewUrl ? (
                       <img src={previewUrl} alt="Vorschau" className="h-full w-full object-contain" />
                     ) : (
@@ -606,107 +686,78 @@ export default function AutomatBranding() {
               </div>
             )}
 
-            <button
-              type="button"
-              onClick={() => void handleUpload()}
-              disabled={!hasSelection || !selectedMachine || saving}
-              className="glass-button-primary mt-3 w-full sm:w-auto"
-            >
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-              {saving ? 'Wird uebertragen...' : 'An den Automaten senden'}
-            </button>
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsEditing(false)}
+                disabled={saving}
+                className="glass-button-secondary"
+              >
+                Abbrechen
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleUpload()}
+                disabled={!hasSelection || !selectedMachine || saving}
+                className="glass-button-primary"
+              >
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                {saving ? 'Wird uebertragen...' : 'Jetzt aendern'}
+              </button>
+            </div>
 
-            <p className="mt-2 text-xs text-slate-500">
-              Der Automat holt sich die Datei automatisch. Das alte Bild wird vorher gesichert.
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-white/40 bg-white/30 p-4">
-            <div className="flex flex-col gap-1">
-              <p className="text-sm font-semibold text-slate-800">Verkaufsprogramm neu starten</p>
-              <p className="text-xs text-slate-500">
-                Manche Bilder &ndash; vor allem der Hintergrund &ndash; werden erst nach einem Neustart des
-                Verkaufsprogramms sichtbar. Solange es laeuft, haelt es die Datei geoeffnet und sie kann gar
-                nicht ausgetauscht werden.
+            <div className="mt-3 rounded-xl bg-white/20 p-3">
+              <p className="mb-2 text-xs font-medium text-slate-500">
+                Danach live schalten &ndash; noetig, damit z. B. ein neuer Hintergrund erscheint
               </p>
-            </div>
 
-            {selectedMachine?.pending_restart ? (
-              <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl bg-amber-50/80 px-3 py-2">
-                <RotateCw className="h-4 w-4 shrink-0 animate-spin text-amber-600" />
-                <span className="text-sm text-amber-800">
-                  {selectedMachine.pending_restart.mode === 'tonight'
-                    ? 'Neustart ist fuer heute Nacht vorgemerkt.'
-                    : 'Neustart ist beauftragt und wird gleich ausgefuehrt.'}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => void requestRestart('cancel')}
-                  disabled={restarting}
-                  className="text-sm font-medium text-amber-900 underline underline-offset-2"
-                >
-                  zuruecknehmen
-                </button>
-              </div>
-            ) : (
-              <div className="mt-3 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => void requestRestart('now')}
-                  disabled={restarting || !selectedMachine}
-                  className="glass-button-secondary"
-                >
-                  {restarting ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCw className="h-4 w-4" />}
-                  Jetzt neu starten
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void requestRestart('tonight')}
-                  disabled={restarting || !selectedMachine}
-                  className="glass-button-secondary"
-                >
-                  <Moon className="h-4 w-4" />
-                  Heute Nacht
-                </button>
-              </div>
-            )}
-
-            <p className="mt-2 text-xs text-slate-500">
-              &bdquo;Jetzt&ldquo; unterbricht den Verkauf fuer etwa 15 Sekunden.
-              &bdquo;Heute Nacht&ldquo; wartet, bis der Automat geschlossen ist.
-              {selectedMachine?.last_restart_at && (
-                <> Zuletzt neu gestartet: {formatWhen(selectedMachine.last_restart_at)}.</>
+              {selectedMachine?.pending_restart ? (
+                <div className="flex flex-wrap items-center gap-2 rounded-xl bg-amber-50/80 px-3 py-1.5">
+                  <RotateCw className="h-4 w-4 shrink-0 animate-spin text-amber-600" />
+                  <span className="text-sm text-amber-800">
+                    {selectedMachine.pending_restart.mode === 'tonight'
+                      ? 'Neustart fuer heute Nacht vorgemerkt.'
+                      : 'Neustart wird gleich ausgefuehrt.'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => void requestRestart('cancel')}
+                    disabled={restarting}
+                    className="text-sm font-medium text-amber-900 underline underline-offset-2"
+                  >
+                    zuruecknehmen
+                  </button>
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void requestRestart('now')}
+                    disabled={restarting || !selectedMachine}
+                    className="glass-button-secondary"
+                  >
+                    {restarting ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCw className="h-4 w-4" />}
+                    Verkaufsprogramm jetzt neu starten
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void requestRestart('tonight')}
+                    disabled={restarting || !selectedMachine}
+                    className="glass-button-secondary"
+                  >
+                    <Moon className="h-4 w-4" />
+                    Heute Nacht
+                  </button>
+                </div>
               )}
-            </p>
-          </div>
 
-          {assetsForMachine.length > 0 && (
-            <div className="border-t border-white/30 pt-4">
-              <p className="mb-2 text-sm font-semibold text-slate-700">Aktuell auf diesem Automaten</p>
-              <div className="space-y-2">
-                {assetsForMachine.map((asset) => {
-                  const slot = CUSTOMER_SLOTS.find((item) => item.id === asset.slot);
-                  return (
-                    <div
-                      key={asset.id}
-                      className="flex items-center justify-between gap-3 rounded-xl bg-white/40 px-3 py-2"
-                    >
-                      <div className="min-w-0">
-                        <p className="truncate text-sm text-slate-700">
-                          {slot?.label || asset.label || asset.slot}
-                        </p>
-                        <p className="truncate text-xs text-slate-400">
-                          {[formatBytes(asset.file_size), formatWhen(asset.updated_at || asset.created_at)]
-                            .filter(Boolean)
-                            .join(' · ')}
-                        </p>
-                      </div>
-                      <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
-                    </div>
-                  );
-                })}
-              </div>
+              {selectedMachine?.last_restart_at && (
+                <p className="mt-2 text-xs text-slate-400">
+                  Zuletzt neu gestartet: {formatWhen(selectedMachine.last_restart_at)}.
+                </p>
+              )}
             </div>
+          </div>
           )}
         </div>
       )}

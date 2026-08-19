@@ -68,7 +68,7 @@ const CUSTOMER_SLOTS: Record<string, SlotDefinition> = {
 
 const machineColumns = 'id, park_id, machine_id, machine_label, camera_code, last_seen_at, is_active';
 const assetColumns =
-  'id, park_id, machine_id, camera_code, slot, label, target_path, file_size, content_type, updated_at, created_at';
+  'id, park_id, machine_id, camera_code, slot, label, target_path, bucket, storage_path, file_size, content_type, updated_at, created_at';
 
 function text(value: unknown, fallback = '') {
   return typeof value === 'string' && value.trim() ? value.trim() : fallback;
