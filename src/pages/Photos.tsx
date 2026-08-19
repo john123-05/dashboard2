@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { Camera, ShoppingBag, Eye, Clock, RefreshCw, Search, CalendarClock, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { Camera, ShoppingBag, Eye, Clock, RefreshCw, Search, CalendarClock, ChevronLeft, ChevronRight, X, RotateCw } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { getOptionalSourceWarning, invokeEdgeFunction, isEdgeSourceUnavailable } from '../lib/edgeFunctions';
 import { formatNumber, formatPercent, formatRelative, formatDateTime } from '../lib/utils';
@@ -10,6 +10,25 @@ import { usePark } from '../contexts/ParkContext';
 import { useAuth } from '../contexts/AuthContext';
 import { fetchRecentPhotos, searchPhotosByCode, searchPhotosByDateTime, claimLinkFor, type BrowsablePhoto } from '../lib/photoBrowser';
 import { fetchKioskSales, fetchKioskPhotosForDay, aggregateByDate, todayInTimezone, type AggregatedDay } from '../lib/kioskSales';
+import { supabase, EXTERNAL_SUPABASE_URL, EXTERNAL_SUPABASE_ANON_KEY } from '../lib/supabase';
+
+const ASSETS_URL = `${EXTERNAL_SUPABASE_URL}/functions/v1/operator-liftpic-assets`;
+
+/**
+ * Ein Automat, soweit diese Seite ihn braucht.
+ *
+ * `can_test_photo` und `restartable` sagt der Automat SELBST im Herzschlag -
+ * das Dashboard raet nicht. Ein Automat ohne eingerichtete Kamerasoftware
+ * meldet eine leere Liste und bekommt hier keinen Knopf, statt einen zu
+ * zeigen, der ins Leere greift.
+ */
+type Automat = {
+  id: string;
+  machine_id: string;
+  machine_label?: string | null;
+  can_test_photo?: boolean;
+  restartable?: { key: string; name: string; tech: string; folge: string }[];
+};
 
 // Local "YYYY-MM-DDTHH:MM" for a datetime-local input, defaulted to now so
 // staff can just tweak the time (date is today by default).
@@ -61,6 +80,78 @@ export default function Photos({ embedded = false }: { embedded?: boolean } = {}
   const [selectedPhoto, setSelectedPhoto] = useState<BrowsablePhoto | null>(null);
   const [copiedLink, setCopiedLink] = useState<'claim' | 'image' | null>(null);
   const selectedPhotoCardRef = useRef<HTMLDivElement | null>(null);
+
+  // Automaten dieses Parks, nur fuer die zwei Knoepfe neben "Aktualisieren".
+  const [automaten, setAutomaten] = useState<Automat[]>([]);
+  const [automatBusy, setAutomatBusy] = useState<string | null>(null);
+
+  async function operatorKopfzeilen() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) return null;
+    return { Authorization: `Bearer ${session.access_token}`, apikey: EXTERNAL_SUPABASE_ANON_KEY };
+  }
+
+  /**
+   * Die Automaten holen, damit die Knoepfe wissen, ob sie ueberhaupt etwas
+   * bewirken koennen.
+   *
+   * Scheitert das, bleibt die Liste leer und es erscheint kein Knopf - eine
+   * Fehlermeldung waere hier falsch, die Fotoseite funktioniert ja weiter.
+   */
+  async function automatenLaden() {
+    if (!parkId) { setAutomaten([]); return; }
+    const h = await operatorKopfzeilen();
+    if (!h) return;
+    try {
+      const res = await fetch(`${ASSETS_URL}?park_id=${encodeURIComponent(parkId)}`, { headers: h });
+      if (!res.ok) return;
+      const body = await res.json().catch(() => null);
+      setAutomaten((body?.data?.machines || []) as Automat[]);
+    } catch {
+      /* die Fotoseite laeuft auch ohne */
+    }
+  }
+
+  /**
+   * Einen Auftrag an den Automaten schicken - Testfoto oder Kamera-Neustart.
+   *
+   * Beides reist ueber denselben, bereits abgesicherten und quittierten Weg wie
+   * die Knoepfe im Systemzustand. Das Ergebnis erscheint dort im Verlauf, denn
+   * erst der Automat weiss, ob wirklich ein Bild entstanden ist: der Ausloeser
+   * meldet auch dann Erfolg, wenn die Kamera gar nicht reagiert hat.
+   */
+  async function automatAuftrag(automat: Automat, ziel: 'testphoto' | 'camera') {
+    const frage = ziel === 'testphoto'
+      ? 'Der Automat nimmt jetzt ein Foto auf und schickt es durch die ganze Kette.\n\nFortfahren?'
+      : 'Die Kamera-Software wird beendet und neu gestartet.\n\n'
+        + 'Waehrenddessen entstehen fuer einige Sekunden keine Fotos. Nur ausfuehren, '
+        + 'wenn gerade niemand faehrt.\n\nFortfahren?';
+    if (!confirm(frage)) return;
+
+    setAutomatBusy(`${automat.id}:${ziel}`);
+    setBrowseError(null);
+    const h = await operatorKopfzeilen();
+    if (!h) { setBrowseError('Deine Sitzung ist abgelaufen. Bitte melde dich neu an.'); setAutomatBusy(null); return; }
+
+    try {
+      const res = await fetch(ASSETS_URL, {
+        method: 'PATCH',
+        headers: { ...h, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ park_id: parkId, machine_config_id: automat.id, mode: 'now', target: ziel }),
+      });
+      const body = await res.json().catch(() => null);
+      if (!res.ok) {
+        setBrowseError(body?.error || `HTTP ${res.status}`);
+      } else {
+        setNotice(ziel === 'testphoto'
+          ? 'Testfoto beauftragt. Es dauert bis zu einer Minute, bis es hier erscheint - dann auf "Aktualisieren" tippen. Das Ergebnis steht im Systemzustand, auch wenn kein Bild zustande kam.'
+          : 'Neustart der Kamera-Software beauftragt. Das Ergebnis steht gleich im Systemzustand im Verlauf - auch ein Fehlschlag.');
+      }
+    } catch (e) {
+      setBrowseError(e instanceof Error ? e.message : 'Auftrag fehlgeschlagen.');
+    }
+    setAutomatBusy(null);
+  }
 
   async function copyLink(kind: 'claim' | 'image', url: string) {
     try {
@@ -121,7 +212,7 @@ export default function Photos({ embedded = false }: { embedded?: boolean } = {}
 
   useEffect(() => {
     setSelectedPhoto(null);
-    if (parkId) runBrowse('recent');
+    if (parkId) { runBrowse('recent'); void automatenLaden(); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [parkId]);
 
@@ -771,14 +862,51 @@ export default function Photos({ embedded = false }: { embedded?: boolean } = {}
       <GlassCard className="p-5 sm:p-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h3 className="text-base font-semibold text-slate-800">Foto-Browser</h3>
-          <button
-            onClick={handleRefreshBrowse}
-            disabled={browseLoading}
-            className="glass-button-secondary customer-operator-btn flex items-center gap-2 text-sm"
-          >
-            <RefreshCw className={`h-4 w-4 ${browseLoading ? 'animate-spin' : ''}`} />
-            Aktualisieren
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={handleRefreshBrowse}
+              disabled={browseLoading}
+              className="glass-button-secondary customer-operator-btn flex items-center gap-2 text-sm"
+            >
+              <RefreshCw className={`h-4 w-4 ${browseLoading ? 'animate-spin' : ''}`} />
+              Aktualisieren
+            </button>
+
+            {/* Die beiden Automaten-Knoepfe.
+                Sie erscheinen nur, wenn der Automat sie SELBST anbietet: das
+                Testfoto ueber `can_test_photo`, der Neustart ueber einen
+                Eintrag `camera` in `restartable`. Laeuft der Agent ohne
+                Bildschirmzugriff oder ist die Kamerasoftware nicht
+                eingerichtet, fehlen sie - besser als ein Knopf, der ins Leere
+                greift. */}
+            {automaten.filter((a) => a.can_test_photo).map((a) => (
+              <button
+                key={`t-${a.id}`}
+                onClick={() => void automatAuftrag(a, 'testphoto')}
+                disabled={automatBusy !== null}
+                className="glass-button-primary customer-operator-btn flex items-center gap-2 text-sm disabled:opacity-40"
+              >
+                <Camera className="h-4 w-4" />
+                {automatBusy === `${a.id}:testphoto` ? 'wird ausgelöst…' : 'Testfoto aufnehmen'}
+                {automaten.length > 1 && <span className="opacity-70">· {a.machine_label || a.machine_id}</span>}
+              </button>
+            ))}
+
+            {automaten
+              .filter((a) => (a.restartable || []).some((r) => r.key === 'camera'))
+              .map((a) => (
+                <button
+                  key={`c-${a.id}`}
+                  onClick={() => void automatAuftrag(a, 'camera')}
+                  disabled={automatBusy !== null}
+                  className="glass-button-secondary customer-operator-btn flex items-center gap-2 text-sm disabled:opacity-40"
+                >
+                  <RotateCw className={`h-4 w-4 ${automatBusy === `${a.id}:camera` ? 'animate-spin' : ''}`} />
+                  {automatBusy === `${a.id}:camera` ? 'wird neu gestartet…' : 'Kamera-Software neu starten'}
+                  {automaten.length > 1 && <span className="opacity-70">· {a.machine_label || a.machine_id}</span>}
+                </button>
+              ))}
+          </div>
         </div>
 
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
