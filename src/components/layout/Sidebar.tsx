@@ -42,6 +42,7 @@ const navItems: NavItem[] = [
   { to: '/personalization', icon: Wand2, labelKey: 'nav.personalization', staffAllowed: true },
   { to: '/tickets', icon: LifeBuoy, labelKey: 'nav.support', staffAllowed: true },
   { to: '/health', icon: Activity, labelKey: 'nav.system_health', staffAllowed: true },
+  { to: '/kamera', icon: Camera, labelKey: 'nav.camera', staffAllowed: true },
   { to: '/team', icon: UserCog, labelKey: 'nav.team', label: 'Mitarbeiter', ownerOnly: true },
   { to: '/settings', icon: Settings, labelKey: 'nav.settings' },
 ];

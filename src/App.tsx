@@ -14,6 +14,7 @@ const Leads = seiteNachladen(() => import('./pages/Leads'));
 const Personalization = seiteNachladen(() => import('./pages/Personalization'));
 const Support = seiteNachladen(() => import('./pages/Support'));
 const SystemHealth = seiteNachladen(() => import('./pages/SystemHealth'));
+const Kamera = seiteNachladen(() => import('./pages/Kamera'));
 const Settings = seiteNachladen(() => import('./pages/Settings'));
 const PrivacyPolicy = seiteNachladen(() => import('./pages/PrivacyPolicy'));
 const LegalSupport = seiteNachladen(() => import('./pages/LegalSupport'));
@@ -163,6 +164,7 @@ export default function App() {
                 <Route path="/personalization" element={<Personalization />} />
                 <Route path="/tickets" element={<Support />} />
                 <Route path="/health" element={<SystemHealth />} />
+                <Route path="/kamera" element={<Kamera />} />
                 <Route path="/team" element={<OwnerOnly><Team /></OwnerOnly>} />
                 <Route path="/settings" element={<OwnerOnly><Settings /></OwnerOnly>} />
               </Route>
