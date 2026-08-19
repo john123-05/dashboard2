@@ -275,7 +275,10 @@ function AutomatBlock({ a }: { a: Automat }) {
                           <CreditCard className="h-3 w-3" /> Karte
                         </span>
                       ) : (
-                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-500">
+                        <span
+                          className="cursor-help rounded-full bg-slate-100 px-2 py-0.5 text-slate-500 underline decoration-dotted"
+                          title={b.hinweis || 'Kein Grund ermittelbar'}
+                        >
                           unbekannt
                         </span>
                       )}
@@ -295,8 +298,25 @@ function AutomatBlock({ a }: { a: Automat }) {
           </div>
           <p className="mt-1 text-[11px] text-slate-400">
             Zahlungsart und Wechselgeld stammen aus dem Münz- und Kartenprotokoll
-            des Automaten, über die Uhrzeit dem Kauf zugeordnet.
+            des Automaten, über die Uhrzeit dem Kauf zugeordnet. Bei „unbekannt"
+            steht der Grund unter der Zeile - auf einem Bildschirm mit Maus auch
+            beim Zeigen auf den Chip.
           </p>
+          {z.letzte.some((b) => b.zahlungsart === 'unbekannt' && b.hinweis) && (
+            <ul className="mt-2 space-y-1 text-[11px] text-slate-500">
+              {z.letzte
+                .filter((b) => b.zahlungsart === 'unbekannt' && b.hinweis)
+                .slice(0, 15)
+                .map((b, i) => (
+                  <li key={i} className="flex gap-1.5">
+                    <span className="tabular-nums text-slate-400">
+                      {new Date(b.zeit).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                    <span>{b.hinweis}</span>
+                  </li>
+                ))}
+            </ul>
+          )}
         </div>
       )}
 

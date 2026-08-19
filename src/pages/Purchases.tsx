@@ -99,6 +99,11 @@ export default function Purchases() {
           const bar = art === 'bar' && zahlung
             ? `, ${euro(zahlung.eingeworfen_cent)} gegeben, ${euro(zahlung.ausgezahlt_cent)} zurück`
             : '';
+          // Warum "unbekannt" gilt, ist so wichtig wie die Einordnung selbst
+          // (F-050) - sonst bleibt die Zeile eine Behauptung ohne Beleg.
+          const grund = art === 'unbekannt' && zahlung?.hinweis
+            ? `, Grund: ${zahlung.hinweis}`
+            : '';
 
           return {
             id: purchase.id,
@@ -112,7 +117,7 @@ export default function Purchases() {
             reference: purchase.cameraCode,
             purchased_at: purchase.capturedAt,
             customer_or_device: purchase.email || purchase.fullName || 'Unbekannt',
-            description: `Foto am Automaten gekauft${abgeholt}${bar}`,
+            description: `Foto am Automaten gekauft${abgeholt}${bar}${grund}`,
           };
         });
         setPurchases(kioskRows);
