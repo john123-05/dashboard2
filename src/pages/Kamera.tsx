@@ -2,9 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Camera, Loader2, RotateCcw, AlertTriangle, Info } from 'lucide-react';
 import GlassCard from '../components/ui/GlassCard';
 import { usePark } from '../contexts/ParkContext';
-import {
-  supabase, externalSupabase, EXTERNAL_SUPABASE_URL, EXTERNAL_SUPABASE_ANON_KEY,
-} from '../lib/supabase';
+import { supabase, EXTERNAL_SUPABASE_URL, EXTERNAL_SUPABASE_ANON_KEY } from '../lib/supabase';
+import { fetchRecentPhotos } from '../lib/photoBrowser';
 
 const HEALTH_URL = `${EXTERNAL_SUPABASE_URL}/functions/v1/operator-liftpic-health`;
 const ASSETS_URL = `${EXTERNAL_SUPABASE_URL}/functions/v1/operator-liftpic-assets`;
@@ -136,7 +135,7 @@ export default function Kamera() {
   const [hinweis, setHinweis] = useState<string | null>(null);
   const [beschaeftigt, setBeschaeftigt] = useState(false);
 
-  const [bild, setBild] = useState<{ url: string; wann: string } | null>(null);
+  const [bild, setBild] = useState<{ url: string; wann: string; test: boolean } | null>(null);
   const [werte, setWerte] = useState<Record<string, number>>(() =>
     Object.fromEntries(REGLER.map((r) => [r.name, r.neutral])),
   );
@@ -176,24 +175,26 @@ export default function Kamera() {
   // Kamera hängt am Automaten, nicht am Internet, und einen Videostrom quer
   // durch Österreich zu schicken wäre teuer und langsam. Das letzte echte Foto
   // beantwortet die eigentliche Frage aber genauso gut: Wie sieht es aus?
+  //
+  // Über `fetchRecentPhotos`, also denselben Weg wie der Foto-Browser. Der
+  // erste Entwurf baute sich eine eigene Abfrage und liess sich die Bild-URL
+  // signieren - das schlug mit HTTP 400 fehl, weil der anonyme Schlüssel nicht
+  // signieren darf. Der Bucket ist öffentlich, eine Signatur war also nie
+  // nötig. Ein Weg, den es schon gibt, ist einem neuen vorzuziehen. (F-046)
   const letztesBildHolen = useCallback(async () => {
     if (!parkId) return;
-    const { data, error } = await externalSupabase
-      .from('photos')
-      .select('storage_bucket, storage_path, captured_at, created_at')
-      .eq('park_id', parkId)
-      .order('created_at', { ascending: false })
-      .limit(1);
-    if (error || !data?.length) { setBild(null); return; }
-    const foto = data[0] as { storage_bucket: string; storage_path: string; captured_at: string | null; created_at: string };
-    const { data: signiert } = await externalSupabase
-      .storage.from(foto.storage_bucket)
-      .createSignedUrl(foto.storage_path, 3600);
-    if (signiert?.signedUrl) {
+    try {
+      const fotos = await fetchRecentPhotos(parkId, 1);
+      const foto = fotos[0];
+      if (!foto?.imageUrl) { setBild(null); return; }
       setBild({
-        url: signiert.signedUrl,
-        wann: new Date(foto.captured_at ?? foto.created_at).toLocaleString('de-AT'),
+        url: foto.imageUrl,
+        wann: new Date(foto.capturedAt).toLocaleString('de-AT'),
+        test: foto.isTest,
       });
+    } catch (e) {
+      setFehler(e instanceof Error ? e.message : 'Letztes Foto nicht erreichbar.');
+      setBild(null);
     }
   }, [parkId]);
 
@@ -338,7 +339,7 @@ export default function Kamera() {
             <div>
               <h2 className="text-base font-semibold text-slate-800">Letztes Foto</h2>
               <p className="mt-0.5 text-xs text-slate-500">
-                {bild ? `aufgenommen ${bild.wann}` : 'noch keins vorhanden'}
+                {bild ? `aufgenommen ${bild.wann}${bild.test ? ' · Testfoto' : ''}` : 'noch keins vorhanden'}
                 {veraendert && <> · <span className="text-sky-700">Vorschau aktiv</span></>}
               </p>
             </div>
