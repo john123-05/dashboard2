@@ -1,7 +1,7 @@
 # dashboard2 - Agent Context
 
 Read this first. It carries the full working context so a fresh session
-can continue where the last one stopped. Last updated 2026-07-18.
+can continue where the last one stopped. Last updated 2026-08-19.
 
 **The master map of the whole Liftpictures ecosystem (all repos, both
 Supabase projects, customers, photo pipeline, incident history) lives in
@@ -102,6 +102,51 @@ a staff form silently does nothing, check the function actually exists.
   "TestPark" fully deleted from both projects (22 child tables). Full
   file backup first at `~/Downloads/liftpictures-park-backup/`. The real
   park "Plose" was untouched. All their Stripe purchases were test-mode.
+
+## Operator dashboard - current state (August 2026)
+
+- **Personalisierung** (`/personalization`, `Personalization.tsx`) was
+  overhauled 2026-08-19. Everything - live preview, saved-overlays gallery,
+  the drag & drop builder, and the AI message/hint fields - now lives in
+  ONE card ("Overlay-Bilder") with a switch: "Overlay erstellen" (default)
+  vs. "Vorschau". Clicking a saved overlay in the preview gallery activates
+  it directly (calls the same `activateUploadedOverlay` campaign-of-one
+  mechanism as auto-apply-on-upload). Saving from the builder, uploading a
+  ready file, and generating via AI all now respect one shared "sofort
+  verwenden" toggle - no more separate re-upload step.
+- **`AutomatBranding.tsx`** (the "Overlays aendern" card, sits above
+  Personalisierung's own card) is a view/edit flow, not a form: pick a
+  target (Foto-Overlay/Logo/Hintergrund) as a small switch, see the image
+  **currently live on the machine**, hit "Aendern" to swap it. Sending
+  stays in edit mode until the operator actually triggers a restart
+  ("Verkaufsprogramm jetzt neu starten" / "Heute Nacht") - it used to
+  bounce back to the (still-stale) preview immediately after sending,
+  before the change was actually live; fixed 2026-08-19.
+  - The live-image preview needs `bucket`/`storage_path` from
+    `operator-liftpic-assets` (added + deployed 2026-08-19). The
+    deployment bucket (`test`, see comment in that function) is **public**
+    - use `getPublicUrl`, not `createSignedUrl`, or the preview silently
+    stays empty (signed URLs need a Storage RLS read policy this bucket
+    doesn't have).
+- **`OverlayBuilder.tsx`** (the drag & drop editor inside "Overlay
+  erstellen") was rebuilt Canva-style: a collapsible category rail
+  (Format/Elemente/Text/Uploads/KI) instead of one crowded toolbar row,
+  double-click a text element on the canvas to edit it in place, a
+  session-local Uploads library (logo etc., insert repeatedly, delete
+  individually - resets on page reload, not persisted server-side),
+  AI-generate moved into its own category. Canvas base width is 900px
+  (`DISPLAY_W`), scaled down to fit via `canvasScale`.
+  - **Drag/resize math**: pointer delta is in real screen px, elements
+    live in the `DISPLAY_W` design grid, so any delta MUST be divided by
+    `canvasScale` before being applied - skipping that makes elements
+    drift faster than the cursor, worst on small/scaled-down screens. Also
+    needed for touch to work at all: `touchAction: 'none'` on draggable
+    elements (otherwise the browser eats the gesture as a page scroll),
+    pointer capture + `pointercancel` handling, and an explicit page
+    scroll lock (`document.documentElement`/`body` touch-action +
+    overscroll-behavior) during an active drag - plain `touch-action: none`
+    on the element isn't enough on iOS Safari once it sits inside a
+    `transform: scale()` ancestor, the page scrolls anyway without it.
 
 ## Open items / next steps
 
