@@ -111,6 +111,11 @@ Deno.serve(async (req) => {
       devices: list(status.operational_devices),
       restartable: list(status.restartable),
       can_test_photo: status.can_test_photo === true,
+      // Wie die Kamera eingestellt ist - Belichtung, Verstaerkung, Farbe.
+      // Rein lesend, kommt unveraendert aus dem Herzschlag. Meldet ein Automat
+      // nichts, steht hier null und das Dashboard zeigt keine Kameraseite,
+      // statt eine leere zu bauen. (F-045)
+      camera_settings: status.camera_settings ?? null,
       restart_poll_seconds:
         typeof status.restart_poll_seconds === 'number' ? status.restart_poll_seconds : null,
       night_window: Array.isArray(status.night_window) ? status.night_window : null,

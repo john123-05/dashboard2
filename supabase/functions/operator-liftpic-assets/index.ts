@@ -66,7 +66,21 @@ const CUSTOMER_SLOTS: Record<string, SlotDefinition> = {
   },
 };
 
-const machineColumns = 'id, park_id, machine_id, machine_label, camera_code, last_seen_at, is_active';
+// Was ein Automat tun soll, wenn ein Auftrag kommt.
+//
+// Bewusst nur SCHLUESSEL, nie Pfade. Welche Programmdatei hinter einem
+// Schluessel steckt, entscheidet der Automat aus seiner eigenen Konfiguration -
+// diese Function kann also nie ein beliebiges Programm starten lassen. Ein
+// Automat, der einen Schluessel nicht eingerichtet hat, lehnt den Auftrag ab.
+const RESTART_TARGETS = ['viewer', 'camera', 'lightbarrier', 'testphoto'];
+
+// `stop` haelt an UND setzt eine Pause: laeuft am Automaten ein Wachhund, der
+// das Programm nachstartet, haelt der Agent dagegen, solange die Pause gilt.
+// Ohne das waere `stop` bei jeder Anlage mit Wachhund wirkungslos.
+const ORDER_MODES = ['now', 'tonight', 'cancel', 'stop'];
+
+const machineColumns =
+  'id, park_id, machine_id, machine_label, camera_code, last_seen_at, is_active, settings';
 const assetColumns =
   'id, park_id, machine_id, camera_code, slot, label, target_path, bucket, storage_path, file_size, content_type, updated_at, created_at';
 
@@ -98,6 +112,25 @@ function slotCatalogue() {
   }));
 }
 
+/** Automat laden und beweisen, dass er zu dem Park gehoert, den der Aufrufer darf. */
+async function loadMachineForPark(machineConfigId: string, parkId: string) {
+  const { data: machine, error } = await supabaseService
+    .from('liftpic_machine_configs')
+    .select(machineColumns)
+    .eq('id', machineConfigId)
+    .maybeSingle();
+
+  if (error) return { error: json({ error: error.message }, 400) };
+  if (!machine) return { error: json({ error: 'Automat nicht gefunden' }, 404) };
+  if (machine.park_id !== parkId) {
+    return { error: json({ error: 'Dieser Automat gehoert nicht zu deinem Park' }, 403) };
+  }
+  if (machine.is_active === false) {
+    return { error: json({ error: 'Dieser Automat ist derzeit deaktiviert' }, 409) };
+  }
+  return { machine };
+}
+
 Deno.serve(async (req) => {
   const preflight = handleOptions(req);
   if (preflight) return preflight;
@@ -114,7 +147,7 @@ Deno.serve(async (req) => {
 
     const { data: machines, error: machineError } = await supabaseService
       .from('liftpic_machine_configs')
-      .select(machineColumns)
+      .select(machineColumns + ', last_status')
       .eq('park_id', auth.parkId)
       .eq('is_active', true)
       .order('machine_label', { ascending: true });
@@ -131,14 +164,105 @@ Deno.serve(async (req) => {
 
     if (assetError) return json({ error: assetError.message }, 400);
 
+    // `settings` und `last_status` gehoeren nicht in die Antwort - dort stehen
+    // Geraetetoken und der ganze Herzschlag. Herausgereicht wird nur, was die
+    // Seite braucht: der offene Auftrag, eine laufende Pause, was sich neu
+    // starten laesst und ob ein Testfoto moeglich ist.
+    const withRestart = (machines || []).map((m: Record<string, unknown>) => {
+      const settings = (m.settings ?? {}) as Record<string, unknown>;
+      const status = (m.last_status ?? {}) as Record<string, unknown>;
+      const { settings: _drop, last_status: _drop2, ...rest } = m;
+      return {
+        ...rest,
+        pending_restart: settings.pending_restart ?? null,
+        viewer_pause: settings.viewer_pause ?? null,
+        last_restart_at: settings.last_restart_at ?? null,
+        restartable: Array.isArray(status.restartable) ? status.restartable : [],
+        can_test_photo: status.can_test_photo === true,
+      };
+    });
+
     return json({
       ok: true,
       data: {
-        machines: machines || [],
+        machines: withRestart,
         assets: assets || [],
         slots: slotCatalogue(),
       },
     });
+  }
+
+  // ----------------------------------- Auftrag (Neustart / Anhalten / Testfoto)
+  if (req.method === 'PATCH') {
+    const body = await req.json().catch(() => null);
+    if (!body) return json({ error: 'Ungueltiger Inhalt' }, 400);
+
+    const parkId = text(body.park_id);
+    if (!parkId) return json({ error: 'park_id fehlt' }, 400);
+
+    const auth = await requireOperatorForPark(req, parkId);
+    if (!auth.ok) return json({ error: auth.message }, auth.status);
+
+    const machineConfigId = text(body.machine_config_id);
+    if (!machineConfigId) return json({ error: 'Automat fehlt' }, 400);
+
+    const mode = text(body.mode, 'now').toLowerCase();
+    if (!ORDER_MODES.includes(mode)) {
+      return json({ error: 'Unbekannter Modus' }, 400);
+    }
+
+    // Fehlt das Ziel, ist das Verkaufsprogramm gemeint - so bleiben aeltere
+    // Dashboards bedienbar.
+    const target = text(body.target, 'viewer').toLowerCase();
+    if (!RESTART_TARGETS.includes(target)) {
+      return json({ error: `Unbekanntes Ziel: ${target}` }, 400);
+    }
+
+    // Ein Testfoto anzuhalten ergibt keinen Sinn - es haelt nichts an, es loest
+    // aus. Lieber hier ablehnen als am Automaten etwas Unerwartetes tun.
+    if (mode === 'stop' && target === 'testphoto') {
+      return json({ error: 'Ein Testfoto laesst sich nicht anhalten' }, 400);
+    }
+
+    const loaded = await loadMachineForPark(machineConfigId, auth.parkId);
+    if (loaded.error) return loaded.error;
+    const machine = loaded.machine as Record<string, unknown>;
+
+    const settings = (machine.settings ?? {}) as Record<string, unknown>;
+    const pending =
+      mode === 'cancel'
+        ? null
+        : {
+            id: crypto.randomUUID(),
+            mode,
+            target,
+            requested_at: new Date().toISOString(),
+            requested_by: auth.userId,
+          };
+
+    // Die Pause.
+    //
+    // `stop` setzt sie, jeder Start hebt sie auf. Das ist Absicht und ersetzt
+    // einen eigenen Freigabeknopf: wer "Jetzt neu starten" drueckt, will das
+    // Programm offensichtlich laufen sehen - ein Zustand, den man extra
+    // aufheben muesste, ist genau der, den man vergisst, und der dann einen
+    // Betriebstag kostet. Der Agent deckelt sie zusaetzlich auf zwoelf Stunden.
+    let pause = settings.viewer_pause ?? null;
+    if (mode === 'stop') {
+      pause = { ziel: target, gesetzt_am: new Date().toISOString(), gesetzt_von: auth.userId };
+    } else if (mode === 'now' || mode === 'tonight') {
+      pause = null;
+    }
+
+    const { error } = await supabaseService
+      .from('liftpic_machine_configs')
+      .update({ settings: { ...settings, pending_restart: pending, viewer_pause: pause } })
+      .eq('id', machine.id as string);
+
+    if (error) {
+      return json({ error: `Auftrag konnte nicht gespeichert werden: ${error.message}` }, 400);
+    }
+    return json({ ok: true, data: { pending_restart: pending, viewer_pause: pause } });
   }
 
   // --------------------------------------------------------------- POST
