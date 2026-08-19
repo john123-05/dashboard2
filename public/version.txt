@@ -1,5 +1,5 @@
 Liftpictures Dashboard
-Stand: 2026-08-19 14:05 (Europe/Vienna)
+Stand: 2026-08-19 14:35 (Europe/Vienna)
 
 Enthalten in dieser Auslieferung
 --------------------------------
@@ -9,6 +9,7 @@ Enthalten in dieser Auslieferung
   24e4d6d  F-042  "Dashboard laedt..." kann nicht mehr ewig stehen bleiben
   4565f80  F-043  Testfoto-Knopf haengt nicht mehr an der Kamerakachel
   (neu)    Kameraseite: 15 Einstellungen, Vorschau am Foto, an die Kamera senden
+  (neu)    Knopf "Beenden": Programm anhalten ohne Neustart
 
 Wozu diese Datei da ist
 -----------------------

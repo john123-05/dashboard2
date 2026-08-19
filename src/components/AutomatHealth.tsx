@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Loader2, AlertTriangle, CheckCircle2, MinusCircle, RotateCw, Moon,
-  ChevronDown, ChevronRight, HelpCircle, Camera,
+  ChevronDown, ChevronRight, HelpCircle, Camera, Square,
 } from 'lucide-react';
 import GlassCard from './ui/GlassCard';
 import { usePark } from '../contexts/ParkContext';
@@ -491,13 +491,25 @@ export default function AutomatHealth({ onVerlauf }: {
    */
   async function restart(
     machine: Machine,
-    mode: 'now' | 'tonight' | 'cancel',
+    mode: 'now' | 'tonight' | 'cancel' | 'stop',
     programm: Neustartbar | null,
   ) {
     if (mode === 'now' && programm && !confirm(
       `${programm.name} (${programm.tech}) wird beendet und neu gestartet.\n\n`
       + `${programm.folge}\n\n`
       + 'Nur ausführen, wenn gerade niemand am Automaten steht.\n\nFortfahren?'
+    )) return;
+
+    // Beenden ist folgenreicher als neu starten, deshalb eine deutlichere
+    // Frage: es startet NICHTS nach. Keines dieser Programme steht in einem
+    // Autostart - was hier ausgeht, bleibt aus, bis es jemand wieder startet.
+    if (mode === 'stop' && programm && !confirm(
+      `${programm.name} (${programm.tech}) wird beendet und NICHT wieder gestartet.\n\n`
+      + `${programm.folge}\n\n`
+      + 'Es startet nichts nach. Das Programm bleibt aus, bis du es hier wieder '
+      + 'startest oder jemand es am Automaten von Hand startet.\n\n'
+      + 'Beim Verkaufsprogramm heisst das: der Automat verkauft ab sofort nichts mehr.'
+      + '\n\nWirklich beenden?'
     )) return;
 
     setBusyMachine(`${machine.id}:${programm?.key ?? 'cancel'}`);
@@ -522,6 +534,11 @@ export default function AutomatHealth({ onVerlauf }: {
       } else if (mode === 'cancel') {
         setNotice('Der geplante Neustart wurde zurückgenommen.');
         setLaufend(null);
+      } else if (mode === 'stop') {
+        setNotice(
+          `${programm?.name ?? 'Das Programm'} wird beendet. Das Ergebnis steht `
+          + 'gleich unten im Verlauf – auch, wenn es sich nicht beenden ließ.',
+        );
       } else if (programm) {
         // Ab hier führt die Phasenanzeige - sie zeigt echte Schritte statt
         // eines Satzes, der eine Sekundenzahl behauptet.
@@ -735,7 +752,7 @@ export default function AutomatHealth({ onVerlauf }: {
 function Automat({ m, detailed, busyKey, laufend, jetzt, onRestart, onTestfoto }: {
   m: Machine; detailed: boolean; busyKey: string | null;
   laufend: LaufenderNeustart | null; jetzt: number;
-  onRestart: (mode: 'now' | 'tonight' | 'cancel', programm: Neustartbar | null) => void;
+  onRestart: (mode: 'now' | 'tonight' | 'cancel' | 'stop', programm: Neustartbar | null) => void;
   onTestfoto: () => void;
 }) {
   const eintraege = useMemo(() => zusammenfuehren(m), [m]);
@@ -972,7 +989,7 @@ function Zeile({
     tage: number | null | undefined;
   } | null;
   testfoto?: { busy: boolean; wartend: boolean; ausloesen: () => void } | null;
-  onRestart: (mode: 'now' | 'tonight' | 'cancel') => void;
+  onRestart: (mode: 'now' | 'tonight' | 'cancel' | 'stop') => void;
 }) {
   const z = ZUSTAND[e.ton];
   const warnung = warnText(e);
@@ -1098,6 +1115,18 @@ function Zeile({
                     >
                       <Moon className="h-3.5 w-3.5" />
                       Heute Nacht
+                    </button>
+                    {/* Beenden ohne Neustart. Steht bewusst rechts und in
+                        gedeckter Farbe: es ist die seltenere Handlung, und
+                        danach verkauft der Automat nichts mehr, bis jemand das
+                        Programm wieder startet. */}
+                    <button
+                      onClick={() => onRestart('stop')}
+                      disabled={busy || wartend}
+                      className="glass-button-secondary px-3 py-1.5 text-xs text-rose-900 disabled:opacity-40"
+                    >
+                      <Square className="h-3.5 w-3.5" />
+                      Beenden
                     </button>
                     {wartend && (
                       <button
