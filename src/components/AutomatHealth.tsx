@@ -211,13 +211,20 @@ function zusammenfuehren(m: Machine): Eintrag[] {
   //
   // Der Agent unterscheidet zwei unbekannte Protokolle derselben Kategorie
   // sauber - beide heissen „Sonstige Protokolle", getrennt werden sie über
-  // `merge_key`, der den Dateinamen enthält. Das Dashboard bekam den Schlüssel
-  // bisher nicht und führte beide über den Klarnamen wieder zusammen: das
-  // zweite überschrieb das erste. Der Test auf Agentenseite war erfüllt, in der
-  // Anzeige war er aufgehoben.
+  // `merge_key`, der den Dateinamen enthält.
+  //
+  // `merge_key` gilt aber NUR für unbekannte Protokolle (F-049). Ein bekanntes
+  // Gerät wie das Verkaufsprogramm schickt zwei Meldungen: die MESSUNG (eine
+  // Probe, ohne merge_key - Prozess läuft oder nicht) und das PROTOKOLL (ein
+  // Device, mit merge_key wie "viewer|verkaufsprogramm"). Beide heissen im
+  // Klartext "Verkaufsprogramm", aber unterschiedliche Schlüssel ("aus"
+  // gemessen, "ruhig" aus dem Protokoll) landeten in zwei Kacheln statt einer -
+  // "aus" und "ruhig" nebeneinander, wo eine hätte stehen müssen. Für bekannte
+  // Geräte zählt deshalb wieder der Klarname, für unbekannte weiterhin der
+  // merge_key.
   const anlegen = (rohname: string, kind: string, eigen?: string | null): Eintrag => {
     const b = benenne(rohname);
-    const schluessel = (eigen || b.klar).toLowerCase();
+    const schluessel = (b.quelle === 'unbekannt' && eigen ? eigen : b.klar).toLowerCase();
     const vorhanden = nach.get(schluessel);
     if (vorhanden) return vorhanden;
     const neu: Eintrag = {
