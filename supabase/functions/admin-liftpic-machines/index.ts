@@ -27,10 +27,19 @@ const selectColumns = `
   pairing_status,
   last_seen_at,
   last_status,
+  settings,
   is_active,
   created_at,
   updated_at
 `;
+
+// Dieselben Auftraege wie operator-liftpic-assets, nur vom Super-Admin statt
+// vom Betreiber ausgeloest - fuer den Fall, dass ein Kunde selbst nicht ans
+// Dashboard kommt oder ein Automat vorbereitet wird, bevor er einem Betreiber
+// zugeordnet ist. Absichtlich nur Schluessel, kein Pfad: welches Programm ein
+// Ziel meint, entscheidet der Automat selbst aus seiner eigenen Konfiguration.
+const RESTART_TARGETS = ['viewer', 'camera', 'lightbarrier', 'testphoto'];
+const ORDER_MODES = ['now', 'tonight', 'cancel', 'stop'];
 
 function text(value: unknown, fallback = '') {
   return typeof value === 'string' && value.trim() ? value.trim() : fallback;
@@ -134,6 +143,63 @@ Deno.serve(async (req) => {
     if (!payload || !id) return json({ error: 'Missing id' }, 400);
 
     const action = text(payload.action);
+
+    if (action === 'order') {
+      const mode = text(payload.mode, 'now').toLowerCase();
+      if (!ORDER_MODES.includes(mode)) return json({ error: 'Unbekannter Modus' }, 400);
+
+      // Fehlendes Ziel heisst Verkaufsprogramm, damit bleibt ein einfacher
+      // Aufruf ohne target moeglich.
+      const target = text(payload.target, 'viewer').toLowerCase();
+      if (!RESTART_TARGETS.includes(target)) return json({ error: `Unbekanntes Ziel: ${target}` }, 400);
+
+      if (mode === 'stop' && target === 'testphoto') {
+        return json({ error: 'Ein Testfoto laesst sich nicht anhalten' }, 400);
+      }
+
+      const { data: existing, error: loadError } = await supabaseService
+        .from('liftpic_machine_configs')
+        .select('id, settings, is_active')
+        .eq('id', id)
+        .maybeSingle();
+
+      if (loadError) return json({ error: loadError.message }, 400);
+      if (!existing) return json({ error: 'Automat nicht gefunden' }, 404);
+      if (existing.is_active === false) return json({ error: 'Dieser Automat ist derzeit deaktiviert' }, 409);
+
+      const settings = (existing.settings ?? {}) as Record<string, unknown>;
+      const pending =
+        mode === 'cancel'
+          ? null
+          : {
+              id: crypto.randomUUID(),
+              mode,
+              target,
+              requested_at: new Date().toISOString(),
+              requested_by: auth.userId,
+            };
+
+      // Siehe operator-liftpic-assets: `stop` setzt die Pause, jeder Start
+      // hebt sie wieder auf - sonst muesste man sie separat aufheben und
+      // genau das wird vergessen.
+      let pause = settings.viewer_pause ?? null;
+      if (mode === 'stop') {
+        pause = { ziel: target, gesetzt_am: new Date().toISOString(), gesetzt_von: auth.userId };
+      } else if (mode === 'now' || mode === 'tonight') {
+        pause = null;
+      }
+
+      const { data, error } = await supabaseService
+        .from('liftpic_machine_configs')
+        .update({ settings: { ...settings, pending_restart: pending, viewer_pause: pause } })
+        .eq('id', id)
+        .select(selectColumns)
+        .maybeSingle();
+
+      if (error) return json({ error: error.message }, 400);
+      return json({ ok: true, data });
+    }
+
     const patch = action === 'new_pairing_code'
       ? {
           pairing_code: crypto.randomUUID().replaceAll('-', '').slice(0, 8).toUpperCase(),

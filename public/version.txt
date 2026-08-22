@@ -1,5 +1,5 @@
 Liftpictures Dashboard
-Stand: 2026-08-22 12:10 (Europe/Vienna)
+Stand: 2026-08-22 14:05 (Europe/Vienna)
 
 Enthalten in dieser Auslieferung
 --------------------------------
@@ -8,8 +8,13 @@ Enthalten in dieser Auslieferung
   b37451f  F-041  Nachladefehler nach einem Deploy heilt sich selbst
   24e4d6d  F-042  "Dashboard laedt..." kann nicht mehr ewig stehen bleiben
   4565f80  F-043  Testfoto-Knopf haengt nicht mehr an der Kamerakachel
-  (neu)    Kameraseite: 15 Einstellungen, Vorschau am Foto, an die Kamera senden
-  (neu)    Knopf "Beenden": Programm anhalten ohne Neustart
+  c4545a5  Kameraseite: 15 Einstellungen, Vorschau am Foto, an die Kamera senden
+  3ddc0c4  Knopf "Beenden": Programm anhalten ohne Neustart
+  005191b  F-049  Geraetekacheln verschmelzen wieder richtig (Systemzustand)
+  f047457  F-050  "unbekannt" bei einer Zahlung nennt jetzt den Grund
+  2c7209b  F-051  Umsatzseite zeigt echte Betraege, nicht 0,00 EUR
+  15fd05a  Umsatzseite: keine erfundene 0 %, Kaeufe-Seite ohne Testfotos
+  (neu)    Kundenmanagement: Testfoto/Neustart/Beenden-Knoepfe je Liftpic-PC
 
 Wozu diese Datei da ist
 -----------------------

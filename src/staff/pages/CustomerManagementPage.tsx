@@ -12,12 +12,16 @@ import {
   LifeBuoy,
   Mail,
   Monitor,
+  Moon,
   Mountain,
   PencilLine,
+  RefreshCw,
   RotateCcw,
   Search,
+  Square,
   Trash2,
   Images,
+  XCircle,
 } from 'lucide-react';
 import { FormEvent, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link, Navigate, useSearchParams } from 'react-router-dom';
@@ -1381,6 +1385,39 @@ export default function CustomerManagementPage() {
     }
   }
 
+  async function orderMachine(config: LiftpicMachineConfig, mode: 'now' | 'tonight' | 'cancel' | 'stop', target: 'viewer' | 'testphoto') {
+    if (mode === 'stop' && !confirm(`"${config.machine_label || config.machine_id}" anhalten? Läuft dort ein Wachhund, hält der Agent dagegen, bis "Jetzt" oder "Heute Nacht" gedrückt wird.`)) {
+      return;
+    }
+
+    setBusyId(config.id);
+    setStatus(null);
+    setError(null);
+
+    try {
+      const res = await edgeFetch('/api/admin/liftpic-machines', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: config.id, action: 'order', mode, target }),
+      });
+      const body = await res.json().catch(() => null);
+      if (!res.ok) {
+        setError(getApiErrorMessage(body, 'Auftrag konnte nicht gesendet werden'));
+        return;
+      }
+
+      const labels: Record<string, string> = {
+        now: target === 'testphoto' ? 'Testfoto ausgelöst' : 'Neustart jetzt ausgelöst',
+        tonight: 'Neustart heute Nacht vorgemerkt',
+        cancel: 'Auftrag abgebrochen',
+        stop: 'Programm angehalten',
+      };
+      await refreshAndNotify(labels[mode] || 'Auftrag gesendet');
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   async function disableConfig(config: LiftpicMachineConfig) {
     if (!confirm(`Liftpic PC "${config.machine_label || config.machine_id}" deaktivieren?`)) return;
     setBusyId(config.id);
@@ -2351,6 +2388,13 @@ export default function CustomerManagementPage() {
                                         <div className="customer-machine-stack">
                                           {expandedConfigs.map((config) => {
                                             const healthNotes = machineHealthNotes(config.last_status || {});
+                                            const settings = (config.settings || {}) as Record<string, unknown>;
+                                            const pendingRestart = settings.pending_restart as
+                                              | { mode?: string; target?: string }
+                                              | null
+                                              | undefined;
+                                            const viewerPause = settings.viewer_pause as Record<string, unknown> | null | undefined;
+                                            const sessionZero = (config.last_status as Record<string, unknown> | null)?.session_zero === true;
                                             return (
                                               <div key={config.id} className="customer-simple-card">
                                                 <div className="customer-inline-head">
@@ -2374,6 +2418,20 @@ export default function CustomerManagementPage() {
                                                       <span key={note}>{note}</span>
                                                     ))}
                                                   </div>
+                                                )}
+                                                {sessionZero && (
+                                                  <p className="note">
+                                                    Agent läuft als Systemdienst (Sitzung 0) - Neustart-Knöpfe wirken hier nicht sichtbar am Bildschirm.
+                                                  </p>
+                                                )}
+                                                {pendingRestart && (
+                                                  <p className="note">
+                                                    Auftrag offen: {pendingRestart.mode === 'tonight' ? 'heute Nacht' : 'jetzt'}{' '}
+                                                    {pendingRestart.target === 'testphoto' ? 'Testfoto' : 'Neustart Verkaufsprogramm'}
+                                                  </p>
+                                                )}
+                                                {viewerPause && (
+                                                  <p className="note">Verkaufsprogramm ist angehalten (Beenden aktiv).</p>
                                                 )}
                                                 <div className="customer-machine-actions">
                                                   <button
@@ -2410,6 +2468,58 @@ export default function CustomerManagementPage() {
                                                     disabled={busyId === config.id}
                                                   >
                                                     Deaktivieren
+                                                  </button>
+                                                </div>
+                                                <div className="customer-machine-actions">
+                                                  <button
+                                                    type="button"
+                                                    className="customer-icon-btn"
+                                                    onClick={() => void orderMachine(config, 'now', 'testphoto')}
+                                                    disabled={busyId === config.id}
+                                                    aria-label={`${config.machine_label} Testfoto auslösen`}
+                                                    title="Testfoto auslösen"
+                                                  >
+                                                    <Camera size={14} />
+                                                  </button>
+                                                  <button
+                                                    type="button"
+                                                    className="customer-icon-btn"
+                                                    onClick={() => void orderMachine(config, 'now', 'viewer')}
+                                                    disabled={busyId === config.id}
+                                                    aria-label={`${config.machine_label} jetzt neu starten`}
+                                                    title="Verkaufsprogramm jetzt neu starten"
+                                                  >
+                                                    <RefreshCw size={14} />
+                                                  </button>
+                                                  <button
+                                                    type="button"
+                                                    className="customer-icon-btn"
+                                                    onClick={() => void orderMachine(config, 'tonight', 'viewer')}
+                                                    disabled={busyId === config.id}
+                                                    aria-label={`${config.machine_label} heute Nacht neu starten`}
+                                                    title="Verkaufsprogramm heute Nacht neu starten"
+                                                  >
+                                                    <Moon size={14} />
+                                                  </button>
+                                                  {(pendingRestart || viewerPause) && (
+                                                    <button
+                                                      type="button"
+                                                      className="customer-icon-btn"
+                                                      onClick={() => void orderMachine(config, 'cancel', 'viewer')}
+                                                      disabled={busyId === config.id}
+                                                      aria-label={`${config.machine_label} Auftrag abbrechen`}
+                                                      title="Offenen Auftrag abbrechen"
+                                                    >
+                                                      <XCircle size={14} />
+                                                    </button>
+                                                  )}
+                                                  <button
+                                                    type="button"
+                                                    className="danger inline"
+                                                    onClick={() => void orderMachine(config, 'stop', 'viewer')}
+                                                    disabled={busyId === config.id}
+                                                  >
+                                                    <Square size={12} /> Beenden
                                                   </button>
                                                 </div>
                                               </div>

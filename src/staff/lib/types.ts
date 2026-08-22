@@ -59,6 +59,7 @@ export interface LiftpicMachineConfig {
   pairing_status: LiftpicPairingStatus;
   last_seen_at: string | null;
   last_status: Record<string, unknown>;
+  settings: Record<string, unknown> | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
