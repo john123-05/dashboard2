@@ -104,13 +104,21 @@ Deno.serve(async (req: Request) => {
     // however long the guest stood at the screen. The day view goes through a
     // SQL function that does not return it; those rows simply have no code,
     // which the dashboard handles.
+    //
+    // `is_test=eq.false` excludes dashboard-triggered test photos. They never
+    // go through a real sale, so they had no payment to show - they showed up
+    // as a purchase with the park's real price and a blank/"unbekannt" payment
+    // column, looking like unexplained revenue instead of what they are: a
+    // diagnostic capture, not a purchase. get_kiosk_photos_for_day (the day
+    // view) has the same gap; fixing that needs a SQL change the operator
+    // applies themselves - see docs/sql/kiosk_photos_for_day_exclude_test.sql.
     const photosRes = businessDate
       ? await fetchExternal("rpc/get_kiosk_photos_for_day", {
           method: "POST",
           body: JSON.stringify({ p_park_id: parkId, p_business_date: businessDate }),
         })
       : await fetchExternal(
-          `photos?select=id,captured_at,created_at,camera_code,source_file_code&park_id=eq.${parkId}&order=captured_at.desc&limit=${limit}`
+          `photos?select=id,captured_at,created_at,camera_code,source_file_code&park_id=eq.${parkId}&is_test=eq.false&order=captured_at.desc&limit=${limit}`
         );
     if (!photosRes.ok) {
       return new Response(

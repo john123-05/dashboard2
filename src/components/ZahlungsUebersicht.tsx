@@ -52,6 +52,7 @@ type Uebersicht = {
   karte_anzahl: number; karte_cent: number;
   unbekannt_anzahl: number;
   bar_anteil: number | null; karte_anteil: number | null;
+  erkannt_anteil: number | null;
   auffaellig: Befund[];
   letzte?: Befund[];
   unzugeordnet?: UnzugeordnetesEreignis[];
@@ -139,7 +140,12 @@ export default function ZahlungsUebersicht() {
 function AutomatBlock({ a }: { a: Automat }) {
   const z = a.payments;
   const gesamt = (z?.bar_anzahl ?? 0) + (z?.karte_anzahl ?? 0);
-  const barAnteil = z?.bar_anteil ?? 0;
+  // `null` heißt hier "zu wenig erkannt, um einen Anteil zu zeigen" (F-037) -
+  // NICHT "0 %". Ein `?? 0` hätte das genau in die erfundene Zahl verwandelt,
+  // die F-037 verhindern sollte: eine Anlage mit 3 Bar- und 1 Kartenkauf,
+  // aber 1329 unbekannten, zeigte "0 % bar" - als wäre jeder Kauf Karte
+  // gewesen, obwohl in Wahrheit fast nichts davon bekannt ist.
+  const anteileBekannt = z?.bar_anteil != null && z?.karte_anteil != null;
   const warnungen = a.coin_warnings ?? [];
 
   return (
@@ -151,14 +157,14 @@ function AutomatBlock({ a }: { a: Automat }) {
       {z && gesamt > 0 ? (
         <>
           <div className="flex flex-col items-center gap-5 sm:flex-row">
-            <Ring barAnteil={barAnteil} gesamt={gesamt} />
+            {anteileBekannt && <Ring barAnteil={z!.bar_anteil!} gesamt={gesamt} />}
             <div className="grid flex-1 gap-3 sm:grid-cols-2">
               <Anteil
                 Icon={Banknote}
                 titel="Bar"
                 anzahl={z.bar_anzahl}
                 betrag={z.bar_cent}
-                anteil={barAnteil}
+                anteil={z.bar_anteil}
                 farbe="text-emerald-700"
                 hintergrund="bg-emerald-50/80"
               />
@@ -167,12 +173,24 @@ function AutomatBlock({ a }: { a: Automat }) {
                 titel="Karte"
                 anzahl={z.karte_anzahl}
                 betrag={z.karte_cent}
-                anteil={z.karte_anteil ?? 0}
+                anteil={z.karte_anteil}
                 farbe="text-sky-700"
                 hintergrund="bg-sky-50/80"
               />
             </div>
           </div>
+
+          {!anteileBekannt && (
+            <p className="mt-3 rounded-lg bg-slate-100/80 px-3 py-2 text-xs leading-relaxed text-slate-500">
+              Kein Anteil in Prozent, weil zu wenige Käufe eindeutig einer
+              Zahlungsart zugeordnet werden konnten
+              {z.erkannt_anteil != null && (
+                <> ({Math.round(z.erkannt_anteil * 100)} % erkannt)</>
+              )}
+              . Anzahl und Betrag oben sind trotzdem echt gezählt, nur der
+              Anteil am Ganzen wäre eine Schätzung aus zu wenigen Fällen.
+            </p>
+          )}
 
           <p className="mt-2 text-xs text-slate-400">
             {gesamt} Käufe{a.payments_days ? ` in den letzten ${a.payments_days} Tagen` : ''}
@@ -266,6 +284,7 @@ function AutomatBlock({ a }: { a: Automat }) {
                   <th className="px-3 py-2 font-medium">Zeitpunkt</th>
                   <th className="px-3 py-2 font-medium">Foto</th>
                   <th className="px-3 py-2 font-medium">Bezahlt mit</th>
+                  <th className="px-3 py-2 text-right font-medium">Betrag</th>
                   <th className="px-3 py-2 text-right font-medium">Gegeben</th>
                   <th className="px-3 py-2 text-right font-medium">Zurück</th>
                 </tr>
@@ -296,6 +315,12 @@ function AutomatBlock({ a }: { a: Automat }) {
                           unbekannt
                         </span>
                       )}
+                    </td>
+                    <td className="px-3 py-1.5 text-right font-medium tabular-nums">
+                      {/* Vorher stand hier ueberhaupt kein Betrag - eine
+                          Kartenzahlung war in dieser Tabelle unsichtbar,
+                          egal wie viel bezahlt wurde (F-051). */}
+                      {b.zahlungsart !== 'unbekannt' ? euro(b.betrag_cent) : '–'}
                     </td>
                     <td className="px-3 py-1.5 text-right tabular-nums">
                       {b.zahlungsart === 'bar' ? euro(b.eingeworfen_cent) : '–'}
@@ -468,7 +493,7 @@ function Ring({ barAnteil, gesamt }: { barAnteil: number; gesamt: number }) {
 
 function Anteil({ Icon, titel, anzahl, betrag, anteil, farbe, hintergrund }: {
   Icon: typeof Banknote;
-  titel: string; anzahl: number; betrag: number; anteil: number;
+  titel: string; anzahl: number; betrag: number; anteil: number | null;
   farbe: string; hintergrund: string;
 }) {
   return (
@@ -476,9 +501,14 @@ function Anteil({ Icon, titel, anzahl, betrag, anteil, farbe, hintergrund }: {
       <div className="flex items-center gap-2">
         <Icon className={`h-4 w-4 ${farbe}`} />
         <span className={`text-sm font-medium ${farbe}`}>{titel}</span>
-        <span className="ml-auto text-lg font-semibold tabular-nums text-slate-800">
-          {Math.round(anteil * 100)}&nbsp;%
-        </span>
+        {/* `null` heisst "zu wenig erkannt" (F-037) - dann lieber gar keine
+            Prozentzahl als eine erfundene "0 %". Anzahl und Betrag darunter
+            bleiben echte Zaehlungen und werden immer gezeigt. */}
+        {anteil !== null && (
+          <span className="ml-auto text-lg font-semibold tabular-nums text-slate-800">
+            {Math.round(anteil * 100)}&nbsp;%
+          </span>
+        )}
       </div>
       <p className="mt-1 text-xs text-slate-600">
         <b className="tabular-nums">{anzahl}</b> Käufe · {euro(betrag)}
