@@ -35,6 +35,19 @@ export type Zahlungsbefund = {
   hinweis: string;
 };
 
+/**
+ * Geld, das zu keinem Verkauf gehoert - nicht weil die Zahlungsart unklar
+ * ist, sondern weil in der Naehe gar kein Kauf steht, dem es zugeordnet
+ * werden koennte. Etwa ein Testeinwurf, oder ein Einwurf, dessen Auszahlung
+ * scheiterte, weil im selben Moment die Wechselgeldroehre entnommen war.
+ */
+export type UnzugeordnetesEreignis = {
+  zeit: string;
+  art: 'muenze_ein' | 'muenze_aus_fehlgeschlagen' | 'karte' | string;
+  cent: number;
+  hinweis: string;
+};
+
 export type Zahlungsuebersicht = {
   bar_anzahl: number; bar_cent: number;
   karte_anzahl: number; karte_cent: number;
@@ -42,6 +55,7 @@ export type Zahlungsuebersicht = {
   bar_anteil: number | null; karte_anteil: number | null;
   auffaellig: Zahlungsbefund[];
   letzte?: Zahlungsbefund[];
+  unzugeordnet?: UnzugeordnetesEreignis[];
 };
 
 export type ZahlungsAutomat = {

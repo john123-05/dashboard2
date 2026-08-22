@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Banknote, CreditCard, AlertTriangle, Loader2, ChevronDown } from 'lucide-react';
+import { Banknote, CreditCard, AlertTriangle, Loader2, ChevronDown, HelpCircle } from 'lucide-react';
 import GlassCard from './ui/GlassCard';
 import { usePark } from '../contexts/ParkContext';
 import { supabase, EXTERNAL_SUPABASE_URL, EXTERNAL_SUPABASE_ANON_KEY } from '../lib/supabase';
@@ -34,6 +34,19 @@ type Befund = {
   erwartetes_wechselgeld_cent: number; abweichung_cent: number;
   sicher: boolean; hinweis: string;
 };
+/**
+ * Geld, das zu keinem Verkauf gehoert - nicht "Zahlungsart unklar", sondern
+ * "hier steht ueberhaupt kein Kauf in der Naehe, dem es gehoeren koennte".
+ * Der Anlass: ein Testeinwurf am 19.08.2026, dessen Auszahlung scheiterte,
+ * weil die Wechselgeldroehre im selben Moment entnommen war - ohne folgenden
+ * Verkauf verschwand er bisher spurlos aus jeder Auswertung.
+ */
+type UnzugeordnetesEreignis = {
+  zeit: string;
+  art: 'muenze_ein' | 'muenze_aus_fehlgeschlagen' | 'karte' | string;
+  cent: number;
+  hinweis: string;
+};
 type Uebersicht = {
   bar_anzahl: number; bar_cent: number;
   karte_anzahl: number; karte_cent: number;
@@ -41,6 +54,7 @@ type Uebersicht = {
   bar_anteil: number | null; karte_anteil: number | null;
   auffaellig: Befund[];
   letzte?: Befund[];
+  unzugeordnet?: UnzugeordnetesEreignis[];
 };
 type Automat = {
   id: string; machine_id: string; machine_label: string | null;
@@ -356,6 +370,51 @@ function AutomatBlock({ a }: { a: Automat }) {
                     <td className="py-1 font-semibold tabular-nums">
                       {b.abweichung_cent > 0 ? '+' : ''}{euro(b.abweichung_cent)}
                     </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </details>
+      )}
+
+      {z && (z.unzugeordnet?.length ?? 0) > 0 && (
+        <details className="group mt-4 rounded-xl border border-amber-200 bg-amber-50/80 p-3">
+          <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-semibold text-amber-800 [&::-webkit-details-marker]:hidden">
+            <HelpCircle className="h-4 w-4 shrink-0" />
+            {z.unzugeordnet!.length} Geldbewegungen ohne zugehörigen Kauf
+            <ChevronDown className="ml-auto h-4 w-4 shrink-0 transition group-open:rotate-180" />
+          </summary>
+          <p className="mt-1.5 text-xs text-amber-700">
+            Münze angenommen oder Karte gebucht, aber in der Nähe steht kein Kauf,
+            zu dem es gehören könnte - zum Beispiel ein Testeinwurf, oder eine
+            Auszahlung, die scheiterte, weil die Wechselgeldröhre gerade
+            herausgenommen war. Dieses Geld ist real, aber keinem Foto zugeordnet.
+          </p>
+          <div className="mt-2 overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead className="text-left text-amber-700">
+                <tr>
+                  <th className="py-1 pr-3 font-medium">Zeitpunkt</th>
+                  <th className="py-1 pr-3 font-medium">Art</th>
+                  <th className="py-1 pr-3 text-right font-medium">Betrag</th>
+                  <th className="py-1 font-medium">Hinweis</th>
+                </tr>
+              </thead>
+              <tbody className="text-amber-900">
+                {z.unzugeordnet!.slice(0, 15).map((e, i) => (
+                  <tr key={i} className="border-t border-amber-200/60">
+                    <td className="py-1 pr-3 tabular-nums">
+                      {new Date(e.zeit).toLocaleString('de-DE')}
+                    </td>
+                    <td className="py-1 pr-3">
+                      {e.art === 'muenze_ein' ? 'Münze angenommen'
+                        : e.art === 'muenze_aus_fehlgeschlagen' ? 'Auszahlung fehlgeschlagen'
+                        : e.art === 'karte' ? 'Kartenzahlung'
+                        : e.art}
+                    </td>
+                    <td className="py-1 pr-3 text-right tabular-nums">{euro(e.cent)}</td>
+                    <td className="py-1 text-amber-700">{e.hinweis}</td>
                   </tr>
                 ))}
               </tbody>
