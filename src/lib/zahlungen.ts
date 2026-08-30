@@ -27,6 +27,11 @@ export type Zahlungsbefund = {
   bildnummer: number | null;
   betrag_cent: number;
   zahlungsart: 'bar' | 'karte' | 'unbekannt' | string;
+  /** Kartenmarke (VISA, MASTERCARD, MAESTRO, …), nur bei Kartenzahlung und nur
+   *  aus der rückwirkenden Log-Auswertung. `null`, wenn nicht bekannt. */
+  kartenmarke?: string | null;
+  /** hobex-Belegnummer der Kartenzahlung, wenn vorhanden. */
+  beleg_nr?: string | null;
   eingeworfen_cent: number;
   ausgezahlt_cent: number;
   erwartetes_wechselgeld_cent: number;
@@ -48,11 +53,17 @@ export type UnzugeordnetesEreignis = {
   hinweis: string;
 };
 
+export type Kartenmarke = { marke: string; anzahl: number; cent: number };
+
 export type Zahlungsuebersicht = {
   bar_anzahl: number; bar_cent: number;
   karte_anzahl: number; karte_cent: number;
   unbekannt_anzahl: number;
   bar_anteil: number | null; karte_anteil: number | null;
+  /** Aufschlüsselung der Kartenzahlungen nach Marke (nur aus der Log-Auswertung). */
+  kartenmarken?: Kartenmarke[];
+  /** Zeitfenster der rückwirkenden Auswertung in Tagen. */
+  zeitraum_tage?: number;
   auffaellig: Zahlungsbefund[];
   letzte?: Zahlungsbefund[];
   unzugeordnet?: UnzugeordnetesEreignis[];

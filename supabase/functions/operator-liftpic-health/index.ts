@@ -89,6 +89,99 @@ Deno.serve(async (req) => {
     historyAvailable = false;
   }
 
+  // Rueckwirkende, protokoll-genaue Zahlungszuordnung je Kauf aus
+  // machine_sale_payments (Automat-Kennzeichen 2=Karte / 1=Bar plus hobex-
+  // Haendlerbeleg fuer Betrag + Kartenmarke). Wenn die Tabelle fuer diesen
+  // Park Zeilen hat, reicht sie weiter zurueck als der Herzschlag und nennt
+  // die Kartenmarke - das Dashboard bevorzugt sie dann vor status.payments.
+  const LEDGER_TAGE = 30;
+  const ledgerByMachine = new Map<string, Record<string, unknown>>();
+  try {
+    const seit = new Date(Date.now() - LEDGER_TAGE * 86_400_000).toISOString();
+    const { data: sp } = await supabaseService
+      .from('machine_sale_payments')
+      .select('machine_id, sold_at, sold_local, bild_nr, method, method_source, amount_cents, card_scheme, receipt_no')
+      .eq('park_id', auth.parkId)
+      .gte('sold_at', seit)
+      .order('sold_at', { ascending: false })
+      .limit(6000);
+
+    const proMaschine = new Map<string, Record<string, unknown>[]>();
+    for (const row of sp ?? []) {
+      const mid = text((row as { machine_id: unknown }).machine_id);
+      if (!mid) continue;
+      if (!proMaschine.has(mid)) proMaschine.set(mid, []);
+      proMaschine.get(mid)!.push(row as Record<string, unknown>);
+    }
+
+    for (const [mid, rows] of proMaschine) {
+      let barAnzahl = 0, barCent = 0, karteAnzahl = 0, karteCent = 0, unbekanntAnzahl = 0;
+      const marken = new Map<string, { anzahl: number; cent: number }>();
+      for (const r of rows) {
+        const art = text(r.method);
+        const cent = typeof r.amount_cents === 'number' ? r.amount_cents : 0;
+        if (art === 'bar') { barAnzahl++; barCent += cent; }
+        else if (art === 'karte') {
+          karteAnzahl++; karteCent += cent;
+          const marke = text(r.card_scheme) || 'ohne Angabe';
+          const m = marken.get(marke) ?? { anzahl: 0, cent: 0 };
+          m.anzahl++; m.cent += cent;
+          marken.set(marke, m);
+        } else { unbekanntAnzahl++; }
+      }
+      const erkannt = barAnzahl + karteAnzahl;
+      const gesamt = erkannt + unbekanntAnzahl;
+      // Anteil nur zeigen, wenn genug erkannt wurde - sonst null (F-037),
+      // nicht "0 %".
+      const genugErkannt = gesamt > 0 && erkannt / gesamt >= 0.5;
+
+      const letzte = rows.slice(0, 400).map((r) => {
+        const art = text(r.method);
+        const hinweis = art === 'unbekannt'
+          ? (text(r.method_source) === 'kein_flag'
+              ? 'Vor der Zahlungsart-Erkennung des Automaten - nicht mehr feststellbar.'
+              : 'Automat hat keine Zahlungsart gemeldet.')
+          : '';
+        return {
+          zeit: text(r.sold_at),
+          foto: text(r.bild_nr),
+          bildnummer: /^\d+$/.test(text(r.bild_nr)) ? Number(text(r.bild_nr)) : null,
+          betrag_cent: typeof r.amount_cents === 'number' ? r.amount_cents : 0,
+          zahlungsart: art,
+          kartenmarke: text(r.card_scheme) || null,
+          beleg_nr: text(r.receipt_no) || null,
+          eingeworfen_cent: 0,
+          ausgezahlt_cent: 0,
+          erwartetes_wechselgeld_cent: 0,
+          abweichung_cent: 0,
+          sicher: text(r.method_source) === 'automat_flag',
+          hinweis,
+        };
+      });
+
+      ledgerByMachine.set(mid, {
+        zeitraum_tage: LEDGER_TAGE,
+        bar_anzahl: barAnzahl,
+        bar_cent: barCent,
+        karte_anzahl: karteAnzahl,
+        karte_cent: karteCent,
+        unbekannt_anzahl: unbekanntAnzahl,
+        bar_anteil: genugErkannt ? barAnzahl / erkannt : null,
+        karte_anteil: genugErkannt ? karteAnzahl / erkannt : null,
+        erkannt_anteil: gesamt > 0 ? erkannt / gesamt : null,
+        kartenmarken: [...marken.entries()]
+          .map(([marke, v]) => ({ marke, anzahl: v.anzahl, cent: v.cent }))
+          .sort((a, b) => b.anzahl - a.anzahl),
+        auffaellig: [],
+        letzte,
+        unzugeordnet: [],
+      });
+    }
+  } catch (_err) {
+    // Tabelle evtl. noch leer oder nicht vorhanden - dann bleibt es beim
+    // Herzschlag-Wert (status.payments).
+  }
+
   const result = (machines || []).map((m: Record<string, unknown>) => {
     const status = (m.last_status ?? {}) as Record<string, unknown>;
     const settings = (m.settings ?? {}) as Record<string, unknown>;
@@ -128,8 +221,15 @@ Deno.serve(async (req) => {
       coin_inventory: status.coin_inventory ?? null,
       coin_warnings: list(status.coin_warnings),
       coin_payout_failures: list(status.coin_payout_failures),
-      payments: status.payments ?? null,
-      payments_days: status.payments_days ?? null,
+      // Rueckwirkende Log-Auswertung schlaegt den Herzschlag-Wert, wenn
+      // vorhanden: sie reicht weiter zurueck und nennt die Kartenmarke.
+      payments: ledgerByMachine.get(text(m.machine_id)) ?? status.payments ?? null,
+      payments_source: ledgerByMachine.has(text(m.machine_id)) ? 'ledger' : 'heartbeat',
+      payments_days:
+        (ledgerByMachine.get(text(m.machine_id))?.zeitraum_tage as number | undefined) ??
+        status.payments_days ??
+        null,
+      heartbeat_payments: status.payments ?? null,
       prices_cent: list(status.prices_cent),
       monitored_sources: status.monitored_sources ?? null,
       faults_now: status.faults_now ?? null,
