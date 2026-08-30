@@ -90,6 +90,9 @@ export default function Purchases() {
           const nummer = purchase.fileCode ? Number(purchase.fileCode) : NaN;
           const zahlung = Number.isFinite(nummer) ? zahlungen.get(nummer) : undefined;
           const art = zahlung?.zahlungsart;
+          // Kartenmarke aus der rückwirkenden Log-Auswertung, wenn vorhanden -
+          // "der hat mit Visa bezahlt, der mit Mastercard".
+          const marke = art === 'karte' ? zahlung?.kartenmarke : null;
 
           const abgeholt = purchase.email
             ? `, später per QR-Code abgeholt (${purchase.email})`
@@ -104,6 +107,9 @@ export default function Purchases() {
           const grund = art === 'unbekannt' && zahlung?.hinweis
             ? `, Grund: ${zahlung.hinweis}`
             : '';
+          const beleg = art === 'karte' && zahlung?.beleg_nr
+            ? `, hobex-Beleg ${zahlung.beleg_nr}`
+            : '';
 
           return {
             id: purchase.id,
@@ -113,11 +119,17 @@ export default function Purchases() {
             currency: 'EUR',
             status: purchase.email ? 'claimed' : 'unknown',
             payment_method:
-              art === 'bar' ? 'Bar' : art === 'karte' ? 'Karte' : 'unbekannt',
+              art === 'bar'
+                ? 'Bar'
+                : art === 'karte'
+                  ? marke
+                    ? `Karte · ${marke}`
+                    : 'Karte'
+                  : 'unbekannt',
             reference: purchase.cameraCode,
             purchased_at: purchase.capturedAt,
             customer_or_device: purchase.email || purchase.fullName || 'Unbekannt',
-            description: `Foto am Automaten gekauft${abgeholt}${bar}${grund}`,
+            description: `Foto am Automaten gekauft${abgeholt}${bar}${grund}${beleg}`,
           };
         });
         setPurchases(kioskRows);

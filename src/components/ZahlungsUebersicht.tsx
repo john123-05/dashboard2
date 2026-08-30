@@ -30,6 +30,7 @@ type Muenzwarnung = {
 };
 type Befund = {
   zeit: string; foto: string; betrag_cent: number; zahlungsart: string;
+  kartenmarke?: string | null; beleg_nr?: string | null;
   eingeworfen_cent: number; ausgezahlt_cent: number;
   erwartetes_wechselgeld_cent: number; abweichung_cent: number;
   sicher: boolean; hinweis: string;
@@ -47,12 +48,15 @@ type UnzugeordnetesEreignis = {
   cent: number;
   hinweis: string;
 };
+type Kartenmarke = { marke: string; anzahl: number; cent: number };
 type Uebersicht = {
   bar_anzahl: number; bar_cent: number;
   karte_anzahl: number; karte_cent: number;
   unbekannt_anzahl: number;
   bar_anteil: number | null; karte_anteil: number | null;
   erkannt_anteil: number | null;
+  kartenmarken?: Kartenmarke[];
+  zeitraum_tage?: number;
   auffaellig: Befund[];
   letzte?: Befund[];
   unzugeordnet?: UnzugeordnetesEreignis[];
@@ -201,6 +205,30 @@ function AutomatBlock({ a }: { a: Automat }) {
               <> · eingestellte Preise: {a.prices_cent.map((c) => euro(c)).join(', ')}</>
             ) : null}
           </p>
+
+          {/* Womit die Kartenzahler bezahlt haben - Visa, Mastercard, Maestro …
+              Kommt aus den hobex-Händlerbelegen, rückwirkend zugeordnet. */}
+          {(z.kartenmarken?.length ?? 0) > 0 && (
+            <div className="mt-3">
+              <p className="mb-1.5 text-xs font-medium text-slate-600">Kartenmarken</p>
+              <div className="flex flex-wrap gap-1.5">
+                {z.kartenmarken!.map((k) => (
+                  <span
+                    key={k.marke}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-sky-50 px-2.5 py-1 text-xs text-sky-800"
+                    title={`${k.anzahl} Käufe · ${euro(k.cent)}`}
+                  >
+                    <CreditCard className="h-3 w-3" />
+                    <span className="font-medium">{k.marke}</span>
+                    <span className="tabular-nums text-sky-600">
+                      {k.anzahl}
+                      {z.karte_anzahl > 0 && ` · ${Math.round((k.anzahl / z.karte_anzahl) * 100)} %`}
+                    </span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </>
       ) : (
         <p className="text-sm text-slate-500">
@@ -305,7 +333,7 @@ function AutomatBlock({ a }: { a: Automat }) {
                         </span>
                       ) : b.zahlungsart === 'karte' ? (
                         <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-0.5 font-medium text-sky-700">
-                          <CreditCard className="h-3 w-3" /> Karte
+                          <CreditCard className="h-3 w-3" /> Karte{b.kartenmarke ? ` · ${b.kartenmarke}` : ''}
                         </span>
                       ) : (
                         <span
