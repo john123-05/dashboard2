@@ -557,21 +557,36 @@ Deno.serve(async (req: Request) => {
         : Number.POSITIVE_INFINITY;
       const key = stateMapKey(pref.operator_user_id, pref.park_id, 'photo_inactivity');
 
-      if (!latestPhotoDate || gapMinutes >= pref.photo_inactivity_minutes) {
-        const nextStateKey = latestPhotoAt ?? 'never';
+      // Eine Foto-Lücke ist NUR dann eine Störung, wenn der Automat Fotos
+      // aufgestaut hat, die nicht rausgehen (queue_count hoch bei frischem
+      // Herzschlag). "Seit 30 min kein Foto" bei frischem Herzschlag und leerer
+      // Warteschlange heißt einfach: eine Weile hat keiner gekauft - keine Push
+      // wert. Der Fall "Automat meldet sich gar nicht mehr" ist Sache der
+      // system_health-Meldung oben, nicht hier (sonst doppelte Push).
+      const lastSeenP = toDate(machine?.last_seen_at ?? null);
+      const hbAgeMinP = lastSeenP
+        ? (Date.now() - lastSeenP.getTime()) / 60000
+        : Number.POSITIVE_INFINITY;
+      const queueCount = Number(
+        (machine?.payload as Record<string, unknown> | null)?.queue_count ?? 0,
+      );
+      const uploadsHaengen = hbAgeMinP <= 15 && queueCount >= 10;
+
+      if (uploadsHaengen && (!latestPhotoDate || gapMinutes >= pref.photo_inactivity_minutes)) {
+        const nextStateKey = `stuck:${latestPhotoAt ?? 'never'}`;
         const state = states.get(key);
         if (state?.state_key !== nextStateKey || state.resolved_at) {
           sent += await sendNotification(
             subs,
-            `Keine neuen Bilder bei ${park.name}`,
-            latestPhotoDate
-              ? `Seit ${formatDurationMinutes(gapMinutes)} ist kein neues Bild eingegangen.`
-              : 'Es wurde noch kein letztes Bild erkannt. Bitte Upload prüfen.',
+            `Fotos stauen sich bei ${park.name}`,
+            `${queueCount} Fotos warten auf Upload${
+              latestPhotoDate ? `, seit ${formatDurationMinutes(gapMinutes)} kein neues durchgekommen` : ''
+            } – PC/Netzwerk prüfen.`,
             '/overview',
           );
           await upsertDispatchState(pref.operator_user_id, pref.park_id, 'photo_inactivity', nextStateKey, {
             latest_photo_at: latestPhotoAt,
-            threshold_minutes: pref.photo_inactivity_minutes,
+            queue_count: queueCount,
           });
           states.set(key, { state_key: nextStateKey, resolved_at: null });
         }

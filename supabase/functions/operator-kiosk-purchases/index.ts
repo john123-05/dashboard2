@@ -61,9 +61,21 @@ Deno.serve(async (req) => {
     .maybeSingle();
   const priceCents = (park?.price_per_photo_cents as number | null) ?? null;
 
+  // machine_id -> Anzeigename ("Automat alt" / "Automat neu"), damit die
+  // Käufe-Seite pro Automat filtern und beschriften kann.
+  const labelByMachine = new Map<string, string>();
+  const { data: configs } = await supabaseService
+    .from('liftpic_machine_configs')
+    .select('machine_id, machine_label')
+    .eq('park_id', auth.parkId);
+  for (const c of configs ?? []) {
+    const mid = text((c as Record<string, unknown>).machine_id);
+    if (mid) labelByMachine.set(mid, text((c as Record<string, unknown>).machine_label) || mid);
+  }
+
   const { data: rows, error } = await supabaseService
     .from('machine_sale_payments')
-    .select('sold_at, sold_local, bild_nr, print_count, method, method_source, amount_cents, card_scheme, receipt_no, auth_code')
+    .select('machine_id, sold_at, sold_local, bild_nr, print_count, method, method_source, amount_cents, card_scheme, receipt_no, auth_code')
     .eq('park_id', auth.parkId)
     .gte('sold_at', from.toISOString())
     .lte('sold_at', to.toISOString())
@@ -139,7 +151,10 @@ Deno.serve(async (req) => {
       infoByCode.get(b) ??
       (/^\d+$/.test(b) ? infoByCode.get(String(Number(b) % 10000)) : undefined) ??
       null;
+    const mid = text(s.machine_id);
     return {
+      machine_id: mid || null,
+      machine_label: labelByMachine.get(mid) ?? mid ?? null,
       sold_at: s.sold_at,
       sold_local: s.sold_local,
       bild_nr: s.bild_nr,
@@ -156,10 +171,17 @@ Deno.serve(async (req) => {
     };
   });
 
+  // Alle Automaten des Parks, für das Filter-Dropdown (auch die ohne Käufe im
+  // Zeitraum). Reihenfolge: nach machine_id, damit "alt" vor "neu" steht.
+  const machines = [...labelByMachine.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([machine_id, machine_label]) => ({ machine_id, machine_label }));
+
   return json({
     ok: true,
     data: {
       purchases,
+      machines,
       priceCents,
       truncated,
       from: from.toISOString(),
