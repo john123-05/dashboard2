@@ -111,11 +111,18 @@ export default function Purchases() {
             ? `, hobex-Beleg ${zahlung.beleg_nr}`
             : '';
 
+          // Betrag aus dem Zahlungseintrag, wenn zugeordnet (ein Doppeldruck
+          // kostet 10 €, nicht 5) - sonst der eingestellte Fixpreis.
+          const betrag =
+            (art === 'karte' || art === 'bar') && zahlung?.betrag_cent
+              ? zahlung.betrag_cent
+              : priceCents;
+
           return {
             id: purchase.id,
             source: 'kiosk' as const,
-            amount_cents: priceCents,
-            amount_kind: 'confirmed' as const,
+            amount_cents: betrag,
+            amount_kind: zahlung ? ('detected' as const) : ('confirmed' as const),
             currency: 'EUR',
             status: purchase.email ? 'claimed' : 'unknown',
             payment_method:

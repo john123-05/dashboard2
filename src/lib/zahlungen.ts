@@ -99,19 +99,32 @@ export async function ladeZahlungen(parkId: string): Promise<ZahlungsAutomat[]> 
  * Bewusst über die Bildnummer und nicht über die Uhrzeit: der Aufnahmezeitpunkt
  * eines Fotos ist nicht sein Kaufzeitpunkt - dazwischen liegt, wie lange der
  * Gast am Bildschirm stand. Eine Zuordnung über die Zeit wäre geraten.
+ *
+ * Die Karte hat pro Kauf MEHRERE Schlüssel: die volle Nummer (56798) und die
+ * hinteren 4/5 Stellen (6798). `photos.source_file_code` speichert die
+ * Bildnummer nämlich abgeschnitten ("56798" -> "6798"), das lokale
+ * Zahlungsprotokoll dagegen voll. Ohne die Kurzschlüssel fände die Käufe-Seite
+ * gar nichts und zeigte überall "unbekannt".
  */
 export function nachBildnummer(
   automaten: ZahlungsAutomat[],
 ): Map<number, Zahlungsbefund> {
   const karte = new Map<number, Zahlungsbefund>();
+  const setzeWennNeuer = (schluessel: number, befund: Zahlungsbefund) => {
+    const vorhanden = karte.get(schluessel);
+    if (!vorhanden || befund.zeit > vorhanden.zeit) {
+      karte.set(schluessel, befund);
+    }
+  };
   for (const automat of automaten) {
     for (const befund of automat.payments?.letzte ?? []) {
       if (befund.bildnummer === null || befund.bildnummer === undefined) continue;
       // Bei mehreren Treffern gewinnt der neuere: Bildnummern laufen taeglich
       // neu los, der juengste Eintrag gehoert zum aktuellen Foto.
-      const vorhanden = karte.get(befund.bildnummer);
-      if (!vorhanden || befund.zeit > vorhanden.zeit) {
-        karte.set(befund.bildnummer, befund);
+      setzeWennNeuer(befund.bildnummer, befund);
+      for (const teiler of [10000, 100000]) {
+        const kurz = befund.bildnummer % teiler;
+        if (kurz !== befund.bildnummer) setzeWennNeuer(kurz, befund);
       }
     }
   }
