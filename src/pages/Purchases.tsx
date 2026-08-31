@@ -7,10 +7,9 @@ import {
   type ParkDashboardData,
   type ParkDashboardEvent,
 } from '../lib/parkDashboard';
-import { fetchKioskPurchases } from '../lib/kioskSales';
+import { fetchKioskPurchasesLedger } from '../lib/kioskSales';
 import { formatCurrency, formatDateTime, statusColor, exportToCSV } from '../lib/utils';
 import DataTable, { type DataTableColumn } from '../components/ui/DataTable';
-import { euro, ladeZahlungen, nachBildnummer, type Zahlungsbefund } from '../lib/zahlungen';
 import { useI18n } from '../lib/i18n';
 import { usePark } from '../contexts/ParkContext';
 
@@ -39,6 +38,34 @@ interface StripePayment {
   description: string | null;
 }
 
+// --- Monats-Auswahl für die Automaten-Käufe -------------------------------
+function monatSchluessel(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function monatsSpanne(schluessel: string): { from: string; to: string } {
+  const [jahr, monat] = schluessel.split('-').map(Number);
+  const from = new Date(jahr, monat - 1, 1, 0, 0, 0);
+  const to = new Date(jahr, monat, 0, 23, 59, 59, 999);
+  return { from: from.toISOString(), to: to.toISOString() };
+}
+
+function monatsListe(zurueck = 15): string[] {
+  const jetzt = new Date();
+  const liste: string[] = [];
+  for (let i = 0; i < zurueck; i += 1) {
+    liste.push(monatSchluessel(new Date(jetzt.getFullYear(), jetzt.getMonth() - i, 1)));
+  }
+  return liste;
+}
+
+function monatLabel(schluessel: string): string {
+  const [jahr, monat] = schluessel.split('-').map(Number);
+  return new Intl.DateTimeFormat('de-DE', { month: 'long', year: 'numeric' }).format(
+    new Date(jahr, monat - 1, 1),
+  );
+}
+
 export default function Purchases() {
   const { t } = useI18n();
   const { parkId, isKioskPark, kioskCheckLoading } = usePark();
@@ -48,12 +75,15 @@ export default function Purchases() {
   const [error, setError] = useState<string | null>(null);
   const [sourceFilter, setSourceFilter] = useState<'all' | 'online' | 'local' | 'kiosk'>('all');
   const [issues, setIssues] = useState<string[]>([]);
+  // Monat für die Automaten-Käufe (aus machine_sale_payments, dauerhaft).
+  const [monat, setMonat] = useState<string>(() => monatSchluessel(new Date()));
+  const [monatGekuerzt, setMonatGekuerzt] = useState(false);
 
   useEffect(() => {
     if (kioskCheckLoading) return;
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [parkId, kioskCheckLoading]);
+  }, [parkId, kioskCheckLoading, monat]);
 
   async function loadData() {
     if (!parkId) {
@@ -66,77 +96,51 @@ export default function Purchases() {
     setIssues([]);
 
     try {
-      // Kiosk parks (no webshop) have no Stripe/local-sales data — skip
-      // those fetches entirely instead of surfacing "temporarily
-      // unavailable" warnings for feeds that were never going to apply.
-      // Each row here is one actual photo taken, not a daily aggregate —
-      // this only covers the last ~30 days (photos are hard-deleted after
-      // that), which is the right tradeoff for a recent-activity log.
+      // Automaten-Parks (kein Webshop): keine Stripe/Local-Feeds abfragen.
+      // Die Käufe kommen aus machine_sale_payments - dauerhaft, Monate zurück,
+      // mit Zahlungsart + Kartenmarke direkt in der Zeile. Der gewählte Monat
+      // begrenzt den Abruf. (Die alte photos-Tabelle reichte nur ~1 Tag
+      // zurück, weil sie bei 100 Zeilen gekappt und nach 30 Tagen gelöscht
+      // wird.)
       if (isKioskPark) {
-        const kioskResult = await fetchKioskPurchases(parkId);
-        const priceCents = kioskResult.priceCents ?? 0;
+        const { from, to } = monatsSpanne(monat);
+        const ledger = await fetchKioskPurchasesLedger(parkId, { from, to });
+        setMonatGekuerzt(ledger.truncated);
+        const preis = ledger.priceCents ?? 0;
 
-        // Wie bezahlt wurde, weiss nur der Automat - er hat Muenz- und
-        // Kartenprotokoll. Verknuepft ueber die Bildnummer; scheitert der
-        // Abruf, bleibt die Liste wie bisher, statt ganz auszufallen.
-        let zahlungen = new Map<number, Zahlungsbefund>();
-        try {
-          zahlungen = nachBildnummer(await ladeZahlungen(parkId));
-        } catch {
-          zahlungen = new Map();
-        }
-
-        const kioskRows: PurchaseRow[] = kioskResult.purchases.map((purchase) => {
-          const nummer = purchase.fileCode ? Number(purchase.fileCode) : NaN;
-          const zahlung = Number.isFinite(nummer) ? zahlungen.get(nummer) : undefined;
-          const art = zahlung?.zahlungsart;
-          // Kartenmarke aus der rückwirkenden Log-Auswertung, wenn vorhanden -
-          // "der hat mit Visa bezahlt, der mit Mastercard".
-          const marke = art === 'karte' ? zahlung?.kartenmarke : null;
-
-          const abgeholt = purchase.email
-            ? `, später per QR-Code abgeholt (${purchase.email})`
+        const kioskRows: PurchaseRow[] = ledger.purchases.map((p) => {
+          const marke = p.method === 'karte' ? p.card_scheme : null;
+          const abgeholt = p.claimed_email
+            ? `, später per QR-Code abgeholt (${p.claimed_email})`
             : '';
-          // Bei Bargeld gehoert dazu, was der Gast gegeben und zurueckbekommen
-          // hat - genau das laesst sich sonst nirgends nachsehen.
-          const bar = art === 'bar' && zahlung
-            ? `, ${euro(zahlung.eingeworfen_cent)} gegeben, ${euro(zahlung.ausgezahlt_cent)} zurück`
+          const beleg = p.method === 'karte' && p.receipt_no
+            ? `, hobex-Beleg ${p.receipt_no}`
             : '';
-          // Warum "unbekannt" gilt, ist so wichtig wie die Einordnung selbst
-          // (F-050) - sonst bleibt die Zeile eine Behauptung ohne Beleg.
-          const grund = art === 'unbekannt' && zahlung?.hinweis
-            ? `, Grund: ${zahlung.hinweis}`
-            : '';
-          const beleg = art === 'karte' && zahlung?.beleg_nr
-            ? `, hobex-Beleg ${zahlung.beleg_nr}`
-            : '';
-
-          // Betrag aus dem Zahlungseintrag, wenn zugeordnet (ein Doppeldruck
-          // kostet 10 €, nicht 5) - sonst der eingestellte Fixpreis.
-          const betrag =
-            (art === 'karte' || art === 'bar') && zahlung?.betrag_cent
-              ? zahlung.betrag_cent
-              : priceCents;
+          const doppeldruck = (p.print_count ?? 0) > 3 ? `, ${p.print_count} Ausdrucke` : '';
+          const herkunft =
+            p.method === 'unbekannt' && p.method_source === 'kein_flag'
+              ? ', vor der Zahlungsart-Erkennung des Automaten'
+              : '';
 
           return {
-            id: purchase.id,
+            id: p.receipt_no || `${p.sold_local ?? p.sold_at}-${p.bild_nr ?? ''}-${p.method}`,
             source: 'kiosk' as const,
-            amount_cents: betrag,
-            amount_kind: zahlung ? ('detected' as const) : ('confirmed' as const),
+            amount_cents: p.amount_cents ?? preis,
+            amount_kind: p.method === 'unbekannt' ? ('detected' as const) : ('confirmed' as const),
             currency: 'EUR',
-            status: purchase.email ? 'claimed' : 'unknown',
+            status: p.claimed_email ? 'claimed' : 'unknown',
             payment_method:
-              art === 'bar'
+              p.method === 'bar'
                 ? 'Bar'
-                : art === 'karte'
+                : p.method === 'karte'
                   ? marke
                     ? `Karte · ${marke}`
                     : 'Karte'
                   : 'unbekannt',
-            reference: purchase.cameraCode,
-            purchased_at: purchase.capturedAt,
-            customer_or_device: purchase.email || purchase.fullName || 'Unbekannt',
-            description: `Foto am Automaten gekauft${abgeholt}${bar}${grund}${beleg}`,
+            reference: p.bild_nr ? `Bild ${p.bild_nr}` : '–',
+            purchased_at: p.sold_local ?? p.sold_at,
+            customer_or_device: p.claimed_email || p.claimed_name || 'Unbekannt',
+            description: `Foto am Automaten gekauft${abgeholt}${beleg}${doppeldruck}${herkunft}`,
           };
         });
         setPurchases(kioskRows);
@@ -363,7 +367,7 @@ export default function Purchases() {
           <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('purchases.title')}</h2>
           <p className="mt-1 text-sm text-slate-500">
             {isKioskPark
-              ? 'Jedes Foto der letzten ~30 Tage, das am Automaten gekauft wurde'
+              ? 'Jeder Kauf am Automaten mit Zahlungsart und Beleg – Monat oben rechts wählbar, Monate zurück'
               : 'Unified transaction log for Stripe and on-site sales'}
           </p>
         </div>
@@ -387,7 +391,22 @@ export default function Purchases() {
         searchKeys={['customer_or_device', 'payment_method', 'description', 'reference']}
         pageSize={12}
         actions={
-          isKioskPark ? undefined : (
+          isKioskPark ? (
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-slate-400" />
+              <select
+                value={monat}
+                onChange={(event) => setMonat(event.target.value)}
+                className="rounded-lg border border-slate-200/60 bg-white/60 px-3 py-1.5 text-sm text-slate-700"
+              >
+                {monatsListe().map((m) => (
+                  <option key={m} value={m}>
+                    {monatLabel(m)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : (
             <div className="flex items-center gap-2">
               <Filter className="h-4 w-4 text-slate-400" />
               <select
@@ -405,6 +424,12 @@ export default function Purchases() {
           )
         }
       />
+      {isKioskPark && monatGekuerzt && (
+        <p className="text-xs text-amber-600">
+          Dieser Monat hat sehr viele Käufe – es werden die neuesten angezeigt. Für die
+          restlichen einen früheren Monat wählen.
+        </p>
+      )}
     </div>
   );
 }
