@@ -95,6 +95,33 @@ function formatDurationMinutes(totalMinutes: number): string {
   return minutes === 0 ? `${hours} Stunden` : `${hours} Std ${minutes} Min`;
 }
 
+// Muster, die zwar als ERROR im Agent-Protokoll stehen, aber KEINE echte
+// Betriebsstoerung sind - sie sollen nie eine Push ausloesen.
+//   - "another liftpic-sync agent ... working on this state database": das
+//     verliert das Sperren-Rennen beim Boot, ein gesunder Agent laeuft weiter.
+//   - "preflight" / Einrichtungs-Selbstchecks.
+const BENIGN_EVENT_PATTERNS: RegExp[] = [
+  /another liftpic-?sync agent .*working on this state database/i,
+  /\bpreflight\b/i,
+  /Doppelstart-Schutz nicht aktiv/i,
+];
+
+function isBenignEvent(text: string): boolean {
+  return BENIGN_EVENT_PATTERNS.some((re) => re.test(text));
+}
+
+// Fuer den Vergleichsschluessel: fluechtige Teile (Prozess-IDs, Uhrzeiten,
+// Zahlen) rausnehmen, damit "pid 10608" und "pid 10676" NICHT als zwei
+// verschiedene Stoerungen zaehlen und jedes Mal neu pushen.
+function normalizeEventKey(text: string): string {
+  return text
+    .replace(/\bpid[=: ]*\d+/gi, 'pid#')
+    .replace(/\b\d{1,3}(?:[.,]\d+)?\b/g, '#')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 160);
+}
+
 function parseOperationalEvents(payload: Record<string, unknown> | null): Array<Record<string, unknown>> {
   if (!payload) return [];
   return Array.isArray(payload.operational_events)
@@ -220,7 +247,9 @@ async function loadParks(parkIds: string[]): Promise<Map<string, ParkRow>> {
       .from('parks')
       .select('id, name, timezone, opening_hours')
       .in('id', parkIds);
-    data = fallback.data;
+    // Der Fallback-Select hat opening_hours_config nicht dabei; die Spalte
+    // wird unten mit ?? null aufgefangen.
+    data = fallback.data as typeof data;
     error = fallback.error;
   }
 
@@ -468,12 +497,20 @@ Deno.serve(async (req: Request) => {
       const key = stateMapKey(pref.operator_user_id, pref.park_id, 'system_health');
       const lastSeen = toDate(machine?.last_seen_at ?? null);
       const ageMinutes = lastSeen ? (Date.now() - lastSeen.getTime()) / 60000 : Number.POSITIVE_INFINITY;
+      const EVENT_FRISCH_MIN = 10;
       const recentOperationalEvents = parseOperationalEvents(machine?.payload ?? null)
         .map((event) => ({
           severity: asText(event.severity) || 'info',
           description: asText(event.description) || asText(event.message) || 'Systemereignis',
+          occurredAt: toDate(asText(event.occurred_at) || asText(event.timestamp)),
         }))
-        .filter((event) => event.severity && event.severity !== 'info');
+        .filter((event) => event.severity && event.severity !== 'info')
+        // Nur frische Ereignisse: ein Fehler von gestern, den der Agent noch im
+        // Protokoll fuehrt, ist keine Push wert.
+        .filter((event) => !event.occurredAt
+          || (Date.now() - event.occurredAt.getTime()) / 60000 <= EVENT_FRISCH_MIN)
+        // Gutartige Muster (Lock-Rennen, preflight) nie melden.
+        .filter((event) => !isBenignEvent(event.description));
 
       let nextStateKey: string | null = null;
       let title = '';
@@ -487,7 +524,9 @@ Deno.serve(async (req: Request) => {
           : 'Für diesen Park ist derzeit kein aktueller Sync-Status verfügbar.';
       } else if (recentOperationalEvents.length > 0) {
         const latestEvent = recentOperationalEvents[0];
-        nextStateKey = `event:${latestEvent.severity}:${latestEvent.description}`;
+        // Prozess-IDs / Zahlen aus dem Schluessel nehmen, sonst zaehlt jede
+        // neue PID als frische Stoerung und pusht erneut.
+        nextStateKey = `event:${latestEvent.severity}:${normalizeEventKey(latestEvent.description)}`;
         title = `Systemwarnung bei ${park.name}`;
         bodyText = latestEvent.description;
       }
