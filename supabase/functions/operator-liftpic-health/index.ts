@@ -94,7 +94,7 @@ Deno.serve(async (req) => {
   // Haendlerbeleg fuer Betrag + Kartenmarke). Wenn die Tabelle fuer diesen
   // Park Zeilen hat, reicht sie weiter zurueck als der Herzschlag und nennt
   // die Kartenmarke - das Dashboard bevorzugt sie dann vor status.payments.
-  const LEDGER_TAGE = 30;
+  const LEDGER_TAGE = Math.min(Math.max(Number(url.searchParams.get('ledger_tage')) || 30, 1), 400);
   const ledgerByMachine = new Map<string, Record<string, unknown>>();
   try {
     const seit = new Date(Date.now() - LEDGER_TAGE * 86_400_000).toISOString();
@@ -182,6 +182,13 @@ Deno.serve(async (req) => {
     // Herzschlag-Wert (status.payments).
   }
 
+  // Nutzt der Park schon das Ledger (mindestens ein Automat hat Zeilen in
+  // machine_sale_payments)? Dann fuer Automaten OHNE Ledger-Zeilen nicht auf
+  // den Herzschlag-Wert zurueckfallen - der kann bei einem frisch geklonten
+  // PC die alten Verkaufsdaten des Quell-PCs zeigen. Lieber "noch keine
+  // Kaeufe".
+  const parkHatLedger = ledgerByMachine.size > 0;
+
   const result = (machines || []).map((m: Record<string, unknown>) => {
     const status = (m.last_status ?? {}) as Record<string, unknown>;
     const settings = (m.settings ?? {}) as Record<string, unknown>;
@@ -218,13 +225,27 @@ Deno.serve(async (req) => {
       customer_code: customerCode || null,
       park_customer_codes: [...registrierte].sort(),
       customer_code_registered: codeGeprueft ? registrierte.has(customerCode) : null,
-      coin_inventory: status.coin_inventory ?? null,
-      coin_warnings: list(status.coin_warnings),
+      // Wie payments: bei Ledger-Park ohne eigene Zeilen nicht den Herzschlag-
+      // Muenzbestand zeigen (Klon-PC).
+      coin_inventory:
+        parkHatLedger && !ledgerByMachine.has(text(m.machine_id))
+          ? null
+          : status.coin_inventory ?? null,
+      coin_warnings:
+        parkHatLedger && !ledgerByMachine.has(text(m.machine_id))
+          ? []
+          : list(status.coin_warnings),
       coin_payout_failures: list(status.coin_payout_failures),
       // Rueckwirkende Log-Auswertung schlaegt den Herzschlag-Wert, wenn
-      // vorhanden: sie reicht weiter zurueck und nennt die Kartenmarke.
-      payments: ledgerByMachine.get(text(m.machine_id)) ?? status.payments ?? null,
-      payments_source: ledgerByMachine.has(text(m.machine_id)) ? 'ledger' : 'heartbeat',
+      // vorhanden: sie reicht weiter zurueck und nennt die Kartenmarke. Nutzt
+      // der Park das Ledger, aber dieser Automat hat (noch) keine Zeilen, dann
+      // NICHT auf den Herzschlag zurueckfallen (Klon-PC zeigt sonst Fremddaten).
+      payments: ledgerByMachine.get(text(m.machine_id))
+        ?? (parkHatLedger ? null : status.payments ?? null)
+        ?? null,
+      payments_source: ledgerByMachine.has(text(m.machine_id))
+        ? 'ledger'
+        : parkHatLedger ? 'ledger_leer' : 'heartbeat',
       payments_days:
         (ledgerByMachine.get(text(m.machine_id))?.zeitraum_tage as number | undefined) ??
         status.payments_days ??

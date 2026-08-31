@@ -75,11 +75,19 @@ function euro(cent: number | null | undefined): string {
   return (cent / 100).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
 }
 
+const ZEITRAeUME = [
+  { tage: 1, label: 'Heute' },
+  { tage: 7, label: '7 Tage' },
+  { tage: 30, label: '30 Tage' },
+  { tage: 90, label: '90 Tage' },
+] as const;
+
 export default function ZahlungsUebersicht() {
   const { parkId } = usePark();
   const [automaten, setAutomaten] = useState<Automat[]>([]);
   const [laedt, setLaedt] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
+  const [zeitraumTage, setZeitraumTage] = useState<number>(30);
 
   useEffect(() => {
     let abgebrochen = false;
@@ -89,12 +97,15 @@ export default function ZahlungsUebersicht() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) { setLaedt(false); return; }
       try {
-        const res = await fetch(`${HEALTH_URL}?park_id=${encodeURIComponent(parkId)}`, {
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-            apikey: EXTERNAL_SUPABASE_ANON_KEY,
+        const res = await fetch(
+          `${HEALTH_URL}?park_id=${encodeURIComponent(parkId)}&ledger_tage=${zeitraumTage}`,
+          {
+            headers: {
+              Authorization: `Bearer ${session.access_token}`,
+              apikey: EXTERNAL_SUPABASE_ANON_KEY,
+            },
           },
-        });
+        );
         const body = await res.json().catch(() => null);
         if (abgebrochen) return;
         if (!res.ok) setFehler(body?.error || `HTTP ${res.status}`);
@@ -108,21 +119,32 @@ export default function ZahlungsUebersicht() {
     void laden();
     const t = setInterval(() => void laden(), 120_000);
     return () => { abgebrochen = true; clearInterval(t); };
-  }, [parkId]);
+  }, [parkId, zeitraumTage]);
 
-  // Nur Automaten, die überhaupt Zahlungsdaten melden. Ein älterer Stand der
-  // Automaten-Software liefert nichts - dann ist eine leere Karte ehrlicher
-  // als erfundene Nullen.
-  const mitDaten = automaten.filter((a) => a.payments || a.coin_inventory);
+  // Alle konfigurierten Automaten anzeigen (der Endpunkt liefert nur aktive) -
+  // auch die ganz ohne Verkäufe, dann steht "noch keine Verkäufe" statt dass
+  // der Automat unsichtbar ist.
+  const mitDaten = automaten;
   if (!parkId || (!laedt && mitDaten.length === 0 && !fehler)) return null;
 
   return (
     <GlassCard className="p-5 sm:p-6">
-      <div className="mb-4">
-        <h3 className="text-base font-semibold text-slate-800">Bar oder Karte</h3>
-        <p className="mt-0.5 text-sm text-slate-500">
-          Wie am Automaten bezahlt wurde, und wie viel Wechselgeld noch bereitliegt.
-        </p>
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="text-base font-semibold text-slate-800">Bar oder Karte</h3>
+          <p className="mt-0.5 text-sm text-slate-500">
+            Wie am Automaten bezahlt wurde, und wie viel Wechselgeld noch bereitliegt.
+          </p>
+        </div>
+        <select
+          value={zeitraumTage}
+          onChange={(e) => setZeitraumTage(Number(e.target.value))}
+          className="rounded-lg border border-slate-200/70 bg-white/70 px-2.5 py-1 text-sm text-slate-700"
+        >
+          {ZEITRAeUME.map((z) => (
+            <option key={z.tage} value={z.tage}>{z.label}</option>
+          ))}
+        </select>
       </div>
 
       {laedt && (
@@ -161,7 +183,7 @@ function AutomatBlock({ a }: { a: Automat }) {
       {z && gesamt > 0 ? (
         <>
           <div className="flex flex-col items-center gap-5 sm:flex-row">
-            {anteileBekannt && <Ring barAnteil={z!.bar_anteil!} gesamt={gesamt} />}
+            {anteileBekannt && <Ring barAnteil={z!.bar_anteil!} />}
             <div className="grid flex-1 gap-3 sm:grid-cols-2">
               <Anteil
                 Icon={Banknote}
@@ -487,7 +509,7 @@ function AutomatBlock({ a }: { a: Automat }) {
  * grüne Bogen bekommt seinen Anteil davon, der Rest bleibt blau. In der Mitte
  * steht der Barteil, weil das die Zahl ist, nach der man hier sucht.
  */
-function Ring({ barAnteil, gesamt }: { barAnteil: number; gesamt: number }) {
+function Ring({ barAnteil }: { barAnteil: number }) {
   const r = 42;
   const umfang = 2 * Math.PI * r;
   const bar = umfang * barAnteil;
@@ -513,7 +535,6 @@ function Ring({ barAnteil, gesamt }: { barAnteil: number; gesamt: number }) {
           {Math.round(barAnteil * 100)}&nbsp;%
         </span>
         <span className="text-[11px] text-slate-500">bar</span>
-        <span className="text-[10px] text-slate-400">{gesamt} Käufe</span>
       </div>
     </div>
   );
