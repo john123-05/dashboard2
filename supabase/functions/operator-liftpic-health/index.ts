@@ -135,7 +135,7 @@ Deno.serve(async (req) => {
       // nicht "0 %".
       const genugErkannt = gesamt > 0 && erkannt / gesamt >= 0.5;
 
-      const letzte = rows.slice(0, 400).map((r) => {
+      const letzte = rows.slice(0, 1500).map((r) => {
         const art = text(r.method);
         const hinweis = art === 'unbekannt'
           ? (text(r.method_source) === 'kein_flag'
