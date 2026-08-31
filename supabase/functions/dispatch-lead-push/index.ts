@@ -117,6 +117,16 @@ function buildParkInactivityNotification(record: Record<string, unknown>): { tit
     };
   }
 
+  if (record.reason === 'upload_stuck') {
+    const queueRaw = record.queue_count;
+    const queue = typeof queueRaw === 'number' ? queueRaw : Number(queueRaw) || 0;
+    return {
+      title: `Fotos stauen sich bei ${parkName}`,
+      body: `${queue} Fotos warten, seit ${formatSinceDuration(minutes)} kommt keins durch – PC/Netzwerk prüfen.`,
+    };
+  }
+
+  // Fallback (kommt seit 20260831183000 praktisch nicht mehr vor).
   return {
     title: `Keine neuen Bilder bei ${parkName}`,
     body: `Seit ${formatSinceDuration(minutes)} – einen Blick wert.`,

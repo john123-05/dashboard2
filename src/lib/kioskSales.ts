@@ -93,6 +93,8 @@ export async function fetchKioskPurchases(parkId: string): Promise<KioskPurchase
 // stehen direkt drin; E-Mail/abgeholt kommt aus photos-Claims, soweit die
 // Foto-Zeile noch existiert.
 export interface KioskLedgerPurchase {
+  machine_id: string | null;
+  machine_label: string | null;
   sold_at: string;
   sold_local: string | null;
   bild_nr: string | null;
@@ -110,10 +112,47 @@ export interface KioskLedgerPurchase {
 
 export interface KioskLedgerResponse {
   purchases: KioskLedgerPurchase[];
+  machines: { machine_id: string; machine_label: string }[];
   priceCents: number | null;
   truncated: boolean;
   from: string;
   to: string;
+}
+
+export interface MachineRevenuePeriod {
+  anzahl: number;
+  cent: number;
+}
+export interface MachineRevenue {
+  machine_id: string;
+  machine_label: string;
+  is_active: boolean;
+  heute: MachineRevenuePeriod;
+  woche: MachineRevenuePeriod;
+  monat: MachineRevenuePeriod;
+  gesamt: MachineRevenuePeriod;
+  karte_anzahl: number;
+  bar_anzahl: number;
+  unbekannt_anzahl: number;
+}
+
+export async function fetchMachineRevenue(parkId: string): Promise<MachineRevenue[]> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session?.access_token) return [];
+  const res = await fetch(
+    `${EXTERNAL_SUPABASE_URL}/functions/v1/operator-machine-revenue?park_id=${encodeURIComponent(parkId)}`,
+    {
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        apikey: EXTERNAL_SUPABASE_ANON_KEY,
+      },
+    },
+  );
+  const body = await res.json().catch(() => null);
+  if (!res.ok) throw new Error(body?.error || `HTTP ${res.status}`);
+  return (body?.data?.machines ?? []) as MachineRevenue[];
 }
 
 export async function fetchKioskPurchasesLedger(
@@ -124,7 +163,7 @@ export async function fetchKioskPurchasesLedger(
     data: { session },
   } = await supabase.auth.getSession();
   if (!session?.access_token) {
-    return { purchases: [], priceCents: null, truncated: false, from: '', to: '' };
+    return { purchases: [], machines: [], priceCents: null, truncated: false, from: '', to: '' };
   }
 
   const params = new URLSearchParams({ park_id: parkId });
@@ -142,7 +181,7 @@ export async function fetchKioskPurchasesLedger(
   );
   const body = await res.json().catch(() => null);
   if (!res.ok) throw new Error(body?.error || `HTTP ${res.status}`);
-  return (body?.data ?? { purchases: [], priceCents: null, truncated: false, from: '', to: '' }) as KioskLedgerResponse;
+  return (body?.data ?? { purchases: [], machines: [], priceCents: null, truncated: false, from: '', to: '' }) as KioskLedgerResponse;
 }
 
 // Every photo for one specific local calendar day (park timezone) — not

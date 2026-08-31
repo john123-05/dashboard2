@@ -13,6 +13,7 @@ import {
   daysAgoInTimezone,
   fetchKioskPhotosForDay,
   fetchKioskSales,
+  fetchMachineRevenue,
   fetchRideSnapshots,
   getOpeningHourRangeForDate,
   ridesByHour,
@@ -21,6 +22,7 @@ import {
   toChartSeries,
   type AggregatedDay,
   type KioskPurchaseRow,
+  type MachineRevenue,
   type RideSnapshot,
 } from '../lib/kioskSales';
 import { formatCurrency, formatNumber, formatPercent, exportToCSV } from '../lib/utils';
@@ -81,6 +83,7 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
   const [error, setError] = useState<string | null>(null);
   const [issues, setIssues] = useState<string[]>([]);
   const [kioskDays, setKioskDays] = useState<AggregatedDay[]>([]);
+  const [machineRevenue, setMachineRevenue] = useState<MachineRevenue[]>([]);
 
   const [chartMode, setChartMode] = useState<'trend' | 'day'>('trend');
   // Explicit, not purely derived from selectedDate — "Anderer Tag" needs to
@@ -146,8 +149,12 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
       // of — skip those fetches entirely instead of surfacing "temporarily
       // unavailable" warnings for feeds that were never going to apply.
       if (isKioskPark) {
-        const kioskResult = await fetchKioskSales(parkId);
+        const [kioskResult, machineRev] = await Promise.all([
+          fetchKioskSales(parkId),
+          fetchMachineRevenue(parkId).catch(() => [] as MachineRevenue[]),
+        ]);
         setKioskDays(aggregateByDate(kioskResult.days, kioskResult.priceCents ?? 0));
+        setMachineRevenue(machineRev);
         setParkData(createEmptyParkDashboardData(parkId));
         setError(null);
         setLoading(false);
@@ -559,6 +566,50 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
               iconBg="bg-fuchsia-50"
             />
           </div>
+
+          {/* Umsatz je Automat - nur wenn der Park mehr als einen hat. Quelle
+              ist machine_sale_payments (mit machine_id), nicht die nach
+              Abhol-Code verschmelzende Tages-Rollup. */}
+          {machineRevenue.length >= 2 && (
+            <GlassCard className="p-5 sm:p-6">
+              <h3 className="text-base font-semibold text-slate-800">Umsatz je Automat</h3>
+              <p className="mt-0.5 text-sm text-slate-500">
+                Käufe und Betrag – diesen Monat, darunter gesamt seit Aufzeichnung.
+              </p>
+              <div className="mt-4 space-y-4">
+                {(() => {
+                  const monatMax = Math.max(1, ...machineRevenue.map((m) => m.monat.cent));
+                  return machineRevenue.map((m) => {
+                    const erkannt = m.karte_anzahl + m.bar_anzahl;
+                    const karteAnteil = erkannt > 0 ? m.karte_anzahl / erkannt : null;
+                    return (
+                      <div key={m.machine_id}>
+                        <div className="flex items-baseline justify-between gap-2">
+                          <span className="text-sm font-medium text-slate-700">{m.machine_label}</span>
+                          <span className="text-sm tabular-nums text-slate-600">
+                            {m.monat.anzahl === 0
+                              ? 'noch keine Verkäufe'
+                              : `${formatNumber(m.monat.anzahl)} Käufe · ${formatCurrency(m.monat.cent, 'eur')}`}
+                          </span>
+                        </div>
+                        <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-slate-100">
+                          <div
+                            className="h-full rounded-full bg-brand-500"
+                            style={{ width: `${Math.round((m.monat.cent / monatMax) * 100)}%` }}
+                          />
+                        </div>
+                        <p className="mt-1 text-xs text-slate-400">
+                          Gesamt: {formatNumber(m.gesamt.anzahl)} Käufe · {formatCurrency(m.gesamt.cent, 'eur')}
+                          {karteAnteil !== null && ` · ${Math.round(karteAnteil * 100)} % Karte`}
+                          {m.unbekannt_anzahl > 0 && ` · ${formatNumber(m.unbekannt_anzahl)} unbekannt`}
+                        </p>
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+            </GlassCard>
+          )}
 
           {/* Wie bezahlt wurde. Steht direkt unter den Kennzahlen, weil die
               Frage "wie viel davon war bar?" unmittelbar aus ihnen folgt - und

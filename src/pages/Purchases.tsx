@@ -16,6 +16,9 @@ import { usePark } from '../contexts/ParkContext';
 interface PurchaseRow {
   id: string;
   source: 'online' | 'local' | 'kiosk';
+  /** Bei Automaten-Käufen: welcher Automat ("Automat alt" / "Automat neu"). */
+  machine_id?: string | null;
+  machine_label?: string | null;
   amount_cents: number | null;
   amount_kind: 'confirmed' | 'detected' | 'unknown';
   currency: string;
@@ -78,6 +81,9 @@ export default function Purchases() {
   // Monat für die Automaten-Käufe (aus machine_sale_payments, dauerhaft).
   const [monat, setMonat] = useState<string>(() => monatSchluessel(new Date()));
   const [monatGekuerzt, setMonatGekuerzt] = useState(false);
+  // Nach welchem Automaten gefiltert wird ('alle' = beide).
+  const [automatFilter, setAutomatFilter] = useState<string>('alle');
+  const [automaten, setAutomaten] = useState<{ machine_id: string; machine_label: string }[]>([]);
 
   useEffect(() => {
     if (kioskCheckLoading) return;
@@ -106,6 +112,7 @@ export default function Purchases() {
         const { from, to } = monatsSpanne(monat);
         const ledger = await fetchKioskPurchasesLedger(parkId, { from, to });
         setMonatGekuerzt(ledger.truncated);
+        setAutomaten(ledger.machines ?? []);
         const preis = ledger.priceCents ?? 0;
 
         const kioskRows: PurchaseRow[] = ledger.purchases.map((p) => {
@@ -125,6 +132,8 @@ export default function Purchases() {
           return {
             id: p.receipt_no || `${p.sold_local ?? p.sold_at}-${p.bild_nr ?? ''}-${p.method}`,
             source: 'kiosk' as const,
+            machine_id: p.machine_id,
+            machine_label: p.machine_label,
             amount_cents: p.amount_cents ?? preis,
             amount_kind: p.method === 'unbekannt' ? ('detected' as const) : ('confirmed' as const),
             currency: 'EUR',
@@ -237,9 +246,15 @@ export default function Purchases() {
   }
 
   const filtered = useMemo(() => {
-    if (sourceFilter === 'all') return purchases;
-    return purchases.filter((item) => item.source === sourceFilter);
-  }, [purchases, sourceFilter]);
+    let rows = purchases;
+    if (isKioskPark && automatFilter !== 'alle') {
+      rows = rows.filter((item) => item.machine_id === automatFilter);
+    }
+    if (!isKioskPark && sourceFilter !== 'all') {
+      rows = rows.filter((item) => item.source === sourceFilter);
+    }
+    return rows;
+  }, [purchases, sourceFilter, automatFilter, isKioskPark]);
 
   function handleExport() {
     exportToCSV(
@@ -296,7 +311,7 @@ export default function Purchases() {
     },
     {
       key: 'source',
-      label: 'Source',
+      label: isKioskPark ? 'Automat' : 'Source',
       render: (item: PurchaseRow) => (
         <span
           className={`status-badge ${
@@ -307,7 +322,11 @@ export default function Purchases() {
                 : 'bg-emerald-50 text-emerald-700 ring-emerald-200'
           }`}
         >
-          {item.source === 'online' ? 'Online' : item.source === 'kiosk' ? 'Automat' : 'Local'}
+          {item.source === 'online'
+            ? 'Online'
+            : item.source === 'kiosk'
+              ? item.machine_label || 'Automat'
+              : 'Local'}
         </span>
       ),
     },
@@ -394,6 +413,20 @@ export default function Purchases() {
           isKioskPark ? (
             <div className="flex items-center gap-2">
               <Filter className="h-4 w-4 text-slate-400" />
+              {automaten.length > 1 && (
+                <select
+                  value={automatFilter}
+                  onChange={(event) => setAutomatFilter(event.target.value)}
+                  className="rounded-lg border border-slate-200/60 bg-white/60 px-3 py-1.5 text-sm text-slate-700"
+                >
+                  <option value="alle">Alle Automaten</option>
+                  {automaten.map((m) => (
+                    <option key={m.machine_id} value={m.machine_id}>
+                      {m.machine_label}
+                    </option>
+                  ))}
+                </select>
+              )}
               <select
                 value={monat}
                 onChange={(event) => setMonat(event.target.value)}
