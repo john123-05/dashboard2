@@ -1,4 +1,5 @@
 import { invokeEdgeFunction } from './edgeFunctions';
+import { supabase, EXTERNAL_SUPABASE_URL, EXTERNAL_SUPABASE_ANON_KEY } from './supabase';
 import type {
   OpeningHoursConfig,
   ScheduleDayConfig,
@@ -85,6 +86,63 @@ export async function fetchKioskPurchases(parkId: string): Promise<KioskPurchase
   }
 
   return data;
+}
+
+// Einzelkäufe am Automaten aus machine_sale_payments (dauerhaft, Monate
+// zurück) statt aus der ~30-Tage-photos-Tabelle. Zahlungsart + Kartenmarke
+// stehen direkt drin; E-Mail/abgeholt kommt aus photos-Claims, soweit die
+// Foto-Zeile noch existiert.
+export interface KioskLedgerPurchase {
+  sold_at: string;
+  sold_local: string | null;
+  bild_nr: string | null;
+  print_count: number | null;
+  method: 'karte' | 'bar' | 'unbekannt' | string;
+  method_source: string | null;
+  card_scheme: string | null;
+  receipt_no: string | null;
+  auth_code: string | null;
+  amount_cents: number | null;
+  claimed_email: string | null;
+  claimed_name: string | null;
+  photo_captured_at: string | null;
+}
+
+export interface KioskLedgerResponse {
+  purchases: KioskLedgerPurchase[];
+  priceCents: number | null;
+  truncated: boolean;
+  from: string;
+  to: string;
+}
+
+export async function fetchKioskPurchasesLedger(
+  parkId: string,
+  opts: { from?: string; to?: string } = {},
+): Promise<KioskLedgerResponse> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session?.access_token) {
+    return { purchases: [], priceCents: null, truncated: false, from: '', to: '' };
+  }
+
+  const params = new URLSearchParams({ park_id: parkId });
+  if (opts.from) params.set('from', opts.from);
+  if (opts.to) params.set('to', opts.to);
+
+  const res = await fetch(
+    `${EXTERNAL_SUPABASE_URL}/functions/v1/operator-kiosk-purchases?${params.toString()}`,
+    {
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        apikey: EXTERNAL_SUPABASE_ANON_KEY,
+      },
+    },
+  );
+  const body = await res.json().catch(() => null);
+  if (!res.ok) throw new Error(body?.error || `HTTP ${res.status}`);
+  return (body?.data ?? { purchases: [], priceCents: null, truncated: false, from: '', to: '' }) as KioskLedgerResponse;
 }
 
 // Every photo for one specific local calendar day (park timezone) — not
