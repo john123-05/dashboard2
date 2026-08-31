@@ -228,7 +228,18 @@ export default function SystemHealth({ embedded = false }: { embedded?: boolean 
   const services = data.health.services || [];
   const events = data.health.events || [];
   const errorItems = data.errors || [];
-  const communicationStatus = data.health.communication_status;
+
+  // Das Banner ganz oben soll EINE Frage beantworten: sind die Zahlen darunter
+  // aktuell? Das haengt am Alter der zuletzt empfangenen Daten - NICHT daran, ob
+  // irgendein Einzeldienst "down" meldet. Vorher stand hier "Keine Verbindung
+  // zur Datenquelle", sobald z. B. der Uploader eine Stoerung meldete, obwohl
+  // die Daten gerade eben ankamen. Einzeldienste haben ihren eigenen Status
+  // weiter unten.
+  const datenAlterMin = data.health.last_data_at
+    ? (Date.now() - new Date(data.health.last_data_at).getTime()) / 60000
+    : Number.POSITIVE_INFINITY;
+  const quelleStatus: 'operational' | 'degraded' | 'down' =
+    datenAlterMin <= 20 ? 'operational' : datenAlterMin <= 120 ? 'degraded' : 'down';
 
   // Alles, was am Automaten steht, fliegt hier raus - es steht oben im
   // Anlagenstatus, dort gemessen statt aus Dateien geraten.
@@ -342,19 +353,19 @@ export default function SystemHealth({ embedded = false }: { embedded?: boolean 
       <GlassCard className="p-4 sm:p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-start gap-3">
-            {communicationStatus === 'down' ? (
+            {quelleStatus === 'down' ? (
               <XCircle className="mt-0.5 h-5 w-5 shrink-0 text-rose-500" />
-            ) : communicationStatus === 'degraded' ? (
+            ) : quelleStatus === 'degraded' ? (
               <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
             ) : (
               <CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-emerald-500" />
             )}
             <div>
               <h3 className="text-base font-semibold text-slate-800">
-                {communicationStatus === 'down'
-                  ? 'Keine Verbindung zur Datenquelle'
-                  : communicationStatus === 'degraded'
-                    ? 'Datenquelle eingeschränkt erreichbar'
+                {quelleStatus === 'down'
+                  ? 'Datenquelle veraltet'
+                  : quelleStatus === 'degraded'
+                    ? 'Daten etwas älter als üblich'
                     : 'Datenquelle erreichbar'}
               </h3>
               <p className="mt-0.5 text-sm text-slate-500">

@@ -93,6 +93,15 @@ function buildParkInactivityNotification(record: Record<string, unknown>): { tit
   const minutesRaw = record.minutes_since_last_photo;
   const minutes = typeof minutesRaw === 'number' ? minutesRaw : Number(minutesRaw) || 60;
 
+  // Entwarnung: der Park sieht wieder gesund aus. Kurz und positiv - damit im
+  // Verlauf steht, dass die vorherige Meldung erledigt ist.
+  if (record.reason === 'recovered') {
+    return {
+      title: `${parkName}: wieder in Ordnung`,
+      body: 'Es kommen wieder Bilder / der Uploader meldet sich - die vorherige Meldung ist erledigt.',
+    };
+  }
+
   // check_park_inactivity() tells these two apart by comparing photos against
   // the machine's own heartbeat: a PC that's still checking in but genuinely
   // has no riders is a different problem from one that can't reach us at all
