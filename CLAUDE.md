@@ -1,7 +1,7 @@
 # dashboard2 - Agent Context
 
 Read this first. It carries the full working context so a fresh session
-can continue where the last one stopped. Last updated 2026-08-19.
+can continue where the last one stopped. Last updated 2026-09-02.
 
 **The master map of the whole Liftpictures ecosystem (all repos, both
 Supabase projects, customers, photo pipeline, incident history) lives in
@@ -37,7 +37,9 @@ gate where pushing alone does NOT deploy.)
   park_photo_sales_daily (permanent revenue rollup; raw photos rows are
   hard-deleted after ~30d), park_photo_ride_daily, park_inactivity_alerts,
   liftpic_machine_configs, liftpic_asset_deployments, machine_status,
-  photo_events. Client: `supabaseBrowser` from `src/staff/lib/supabase.ts`.
+  photo_events, machine_sale_payments (permanent per-purchase card/cash
+  attribution, see below). Client: `supabaseBrowser` from
+  `src/staff/lib/supabase.ts`.
   Edge functions here: all `admin-*` (pattern:
   `_shared/sameProjectAdminAuth.ts`), `dispatch-lead-push`, `liftpic-*`.
 - **`xcrxltiiovpoladpaewd` (operator)**: park_access, media_assets,
@@ -148,6 +150,102 @@ a staff form silently does nothing, check the function actually exists.
     on the element isn't enough on iOS Safari once it sits inside a
     `transform: scale()` ancestor, the page scrolls anyway without it.
 
+## Payment attribution - card vs cash per purchase (Aug/Sep 2026)
+
+- **`machine_sale_payments`** (shared project, migration
+  `20260831004900`): permanent, one row per kiosk purchase, with
+  `park_id`, `machine_id`, `sold_at`/`sold_local`, `bild_nr`,
+  `method` (`karte`|`bar`|`unbekannt`), `method_source`, `amount_cents`,
+  `card_scheme` (VISA/MASTERCARD/MAESTRO/V PAY/MC-E), `receipt_no`,
+  `auth_code`, `pan_masked`, `source_file`. Dedup: unique partial index
+  on `(machine_id, receipt_no)`. RLS: admin_users read-only.
+- **Attribution logic**: the automat's `Statistic.txt` middle `||`-field
+  is its own payment flag (`2`=Karte, `1`=Bar, `0`/absent=unknown).
+  hobex `ZVT-YYYY-MM-0001-HDL.LOG` = one HAENDLERBELEG+KAUF+Genehmigt
+  block per approved card sale; matched to the sale by in-block
+  timestamp (per-day sequential alignment, PC/terminal clocks drift
+  20-140s). Full parser: `scripts/zahlungen_imst.py`.
+- **Imst backfill loaded** (via CSV Table Editor import, not the
+  migration): 8925 rows. Karte 7087 (93%) / EUR 35,625; Bar 514 /
+  EUR 2,570; unbekannt 1324 (all pre-2026-03, before the automat wrote
+  a flag). Schemes ~ MC 45 / VISA 43 / MAESTRO 9 / V PAY 2.
+- **Live path** (going forward): Liftpic Sync agent (`payments.py` in
+  testsoftware, tag `v0.3.0-zahlungen`) parses the hobex HDL log +
+  `Statistic.txt` flag, ships `sale_payments[]` (last ~45 min) in the
+  heartbeat; `liftpic-status` edge fn (v7) dedups + inserts into
+  `machine_sale_payments`. First live Imst sale confirmed 2026-08-31
+  10:16 (Bild 56820, MASTERCARD, Beleg H179001). Needs `card_log_glob`
+  set per machine (Liftpic tab -> PC bearbeiten).
+- **Dashboard wiring**:
+  - `operator-liftpic-health` (v13) builds a per-machine `payments`
+    block from `machine_sale_payments` (`ledger_tage` query param,
+    default 30). `ZahlungsUebersicht.tsx` renders it: Bar/Karte ring
+    (no count inside the ring), Kartenmarken breakdown, adjustable
+    period (Heute/7/30/90 Tage). Bar-Anteil is `null` (not "0 %") when
+    < 50 % of sales are erkannt (F-037).
+  - `operator-kiosk-purchases` (v2) -> `Purchases.tsx` (Kaeufe page):
+    reads `machine_sale_payments` directly (not the 30-day `photos`
+    table), so you can page months back. Month + Automat dropdown top
+    right.
+  - `park_machine_revenue()` SQL fn + `operator-machine-revenue` (v1)
+    -> `Revenue.tsx` "Umsatz je Automat" card (shown when >= 2
+    machines): per-automat Kaeufe/Betrag/Karte-%/period.
+  - **Clone-PC guard**: if a park uses the ledger but a machine has no
+    rows in it, `operator-liftpic-health` returns `payments: null`,
+    `coin_inventory: null` for that machine (a freshly imaged PC would
+    otherwise show the source PC's frozen `Statistic.txt`/`CoinStats`).
+
+## Imst second automat - `pcneu2` / "Automat neu" (Sep 2026)
+
+- Imst got a 2nd kiosk. Config row `machine_id='pcneu2'`,
+  `camera_code='cam2'`, same `park_id` and same
+  `legacy_customer_code='2734'` as `pcneu` ("Automat alt", `cam1`).
+  `mode='sold_only'`, `settings.card_only=true` (no coin acceptor -
+  coin_log_glob/coin_stats_file removed from its settings 2026-09-02).
+- Liftpic Sync agent is paired, running, heartbeating; its camera takes
+  photos. **But Automat 2 is NOT a working sales point yet - do not use
+  it for real sales:**
+  1. Its `Statistic.txt` is still the frozen clone from PC#1 (last line
+     26.08.2026) - the kiosk sale/viewer software on PC#2 is not in live
+     operation, so no sale line is written. Tom must finish the on-site
+     setup and clear PC#2's cloned `Statistic.txt` / `CoinStats.txt` /
+     `PrintCount.txt`.
+  2. The new agent writes `photo_events` but **not the `photos` table**
+     the claim page reads (open item #1), and PC#2 has no legacy
+     uploader - so a purchased photo would never reach
+     liftpictures-fotos.de.
+  3. **Shared `2734` is a collision risk**: the claim page resolves a
+     code by `park + Kundennummer(2734) + Datum + Bildnummer` (or the
+     16-digit printed code). Both automats number Bildnummern
+     independently; once PC#2's range overlaps PC#1's (~weeks at
+     ~180/day) two different photos share one code. Fix before go-live:
+     give Automat 2 its **own Kundennummer** (own claim pool + own
+     printed-code prefix); revenue rollup is by `park_id` so the Imst
+     total is unaffected.
+- Deferred polish (do when Automat 2 goes live): frontend - for a
+  `card_only` machine hide the empty Bar/Karte ring, show "Nur Karte" +
+  Kartenmarken; agent `pruefe_verkauf()` - a card-only automat's
+  unmatched sale should be `karte`, never `unbekannt`.
+
+## Notifications rework (Aug/Sep 2026)
+
+- **Schritt 1+2 DONE & deployed**: SystemHealth banner decoupled from
+  service status, now data-freshness based (`quelleStatus` from
+  `datenAlterMin`). Noise cut: `check_park_inactivity()` (migration
+  `20260831183000`) only alerts on `uploader_disconnected` (heartbeat
+  > 12 min stale) or `upload_stuck` (queue >= 10 + 30 min photo gap) -
+  the plain "no photos for 30 min" alert is GONE (normal for a kiosk
+  that only uploads on sale). Recovery message + 24 h dampener kept.
+  `dispatch-operator-notifications` (v4) + `dispatch-lead-push` (v13):
+  benign-event patterns, event-key normalisation, recency filter,
+  `photo_inactivity` only fires when uploads actually hang.
+- **Schritt 3-5 NOT started**: per-type on/off switches (Operator
+  `Settings.tsx` + Staff `StaffSettingsPage.tsx`), notification inbox on
+  the Systemzustand page (erledigt/archivieren/Papierkorb), shared
+  `notification_type` enum. Needs `staff_notification_preferences` /
+  `staff_notification_dispatch_state` tables + a
+  `staff-notification-settings` edge fn.
+
 ## Open items / next steps
 
 1. **Claim gap in Liftpic Sync ingest** (testsoftware repo):
@@ -168,6 +266,16 @@ a staff form silently does nothing, check the function actually exists.
 5. Verify migration `20260717090000_admin_set_park_password.sql` was
    actually run on the operator project (was handed off, never
    explicitly confirmed).
+6. **Imst Automat 2 go-live** (see its section above): own Kundennummer
+   for `pcneu2`, close the `photos`-ingest gap (or legacy uploader on
+   PC#2), Tom clears the cloned files on PC#2. Then the deferred
+   card_only frontend/agent polish.
+7. **Notifications Schritt 3-5** (see its section above): per-type
+   switches, notification inbox, shared enum.
+8. Delta backfill for `machine_sale_payments`: small gap between the
+   8925-row import (up to ~30.08 evening) and the agent rollout - John
+   sends fresh `ZVT-...-HDL.LOG` + `Statistic.txt`, parse the delta
+   with `scripts/zahlungen_imst.py`.
 
 ## People / customers quick reference
 
