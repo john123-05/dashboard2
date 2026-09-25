@@ -108,6 +108,10 @@ export default function AutomatenUebersicht({ machines }: { machines: MachineRev
                   outerRadius={70}
                   dataKey="value"
                   strokeWidth={0}
+                  // Start oben (12 Uhr), im Uhrzeigersinn: der erste Automat liegt
+                  // rechts, der zweite links - nicht oben und unten.
+                  startAngle={90}
+                  endAngle={-270}
                 >
                   {(gesamtWert > 0 ? machines : [null]).map((_, i) => (
                     <Cell key={i} fill={gesamtWert > 0 ? FARBEN[i % FARBEN.length] : '#e2e8f0'} />
