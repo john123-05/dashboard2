@@ -20,7 +20,7 @@ interface PurchaseRow {
   machine_id?: string | null;
   machine_label?: string | null;
   amount_cents: number | null;
-  amount_kind: 'confirmed' | 'detected' | 'unknown';
+  amount_kind: 'confirmed' | 'detected' | 'unknown' | 'price';
   currency: string;
   status: string;
   payment_method: string;
@@ -135,7 +135,14 @@ export default function Purchases() {
             machine_id: p.machine_id,
             machine_label: p.machine_label,
             amount_cents: p.amount_cents ?? preis,
-            amount_kind: p.method === 'unbekannt' ? ('detected' as const) : ('confirmed' as const),
+            // 'price': kein Betrag vom Terminal, es gilt der Fotopreis (Karte-only-
+            // Automat). Nicht als "bestätigt" ausgeben.
+            amount_kind:
+              p.method === 'unbekannt'
+                ? ('detected' as const)
+                : p.card_only && p.amount_estimated
+                  ? ('price' as const)
+                  : ('confirmed' as const),
             currency: 'EUR',
             status: p.claimed_email ? 'claimed' : 'unknown',
             payment_method:
@@ -356,6 +363,9 @@ export default function Purchases() {
           </span>
           {item.amount_cents !== null && item.amount_kind === 'detected' && (
             <p className="mt-0.5 text-xs text-amber-600">Detected, not confirmed</p>
+          )}
+          {item.amount_cents !== null && item.amount_kind === 'price' && (
+            <p className="mt-0.5 text-xs text-slate-500">Fotopreis (kein Terminalbetrag)</p>
           )}
           {item.amount_cents === null && (
             <p className="mt-0.5 text-xs text-slate-500">No confirmed amount</p>

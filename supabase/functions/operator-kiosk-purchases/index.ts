@@ -64,13 +64,18 @@ Deno.serve(async (req) => {
   // machine_id -> Anzeigename ("Automat alt" / "Automat neu"), damit die
   // Käufe-Seite pro Automat filtern und beschriften kann.
   const labelByMachine = new Map<string, string>();
+  // Karte-only-Automaten (settings.card_only): dort liefert die Kiosk-Software
+  // keinen Betrag je Kauf, es gilt der Fotopreis (siehe park_machine_revenue).
+  const cardOnly = new Set<string>();
   const { data: configs } = await supabaseService
     .from('liftpic_machine_configs')
-    .select('machine_id, machine_label')
+    .select('machine_id, machine_label, settings')
     .eq('park_id', auth.parkId);
   for (const c of configs ?? []) {
     const mid = text((c as Record<string, unknown>).machine_id);
     if (mid) labelByMachine.set(mid, text((c as Record<string, unknown>).machine_label) || mid);
+    const settings = ((c as Record<string, unknown>).settings ?? {}) as Record<string, unknown>;
+    if (mid && settings.card_only === true) cardOnly.add(mid);
   }
 
   const { data: rows, error } = await supabaseService
@@ -165,6 +170,9 @@ Deno.serve(async (req) => {
       receipt_no: s.receipt_no ?? null,
       auth_code: s.auth_code ?? null,
       amount_cents: typeof s.amount_cents === 'number' ? s.amount_cents : priceCents,
+      // true: kein Betrag vom Terminal, es wird der Fotopreis gezählt.
+      amount_estimated: typeof s.amount_cents !== 'number',
+      card_only: cardOnly.has(mid),
       claimed_email: info?.email ?? null,
       claimed_name: info?.name ?? null,
       photo_captured_at: info?.capturedAt ?? null,
@@ -175,7 +183,11 @@ Deno.serve(async (req) => {
   // Zeitraum). Reihenfolge: nach machine_id, damit "alt" vor "neu" steht.
   const machines = [...labelByMachine.entries()]
     .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([machine_id, machine_label]) => ({ machine_id, machine_label }));
+    .map(([machine_id, machine_label]) => ({
+      machine_id,
+      machine_label,
+      card_only: cardOnly.has(machine_id),
+    }));
 
   return json({
     ok: true,

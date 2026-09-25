@@ -105,6 +105,10 @@ export interface KioskLedgerPurchase {
   receipt_no: string | null;
   auth_code: string | null;
   amount_cents: number | null;
+  /** true: kein Betrag vom Terminal - es wird der Fotopreis gezählt. */
+  amount_estimated?: boolean;
+  /** Automat ohne Münzeinwurf - nur Kartenzahlung. */
+  card_only?: boolean;
   claimed_email: string | null;
   claimed_name: string | null;
   photo_captured_at: string | null;
@@ -112,7 +116,7 @@ export interface KioskLedgerPurchase {
 
 export interface KioskLedgerResponse {
   purchases: KioskLedgerPurchase[];
-  machines: { machine_id: string; machine_label: string }[];
+  machines: { machine_id: string; machine_label: string; card_only?: boolean }[];
   priceCents: number | null;
   truncated: boolean;
   from: string;
