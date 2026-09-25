@@ -486,6 +486,11 @@ export default function Leads({ embedded = false }: { embedded?: boolean } = {})
   const [stats, setStats] = useState({ total: 0, optedIn: 0 });
   const [filterOptIn, setFilterOptIn] = useState<boolean | null>(null);
   const [countryFilter, setCountryFilter] = useState('all');
+  // Mehrfach abgegebene Adressen: alle / nur die Mehrfachen / je Adresse nur die
+  // älteste Zeile ("ohne Doppelte").
+  const [duplicateFilter, setDuplicateFilter] = useState<'all' | 'only' | 'unique'>('all');
+  const [sourceFilter, setSourceFilter] = useState('all');
+  const [periodFilter, setPeriodFilter] = useState<'all' | '1' | '7' | '30' | '90'>('all');
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
@@ -644,11 +649,47 @@ export default function Leads({ embedded = false }: { embedded?: boolean } = {})
     setLoading(false);
   }
 
+  const emailKey = (lead: Record<string, unknown>) =>
+    typeof lead.email === 'string' ? lead.email.trim().toLowerCase() : '';
+
+  // Wie oft jede Adresse in der ganzen Liste vorkommt (unabhängig von den Filtern),
+  // und welche Zeile je Adresse die älteste ist.
+  const duplicateInfo = useMemo(() => {
+    const counts = new Map<string, number>();
+    const oldest = new Map<string, { id: unknown; time: number }>();
+    leads.forEach((lead) => {
+      const key = emailKey(lead);
+      if (!key) return;
+      counts.set(key, (counts.get(key) || 0) + 1);
+      const time = typeof lead.created_at === 'string' ? Date.parse(lead.created_at) : Number.POSITIVE_INFINITY;
+      const current = oldest.get(key);
+      if (!current || time < current.time) oldest.set(key, { id: lead.id, time });
+    });
+    const duplicateAddresses = [...counts.values()].filter((n) => n > 1).length;
+    return { counts, oldest, duplicateAddresses };
+  }, [leads]);
+
+  const sourceOptions = useMemo(
+    () => [...new Set(leads.map((lead) => (typeof lead.source === 'string' ? lead.source : '')).filter(Boolean))].sort(),
+    [leads],
+  );
+
   const filtered = leads.filter((lead) => {
     if (filterOptIn !== null && lead.opted_in !== filterOptIn) return false;
     if (countryFilter !== 'all') {
       const rowCountry = typeof lead.country_code === 'string' ? lead.country_code.trim().toUpperCase() : '';
       if (rowCountry !== countryFilter) return false;
+    }
+    if (sourceFilter !== 'all' && lead.source !== sourceFilter) return false;
+    if (periodFilter !== 'all') {
+      const time = typeof lead.created_at === 'string' ? Date.parse(lead.created_at) : NaN;
+      if (Number.isNaN(time) || time < Date.now() - Number(periodFilter) * 86_400_000) return false;
+    }
+    if (duplicateFilter !== 'all') {
+      const key = emailKey(lead);
+      const count = key ? duplicateInfo.counts.get(key) || 0 : 0;
+      if (duplicateFilter === 'only' && count < 2) return false;
+      if (duplicateFilter === 'unique' && key && duplicateInfo.oldest.get(key)?.id !== lead.id) return false;
     }
     return true;
   });
@@ -1039,6 +1080,14 @@ export default function Leads({ embedded = false }: { embedded?: boolean } = {})
         return (
           <div className="flex flex-col gap-1">
             <span className="font-medium text-slate-700">{item.email as string}</span>
+            {(duplicateInfo.counts.get(emailKey(item)) || 0) > 1 && (
+              <span
+                className="inline-flex w-fit rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-800 ring-1 ring-amber-200"
+                title="Diese Adresse wurde mehrfach abgegeben"
+              >
+                {duplicateInfo.counts.get(emailKey(item))}× abgegeben
+              </span>
+            )}
             {localeBadge && (
               <span className="inline-flex w-fit rounded-full bg-sky-50 px-2 py-0.5 text-[11px] font-medium text-sky-700 ring-1 ring-sky-200">
                 {localeBadge}
@@ -1358,6 +1407,38 @@ export default function Leads({ embedded = false }: { embedded?: boolean } = {})
               <option value="all">{t('leads.all')}</option>
               <option value="yes">{t('leads.opted_in')}</option>
               <option value="no">{t('leads.opted_out')}</option>
+            </select>
+            <select
+              value={duplicateFilter}
+              onChange={(e) => setDuplicateFilter(e.target.value as 'all' | 'only' | 'unique')}
+              className="rounded-lg border border-slate-200/60 bg-white/60 px-3 py-1.5 text-sm text-slate-700"
+            >
+              <option value="all">Doppelte: alle zeigen</option>
+              <option value="only">
+                Nur mehrfach abgegebene ({duplicateInfo.duplicateAddresses})
+              </option>
+              <option value="unique">Ohne Doppelte</option>
+            </select>
+            <select
+              value={sourceFilter}
+              onChange={(e) => setSourceFilter(e.target.value)}
+              className="rounded-lg border border-slate-200/60 bg-white/60 px-3 py-1.5 text-sm text-slate-700"
+            >
+              <option value="all">Alle Quellen</option>
+              {sourceOptions.map((source) => (
+                <option key={source} value={source}>{source}</option>
+              ))}
+            </select>
+            <select
+              value={periodFilter}
+              onChange={(e) => setPeriodFilter(e.target.value as 'all' | '1' | '7' | '30' | '90')}
+              className="rounded-lg border border-slate-200/60 bg-white/60 px-3 py-1.5 text-sm text-slate-700"
+            >
+              <option value="all">Alle Zeiträume</option>
+              <option value="1">Heute</option>
+              <option value="7">7 Tage</option>
+              <option value="30">30 Tage</option>
+              <option value="90">90 Tage</option>
             </select>
             <select
               value={countryFilter}
