@@ -70,3 +70,8 @@ verify_jwt = false
 # so the caller's token comes from the operator project and must be validated
 # by the function itself via _shared/operatorAuth.ts.
 verify_jwt = false
+
+[functions.operator-survey]
+# Same cross-project operator auth pattern as operator-notification-settings:
+# the browser sends an operator-project token, validated in _shared/operatorAuth.ts.
+verify_jwt = false
