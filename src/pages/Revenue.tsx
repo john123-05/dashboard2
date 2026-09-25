@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ComposedChart, Legend, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { Camera, ChevronLeft, ChevronRight, CreditCard, Download, Gauge, Percent, Receipt, Ticket, Wallet } from 'lucide-react';
+import { Camera, ChevronDown, ChevronLeft, ChevronRight, CreditCard, Download, Gauge, Percent, Receipt, Ticket, Wallet } from 'lucide-react';
 import { getOptionalSourceWarning, invokeEdgeFunction } from '../lib/edgeFunctions';
 import {
   createEmptyParkDashboardData,
@@ -28,6 +28,7 @@ import {
 import { formatCurrency, formatNumber, formatPercent, exportToCSV } from '../lib/utils';
 import GlassCard from '../components/ui/GlassCard';
 import ZahlungsUebersicht from '../components/ZahlungsUebersicht';
+import AutomatenUebersicht from '../components/AutomatenUebersicht';
 import KPICard from '../components/ui/KPICard';
 import { useI18n } from '../lib/i18n';
 import { usePark } from '../contexts/ParkContext';
@@ -472,7 +473,7 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('revenue.title')}</h2>
           <p className="mt-1 text-sm text-slate-500">
-            Unified revenue view for online and local sales
+            Umsatz und Verkäufe im Überblick
           </p>
         </div>
         <button onClick={handleExport} className="glass-button-secondary customer-operator-btn">
@@ -567,57 +568,9 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
             />
           </div>
 
-          {/* Umsatz je Automat - nur wenn der Park mehr als einen hat. Quelle
-              ist machine_sale_payments (mit machine_id), nicht die nach
-              Abhol-Code verschmelzende Tages-Rollup. */}
-          {machineRevenue.length >= 2 && (
-            <GlassCard className="p-5 sm:p-6">
-              <h3 className="text-base font-semibold text-slate-800">Umsatz je Automat</h3>
-              <p className="mt-0.5 text-sm text-slate-500">
-                Käufe und Betrag – diesen Monat, darunter gesamt seit Aufzeichnung.
-              </p>
-              <div className="mt-4 space-y-4">
-                {(() => {
-                  const monatMax = Math.max(1, ...machineRevenue.map((m) => m.monat.cent));
-                  return machineRevenue.map((m) => {
-                    const erkannt = m.karte_anzahl + m.bar_anzahl;
-                    const karteAnteil = erkannt > 0 ? m.karte_anzahl / erkannt : null;
-                    return (
-                      <div key={m.machine_id}>
-                        <div className="flex items-baseline justify-between gap-2">
-                          <span className="text-sm font-medium text-slate-700">{m.machine_label}</span>
-                          <span className="text-sm tabular-nums text-slate-600">
-                            {m.monat.anzahl === 0
-                              ? 'noch keine Verkäufe'
-                              : `${formatNumber(m.monat.anzahl)} Käufe · ${formatCurrency(m.monat.cent, 'eur')}`}
-                          </span>
-                        </div>
-                        <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-slate-100">
-                          <div
-                            className="h-full rounded-full bg-brand-500"
-                            style={{ width: `${Math.round((m.monat.cent / monatMax) * 100)}%` }}
-                          />
-                        </div>
-                        <p className="mt-1 text-xs text-slate-400">
-                          Gesamt: {formatNumber(m.gesamt.anzahl)} Käufe · {formatCurrency(m.gesamt.cent, 'eur')}
-                          {m.card_only
-                            ? ' · Nur Karte'
-                            : karteAnteil !== null && ` · ${Math.round(karteAnteil * 100)} % Karte`}
-                          {!m.card_only && m.unbekannt_anzahl > 0 && ` · ${formatNumber(m.unbekannt_anzahl)} unbekannt`}
-                        </p>
-                      </div>
-                    );
-                  });
-                })()}
-              </div>
-            </GlassCard>
-          )}
-
-          {/* Wie bezahlt wurde. Steht direkt unter den Kennzahlen, weil die
-              Frage "wie viel davon war bar?" unmittelbar aus ihnen folgt - und
-              weil hier auch auffaellt, wenn der Muenzwechsler falsch herausgibt
-              oder das Wechselgeld ausgeht. */}
-          <ZahlungsUebersicht />
+          {/* Automaten im Vergleich: Ring + eine Karte je Automat. Nur bei mehr als
+              einem Automaten; Quelle ist machine_sale_payments (mit machine_id). */}
+          <AutomatenUebersicht machines={machineRevenue} />
 
           <GlassCard className="p-5 sm:p-6">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -907,6 +860,23 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
               </div>
             )}
           </GlassCard>
+
+          {/* Die Einzelheiten zu Bar/Karte, Kartenmarken, Wechselgeld und den
+              letzten Käufen: wichtig, aber nichts, was man jeden Tag lesen muss. */}
+          <details className="group rounded-2xl">
+            <summary className="glass-panel flex cursor-pointer list-none items-center justify-between rounded-2xl px-5 py-4 [&::-webkit-details-marker]:hidden sm:px-6">
+              <span>
+                <span className="block text-base font-semibold text-slate-800">Zahlungen im Detail</span>
+                <span className="block text-sm text-slate-500">
+                  Bar oder Karte, Kartenmarken, Wechselgeld und die letzten Käufe
+                </span>
+              </span>
+              <ChevronDown className="h-5 w-5 shrink-0 text-slate-400 transition group-open:rotate-180" />
+            </summary>
+            <div className="mt-4">
+              <ZahlungsUebersicht />
+            </div>
+          </details>
         </>
       )}
 
