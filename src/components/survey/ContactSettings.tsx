@@ -63,11 +63,7 @@ export default function ContactSettings({ parkId, email, phone, onSaved }: {
 
   return (
     <GlassCard className="p-5 sm:p-6">
-      <h3 className="text-base font-semibold text-slate-800">Was Gäste angeben</h3>
-      <p className="mt-0.5 text-sm text-slate-500">
-        Name ist immer dabei. Mit „Freiwillig“ können Gäste das Feld überspringen.
-      </p>
-      <div className="mt-4 flex flex-wrap items-end gap-6">
+      <div className="flex flex-wrap items-end gap-6">
         <Choice label="E-Mail-Adresse" value={emailMode} onChange={(v) => { setEmailMode(v); setSaved(false); }} />
         <Choice label="Telefonnummer" value={phoneMode} onChange={(v) => { setPhoneMode(v); setSaved(false); }} />
         <button type="button" onClick={save} disabled={saving || !dirty} className="glass-button-primary disabled:opacity-50">
