@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { CreditCard } from 'lucide-react';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import GlassCard from './ui/GlassCard';
 import { usePark } from '../contexts/ParkContext';
 import { supabase, EXTERNAL_SUPABASE_URL, EXTERNAL_SUPABASE_ANON_KEY } from '../lib/supabase';
@@ -20,45 +21,6 @@ const ZEITRAEUME: { key: Zeitraum; label: string }[] = [
 import { AUTOMAT_FARBEN as FARBEN } from '../lib/automatFarben';
 
 type Marke = { marke: string; anzahl: number };
-
-function Ring({ segmente, mitte, unten }: {
-  segmente: { anteil: number; farbe: string }[];
-  mitte: string;
-  unten: string;
-}) {
-  const radius = 54;
-  const umfang = 2 * Math.PI * radius;
-  let offset = 0;
-  return (
-    <div className="relative mx-auto h-44 w-44">
-      <svg viewBox="0 0 140 140" className="h-full w-full -rotate-90">
-        <circle cx="70" cy="70" r={radius} fill="none" stroke="#e2e8f0" strokeWidth="18" />
-        {segmente.map((s, i) => {
-          const laenge = Math.max(0, s.anteil) * umfang;
-          const el = (
-            <circle
-              key={i}
-              cx="70"
-              cy="70"
-              r={radius}
-              fill="none"
-              stroke={s.farbe}
-              strokeWidth="18"
-              strokeDasharray={`${laenge} ${umfang - laenge}`}
-              strokeDashoffset={-offset}
-            />
-          );
-          offset += laenge;
-          return el;
-        })}
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-        <span className="text-xl font-semibold tabular-nums text-slate-800">{mitte}</span>
-        <span className="text-xs text-slate-500">{unten}</span>
-      </div>
-    </div>
-  );
-}
 
 export default function AutomatenUebersicht({ machines }: { machines: MachineRevenue[] }) {
   const { parkId } = usePark();
@@ -111,10 +73,7 @@ export default function AutomatenUebersicht({ machines }: { machines: MachineRev
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h3 className="text-base font-semibold text-slate-800">Automaten im Vergleich</h3>
-        </div>
+      <div className="flex justify-end">
         <div className="inline-flex rounded-xl bg-white/50 p-1">
           {ZEITRAEUME.map((z) => (
             <button
@@ -133,16 +92,41 @@ export default function AutomatenUebersicht({ machines }: { machines: MachineRev
 
       <div className="grid gap-4 lg:grid-cols-[minmax(260px,320px)_minmax(0,1fr)]">
         <GlassCard className="p-5">
-          <h4 className="text-sm font-semibold text-slate-800">Verteilung nach Automat</h4>
-          <div className="mt-4">
-            <Ring
-              segmente={machines.map((m, i) => ({
-                anteil: gesamtWert > 0 ? wert(m) / gesamtWert : 0,
-                farbe: FARBEN[i % FARBEN.length],
-              }))}
-              mitte={formatCurrency(summe.cent, 'eur')}
-              unten={`${formatNumber(summe.anzahl)} Käufe`}
-            />
+          <h4 className="text-base font-semibold text-slate-800">Verteilung nach Automaten</h4>
+          {/* Derselbe Ring wie "Status-Verteilung" auf der Fotoseite (recharts,
+              gleiche Maße): läuft beim Laden und beim Umschalten von selbst ein. */}
+          <div className="relative mx-auto mt-4 h-40 w-40">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={gesamtWert > 0
+                    ? machines.map((m) => ({ name: m.machine_label, value: wert(m) }))
+                    : [{ name: 'Noch keine Käufe', value: 1 }]}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={44}
+                  outerRadius={70}
+                  dataKey="value"
+                  strokeWidth={0}
+                >
+                  {(gesamtWert > 0 ? machines : [null]).map((_, i) => (
+                    <Cell key={i} fill={gesamtWert > 0 ? FARBEN[i % FARBEN.length] : '#e2e8f0'} />
+                  ))}
+                </Pie>
+                {gesamtWert > 0 && (
+                  <Tooltip
+                    formatter={(value) => (nachUmsatz ? formatCurrency(Number(value), 'eur') : `${formatNumber(Number(value))} Käufe`)}
+                    contentStyle={{ background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.08)' }}
+                  />
+                )}
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
+              <span className="text-base font-semibold tabular-nums text-slate-800">
+                {(summe.cent / 100).toLocaleString('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })}
+              </span>
+              <span className="text-[11px] text-slate-500">{formatNumber(summe.anzahl)} Käufe</span>
+            </div>
           </div>
           <ul className="mt-4 space-y-2">
             {machines.map((m, i) => (
