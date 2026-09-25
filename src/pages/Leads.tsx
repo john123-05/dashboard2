@@ -692,17 +692,22 @@ function LeadsContacts({ embedded = false }: { embedded?: boolean } = {}) {
   // und welche Zeile je Adresse die älteste ist.
   const duplicateInfo = useMemo(() => {
     const counts = new Map<string, number>();
-    const oldest = new Map<string, { id: unknown; time: number }>();
+    // Welche Zeile je Adresse bleibt: eine mit Newsletter-Zustimmung (die
+    // Zustimmung soll nicht verloren gehen), sonst die älteste.
+    const keep = new Map<string, { id: unknown; optedIn: boolean; time: number }>();
     leads.forEach((lead) => {
       const key = emailKey(lead);
       if (!key) return;
       counts.set(key, (counts.get(key) || 0) + 1);
       const time = typeof lead.created_at === 'string' ? Date.parse(lead.created_at) : Number.POSITIVE_INFINITY;
-      const current = oldest.get(key);
-      if (!current || time < current.time) oldest.set(key, { id: lead.id, time });
+      const optedIn = lead.opted_in === true;
+      const current = keep.get(key);
+      if (!current || (optedIn && !current.optedIn) || (optedIn === current.optedIn && time < current.time)) {
+        keep.set(key, { id: lead.id, optedIn, time });
+      }
     });
     const duplicateAddresses = [...counts.values()].filter((n) => n > 1).length;
-    return { counts, oldest, duplicateAddresses };
+    return { counts, keep, duplicateAddresses };
   }, [leads]);
 
   const sourceOptions = useMemo(
@@ -725,10 +730,27 @@ function LeadsContacts({ embedded = false }: { embedded?: boolean } = {}) {
       const key = emailKey(lead);
       const count = key ? duplicateInfo.counts.get(key) || 0 : 0;
       if (duplicateFilter === 'only' && count < 2) return false;
-      if (duplicateFilter === 'unique' && key && duplicateInfo.oldest.get(key)?.id !== lead.id) return false;
+      if (duplicateFilter === 'unique' && key && duplicateInfo.keep.get(key)?.id !== lead.id) return false;
     }
     return true;
   });
+  // Bei "nur mehrfach abgegebene" stehen die Zeilen einer Adresse untereinander.
+  if (duplicateFilter === 'only') {
+    filtered.sort((a, b) => {
+      const byEmail = emailKey(a).localeCompare(emailKey(b));
+      if (byEmail !== 0) return byEmail;
+      return Date.parse(String(a.created_at ?? '')) - Date.parse(String(b.created_at ?? ''));
+    });
+  }
+
+  // Zeilen, die beim Bereinigen wegfallen würden (alle außer der behaltenen je Adresse).
+  const extraDuplicateIds = filtered
+    .filter((lead) => {
+      const key = emailKey(lead);
+      return key && (duplicateInfo.counts.get(key) || 0) > 1 && duplicateInfo.keep.get(key)?.id !== lead.id
+        && lead.source === 'photo_claim' && typeof lead.id === 'string';
+    })
+    .map((lead) => String(lead.id));
 
   const countryOptions = useMemo(() => {
     return [...new Set(
@@ -1010,7 +1032,8 @@ function LeadsContacts({ embedded = false }: { embedded?: boolean } = {}) {
   async function deleteLeadIds(ids: string[]) {
     if (!parkId || ids.length === 0) return;
     const plural = ids.length > 1;
-    if (!confirm(plural ? `${ids.length} E-Mail-Leads wirklich löschen?` : 'Diesen E-Mail-Lead wirklich löschen?')) {
+    const hinweis = '\n\nHinweis: Das löscht den Eintrag der Foto-Freischaltung. Der Freischalt-Link dieses Gastes für das zugehörige Foto funktioniert danach nicht mehr.';
+    if (!confirm((plural ? `${ids.length} E-Mail-Leads wirklich löschen?` : 'Diesen E-Mail-Lead wirklich löschen?') + hinweis)) {
       return;
     }
 
@@ -1117,12 +1140,21 @@ function LeadsContacts({ embedded = false }: { embedded?: boolean } = {}) {
           <div className="flex flex-col gap-1">
             <span className="font-medium text-slate-700">{item.email as string}</span>
             {(duplicateInfo.counts.get(emailKey(item)) || 0) > 1 && (
-              <span
-                className="inline-flex w-fit rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-800 ring-1 ring-amber-200"
-                title="Diese Adresse wurde mehrfach abgegeben"
-              >
-                {duplicateInfo.counts.get(emailKey(item))}× abgegeben
-              </span>
+              duplicateInfo.keep.get(emailKey(item))?.id === item.id ? (
+                <span
+                  className="inline-flex w-fit rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-800 ring-1 ring-emerald-200"
+                  title="Diese Zeile bleibt beim Bereinigen erhalten"
+                >
+                  Behalten · {duplicateInfo.counts.get(emailKey(item))}× abgegeben
+                </span>
+              ) : (
+                <span
+                  className="inline-flex w-fit rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-800 ring-1 ring-amber-200"
+                  title="Diese Adresse wurde schon einmal abgegeben"
+                >
+                  Doppelt · {duplicateInfo.counts.get(emailKey(item))}× abgegeben
+                </span>
+              )
             )}
             {localeBadge && (
               <span className="inline-flex w-fit rounded-full bg-sky-50 px-2 py-0.5 text-[11px] font-medium text-sky-700 ring-1 ring-sky-200">
@@ -1432,6 +1464,19 @@ function LeadsContacts({ embedded = false }: { embedded?: boolean } = {}) {
             >
               {selectionMode ? 'Fertig' : 'Auswählen'}
             </button>
+            {duplicateFilter === 'only' && extraDuplicateIds.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectionMode(true);
+                  setSelectedLeadIds(extraDuplicateIds);
+                }}
+                className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-800 transition-colors hover:bg-amber-100"
+                title="Wählt alle Zeilen mit „Doppelt“ vor. Danach kannst du einzelne abwählen und „löschen“ drücken."
+              >
+                Doppelte vorwählen ({extraDuplicateIds.length})
+              </button>
+            )}
             <select
               value={filterOptIn === null ? 'all' : filterOptIn ? 'yes' : 'no'}
               onChange={(e) => {
