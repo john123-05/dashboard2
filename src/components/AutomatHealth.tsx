@@ -7,7 +7,8 @@ import GlassCard from './ui/GlassCard';
 import { usePark } from '../contexts/ParkContext';
 import { benenne } from '../lib/geraeteNamen';
 import { automatFarbe } from '../lib/automatFarben';
-import { supabase, EXTERNAL_SUPABASE_URL, EXTERNAL_SUPABASE_ANON_KEY } from '../lib/supabase';
+import { EXTERNAL_SUPABASE_URL, EXTERNAL_SUPABASE_ANON_KEY } from '../lib/supabase';
+import { getFunctionSession } from '../lib/functionAuth';
 
 const HEALTH_URL = `${EXTERNAL_SUPABASE_URL}/functions/v1/operator-liftpic-health`;
 const ASSETS_URL = `${EXTERNAL_SUPABASE_URL}/functions/v1/operator-liftpic-assets`;
@@ -470,7 +471,7 @@ export default function AutomatHealth({ onVerlauf }: {
   }, [machines, laufend]);
 
   async function headers() {
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await getFunctionSession();
     if (!session?.access_token) return null;
     return { Authorization: `Bearer ${session.access_token}`, apikey: EXTERNAL_SUPABASE_ANON_KEY };
   }

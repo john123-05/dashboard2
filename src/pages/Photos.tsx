@@ -10,7 +10,8 @@ import { usePark } from '../contexts/ParkContext';
 import { useAuth } from '../contexts/AuthContext';
 import { fetchRecentPhotos, searchPhotosByCode, searchPhotosByDateTime, claimLinkFor, type BrowsablePhoto } from '../lib/photoBrowser';
 import { fetchKioskSales, fetchKioskPhotosForDay, aggregateByDate, todayInTimezone, type AggregatedDay } from '../lib/kioskSales';
-import { supabase, EXTERNAL_SUPABASE_URL, EXTERNAL_SUPABASE_ANON_KEY } from '../lib/supabase';
+import { EXTERNAL_SUPABASE_URL, EXTERNAL_SUPABASE_ANON_KEY } from '../lib/supabase';
+import { getFunctionSession } from '../lib/functionAuth';
 
 const ASSETS_URL = `${EXTERNAL_SUPABASE_URL}/functions/v1/operator-liftpic-assets`;
 
@@ -86,7 +87,7 @@ export default function Photos({ embedded = false }: { embedded?: boolean } = {}
   const [automatBusy, setAutomatBusy] = useState<string | null>(null);
 
   async function operatorKopfzeilen() {
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await getFunctionSession();
     if (!session?.access_token) return null;
     return { Authorization: `Bearer ${session.access_token}`, apikey: EXTERNAL_SUPABASE_ANON_KEY };
   }

@@ -1,3 +1,5 @@
+import { requireAdminFromRequest, supabaseService } from "./sameProjectAdminAuth.ts";
+
 const OPERATOR_SUPABASE_URL = Deno.env.get("OPERATOR_SUPABASE_URL") ??
   "https://xcrxltiiovpoladpaewd.supabase.co";
 const OPERATOR_SUPABASE_ANON_KEY = Deno.env.get("OPERATOR_SUPABASE_ANON_KEY") ??
@@ -79,6 +81,23 @@ export async function requireOperatorForPark(
 
   const user = await fetchOperatorUser(token);
   if (!user) {
+    // Kein Betreiber-Token: im Staff-CRM kommt das Token des gemeinsamen Projekts.
+    // Staff (admin_users) darf jeden Park sehen.
+    const staff = await requireAdminFromRequest(req);
+    if (staff.ok) {
+      const { data: park } = await supabaseService
+        .from("parks")
+        .select("id, organization_id")
+        .eq("id", parkId)
+        .maybeSingle();
+      if (!park) return { ok: false, status: 404, message: "Park not found" };
+      return {
+        ok: true,
+        userId: staff.userId,
+        parkId: String(park.id),
+        organizationId: park.organization_id ? String(park.organization_id) : null,
+      };
+    }
     return { ok: false, status: 401, message: "Invalid operator auth token" };
   }
 

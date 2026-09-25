@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { Banknote, CreditCard, AlertTriangle, Loader2, ChevronDown, HelpCircle } from 'lucide-react';
 import GlassCard from './ui/GlassCard';
 import { usePark } from '../contexts/ParkContext';
-import { supabase, EXTERNAL_SUPABASE_URL, EXTERNAL_SUPABASE_ANON_KEY } from '../lib/supabase';
+import { EXTERNAL_SUPABASE_URL, EXTERNAL_SUPABASE_ANON_KEY } from '../lib/supabase';
+import { getFunctionSession } from '../lib/functionAuth';
 
 const HEALTH_URL = `${EXTERNAL_SUPABASE_URL}/functions/v1/operator-liftpic-health`;
 
@@ -96,7 +97,7 @@ export default function ZahlungsUebersicht() {
 
     async function laden() {
       if (!parkId) { setLaedt(false); return; }
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await getFunctionSession();
       if (!session?.access_token) { setLaedt(false); return; }
       try {
         const res = await fetch(

@@ -1,4 +1,5 @@
-import { supabase, EXTERNAL_SUPABASE_URL, EXTERNAL_SUPABASE_ANON_KEY } from './supabase';
+import { EXTERNAL_SUPABASE_URL, EXTERNAL_SUPABASE_ANON_KEY } from './supabase';
+import { getFunctionSession } from './functionAuth';
 
 export type Localized = Record<string, string>;
 export type QuestionType = 'nps' | 'stars' | 'yesno' | 'choice' | 'text';
@@ -88,7 +89,7 @@ export function pickLocalized(value: Localized | null | undefined, lang = 'de'):
 async function call<T>(init: RequestInit, query: Record<string, string>): Promise<T> {
   const {
     data: { session },
-  } = await supabase.auth.getSession();
+  } = await getFunctionSession();
   if (!session?.access_token) throw new Error('Sitzung abgelaufen. Bitte neu anmelden.');
 
   const params = new URLSearchParams(query);

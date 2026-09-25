@@ -1,5 +1,5 @@
 import { invokeEdgeFunction } from './edgeFunctions';
-import { supabase, EXTERNAL_SUPABASE_URL, EXTERNAL_SUPABASE_ANON_KEY } from './supabase';
+import { EXTERNAL_SUPABASE_URL, EXTERNAL_SUPABASE_ANON_KEY } from './supabase';
 import type {
   OpeningHoursConfig,
   ScheduleDayConfig,
@@ -7,6 +7,7 @@ import type {
   SchedulePause,
   WeekdayKey,
 } from './types';
+import { getFunctionSession } from './functionAuth';
 
 export interface DailySalesRow {
   camera_code: string;
@@ -149,7 +150,7 @@ export interface MachineRevenue {
 export async function fetchMachineRevenue(parkId: string): Promise<MachineRevenue[]> {
   const {
     data: { session },
-  } = await supabase.auth.getSession();
+  } = await getFunctionSession();
   if (!session?.access_token) return [];
   const res = await fetch(
     `${EXTERNAL_SUPABASE_URL}/functions/v1/operator-machine-revenue?park_id=${encodeURIComponent(parkId)}`,
@@ -171,7 +172,7 @@ export async function fetchKioskPurchasesLedger(
 ): Promise<KioskLedgerResponse> {
   const {
     data: { session },
-  } = await supabase.auth.getSession();
+  } = await getFunctionSession();
   if (!session?.access_token) {
     return { purchases: [], machines: [], priceCents: null, truncated: false, from: '', to: '' };
   }
