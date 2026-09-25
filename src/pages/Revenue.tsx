@@ -600,8 +600,10 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
                         </div>
                         <p className="mt-1 text-xs text-slate-400">
                           Gesamt: {formatNumber(m.gesamt.anzahl)} Käufe · {formatCurrency(m.gesamt.cent, 'eur')}
-                          {karteAnteil !== null && ` · ${Math.round(karteAnteil * 100)} % Karte`}
-                          {m.unbekannt_anzahl > 0 && ` · ${formatNumber(m.unbekannt_anzahl)} unbekannt`}
+                          {m.card_only
+                            ? ' · Nur Karte'
+                            : karteAnteil !== null && ` · ${Math.round(karteAnteil * 100)} % Karte`}
+                          {!m.card_only && m.unbekannt_anzahl > 0 && ` · ${formatNumber(m.unbekannt_anzahl)} unbekannt`}
                         </p>
                       </div>
                     );

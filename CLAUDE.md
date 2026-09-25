@@ -1,7 +1,7 @@
 # dashboard2 - Agent Context
 
 Read this first. It carries the full working context so a fresh session
-can continue where the last one stopped. Last updated 2026-09-02.
+can continue where the last one stopped. Last updated 2026-09-25.
 
 **The master map of the whole Liftpictures ecosystem (all repos, both
 Supabase projects, customers, photo pipeline, incident history) lives in
@@ -222,10 +222,46 @@ a staff form silently does nothing, check the function actually exists.
      give Automat 2 its **own Kundennummer** (own claim pool + own
      printed-code prefix); revenue rollup is by `park_id` so the Imst
      total is unaffected.
-- Deferred polish (do when Automat 2 goes live): frontend - for a
-  `card_only` machine hide the empty Bar/Karte ring, show "Nur Karte" +
-  Kartenmarken; agent `pruefe_verkauf()` - a card-only automat's
-  unmatched sale should be `karte`, never `unbekannt`.
+- **card_only frontend DONE (2026-09-25)**: for a `settings.card_only`
+  machine the Umsatz card says "Nur Karte", `ZahlungsUebersicht` hides the
+  Bar/Karte ring, Bar tile, Gegeben/Zurueck columns and the Wechselgeld
+  block, and shows "Nur Karte" + Kartenmarken. `operator-liftpic-health`
+  returns `card_only` and forces `coin_inventory: null` / `coin_warnings: []`
+  for such machines (a cloned `CoinStats.txt` must not show as stock).
+- **Amounts for card_only machines**: Statistic.txt carries no price and
+  no hobex receipt is matched, so `amount_cents` is NULL. Both
+  `park_machine_revenue()` (migration `20260925090000`) and
+  `operator-liftpic-health` count `parks.price_per_photo_cents` (fallback
+  500) per purchase while `amount_cents` is NULL. A real receipt amount wins.
+  Only machines with `settings.card_only = true` get this - never
+  extrapolate for cash machines.
+- Still open (agent): `pruefe_verkauf()` - a card-only automat's
+  unmatched sale should be `karte`, never `unbekannt`. Own Kundennummer for
+  `pcneu2` not set yet (proposal 2736; 2735 was used 2026-07-06 with 253
+  Imst photos). The code is computed by TWO programs: Samuel prints it
+  from `Settings.xml` `CustomerNumber`, the agent uses config
+  `legacy_customer_code` for the online filename (`VIEWER_RECIPE_ENABLED`
+  is off by default). Both must change together (Tom / AnyDesk on PC#2),
+  else "Foto nicht gefunden". Also register the number in `park_cameras`.
+
+## machine_sale_payments duplicate bug (fixed 2026-09-25)
+
+- Symptom: "Automat neu" showed 24,815 purchases / 0.00 EUR; the "Die
+  letzten Kaeufe" list repeated one line. Cause: the agent resends the last
+  45 min of sales in every heartbeat (~76 s) and `liftpic-status` dedup
+  compared `sold_local` as `"2026-09-24T16:53:31"` (PostgREST) against
+  `"2026-09-24 16:53:31"` (agent) - never equal, so every receipt-less row
+  (cash, card without matched receipt) was inserted again each heartbeat.
+- Fix: `liftpic-status` v14 (testsoftware repo, `supabase/functions/`)
+  normalises both sides, a receipt later arriving upgrades the placeholder
+  row instead of adding a second one, and a receipt row suppresses a
+  placeholder. DB: unique index `machine_sale_payments_sale_key_idx` on
+  `(machine_id, sold_local, bild_nr, method)`.
+- Cleanup: 29,109 duplicate rows deleted (pcneu2 24,785 / pcneu 4,324) and
+  kept in `machine_sale_payments_dup_backup_20260925` (RLS on, safe to drop
+  later). Result: pcneu ~9.7k rows, pcneu2 ~650.
+- Caveat: rows with `bild_nr IS NULL` are not covered by the index (NULLs
+  are distinct); the function's own check still handles them.
 
 ## Notifications rework (Aug/Sep 2026)
 

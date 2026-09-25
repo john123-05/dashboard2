@@ -63,6 +63,8 @@ type Uebersicht = {
 };
 type Automat = {
   id: string; machine_id: string; machine_label: string | null;
+  /** Automat ohne Münzeinwurf: nur Karte, kein Bar/Karte-Anteil, kein Wechselgeld. */
+  card_only?: boolean;
   coin_inventory?: Muenzbestand | null;
   coin_warnings?: Muenzwarnung[];
   payments?: Uebersicht | null;
@@ -173,6 +175,9 @@ function AutomatBlock({ a }: { a: Automat }) {
   // gewesen, obwohl in Wahrheit fast nichts davon bekannt ist.
   const anteileBekannt = z?.bar_anteil != null && z?.karte_anteil != null;
   const warnungen = a.coin_warnings ?? [];
+  // Karte-only-Automat: es gibt keinen Bar-Anteil zu zeigen. Statt eines
+  // leeren Rings steht "Nur Karte" mit den Kartenmarken.
+  const nurKarte = a.card_only === true;
 
   return (
     <div>
@@ -183,30 +188,32 @@ function AutomatBlock({ a }: { a: Automat }) {
       {z && gesamt > 0 ? (
         <>
           <div className="flex flex-col items-center gap-5 sm:flex-row">
-            {anteileBekannt && <Ring barAnteil={z!.bar_anteil!} />}
-            <div className="grid flex-1 gap-3 sm:grid-cols-2">
-              <Anteil
-                Icon={Banknote}
-                titel="Bar"
-                anzahl={z.bar_anzahl}
-                betrag={z.bar_cent}
-                anteil={z.bar_anteil}
-                farbe="text-emerald-700"
-                hintergrund="bg-emerald-50/80"
-              />
+            {!nurKarte && anteileBekannt && <Ring barAnteil={z!.bar_anteil!} />}
+            <div className={`grid flex-1 gap-3 ${nurKarte ? '' : 'sm:grid-cols-2'}`}>
+              {!nurKarte && (
+                <Anteil
+                  Icon={Banknote}
+                  titel="Bar"
+                  anzahl={z.bar_anzahl}
+                  betrag={z.bar_cent}
+                  anteil={z.bar_anteil}
+                  farbe="text-emerald-700"
+                  hintergrund="bg-emerald-50/80"
+                />
+              )}
               <Anteil
                 Icon={CreditCard}
-                titel="Karte"
+                titel={nurKarte ? 'Nur Karte' : 'Karte'}
                 anzahl={z.karte_anzahl}
                 betrag={z.karte_cent}
-                anteil={z.karte_anteil}
+                anteil={nurKarte ? null : z.karte_anteil}
                 farbe="text-sky-700"
                 hintergrund="bg-sky-50/80"
               />
             </div>
           </div>
 
-          {!anteileBekannt && (
+          {!nurKarte && !anteileBekannt && (
             <p className="mt-3 rounded-lg bg-slate-100/80 px-3 py-2 text-xs leading-relaxed text-slate-500">
               Kein Anteil in Prozent, weil zu wenige Käufe eindeutig einer
               Zahlungsart zugeordnet werden konnten
@@ -220,7 +227,7 @@ function AutomatBlock({ a }: { a: Automat }) {
 
           <p className="mt-2 text-xs text-slate-400">
             {gesamt} Käufe{a.payments_days ? ` in den letzten ${a.payments_days} Tagen` : ''}
-            {z.unbekannt_anzahl > 0 && (
+            {!nurKarte && z.unbekannt_anzahl > 0 && (
               <> · {z.unbekannt_anzahl} ohne erkennbare Zahlung</>
             )}
             {a.prices_cent?.length ? (
@@ -259,7 +266,7 @@ function AutomatBlock({ a }: { a: Automat }) {
         </p>
       )}
 
-      {a.coin_inventory && (
+      {a.coin_inventory && !nurKarte && (
         <div className="mt-4 rounded-xl bg-white/40 px-4 py-3">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <span className="text-sm font-medium text-slate-700">Wechselgeld im Gerät</span>
@@ -335,8 +342,8 @@ function AutomatBlock({ a }: { a: Automat }) {
                   <th className="px-3 py-2 font-medium">Foto</th>
                   <th className="px-3 py-2 font-medium">Bezahlt mit</th>
                   <th className="px-3 py-2 text-right font-medium">Betrag</th>
-                  <th className="px-3 py-2 text-right font-medium">Gegeben</th>
-                  <th className="px-3 py-2 text-right font-medium">Zurück</th>
+                  {!nurKarte && <th className="px-3 py-2 text-right font-medium">Gegeben</th>}
+                  {!nurKarte && <th className="px-3 py-2 text-right font-medium">Zurück</th>}
                 </tr>
               </thead>
               <tbody className="text-slate-700">
@@ -372,14 +379,18 @@ function AutomatBlock({ a }: { a: Automat }) {
                           egal wie viel bezahlt wurde (F-051). */}
                       {b.zahlungsart !== 'unbekannt' ? euro(b.betrag_cent) : '–'}
                     </td>
-                    <td className="px-3 py-1.5 text-right tabular-nums">
-                      {b.zahlungsart === 'bar' ? euro(b.eingeworfen_cent) : '–'}
-                    </td>
-                    <td className={`px-3 py-1.5 text-right tabular-nums ${
-                      b.abweichung_cent !== 0 && b.sicher ? 'font-semibold text-rose-700' : ''
-                    }`}>
-                      {b.zahlungsart === 'bar' ? euro(b.ausgezahlt_cent) : '–'}
-                    </td>
+                    {!nurKarte && (
+                      <td className="px-3 py-1.5 text-right tabular-nums">
+                        {b.zahlungsart === 'bar' ? euro(b.eingeworfen_cent) : '–'}
+                      </td>
+                    )}
+                    {!nurKarte && (
+                      <td className={`px-3 py-1.5 text-right tabular-nums ${
+                        b.abweichung_cent !== 0 && b.sicher ? 'font-semibold text-rose-700' : ''
+                      }`}>
+                        {b.zahlungsart === 'bar' ? euro(b.ausgezahlt_cent) : '–'}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

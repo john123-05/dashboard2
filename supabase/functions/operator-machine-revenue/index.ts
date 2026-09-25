@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
     supabaseService.rpc('park_machine_revenue', { p_park_id: auth.parkId }),
     supabaseService
       .from('liftpic_machine_configs')
-      .select('machine_id, machine_label, is_active')
+      .select('machine_id, machine_label, is_active, settings')
       .eq('park_id', auth.parkId),
   ]);
   if (revError) return json({ error: revError.message }, 400);
@@ -47,7 +47,14 @@ Deno.serve(async (req) => {
 
   // Reihenfolge nach machine_id -> "pcneu" (alt) vor "pcneu2" (neu).
   const machines = ((configs ?? []) as Array<Record<string, unknown>>)
-    .map((c) => ({ machine_id: text(c.machine_id), machine_label: text(c.machine_label) || text(c.machine_id), is_active: c.is_active === true }))
+    .map((c) => ({
+      machine_id: text(c.machine_id),
+      machine_label: text(c.machine_label) || text(c.machine_id),
+      is_active: c.is_active === true,
+      // Karte-only-Automat (kein Münzeinwurf): die Seite zeigt "Nur Karte"
+      // statt eines Bar/Karte-Anteils.
+      card_only: ((c.settings ?? {}) as Record<string, unknown>).card_only === true,
+    }))
     .filter((m) => m.machine_id)
     .sort((a, b) => a.machine_id.localeCompare(b.machine_id))
     .map((m) => {
@@ -56,6 +63,7 @@ Deno.serve(async (req) => {
         machine_id: m.machine_id,
         machine_label: m.machine_label,
         is_active: m.is_active,
+        card_only: m.card_only,
         heute: { anzahl: num(r.heute_anzahl), cent: num(r.heute_cent) },
         woche: { anzahl: num(r.woche_anzahl), cent: num(r.woche_cent) },
         monat: { anzahl: num(r.monat_anzahl), cent: num(r.monat_cent) },

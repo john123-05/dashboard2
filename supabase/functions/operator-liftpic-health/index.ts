@@ -96,6 +96,32 @@ Deno.serve(async (req) => {
   // die Kartenmarke - das Dashboard bevorzugt sie dann vor status.payments.
   const LEDGER_TAGE = Math.min(Math.max(Number(url.searchParams.get('ledger_tage')) || 30, 1), 400);
   const ledgerByMachine = new Map<string, Record<string, unknown>>();
+
+  // Karte-only-Automaten (kein Münzeinwurf, settings.card_only): die Kiosk-
+  // Software liefert dort keinen Betrag je Kauf. Solange amount_cents leer ist,
+  // gilt der Parkpreis je Foto - dieselbe Rechnung wie park_machine_revenue().
+  const cardOnly = new Set<string>();
+  for (const m of machines ?? []) {
+    const s = ((m as { settings?: unknown }).settings ?? {}) as Record<string, unknown>;
+    if (s.card_only === true) cardOnly.add(text((m as { machine_id: unknown }).machine_id));
+  }
+  let fotoPreisCent = 500;
+  try {
+    const { data: park } = await supabaseService
+      .from('parks')
+      .select('price_per_photo_cents')
+      .eq('id', auth.parkId)
+      .maybeSingle();
+    const p = Number((park as { price_per_photo_cents?: unknown } | null)?.price_per_photo_cents);
+    if (Number.isFinite(p) && p > 0) fotoPreisCent = p;
+  } catch (_err) {
+    // Fallback 500 Cent
+  }
+  const betragCent = (mid: string, r: Record<string, unknown>) =>
+    typeof r.amount_cents === 'number'
+      ? r.amount_cents
+      : cardOnly.has(mid) ? fotoPreisCent : 0;
+
   try {
     const seit = new Date(Date.now() - LEDGER_TAGE * 86_400_000).toISOString();
     const { data: sp } = await supabaseService
@@ -119,7 +145,7 @@ Deno.serve(async (req) => {
       const marken = new Map<string, { anzahl: number; cent: number }>();
       for (const r of rows) {
         const art = text(r.method);
-        const cent = typeof r.amount_cents === 'number' ? r.amount_cents : 0;
+        const cent = betragCent(mid, r);
         if (art === 'bar') { barAnzahl++; barCent += cent; }
         else if (art === 'karte') {
           karteAnzahl++; karteCent += cent;
@@ -146,7 +172,7 @@ Deno.serve(async (req) => {
           zeit: text(r.sold_at),
           foto: text(r.bild_nr),
           bildnummer: /^\d+$/.test(text(r.bild_nr)) ? Number(text(r.bild_nr)) : null,
-          betrag_cent: typeof r.amount_cents === 'number' ? r.amount_cents : 0,
+          betrag_cent: betragCent(mid, r),
           zahlungsart: art,
           kartenmarke: text(r.card_scheme) || null,
           beleg_nr: text(r.receipt_no) || null,
@@ -227,12 +253,18 @@ Deno.serve(async (req) => {
       customer_code_registered: codeGeprueft ? registrierte.has(customerCode) : null,
       // Wie payments: bei Ledger-Park ohne eigene Zeilen nicht den Herzschlag-
       // Muenzbestand zeigen (Klon-PC).
+      // Karte-only-Automat: kein Münzeinwurf, also auch kein Wechselgeld-
+      // Bestand. Ein altes CoinStats.txt (z. B. vom Klon-Quell-PC) soll dort
+      // nicht als Bestand erscheinen.
+      card_only: cardOnly.has(text(m.machine_id)),
       coin_inventory:
-        parkHatLedger && !ledgerByMachine.has(text(m.machine_id))
+        cardOnly.has(text(m.machine_id)) ||
+        (parkHatLedger && !ledgerByMachine.has(text(m.machine_id)))
           ? null
           : status.coin_inventory ?? null,
       coin_warnings:
-        parkHatLedger && !ledgerByMachine.has(text(m.machine_id))
+        cardOnly.has(text(m.machine_id)) ||
+        (parkHatLedger && !ledgerByMachine.has(text(m.machine_id)))
           ? []
           : list(status.coin_warnings),
       coin_payout_failures: list(status.coin_payout_failures),

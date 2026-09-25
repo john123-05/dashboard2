@@ -127,6 +127,8 @@ export interface MachineRevenue {
   machine_id: string;
   machine_label: string;
   is_active: boolean;
+  /** Automat ohne Münzeinwurf - nur Kartenzahlung. */
+  card_only?: boolean;
   heute: MachineRevenuePeriod;
   woche: MachineRevenuePeriod;
   monat: MachineRevenuePeriod;
