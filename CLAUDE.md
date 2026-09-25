@@ -214,7 +214,7 @@ a staff form silently does nothing, check the function actually exists.
      the claim page reads (open item #1), and PC#2 has no legacy
      uploader - so a purchased photo would never reach
      liftpictures-fotos.de.
-  3. **Shared `2734` is a collision risk**: the claim page resolves a
+  3. **Shared `2734` is a collision risk (REAL collisions found 2026-09-25)**: the claim page resolves a
      code by `park + Kundennummer(2734) + Datum + Bildnummer` (or the
      16-digit printed code). Both automats number Bildnummern
      independently; once PC#2's range overlaps PC#1's (~weeks at
@@ -235,6 +235,19 @@ a staff form silently does nothing, check the function actually exists.
   500) per purchase while `amount_cents` is NULL. A real receipt amount wins.
   Only machines with `settings.card_only = true` get this - never
   extrapolate for cash machines.
+- **Kundennummer-Wechsel pcneu2 -> 2736 (Stand 2026-09-25)**: In 45 Tagen
+  haben pcneu und pcneu2 neunmal denselben 16-stelligen Code hochgeladen;
+  `photos` hat einen Eintrag je Pfad, die zweite Datei hat die erste
+  ersetzt (vertauschte Fotos). 2736 ist in `park_cameras` registriert
+  (Imst, Alpine Coaster). NOCH OFFEN, muss zeitgleich passieren:
+  (1) Tom: `Settings.xml` `CustomerNumber` = 2736 auf PC#2 (aktives
+  Druckprofil beachten, es gibt `CustomerNumber3`), Verkaufsprogramm neu
+  starten; (2) Dashboard Liftpic-Tab -> PC#2 -> Kundennummer
+  (`legacy_customer_code`) = 2736. Danach pruefen: `last_status.customer_code`
+  von pcneu2 = 2736 und neue `photos.source_customer_code = 2736`.
+  Alte Codes (2734) bleiben abholbar.
+- The photos-ingest gap (open item 1 below) is CLOSED: `liftpic-ingest-commit`
+  writes `photos` (pcneu2 photos exist, claimable).
 - Still open (agent): `pruefe_verkauf()` - a card-only automat's
   unmatched sale should be `karte`, never `unbekannt`. Own Kundennummer for
   `pcneu2` not set yet (proposal 2736; 2735 was used 2026-07-06 with 253
