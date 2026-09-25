@@ -140,6 +140,10 @@ export interface MachineRevenue {
   karte_anzahl: number;
   bar_anzahl: number;
   unbekannt_anzahl: number;
+  /** Karte/Bar/unbekannt und Kartenmarken je Zeitraum (fehlt bei älterer Function). */
+  split?: Record<'heute' | 'woche' | 'monat' | 'gesamt', {
+    karte: number; bar: number; unbekannt: number; marken: Record<string, number>;
+  }>;
 }
 
 export async function fetchMachineRevenue(parkId: string): Promise<MachineRevenue[]> {

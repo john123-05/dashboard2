@@ -1,13 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { CreditCard } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import GlassCard from './ui/GlassCard';
-import { usePark } from '../contexts/ParkContext';
-import { supabase, EXTERNAL_SUPABASE_URL, EXTERNAL_SUPABASE_ANON_KEY } from '../lib/supabase';
 import { formatCurrency, formatNumber } from '../lib/utils';
 import type { MachineRevenue } from '../lib/kioskSales';
-
-const HEALTH_URL = `${EXTERNAL_SUPABASE_URL}/functions/v1/operator-liftpic-health`;
 
 type Zeitraum = 'heute' | 'woche' | 'monat' | 'gesamt';
 
@@ -20,42 +16,8 @@ const ZEITRAEUME: { key: Zeitraum; label: string }[] = [
 
 import { AUTOMAT_FARBEN as FARBEN } from '../lib/automatFarben';
 
-type Marke = { marke: string; anzahl: number };
-
 export default function AutomatenUebersicht({ machines }: { machines: MachineRevenue[] }) {
-  const { parkId } = usePark();
   const [zeitraum, setZeitraum] = useState<Zeitraum>('monat');
-  const [marken, setMarken] = useState<Map<string, Marke[]> | null>(null);
-
-  // Kartenmarken je Automat (letzte 30 Tage) - kommen aus den Terminal-Belegen.
-  useEffect(() => {
-    let abgebrochen = false;
-    async function laden() {
-      if (!parkId) return;
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) return;
-      try {
-        const res = await fetch(`${HEALTH_URL}?park_id=${encodeURIComponent(parkId)}&ledger_tage=30`, {
-          headers: { Authorization: `Bearer ${session.access_token}`, apikey: EXTERNAL_SUPABASE_ANON_KEY },
-        });
-        const body = await res.json().catch(() => null);
-        if (abgebrochen || !res.ok) return;
-        const map = new Map<string, Marke[]>();
-        for (const m of (body?.data?.machines ?? []) as Array<{
-          machine_id: string;
-          payments?: { kartenmarken?: Marke[] } | null;
-        }>) {
-          map.set(m.machine_id, m.payments?.kartenmarken ?? []);
-        }
-        setMarken(map);
-      } catch {
-        // ohne Marken bleibt die Karte einfach kürzer
-      }
-    }
-    void laden();
-    return () => { abgebrochen = true; };
-  }, [parkId]);
-
   const summe = useMemo(
     () => machines.reduce(
       (acc, m) => ({ cent: acc.cent + m[zeitraum].cent, anzahl: acc.anzahl + m[zeitraum].anzahl }),
@@ -148,11 +110,19 @@ export default function AutomatenUebersicht({ machines }: { machines: MachineRev
         <div className="grid gap-4 md:grid-cols-2">
           {machines.map((m, i) => {
             const farbe = FARBEN[i % FARBEN.length];
-            const erkannt = m.karte_anzahl + m.bar_anzahl;
-            const karteAnteil = erkannt > 0 ? m.karte_anzahl / erkannt : null;
-            const liste = (marken?.get(m.machine_id) ?? []).filter((x) => x.marke !== 'ohne Angabe');
+            // Alles je gewählten Zeitraum. Fehlt `split` (ältere Function), bleibt
+            // es beim Gesamtwert - dann steht der Zeitraum nicht dabei.
+            const sp = m.split?.[zeitraum];
+            const karteN = sp ? sp.karte : m.karte_anzahl;
+            const barN = sp ? sp.bar : m.bar_anzahl;
+            const erkannt = karteN + barN;
+            const karteAnteil = erkannt > 0 ? karteN / erkannt : null;
+            const liste = Object.entries(sp?.marken ?? {})
+              .filter(([marke]) => marke !== 'ohne Angabe')
+              .map(([marke, anzahl]) => ({ marke, anzahl }))
+              .sort((a, b) => b.anzahl - a.anzahl);
             const kartenGesamt = liste.reduce((s, x) => s + x.anzahl, 0);
-            const markeUnbekannt = marken !== null && m.karte_anzahl > 0 && kartenGesamt === 0;
+            const markeUnbekannt = Boolean(sp) && karteN > 0 && kartenGesamt === 0;
             return (
               <GlassCard key={m.machine_id} className="p-5">
                 <div className="flex items-center gap-2">
@@ -201,7 +171,7 @@ export default function AutomatenUebersicht({ machines }: { machines: MachineRev
 
                 {(liste.length > 0 || markeUnbekannt) && (
                   <div className="mt-3">
-                    <p className="mb-1.5 text-xs font-medium text-slate-500">Kartenmarken (30 Tage)</p>
+                    <p className="mb-1.5 text-xs font-medium text-slate-500">Kartenmarken ({ZEITRAEUME.find((z) => z.key === zeitraum)?.label})</p>
                     {liste.length > 0 ? (
                       <div className="flex flex-wrap gap-1.5">
                         {liste.slice(0, 4).map((x) => (

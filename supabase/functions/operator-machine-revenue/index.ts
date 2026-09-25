@@ -31,8 +31,10 @@ Deno.serve(async (req) => {
   const auth = await requireOperatorForPark(req, parkId);
   if (!auth.ok) return json({ error: auth.message }, auth.status);
 
-  const [{ data: rev, error: revError }, { data: configs }] = await Promise.all([
+  const [{ data: rev, error: revError }, { data: splitRows }, { data: configs }] = await Promise.all([
     supabaseService.rpc('park_machine_revenue', { p_park_id: auth.parkId }),
+    // Karte/Bar und Kartenmarken je Zeitraum (gleiche Zeitgrenzen wie oben).
+    supabaseService.rpc('park_machine_payment_split', { p_park_id: auth.parkId }),
     supabaseService
       .from('liftpic_machine_configs')
       .select('machine_id, machine_label, is_active, settings')
@@ -44,6 +46,26 @@ Deno.serve(async (req) => {
   for (const r of (rev ?? []) as Array<Record<string, unknown>>) {
     revByMachine.set(text(r.machine_id), r);
   }
+
+  type Split = { karte: number; bar: number; unbekannt: number; marken: Record<string, number> };
+  const splitByMachine = new Map<string, Record<string, Split>>();
+  for (const r of (splitRows ?? []) as Array<Record<string, unknown>>) {
+    const mid = text(r.machine_id);
+    const periode = text(r.periode);
+    const perioden = splitByMachine.get(mid) ?? {};
+    const s = perioden[periode] ?? { karte: 0, bar: 0, unbekannt: 0, marken: {} };
+    const n = num(r.anzahl);
+    const method = text(r.method);
+    if (method === 'karte') {
+      s.karte += n;
+      const marke = text(r.card_scheme) || 'ohne Angabe';
+      s.marken[marke] = (s.marken[marke] ?? 0) + n;
+    } else if (method === 'bar') s.bar += n;
+    else s.unbekannt += n;
+    perioden[periode] = s;
+    splitByMachine.set(mid, perioden);
+  }
+  const leer: Split = { karte: 0, bar: 0, unbekannt: 0, marken: {} };
 
   // Reihenfolge nach machine_id -> "pcneu" (alt) vor "pcneu2" (neu).
   const machines = ((configs ?? []) as Array<Record<string, unknown>>)
@@ -71,6 +93,13 @@ Deno.serve(async (req) => {
         karte_anzahl: num(r.karte_anzahl),
         bar_anzahl: num(r.bar_anzahl),
         unbekannt_anzahl: num(r.unbekannt_anzahl),
+        // je Zeitraum: Karte/Bar/unbekannt und Kartenmarken
+        split: {
+          heute: splitByMachine.get(m.machine_id)?.heute ?? leer,
+          woche: splitByMachine.get(m.machine_id)?.woche ?? leer,
+          monat: splitByMachine.get(m.machine_id)?.monat ?? leer,
+          gesamt: splitByMachine.get(m.machine_id)?.gesamt ?? leer,
+        },
       };
     });
 
