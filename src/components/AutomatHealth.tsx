@@ -6,6 +6,7 @@ import {
 import GlassCard from './ui/GlassCard';
 import { usePark } from '../contexts/ParkContext';
 import { benenne } from '../lib/geraeteNamen';
+import { automatFarbe } from '../lib/automatFarben';
 import { supabase, EXTERNAL_SUPABASE_URL, EXTERNAL_SUPABASE_ANON_KEY } from '../lib/supabase';
 
 const HEALTH_URL = `${EXTERNAL_SUPABASE_URL}/functions/v1/operator-liftpic-health`;
@@ -680,17 +681,11 @@ export default function AutomatHealth({ onVerlauf }: {
   if (!parkId) return null;
 
   return (
-    <GlassCard className="p-4 sm:p-6">
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <h3 className="text-base font-semibold text-slate-800">Anlagenstatus</h3>
-            <ZustandsHilfe />
-          </div>
-          <p className="mt-1 text-sm text-slate-500">
-            Was gerade am Automaten läuft &ndash; direkt dort gemessen.
-            Aktualisiert sich jede Minute.
-          </p>
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-slate-800">Anlagenstatus</h3>
+          <ZustandsHilfe />
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <div className="inline-flex rounded-xl bg-white/50 p-1">
@@ -727,7 +722,7 @@ export default function AutomatHealth({ onVerlauf }: {
       )}
 
       {urteil && (
-        <div className={`mb-4 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 rounded-xl px-3 py-2.5 ${
+        <div className={`flex flex-wrap items-baseline gap-x-2 gap-y-0.5 rounded-xl px-3 py-2.5 ${
           urteil.ton === 'bad' ? 'bg-rose-50/80'
             : urteil.ton === 'warn' ? 'bg-amber-50/80'
               : urteil.ton === 'unklar' ? 'bg-white/50' : 'bg-emerald-50/80'
@@ -745,11 +740,13 @@ export default function AutomatHealth({ onVerlauf }: {
       )}
 
       {machines.length > 0 && (
-        <div className="space-y-5">
-          {machines.map((m) => (
+        <div className="grid items-start gap-4 xl:grid-cols-2">
+          {machines.map((m, index) => (
             <Automat
               key={m.id}
               m={m}
+              farbe={automatFarbe(index)}
+              mehrere={machines.length > 1}
               detailed={detailed}
               busyKey={busyMachine}
               laufend={laufend?.machineId === m.id ? laufend : null}
@@ -760,12 +757,12 @@ export default function AutomatHealth({ onVerlauf }: {
           ))}
         </div>
       )}
-    </GlassCard>
+    </div>
   );
 }
 
-function Automat({ m, detailed, busyKey, laufend, jetzt, onRestart, onTestfoto }: {
-  m: Machine; detailed: boolean; busyKey: string | null;
+function Automat({ m, farbe, mehrere, detailed, busyKey, laufend, jetzt, onRestart, onTestfoto }: {
+  m: Machine; farbe: string; mehrere: boolean; detailed: boolean; busyKey: string | null;
   laufend: LaufenderNeustart | null; jetzt: number;
   onRestart: (mode: 'now' | 'tonight' | 'cancel' | 'stop', programm: Neustartbar | null) => void;
   onTestfoto: () => void;
@@ -788,8 +785,6 @@ function Automat({ m, detailed, busyKey, laufend, jetzt, onRestart, onTestfoto }
     ? eintraege
     : eintraege.filter((e) => e.kind !== 'system' || e.ton === 'bad' || e.ton === 'warn');
 
-  const versteckt = eintraege.length - sichtbar.length;
-  const keinNeustartMoeglich = !(m.restartable || []).length;
 
   // Der Testfoto-Knopf hing bisher allein an der Kamerakachel. Die entsteht
   // aber nur, solange das Kameraprotokoll juenger als 48 Stunden ist
@@ -818,24 +813,33 @@ function Automat({ m, detailed, busyKey, laufend, jetzt, onRestart, onTestfoto }
   }
 
   return (
-    <div className="rounded-2xl border border-white/40 bg-white/30 p-4">
-      <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1">
-        <span className="font-semibold text-slate-800">{m.machine_label || m.machine_id}</span>
+    <GlassCard className="overflow-hidden p-0">
+      <div className="h-1.5" style={{ backgroundColor: farbe }} />
+      <div className="p-4 sm:p-5">
+      <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2">
+        <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: farbe }} />
+        <h4 className="text-lg font-semibold text-slate-800">{m.machine_label || m.machine_id}</h4>
         <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${
           m.reachable ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
         }`}>
           {m.reachable ? 'verbunden' : `keine Daten seit ${seit(m.offline_minutes)}`}
         </span>
         {m.photos_taken_today !== null && (
-          <span className="ml-auto text-xs text-slate-500">
-            heute <b className="tabular-nums text-slate-700">{m.photos_taken_today}</b> Fotos
+          <div className="ml-auto flex gap-2">
+            <div className="rounded-lg bg-white/60 px-3 py-1.5 text-right">
+              <p className="text-[11px] text-slate-400">Fotos heute</p>
+              <p className="text-sm font-semibold tabular-nums text-slate-800">{m.photos_taken_today}</p>
+            </div>
             {/* „0 verkauft" wäre eine Aussage über etwas, das niemand gezählt
                 hat — die Bedingung oben prüft nur die aufgenommenen Fotos.
                 Meldet der Automat die Verkäufe nicht, bleibt die Angabe weg. */}
             {m.photos_sold_today !== null && m.photos_sold_today !== undefined && (
-              <> · <b className="tabular-nums text-slate-700">{m.photos_sold_today}</b> verkauft</>
+              <div className="rounded-lg bg-white/60 px-3 py-1.5 text-right">
+                <p className="text-[11px] text-slate-400">Verkauft</p>
+                <p className="text-sm font-semibold tabular-nums text-slate-800">{m.photos_sold_today}</p>
+              </div>
             )}
-          </span>
+          </div>
         )}
       </div>
 
@@ -903,7 +907,7 @@ function Automat({ m, detailed, busyKey, laufend, jetzt, onRestart, onTestfoto }
         </div>
       )}
 
-      <div className="grid items-start gap-2 lg:grid-cols-2">
+      <div className={`grid items-start gap-2 lg:grid-cols-2 ${mehrere ? 'xl:grid-cols-1' : ''}`}>
         {sichtbar.map((e) => (
           <Zeile
             key={e.name}
@@ -952,31 +956,7 @@ function Automat({ m, detailed, busyKey, laufend, jetzt, onRestart, onTestfoto }
         ))}
       </div>
 
-      {(m.ausgeblendet?.length ?? 0) > 0 && (
-        <p className="mt-2 text-xs text-slate-400">
-          Für diesen Automaten nicht angezeigt: {m.ausgeblendet!.join(', ')}.
-        </p>
-      )}
-
-      {versteckt > 0 && (
-        <p className="mt-2 text-xs text-slate-400">
-          {versteckt} unauffällige Systemwerte ausgeblendet &ndash; unter
-          &bdquo;Ausführlich&ldquo; sichtbar.
-        </p>
-      )}
-
       <div className="mt-3">
-        {/* Meldet der Automat gar nichts, steht die Erklärung schon oben statt
-            der Kacheln - hier wäre sie nur eine Wiederholung. */}
-        {keinNeustartMoeglich && eintraege.length > 0 && (
-          <p className="rounded-lg bg-white/40 px-3 py-2 text-xs text-slate-500">
-            <b className="font-semibold text-slate-700">Keine Neustart-Knöpfe:</b>{' '}
-            dieser Automat meldet nicht, welche Programme er neu starten kann.
-            Das ist bei einem älteren Stand der Automaten-Software normal
-            {m.agent_version && <> (hier Version {m.agent_version})</>} &ndash;
-            nach deren Aktualisierung erscheinen die Knöpfe von selbst.
-          </p>
-        )}
         {detailed && (
           <p className="mt-2 text-[11px] text-slate-400">
             {/* „0 Quellen überwacht" klingt wie ein Ausfall, ist aber eine
@@ -990,7 +970,8 @@ function Automat({ m, detailed, busyKey, laufend, jetzt, onRestart, onTestfoto }
           </p>
         )}
       </div>
-    </div>
+      </div>
+    </GlassCard>
   );
 }
 

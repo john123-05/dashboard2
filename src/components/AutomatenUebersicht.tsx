@@ -17,8 +17,7 @@ const ZEITRAEUME: { key: Zeitraum; label: string }[] = [
   { key: 'gesamt', label: 'Gesamt' },
 ];
 
-// Jeder Automat behält überall dieselbe Farbe (Ring, Legende, Karte).
-const FARBEN = ['#3b82f6', '#f59e0b', '#10b981', '#8b5cf6', '#ec4899'];
+import { AUTOMAT_FARBEN as FARBEN } from '../lib/automatFarben';
 
 type Marke = { marke: string; anzahl: number };
 

@@ -329,9 +329,6 @@ export default function SystemHealth({ embedded = false }: { embedded?: boolean 
       <div className="customer-operator-pagehead flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('health.title')}</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Live operational health based on uploaded machine and system files
-          </p>
         </div>
         <button onClick={handleRefresh} disabled={refreshing} className="glass-button-secondary customer-operator-btn">
           <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
@@ -415,10 +412,7 @@ export default function SystemHealth({ embedded = false }: { embedded?: boolean 
           stehen sie oben im Anlagenstatus; hier wären sie nur eine schlechtere
           Kopie. */}
       <GlassCard className="p-5 sm:p-6">
-        <h3 className="text-base font-semibold text-slate-800">Dienste bei Liftpictures</h3>
-        <p className="mb-4 mt-0.5 text-sm text-slate-500">
-          Unsere Server hinter dem Automaten. Der Automat selbst steht oben.
-        </p>
+        <h3 className="mb-4 text-base font-semibold text-slate-800">Dienste bei Liftpictures</h3>
         <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {serverDienste.length === 0 ? (
             <p className="text-sm text-slate-500">Keine Meldungen von den Diensten.</p>
@@ -468,11 +462,6 @@ export default function SystemHealth({ embedded = false }: { embedded?: boolean 
         <div className="flex flex-col gap-3 border-b border-white/40 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
           <div>
             <h3 className="text-base font-semibold text-slate-800">Was passiert ist</h3>
-            <p className="mt-0.5 text-sm text-slate-500">
-              {register === 'dateien'
-                ? 'Meldungen, die die Programme am Automaten geschrieben haben.'
-                : 'Vom Automaten selbst festgehalten – auch aus Zeiten ohne Verbindung.'}
-            </p>
           </div>
           <div className="inline-flex shrink-0 self-start rounded-xl bg-white/50 p-1 sm:self-auto">
             <button
