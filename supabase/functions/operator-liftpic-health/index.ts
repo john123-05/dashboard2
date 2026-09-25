@@ -117,6 +117,52 @@ Deno.serve(async (req) => {
   } catch (_err) {
     // Fallback 500 Cent
   }
+  // Neuester Barkauf je Automat (letzte 3 Tage). Belegt, dass der Münzprüfer
+  // tatsächlich Geld annimmt - unabhängig davon, was sein Protokoll meldet.
+  const letzterBarkauf = new Map<string, number>();
+  try {
+    const seit3 = new Date(Date.now() - 3 * 86_400_000).toISOString();
+    const { data: barRows } = await supabaseService
+      .from('machine_sale_payments')
+      .select('machine_id, sold_at')
+      .eq('park_id', auth.parkId)
+      .eq('method', 'bar')
+      .gte('sold_at', seit3)
+      .order('sold_at', { ascending: false })
+      .limit(200);
+    for (const r of barRows ?? []) {
+      const mid = text((r as { machine_id: unknown }).machine_id);
+      const ts = Date.parse(text((r as { sold_at: unknown }).sold_at));
+      if (mid && !Number.isNaN(ts) && !letzterBarkauf.has(mid)) letzterBarkauf.set(mid, ts);
+    }
+  } catch (_err) {
+    // ohne diese Angabe bleibt der Zustand des Münzprüfers, wie er gemeldet wurde
+  }
+  const uhrzeit = (ts: number) =>
+    new Date(ts).toLocaleString('de-AT', {
+      timeZone: 'Europe/Vienna', day: '2-digit', month: '2-digit',
+      hour: '2-digit', minute: '2-digit',
+    });
+
+  // Das Protokoll des Münzprüfers sagt bei jeder Meldung "CoinChangerError" und
+  // der Agent übersetzt das pauschal in "antwortet nicht" / Ausgefallen. Nimmt
+  // der Automat aber nachweislich Bargeld an (Barkauf in den letzten 24 h), ist
+  // "Ausgefallen" falsch: dann zeigen wir die echte Meldung als Warnung.
+  const munzpruefer = (mid: string, d: unknown): unknown => {
+    const dev = d as Record<string, unknown>;
+    if (text(dev.name) !== 'Münzprüfer' || text(dev.status) !== 'down') return d;
+    const bar = letzterBarkauf.get(mid);
+    if (bar === undefined || Date.now() - bar > 24 * 3_600_000) return d;
+    const meldung = text(dev.detail).replace(/^.*CoinChangerError:\s*/i, '').trim();
+    return {
+      ...dev,
+      status: 'degraded',
+      severity: 'warning',
+      plain: `Meldet${meldung ? ` „${meldung}“` : ' einen Fehler'} – Barzahlungen laufen aber `
+        + `(letzter Barkauf ${uhrzeit(bar)}).`,
+    };
+  };
+
   const betragCent = (mid: string, r: Record<string, unknown>) =>
     typeof r.amount_cents === 'number'
       ? r.amount_cents
@@ -234,7 +280,18 @@ Deno.serve(async (req) => {
       offline_minutes: offlineMinutes,
       reachable: offlineMinutes !== null && offlineMinutes <= 5,
       probes: list(status.probes),
-      devices: list(status.operational_devices),
+      devices: list(status.operational_devices).map((d) => munzpruefer(text(m.machine_id), d)),
+      // Geräte, die für diesen Automaten nichts bedeuten (nicht eingebaut oder
+      // mit anderer Software): die Seite blendet sie samt Störungsmeldung aus.
+      // Namen wie in der Kachel ("Lichtschranke", "Kamera-Software", ...),
+      // aus settings.hide_devices; Karte-only-Automaten haben zusätzlich weder
+      // Münzprüfer noch Münz-Anschlüsse.
+      ausgeblendet: [...new Set([
+        ...list(settings.hide_devices).map((n) => String(n)),
+        ...(cardOnly.has(text(m.machine_id))
+          ? ['Münzprüfer', 'Münzeinnahmen', 'Anschlüsse']
+          : []),
+      ])],
       restartable: list(status.restartable),
       can_test_photo: status.can_test_photo === true,
       // Wie die Kamera eingestellt ist - Belichtung, Verstaerkung, Farbe.

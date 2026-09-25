@@ -88,6 +88,8 @@ type Machine = {
   id: string; machine_id: string; machine_label: string | null;
   last_seen_at: string | null; offline_minutes: number | null; reachable: boolean;
   probes: Probe[]; devices: Device[];
+  /** Geräte, die für diesen Automaten nichts bedeuten (Klarnamen). */
+  ausgeblendet?: string[];
   restartable?: Neustartbar[];
   /** Kann der Automat auf Zuruf ein Testfoto machen? */
   can_test_photo?: boolean;
@@ -277,10 +279,16 @@ function zusammenfuehren(m: Machine): Eintrag[] {
     e.ton = toene.sort((a, b) => ZUSTAND[b].rang - ZUSTAND[a].rang)[0] ?? 'unklar';
   }
 
-  return [...nach.values()].sort((a, b) => {
-    const ai = ORDER.indexOf(a.kind), bi = ORDER.indexOf(b.kind);
-    return ((ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi)) || a.name.localeCompare(b.name);
-  });
+  // Für diesen Automaten ausgeblendete Geräte (nicht eingebaut / andere
+  // Software). Sie zählen weder als Kachel noch für das Urteil oben.
+  const aus = new Set((m.ausgeblendet ?? []).map((n) => n.toLowerCase()));
+
+  return [...nach.values()]
+    .filter((e) => !aus.has(e.name.toLowerCase()))
+    .sort((a, b) => {
+      const ai = ORDER.indexOf(a.kind), bi = ORDER.indexOf(b.kind);
+      return ((ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi)) || a.name.localeCompare(b.name);
+    });
 }
 
 /** Die eine Zeile, die in der einfachen Ansicht immer sichtbar ist. */
@@ -943,6 +951,12 @@ function Automat({ m, detailed, busyKey, laufend, jetzt, onRestart, onTestfoto }
           />
         ))}
       </div>
+
+      {(m.ausgeblendet?.length ?? 0) > 0 && (
+        <p className="mt-2 text-xs text-slate-400">
+          Für diesen Automaten nicht angezeigt: {m.ausgeblendet!.join(', ')}.
+        </p>
+      )}
 
       {versteckt > 0 && (
         <p className="mt-2 text-xs text-slate-400">
