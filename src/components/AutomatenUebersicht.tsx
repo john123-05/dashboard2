@@ -115,7 +115,6 @@ export default function AutomatenUebersicht({ machines }: { machines: MachineRev
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h3 className="text-base font-semibold text-slate-800">Automaten im Vergleich</h3>
-          <p className="mt-0.5 text-sm text-slate-500">Wie sich Umsatz und Käufe auf die Automaten verteilen.</p>
         </div>
         <div className="inline-flex rounded-xl bg-white/50 p-1">
           {ZEITRAEUME.map((z) => (
