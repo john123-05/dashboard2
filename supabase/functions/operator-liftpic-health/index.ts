@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
 
   const { data: machines, error } = await supabaseService
     .from('liftpic_machine_configs')
-    .select('id, machine_id, machine_label, camera_code, last_seen_at, is_active, last_status, settings')
+    .select('id, machine_id, machine_label, camera_code, last_seen_at, is_active, last_status, settings, paper_capacity, paper_warn_remaining')
     .eq('park_id', auth.parkId)
     .eq('is_active', true)
     .order('machine_label', { ascending: true });
@@ -349,6 +349,9 @@ Deno.serve(async (req) => {
       queue_count: status.queue_count ?? null,
       disk_free_mb: status.disk_free_mb ?? null,
       paper_remaining: status.paper_remaining ?? null,
+      // Fassungsvermögen und Warnschwelle der Papierrolle (aus der Automaten-Konfiguration)
+      paper_capacity: typeof m.paper_capacity === 'number' ? m.paper_capacity : null,
+      paper_warn_remaining: typeof m.paper_warn_remaining === 'number' ? m.paper_warn_remaining : null,
       photos_taken_today: status.photos_taken_today ?? null,
       photos_sold_today: status.photos_sold_today ?? null,
       photo_conversion_today: status.photo_conversion_today ?? null,

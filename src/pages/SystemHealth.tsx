@@ -373,13 +373,8 @@ export default function SystemHealth({ embedded = false }: { embedded?: boolean 
               </p>
             </div>
           </div>
-          <div className="grid shrink-0 grid-cols-2 gap-2 sm:grid-cols-4">
-            <Kennzahl
-              label="Papier übrig"
-              wert={data.health.printer.paper_remaining !== null
-                ? formatNumber(data.health.printer.paper_remaining) : '-'}
-            />
-            <Kennzahl label="Drucke gesamt" wert={formatNumber(data.health.printer.print_count)} />
+          {/* Papier und Drucke stehen jetzt je Automat auf dessen Karte. */}
+          <div className="grid shrink-0 grid-cols-2 gap-2">
             <Kennzahl
               label="Fahrten gesamt"
               wert={data.summary.rides_total !== null && data.summary.rides_total !== undefined

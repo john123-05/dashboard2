@@ -111,6 +111,7 @@ type Machine = {
   monitored_sources: number | null; faults_now: number | null;
   pending_health_events: number | null; agent_version: string | null;
   queue_count: number | null; disk_free_mb: number | null; paper_remaining: number | null;
+  paper_capacity?: number | null; paper_warn_remaining?: number | null;
   photos_taken_today: number | null; photos_sold_today: number | null;
   pending_restart: { mode?: string; target?: string } | null;
   last_restart_at: string | null;
@@ -824,12 +825,30 @@ function Automat({ m, farbe, mehrere, detailed, busyKey, laufend, jetzt, onResta
         }`}>
           {m.reachable ? 'verbunden' : `keine Daten seit ${seit(m.offline_minutes)}`}
         </span>
-        {m.photos_taken_today !== null && (
+        {(m.photos_taken_today !== null || typeof m.paper_remaining === 'number') && (
           <div className="ml-auto flex gap-2">
-            <div className="rounded-lg bg-white/60 px-3 py-1.5 text-right">
-              <p className="text-[11px] text-slate-400">Fotos heute</p>
-              <p className="text-sm font-semibold tabular-nums text-slate-800">{m.photos_taken_today}</p>
-            </div>
+            {typeof m.paper_remaining === 'number' && (() => {
+              // Papierrolle: Farbe nach Warnschwelle der Konfiguration (Standard 30).
+              const warn = m.paper_warn_remaining ?? 30;
+              const knapp = m.paper_remaining <= warn;
+              return (
+                <div className={`rounded-lg px-3 py-1.5 text-right ${knapp ? 'bg-amber-100/80' : 'bg-white/60'}`}>
+                  <p className="text-[11px] text-slate-400">Papier übrig</p>
+                  <p className={`text-sm font-semibold tabular-nums ${knapp ? 'text-amber-800' : 'text-slate-800'}`}>
+                    {m.paper_remaining}
+                    {m.paper_capacity ? (
+                      <span className="text-[11px] font-normal text-slate-400"> / {m.paper_capacity}</span>
+                    ) : null}
+                  </p>
+                </div>
+              );
+            })()}
+            {m.photos_taken_today !== null && (
+              <div className="rounded-lg bg-white/60 px-3 py-1.5 text-right">
+                <p className="text-[11px] text-slate-400">Fotos heute</p>
+                <p className="text-sm font-semibold tabular-nums text-slate-800">{m.photos_taken_today}</p>
+              </div>
+            )}
             {/* „0 verkauft" wäre eine Aussage über etwas, das niemand gezählt
                 hat — die Bedingung oben prüft nur die aufgenommenen Fotos.
                 Meldet der Automat die Verkäufe nicht, bleibt die Angabe weg. */}
