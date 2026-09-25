@@ -7,6 +7,7 @@ import GlassCard from '../components/ui/GlassCard';
 import DataTable from '../components/ui/DataTable';
 import { useI18n } from '../lib/i18n';
 import { usePark } from '../contexts/ParkContext';
+import SurveyManager from '../components/survey/SurveyManager';
 
 type CountryStat = {
   countryCode: string;
@@ -470,7 +471,42 @@ function leadLocaleBadge(item: Record<string, unknown>): string | null {
   return parts.length > 0 ? parts.join(' ') : null;
 }
 
+/**
+ * Rahmen mit zwei Reitern: die Kontaktliste (wie bisher) und die Umfrage, mit der
+ * Gäste ihr Foto statt per E-Mail-Adresse freischalten können.
+ */
 export default function Leads({ embedded = false }: { embedded?: boolean } = {}) {
+  const { parkId } = usePark();
+  const [pageTab, setPageTab] = useState<'contacts' | 'survey'>('contacts');
+
+  return (
+    <div className={embedded ? 'space-y-5' : 'space-y-6'}>
+      {parkId && (
+        <div className="inline-flex rounded-xl bg-white/50 p-1">
+          {([['contacts', 'E-Mail-Liste'], ['survey', 'Umfrage']] as const).map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setPageTab(key)}
+              className={`rounded-lg px-4 py-1.5 text-sm font-medium transition ${
+                pageTab === key ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+      {pageTab === 'survey' && parkId ? (
+        <SurveyManager parkId={parkId} />
+      ) : (
+        <LeadsContacts embedded={embedded} />
+      )}
+    </div>
+  );
+}
+
+function LeadsContacts({ embedded = false }: { embedded?: boolean } = {}) {
   const { t } = useI18n();
   const {
     parkId,

@@ -131,7 +131,11 @@ Deno.serve(async (req: Request) => {
     });
 
     const photoClaimLeads = photoClaimsRes.ok
-      ? (photoClaimsRes.data as Record<string, unknown>[]).map((c) => {
+      // Umfrage-Freischaltungen (Park-Umfrage statt E-Mail) haben keine Adresse
+      // und gehören nicht in die E-Mail-Liste.
+      ? (photoClaimsRes.data as Record<string, unknown>[])
+        .filter((c) => String(c.email ?? "").trim() !== "")
+        .map((c) => {
           const parkId = c.park_id as string | undefined;
           const parkName = parkId ? parkNames.get(parkId) || "Unknown" : "Unknown";
           return {
