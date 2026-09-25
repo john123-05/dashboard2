@@ -7,8 +7,12 @@ import { requireOperatorForPark } from '../_shared/operatorAuth.ts';
  * Umfrage-Einstellungen und -Auswertung für die Claim-Seite eines Parks.
  *
  *   GET  ?park_id=…                     -> { settings, questions }
- *   GET  ?park_id=…&view=results&days=N -> Auswertung der Antworten
- *   PUT  { park_id, settings, questions } -> speichern
+ *   GET  ?park_id=…&view=results&days=N -> Auswertung der Umfrage
+ *   GET  ?park_id=…&view=social&days=N  -> Auswertung der Social-Media-Freischaltungen
+ *   POST { park_id, settings, questions } -> Umfrage speichern (ohne Modus/Kontakt/Social)
+ *   POST { park_id, action: 'set_mode', mode }         -> was Gäste zum Freischalten tun
+ *   POST { park_id, action: 'save_contact', email_mode, phone_mode }
+ *   POST { park_id, action: 'save_social', social }
  *
  * Fragen werden nie gelöscht, sondern auf active=false gesetzt: bestehende
  * Antworten verweisen per Fragen-ID auf sie, und die Auswertung braucht den
@@ -74,6 +78,9 @@ async function loadConfig(parkId: string) {
       intro: {},
       review_text: {},
       thanks_text: {},
+      email_mode: 'required',
+      phone_mode: 'off',
+      social: {},
     },
     questions: questions ?? [],
   };
@@ -81,7 +88,11 @@ async function loadConfig(parkId: string) {
 
 async function saveConfig(parkId: string, body: Record<string, unknown>) {
   const s = (body.settings ?? {}) as Record<string, unknown>;
-  const mode = s.mode === 'survey' ? 'survey' : 'email';
+  // Der Modus (und Kontakt/Social) hat eigene Aktionen; diese Speicherung fasst
+  // nur die Umfrage an. Ist die Umfrage gerade aktiv, gelten die strengen Prüfungen.
+  const { data: current } = await supabaseService
+    .from('park_survey_settings').select('mode').eq('park_id', parkId).maybeSingle();
+  const mode = current?.mode === 'survey' ? 'survey' : 'off';
   const reviewUrl = text(s.review_url);
   if (reviewUrl && !isHttpUrl(reviewUrl)) return { error: 'Der Bewertungs-Link muss mit https:// beginnen.' };
   const minScore = Math.min(10, Math.max(0, Math.round(Number(s.review_min_score ?? 8))));
@@ -125,7 +136,6 @@ async function saveConfig(parkId: string, body: Record<string, unknown>) {
 
   const { error: settingsError } = await supabaseService.from('park_survey_settings').upsert({
     park_id: parkId,
-    mode,
     review_url: reviewUrl || null,
     review_min_score: minScore,
     intro: localized(s.intro, 600),
@@ -170,6 +180,114 @@ async function saveConfig(parkId: string, body: Record<string, unknown>) {
   }
 
   return { ok: true };
+}
+
+type Level = 'off' | 'optional' | 'required';
+const LEVELS: Level[] = ['off', 'optional', 'required'];
+const PLATFORMS = ['instagram', 'facebook', 'tiktok', 'x', 'youtube', 'whatsapp'];
+
+function level(value: unknown, fallback: Level): Level {
+  return LEVELS.includes(value as Level) ? (value as Level) : fallback;
+}
+
+async function setMode(parkId: string, modeRaw: unknown) {
+  const mode = modeRaw === 'survey' ? 'survey' : modeRaw === 'social' ? 'social' : modeRaw === 'email' ? 'email' : null;
+  if (!mode) return { error: 'Unbekannter Modus.' };
+
+  if (mode === 'survey') {
+    const { data: questions } = await supabaseService
+      .from('park_survey_questions').select('prompt').eq('park_id', parkId).eq('active', true);
+    if (!questions || questions.length === 0) {
+      return { error: 'Für die Umfrage fehlen noch Fragen. Lege sie im Reiter „Umfrage“ an und speichere sie.' };
+    }
+  }
+  if (mode === 'email') {
+    const { data: cur } = await supabaseService
+      .from('park_survey_settings').select('email_mode, phone_mode').eq('park_id', parkId).maybeSingle();
+    if ((cur?.email_mode ?? 'required') === 'off' && (cur?.phone_mode ?? 'off') === 'off') {
+      return { error: 'Im Reiter „Kontakte“ muss E-Mail oder Telefon abgefragt werden.' };
+    }
+  }
+  const { error } = await supabaseService.from('park_survey_settings').upsert(
+    { park_id: parkId, mode, updated_at: new Date().toISOString() },
+    { onConflict: 'park_id' },
+  );
+  return error ? { error: error.message } : { ok: true };
+}
+
+async function saveContact(parkId: string, body: Record<string, unknown>) {
+  const email = level(body.email_mode, 'required');
+  const phone = level(body.phone_mode, 'off');
+  const { data: cur } = await supabaseService
+    .from('park_survey_settings').select('mode').eq('park_id', parkId).maybeSingle();
+  if ((cur?.mode ?? 'email') === 'email' && email === 'off' && phone === 'off') {
+    return { error: 'Im E-Mail-Modus muss mindestens E-Mail oder Telefon abgefragt werden.' };
+  }
+  const { error } = await supabaseService.from('park_survey_settings').upsert(
+    { park_id: parkId, email_mode: email, phone_mode: phone, updated_at: new Date().toISOString() },
+    { onConflict: 'park_id' },
+  );
+  return error ? { error: error.message } : { ok: true };
+}
+
+async function saveSocial(parkId: string, body: Record<string, unknown>) {
+  const raw = (body.social ?? {}) as Record<string, unknown>;
+  const platforms = (Array.isArray(raw.platforms) ? raw.platforms : [])
+    .map((p) => String(p)).filter((p) => PLATFORMS.includes(p));
+  const handle = text(raw.handle).slice(0, 80);
+  const hashtag = text(raw.hashtag).slice(0, 80);
+  const social = {
+    platforms,
+    handle: handle && !handle.startsWith('@') ? `@${handle}` : handle,
+    hashtag: hashtag && !hashtag.startsWith('#') ? `#${hashtag}` : hashtag,
+    instructions: localized(raw.instructions, 600),
+    share_text: localized(raw.share_text, 300),
+    giveaway_enabled: raw.giveaway_enabled === true,
+    giveaway_text: localized(raw.giveaway_text, 600),
+    post_link: level(raw.post_link, 'optional'),
+  };
+  const { error } = await supabaseService.from('park_survey_settings').upsert(
+    { park_id: parkId, social, updated_at: new Date().toISOString() },
+    { onConflict: 'park_id' },
+  );
+  return error ? { error: error.message } : { ok: true };
+}
+
+async function loadSocialResults(parkId: string, days: number) {
+  const since = new Date(Date.now() - days * 86_400_000).toISOString();
+  const { data } = await supabaseService
+    .from('park_social_entries')
+    .select('id, name, email, phone, giveaway_opt_in, platform, handle, post_url, posted_at, created_at, country_code')
+    .eq('park_id', parkId)
+    .gte('created_at', since)
+    .order('created_at', { ascending: false })
+    .limit(3000);
+  const rows = (data ?? []) as Array<Record<string, unknown>>;
+  const posted = rows.filter((r) => r.posted_at);
+  const byPlatform = new Map<string, number>();
+  for (const r of posted) {
+    const p = text(r.platform, 'sonstige');
+    byPlatform.set(p, (byPlatform.get(p) ?? 0) + 1);
+  }
+  const byDay = new Map<string, { unlocked: number; posted: number }>();
+  for (const r of rows) {
+    const day = String(r.created_at).slice(0, 10);
+    const d = byDay.get(day) ?? { unlocked: 0, posted: 0 };
+    d.unlocked += 1;
+    if (r.posted_at) d.posted += 1;
+    byDay.set(day, d);
+  }
+  return {
+    days,
+    unlocked: rows.length,
+    posted: posted.length,
+    with_link: rows.filter((r) => r.post_url).length,
+    giveaway: rows.filter((r) => r.giveaway_opt_in).length,
+    platforms: [...byPlatform.entries()].map(([platform, count]) => ({ platform, count })).sort((a, b) => b.count - a.count),
+    timeline: [...byDay.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([day, d]) => ({ day, ...d })),
+    entries: rows.slice(0, 200),
+    truncated: rows.length >= 3000,
+  };
 }
 
 async function loadResults(parkId: string, days: number) {
@@ -300,6 +418,10 @@ Deno.serve(async (req) => {
       const days = Math.min(Math.max(Number(url.searchParams.get('days')) || 30, 1), 730);
       return json({ ok: true, data: await loadResults(auth.parkId, days) });
     }
+    if (url.searchParams.get('view') === 'social') {
+      const days = Math.min(Math.max(Number(url.searchParams.get('days')) || 30, 1), 730);
+      return json({ ok: true, data: await loadSocialResults(auth.parkId, days) });
+    }
     return json({ ok: true, data: await loadConfig(auth.parkId) });
   }
 
@@ -310,7 +432,14 @@ Deno.serve(async (req) => {
     const auth = await requireOperatorForPark(req, parkId);
     if (!auth.ok) return json({ error: auth.message }, auth.status);
 
-    const result = await saveConfig(auth.parkId, body);
+    const action = text(body.action);
+    const result = action === 'set_mode'
+      ? await setMode(auth.parkId, body.mode)
+      : action === 'save_contact'
+        ? await saveContact(auth.parkId, body)
+        : action === 'save_social'
+          ? await saveSocial(auth.parkId, body)
+          : await saveConfig(auth.parkId, body);
     if ('error' in result) return json({ error: result.error }, 400);
     return json({ ok: true, data: await loadConfig(auth.parkId) });
   }

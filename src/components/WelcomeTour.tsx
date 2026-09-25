@@ -53,7 +53,7 @@ const ownerSteps: TourStep[] = [
   {
     id: 'leads',
     route: '/leads',
-    title: 'E-Mail-Liste',
+    title: 'CRM',
     benefit: 'Hier erkennst du, welche Gäste ihre Bilder digital freischalten oder nach dem Besuch noch mit dem Bild interagieren.',
     actions: 'Du kannst Kontakte filtern, nach Land segmentieren, einzelne Einträge löschen und die Weltkarte sowie Einlösezeiten auswerten.',
     kpis: 'Wichtig sind Gesamt-Leads, Marketing-Opt-ins, Länder, Zeit zwischen Kauf und Einlösung und die detaillierte Standortkarte.',

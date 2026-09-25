@@ -3,9 +3,27 @@ import { supabase, EXTERNAL_SUPABASE_URL, EXTERNAL_SUPABASE_ANON_KEY } from './s
 export type Localized = Record<string, string>;
 export type QuestionType = 'nps' | 'stars' | 'yesno' | 'choice' | 'text';
 
+export type UnlockMode = 'email' | 'survey' | 'social';
+export type FieldLevel = 'off' | 'optional' | 'required';
+export type SocialPlatform = 'instagram' | 'facebook' | 'tiktok' | 'x' | 'youtube' | 'whatsapp';
+
+export interface SocialSettings {
+  platforms?: SocialPlatform[];
+  handle?: string;
+  hashtag?: string;
+  instructions?: Localized;
+  share_text?: Localized;
+  giveaway_enabled?: boolean;
+  giveaway_text?: Localized;
+  post_link?: FieldLevel;
+}
+
 export interface SurveySettings {
   park_id: string;
-  mode: 'email' | 'survey';
+  mode: UnlockMode;
+  email_mode: FieldLevel;
+  phone_mode: FieldLevel;
+  social: SocialSettings;
   review_url: string | null;
   review_min_score: number;
   intro: Localized;
@@ -126,4 +144,61 @@ export function defaultQuestions(): SurveyQuestion[] {
       is_score_question: false,
     },
   ];
+}
+
+/* ------------------------------------------------------------- Modus, Kontakt, Social */
+
+export function setUnlockMode(parkId: string, mode: UnlockMode): Promise<SurveyConfig> {
+  return call<SurveyConfig>(
+    { method: 'POST', body: JSON.stringify({ park_id: parkId, action: 'set_mode', mode }) },
+    { park_id: parkId },
+  );
+}
+
+export function saveContactSettings(
+  parkId: string,
+  email_mode: FieldLevel,
+  phone_mode: FieldLevel,
+): Promise<SurveyConfig> {
+  return call<SurveyConfig>(
+    { method: 'POST', body: JSON.stringify({ park_id: parkId, action: 'save_contact', email_mode, phone_mode }) },
+    { park_id: parkId },
+  );
+}
+
+export function saveSocialSettings(parkId: string, social: SocialSettings): Promise<SurveyConfig> {
+  return call<SurveyConfig>(
+    { method: 'POST', body: JSON.stringify({ park_id: parkId, action: 'save_social', social }) },
+    { park_id: parkId },
+  );
+}
+
+export interface SocialEntry {
+  id: string;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  giveaway_opt_in: boolean;
+  platform: string | null;
+  handle: string | null;
+  post_url: string | null;
+  posted_at: string | null;
+  created_at: string;
+  country_code: string | null;
+}
+
+export interface SocialResults {
+  days: number;
+  unlocked: number;
+  posted: number;
+  with_link: number;
+  giveaway: number;
+  platforms: { platform: string; count: number }[];
+  timeline: { day: string; unlocked: number; posted: number }[];
+  entries: SocialEntry[];
+  truncated: boolean;
+}
+
+export function fetchSocialResults(parkId: string, days: number): Promise<SocialResults> {
+  return call<SocialResults>({ method: 'GET' }, { park_id: parkId, view: 'social', days: String(days) });
 }

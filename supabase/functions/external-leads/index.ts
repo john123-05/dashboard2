@@ -2,7 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
@@ -40,6 +40,62 @@ async function fetchExternal(path: string) {
   return { ok: true, data };
 }
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function jsonResponse(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+/** Sieht dieser Betreiber den Park? Die Zeilen von `parks` sind per RLS auf seine Parks beschränkt. */
+async function operatorCanSeePark(req: Request, parkId: string): Promise<boolean> {
+  const url = Deno.env.get("SUPABASE_URL");
+  const anon = Deno.env.get("SUPABASE_ANON_KEY");
+  const authorization = req.headers.get("Authorization");
+  if (!url || !anon || !authorization) return false;
+  const res = await fetch(`${url}/rest/v1/parks?select=id&id=eq.${parkId}`, {
+    headers: { apikey: anon, Authorization: authorization },
+  });
+  if (!res.ok) return false;
+  const rows = await res.json().catch(() => []);
+  return Array.isArray(rows) && rows.length > 0;
+}
+
+/**
+ * DELETE { park_id, ids: [claim-id, …] } - löscht Foto-Freischaltungen (photo_claims)
+ * dieses Parks. Der Freischalt-Link der betroffenen Gäste funktioniert danach nicht mehr.
+ */
+async function deleteClaims(req: Request) {
+  const body = await req.json().catch(() => null) as { park_id?: unknown; ids?: unknown } | null;
+  const parkId = typeof body?.park_id === "string" ? body.park_id : "";
+  const ids = Array.isArray(body?.ids) ? body!.ids.map(String) : [];
+  if (!UUID.test(parkId) || ids.length === 0 || ids.length > 500 || !ids.every((id) => UUID.test(id))) {
+    return jsonResponse({ error: "park_id und ids (UUIDs, höchstens 500) erforderlich" }, 400);
+  }
+  if (!(await operatorCanSeePark(req, parkId))) {
+    return jsonResponse({ error: "Kein Zugriff auf diesen Park" }, 403);
+  }
+
+  const res = await fetch(
+    `${APP_SUPABASE_URL}/rest/v1/photo_claims?park_id=eq.${parkId}&id=in.(${ids.join(",")})`,
+    {
+      method: "DELETE",
+      headers: {
+        apikey: APP_SUPABASE_SERVICE_KEY as string,
+        Authorization: `Bearer ${APP_SUPABASE_SERVICE_KEY}`,
+        Prefer: "return=representation",
+      },
+    },
+  );
+  if (!res.ok) {
+    return jsonResponse({ error: "Löschen fehlgeschlagen", details: await res.text() }, 502);
+  }
+  const deleted = await res.json().catch(() => []) as Array<{ id: string }>;
+  return jsonResponse({ deletedIds: deleted.map((r) => r.id) });
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
@@ -47,6 +103,8 @@ Deno.serve(async (req: Request) => {
 
   const envError = requireEnv();
   if (envError) return envError;
+
+  if (req.method === "DELETE") return await deleteClaims(req);
 
   try {
     const url = new URL(req.url);
@@ -60,7 +118,7 @@ Deno.serve(async (req: Request) => {
       // Imst (and any future shop-less park) doesn't create a `users` row at all —
       // claiming a photo there only ever writes to `photo_claims` (service-role
       // only table, by design). Without this, those leads never show up here.
-      fetchExternal(`photo_claims?select=id,full_name,email,park_id,marketing_opt_in,claimed_at,created_at,locale,country_code&order=created_at.desc${parkFilter}`),
+      fetchExternal(`photo_claims?select=id,full_name,email,phone,social_entry_id,park_id,marketing_opt_in,claimed_at,created_at,locale,country_code&order=created_at.desc${parkFilter}`),
     ]);
 
     if (!usersRes.ok) {
@@ -131,18 +189,19 @@ Deno.serve(async (req: Request) => {
     });
 
     const photoClaimLeads = photoClaimsRes.ok
-      // Umfrage-Freischaltungen (Park-Umfrage statt E-Mail) haben keine Adresse
-      // und gehören nicht in die E-Mail-Liste.
+      // Umfrage-Freischaltungen haben weder Adresse noch Telefon und gehören
+      // nicht in die Kontaktliste; Freischaltungen nur mit Telefon schon.
       ? (photoClaimsRes.data as Record<string, unknown>[])
-        .filter((c) => String(c.email ?? "").trim() !== "")
+        .filter((c) => String(c.email ?? "").trim() !== "" || String(c.phone ?? "").trim() !== "")
         .map((c) => {
           const parkId = c.park_id as string | undefined;
           const parkName = parkId ? parkNames.get(parkId) || "Unknown" : "Unknown";
           return {
             id: c.id,
             email: c.email,
+            phone: c.phone ?? null,
             full_name: c.full_name,
-            source: "photo_claim",
+            source: c.social_entry_id ? "social_media" : "photo_claim",
             opted_in: Boolean(c.marketing_opt_in),
             created_at: (c.claimed_at ?? c.created_at) as string,
             locale: c.locale,

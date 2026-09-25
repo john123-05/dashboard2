@@ -21,10 +21,10 @@ const TYPE_LABEL: Record<QuestionType, string> = {
   text: 'Freitext',
 };
 
-const inputClass =
+export const inputClass =
   'w-full rounded-lg border border-slate-200/70 bg-white/70 px-3 py-2 text-sm text-slate-700 outline-none focus:border-brand-400';
 
-function LocalizedField({
+export function LocalizedField({
   label,
   value,
   onChange,
@@ -296,35 +296,7 @@ export default function SurveyManager({ parkId }: { parkId: string }) {
       {tab === 'settings' && config && (
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
           <div className="space-y-5">
-            <GlassCard className="p-5 sm:p-6">
-              <h3 className="text-base font-semibold text-slate-800">Vor der Freischaltung</h3>
-              <p className="mt-0.5 text-sm text-slate-500">Was müssen Gäste tun, um ihr Foto zu sehen?</p>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                {([
-                  ['email', 'E-Mail-Adresse angeben', 'Name, E-Mail und Newsletter-Häkchen'],
-                  ['survey', 'Umfrage beantworten', 'Ein paar Fragen, danach ist das Foto frei'],
-                ] as const).map(([mode, title, sub]) => (
-                  <button
-                    key={mode}
-                    type="button"
-                    onClick={() => patchSettings({ mode })}
-                    className={`rounded-xl border p-4 text-left transition ${
-                      config.settings.mode === mode
-                        ? 'border-brand-400 bg-brand-50/60 ring-1 ring-brand-300'
-                        : 'border-slate-200/70 bg-white/60 hover:bg-white'
-                    }`}
-                  >
-                    <span className="flex items-center gap-2 text-sm font-semibold text-slate-800">
-                      {config.settings.mode === mode && <Check className="h-4 w-4 text-brand-600" />}
-                      {title}
-                    </span>
-                    <span className="mt-1 block text-xs text-slate-500">{sub}</span>
-                  </button>
-                ))}
-              </div>
-            </GlassCard>
-
-            {config.settings.mode === 'survey' && (
+            {(
               <>
                 <GlassCard className="p-5 sm:p-6">
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -516,7 +488,7 @@ export default function SurveyManager({ parkId }: { parkId: string }) {
             </div>
           </div>
 
-          {config.settings.mode === 'survey' && (
+          {(
             <div className="xl:sticky xl:top-4 xl:self-start">
               <SurveyPreview config={config} />
             </div>

@@ -7,7 +7,7 @@ import GlassCard from '../components/ui/GlassCard';
 import DataTable from '../components/ui/DataTable';
 import { useI18n } from '../lib/i18n';
 import { usePark } from '../contexts/ParkContext';
-import SurveyManager from '../components/survey/SurveyManager';
+import UnlockCenter from '../components/survey/UnlockCenter';
 
 type CountryStat = {
   countryCode: string;
@@ -472,36 +472,17 @@ function leadLocaleBadge(item: Record<string, unknown>): string | null {
 }
 
 /**
- * Rahmen mit zwei Reitern: die Kontaktliste (wie bisher) und die Umfrage, mit der
- * Gäste ihr Foto statt per E-Mail-Adresse freischalten können.
+ * CRM: oben der Umschalter (E-Mail / Umfrage / Social Media), darunter je Weg ein
+ * Reiter. Die Kontaktliste steckt im Reiter „Kontakte“.
  */
 export default function Leads({ embedded = false }: { embedded?: boolean } = {}) {
   const { parkId } = usePark();
-  const [pageTab, setPageTab] = useState<'contacts' | 'survey'>('contacts');
-
+  if (!parkId) return <LeadsContacts embedded={embedded} />;
   return (
     <div className={embedded ? 'space-y-5' : 'space-y-6'}>
-      {parkId && (
-        <div className="inline-flex rounded-xl bg-white/50 p-1">
-          {([['contacts', 'E-Mail-Liste'], ['survey', 'Umfrage']] as const).map(([key, label]) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setPageTab(key)}
-              className={`rounded-lg px-4 py-1.5 text-sm font-medium transition ${
-                pageTab === key ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      )}
-      {pageTab === 'survey' && parkId ? (
-        <SurveyManager parkId={parkId} />
-      ) : (
+      <UnlockCenter parkId={parkId}>
         <LeadsContacts embedded={embedded} />
-      )}
+      </UnlockCenter>
     </div>
   );
 }
@@ -583,7 +564,7 @@ function LeadsContacts({ embedded = false }: { embedded?: boolean } = {}) {
     const claimDateKeys = Array.from(
       new Set(
         leads
-          .filter((lead) => lead.source === 'photo_claim')
+          .filter((lead) => lead.source === 'photo_claim' || lead.source === 'social_media')
           .map((lead) => {
             const createdAt = typeof lead.created_at === 'string' ? new Date(lead.created_at) : null;
             return createdAt && !Number.isNaN(createdAt.getTime()) ? localDateKey(createdAt, kioskTimezone) : null;
@@ -748,7 +729,7 @@ function LeadsContacts({ embedded = false }: { embedded?: boolean } = {}) {
     .filter((lead) => {
       const key = emailKey(lead);
       return key && (duplicateInfo.counts.get(key) || 0) > 1 && duplicateInfo.keep.get(key)?.id !== lead.id
-        && lead.source === 'photo_claim' && typeof lead.id === 'string';
+        && (lead.source === 'photo_claim' || lead.source === 'social_media') && typeof lead.id === 'string';
     })
     .map((lead) => String(lead.id));
 
@@ -1002,7 +983,7 @@ function LeadsContacts({ embedded = false }: { embedded?: boolean } = {}) {
   }
 
   function isDeletableLead(lead: Record<string, unknown>) {
-    return lead.source === 'photo_claim' && typeof lead.id === 'string' && lead.id.length > 0;
+    return (lead.source === 'photo_claim' || lead.source === 'social_media') && typeof lead.id === 'string' && lead.id.length > 0;
   }
 
   function toggleLeadSelection(leadId: string) {
@@ -1060,6 +1041,7 @@ function LeadsContacts({ embedded = false }: { embedded?: boolean } = {}) {
     exportToCSV(
         filtered.map((l) => ({
           email: l.email as string,
+          phone: (l.phone as string) || '',
           name: (l.full_name as string) || '',
           source: l.source as string,
           opted_in: l.opted_in ? t('leads.opted_in') : t('leads.opted_out'),
@@ -1138,7 +1120,10 @@ function LeadsContacts({ embedded = false }: { embedded?: boolean } = {}) {
         const localeBadge = leadLocaleBadge(item);
         return (
           <div className="flex flex-col gap-1">
-            <span className="font-medium text-slate-700">{item.email as string}</span>
+            <span className="font-medium text-slate-700">{(item.email as string) || (item.phone as string) || '–'}</span>
+            {Boolean(item.email) && Boolean(item.phone) && (
+              <span className="text-xs text-slate-500">{item.phone as string}</span>
+            )}
             {(duplicateInfo.counts.get(emailKey(item)) || 0) > 1 && (
               duplicateInfo.keep.get(emailKey(item))?.id === item.id ? (
                 <span
@@ -1181,7 +1166,7 @@ function LeadsContacts({ embedded = false }: { embedded?: boolean } = {}) {
       label: t('leads.table.source'),
       render: (item: Record<string, unknown>) => (
         <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
-          {item.source as string}
+          {item.source === 'social_media' ? 'Social Media' : item.source === 'photo_claim' ? 'Foto-Freischaltung' : (item.source as string)}
         </span>
       ),
     },
@@ -1444,7 +1429,7 @@ function LeadsContacts({ embedded = false }: { embedded?: boolean } = {}) {
         columns={columns}
         title={t('leads.title')}
         searchable
-        searchKeys={['email', 'full_name', 'source', 'park_name', 'country_code', 'locale']}
+        searchKeys={['email', 'phone', 'full_name', 'source', 'park_name', 'country_code', 'locale']}
         pageSize={embedded ? 8 : 10}
         embeddedOperator={embedded}
         actions={

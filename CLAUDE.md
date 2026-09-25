@@ -295,6 +295,27 @@ a staff form silently does nothing, check the function actually exists.
   `staff_notification_dispatch_state` tables + a
   `staff-notification-settings` edge fn.
 
+## CRM: Foto freischalten per E-Mail/Telefon, Umfrage oder Social Media (Sep 2026)
+
+- Navigation heisst "CRM" (`/leads`). Oben `UnlockCenter`: Umschalter, was Gaeste zum
+  Freischalten tun (`park_survey_settings.mode` = `email` | `survey` | `social`), darunter
+  Reiter Kontakte (Einstellungen + Liste), Umfrage, Social Media. Wirkt sofort auf der
+  Claim-Seite (Imst: repo `imst`, Bolt-Veroeffentlichung noetig).
+- Tabellen (Projekt kvpc): `park_survey_settings` (mode, email_mode/phone_mode =
+  off|optional|required, social jsonb, review_*), `park_survey_questions`,
+  `park_survey_responses`, `park_social_entries` (nur Service Role), `photo_claims.phone`,
+  `photo_claims.survey_response_id`, `photo_claims.social_entry_id`.
+- Function `operator-survey` (verify_jwt=false): GET Konfiguration/`view=results`/`view=social`,
+  POST Umfrage speichern, `action`: `set_mode` | `save_contact` | `save_social`.
+- Claim-Functions (imst): `imst-claim-submit` liest die Regeln serverseitig,
+  `imst-survey-submit`, `imst-social-submit`, `imst-claim-verify`.
+- Social-Ablauf: Name + Kontakt (+ Gewinnspiel-Haekchen) -> Foto frei -> "Jetzt teilen" mit
+  Hashtag/Profil zum Kopieren -> Gast meldet Beitrag (Link/Profil). Das System kann NICHT
+  pruefen, ob der Beitrag online ist.
+- `external-leads` (Projekt xcrx!) liefert jetzt `phone`, Quelle `social_media`, und kennt
+  `DELETE {park_id, ids}` (vorher gab es kein Loeschen; Zugriff wird ueber die Sichtbarkeit
+  des Parks fuer den Betreiber geprueft). Umfrage-Freischaltungen ohne Kontakt stehen nicht in der Liste.
+
 ## Open items / next steps
 
 1. **Claim gap in Liftpic Sync ingest** (testsoftware repo):
