@@ -1117,16 +1117,11 @@ export default function Leads({ embedded = false }: { embedded?: boolean } = {})
       <div className={`flex items-center justify-between gap-3 ${embedded ? 'customer-operator-pagehead' : ''}`}>
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('leads.title')}</h2>
-          <p className="mt-1 text-sm text-slate-500">{t('leads.subtitle')}</p>
         </div>
         <button onClick={handleExport} className="glass-button-secondary">
           <Download className="h-4 w-4" />
           {t('leads.export')}
         </button>
-      </div>
-
-      <div className="rounded-2xl border border-sky-200 bg-sky-50 p-4">
-        <p className="text-sm text-sky-900">{t('leads.explainer')}</p>
       </div>
 
       {notice && (
