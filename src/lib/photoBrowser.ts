@@ -107,7 +107,9 @@ export async function searchPhotosByDateTime(
 // per-park setting later.
 const CLAIM_BASE_BY_PARK: Record<string, string> = {
   '85c77b81-9f9b-4b4e-9f70-9c6ffa0b9b14': 'https://liftpictures-fotos.de', // Imster Bergbahnen
-  'e2da6436-6a83-4c39-add3-5f99eb6bd897': 'https://liftpictures-fotos-tarzans.de', // CSS-Alpine / Tarzans
+  // liftpictures-fotos-tarzans.de wurde nie registriert; Tarzans laeuft
+  // stattdessen unter /tarzans auf der Imst-Domain (selber bolt.new-Build).
+  'e2da6436-6a83-4c39-add3-5f99eb6bd897': 'https://liftpictures-fotos.de/tarzans', // CSS-Alpine / Tarzans
 };
 
 // Claim link a guest can open to get their photo (via email) - the DB code is
