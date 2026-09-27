@@ -160,11 +160,11 @@ export default function SocialManager({ parkId, initial, onSaved }: {
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div>
                     <p className="mb-1 text-xs font-medium text-slate-600">Unser Profil zum Markieren</p>
-                    <input value={s.handle ?? ''} onChange={(e) => patch({ handle: e.target.value })} placeholder="@imster_bergbahnen" className={inputClass} />
+                    <input value={s.handle ?? ''} onChange={(e) => patch({ handle: e.target.value })} placeholder="@euer_profil" className={inputClass} />
                   </div>
                   <div>
                     <p className="mb-1 text-xs font-medium text-slate-600">Hashtag</p>
-                    <input value={s.hashtag ?? ''} onChange={(e) => patch({ hashtag: e.target.value })} placeholder="#alpinecoaster" className={inputClass} />
+                    <input value={s.hashtag ?? ''} onChange={(e) => patch({ hashtag: e.target.value })} placeholder="#euerhashtag" className={inputClass} />
                   </div>
                 </div>
                 <LocalizedField label="Anleitung für den Gast" value={s.instructions ?? {}} onChange={(instructions) => patch({ instructions })} multiline />
