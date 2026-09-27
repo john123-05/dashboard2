@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Check, ExternalLink, Loader2 } from 'lucide-react';
 import GlassCard from '../ui/GlassCard';
 import { inputClass, LocalizedField } from './SurveyManager';
+import { accentColorForPark } from '../../lib/parkBrand';
 import {
   fetchSocialResults,
   saveSocialSettings,
@@ -37,7 +38,7 @@ function Kpi({ label, value, sub }: { label: string; value: string; sub?: string
   );
 }
 
-function Preview({ s }: { s: SocialSettings }) {
+function Preview({ s, accentColor }: { s: SocialSettings; accentColor: string }) {
   const tags = [s.handle, s.hashtag].filter(Boolean).join(' ');
   return (
     <div className="space-y-3">
@@ -49,7 +50,10 @@ function Preview({ s }: { s: SocialSettings }) {
             {s.instructions?.de || (tags ? `Teile dein Foto und markiere ${tags}.` : 'Teile dein Foto mit deinen Freunden.')}
           </p>
           {tags && <p className="mt-2 text-sm font-medium text-brand-700">{tags}</p>}
-          <span className="mt-3 inline-block rounded bg-amber-400 px-4 py-2 text-xs font-black uppercase italic text-slate-900">
+          <span
+            style={{ backgroundColor: accentColor }}
+            className="mt-3 inline-block rounded px-4 py-2 text-xs font-black uppercase italic text-slate-900"
+          >
             Foto teilen
           </span>
         </div>
@@ -222,7 +226,7 @@ export default function SocialManager({ parkId, initial, onSaved }: {
           </div>
 
           <div className="xl:sticky xl:top-4 xl:self-start">
-            <Preview s={s} />
+            <Preview s={s} accentColor={accentColorForPark(parkId)} />
           </div>
         </div>
       )}
