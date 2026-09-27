@@ -77,7 +77,10 @@ Deno.serve(async (req) => {
       // statt eines Bar/Karte-Anteils.
       card_only: ((c.settings ?? {}) as Record<string, unknown>).card_only === true,
     }))
-    .filter((m) => m.machine_id)
+    // Nur aktive Automaten zaehlen mit - ein abgeschalteter/deaktivierter
+    // Test-PC (z.B. css-alpine-pc1) soll nicht dauerhaft als zweiter Automat
+    // auftauchen, nur weil er frueher mal Verkaeufe hatte.
+    .filter((m) => m.machine_id && m.is_active)
     .sort((a, b) => a.machine_id.localeCompare(b.machine_id))
     .map((m) => {
       const r = revByMachine.get(m.machine_id) ?? {};
