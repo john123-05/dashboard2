@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Users as UsersIcon, Search } from 'lucide-react';
 import { getOptionalSourceWarning, invokeEdgeFunction, isEdgeSourceUnavailable } from '../lib/edgeFunctions';
 import { formatDate, formatCurrency } from '../lib/utils';
+import { fetchGuestActivity, type GuestActivityRow } from '../lib/guestActivity';
 import GlassCard from '../components/ui/GlassCard';
 import { useI18n } from '../lib/i18n';
 import { usePark } from '../contexts/ParkContext';
@@ -25,9 +26,20 @@ export default function Users() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [guestActivity, setGuestActivity] = useState<GuestActivityRow[]>([]);
+  const [guestActivityLoading, setGuestActivityLoading] = useState(true);
 
   useEffect(() => {
     loadData();
+  }, [parkId]);
+
+  useEffect(() => {
+    if (!parkId) return;
+    setGuestActivityLoading(true);
+    fetchGuestActivity(parkId)
+      .then(setGuestActivity)
+      .catch((err) => console.error('Failed to fetch guest activity:', err))
+      .finally(() => setGuestActivityLoading(false));
   }, [parkId]);
 
   async function loadData() {
@@ -127,6 +139,39 @@ export default function Users() {
           <p className="text-sm font-medium text-amber-900">User data is currently unavailable.</p>
           <p className="mt-1 text-sm text-amber-700">{notice}</p>
         </div>
+      )}
+
+      {!guestActivityLoading && guestActivity.length > 0 && (
+        <GlassCard className="p-5">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+            Heute freigeschaltet
+          </h3>
+          <div className="mt-3 flex flex-wrap gap-3">
+            {guestActivity.map((g) => (
+              <div
+                key={g.claimId}
+                className="flex items-center gap-2.5 rounded-xl border border-slate-100 bg-white/60 px-3 py-2"
+              >
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-slate-100 bg-slate-100 text-xs font-semibold text-slate-600">
+                  {g.avatarUrl ? (
+                    <img src={g.avatarUrl} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    ((g.displayName || g.fullName || '?')[0] || '?').toUpperCase()
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-slate-800">
+                    {g.displayName || g.fullName || t('app.unknown')}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    {new Date(g.claimedAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr
+                    {g.speedKmh !== null ? ` · ${g.speedKmh.toFixed(1)} km/h` : ''}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </GlassCard>
       )}
 
       <div className="grid gap-4 sm:grid-cols-3">
