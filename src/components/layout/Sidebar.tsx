@@ -27,6 +27,7 @@ type NavItem = {
   label?: string;
   comingSoon?: boolean;
   kioskUnlocks?: boolean;
+  guestActivityUnlocks?: boolean;
   // Visible to the restricted "staff" role. Everything else is owner-only.
   staffAllowed?: boolean;
   ownerOnly?: boolean;
@@ -36,7 +37,7 @@ const navItems: NavItem[] = [
   { to: '/', icon: LayoutDashboard, labelKey: 'nav.overview', comingSoon: true, kioskUnlocks: true },
   { to: '/revenue', icon: DollarSign, labelKey: 'nav.revenue', comingSoon: true, kioskUnlocks: true },
   { to: '/purchases', icon: ShoppingCart, labelKey: 'nav.purchases', comingSoon: true, kioskUnlocks: true },
-  { to: '/users', icon: Users, labelKey: 'nav.users', comingSoon: true },
+  { to: '/users', icon: Users, labelKey: 'nav.users', comingSoon: true, guestActivityUnlocks: true },
   { to: '/photos', icon: Camera, labelKey: 'nav.photos', staffAllowed: true },
   { to: '/leads', icon: Mail, labelKey: 'nav.leads' },
   { to: '/personalization', icon: Wand2, labelKey: 'nav.personalization', staffAllowed: true },
@@ -63,7 +64,10 @@ export default function Sidebar({
   const { profile, currentOrg, signOut, isStaff, isOwner } = useAuth();
   const location = useLocation();
   const { t } = useI18n();
-  const { parkName, setPark, isKioskPark } = usePark();
+  const { parkName, setPark, isKioskPark, parkId } = usePark();
+  // Same park-gate as GuestActivityAwareOverlay: the Benutzer page only has
+  // real content for CSS-ALPINE/Tarzans so far.
+  const isTarzansPark = parkId === 'e2da6436-6a83-4c39-add3-5f99eb6bd897';
   const showFull = !collapsed || mobileOpen;
 
   const visibleItems = navItems.filter((item) => {
@@ -112,7 +116,10 @@ export default function Sidebar({
               item.to === '/'
                 ? location.pathname === '/'
                 : location.pathname.startsWith(item.to);
-            const showComingSoon = item.comingSoon && !(item.kioskUnlocks && isKioskPark);
+            const showComingSoon =
+              item.comingSoon &&
+              !(item.kioskUnlocks && isKioskPark) &&
+              !(item.guestActivityUnlocks && isTarzansPark);
 
             return (
               <NavLink

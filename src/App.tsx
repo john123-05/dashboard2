@@ -20,8 +20,8 @@ const PrivacyPolicy = seiteNachladen(() => import('./pages/PrivacyPolicy'));
 const LegalSupport = seiteNachladen(() => import('./pages/LegalSupport'));
 import { I18nProvider } from './lib/i18n';
 import { ParkProvider } from './contexts/ParkContext';
-import ComingSoonOverlay from './components/ComingSoonOverlay';
 import KioskAwareOverlay from './components/KioskAwareOverlay';
+import GuestActivityAwareOverlay from './components/GuestActivityAwareOverlay';
 import OwnerOnly from './components/OwnerOnly';
 const Team = seiteNachladen(() => import('./pages/Team'));
 const StaffAdminLayout = seiteNachladen(() => import('./staff/components/AdminLayout'));
@@ -153,9 +153,9 @@ export default function App() {
                   path="/users"
                   element={
                     <OwnerOnly>
-                      <ComingSoonOverlay description="Hier findest du alle registrierten Nutzer-Accounts deines Parks — also Gäste, die sich für den Foto-Shop angemeldet haben.">
+                      <GuestActivityAwareOverlay description="Hier findest du alle registrierten Nutzer-Accounts deines Parks — also Gäste, die sich für den Foto-Shop angemeldet haben.">
                         <Users />
-                      </ComingSoonOverlay>
+                      </GuestActivityAwareOverlay>
                     </OwnerOnly>
                   }
                 />
