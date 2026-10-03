@@ -110,6 +110,8 @@ const CLAIM_BASE_BY_PARK: Record<string, string> = {
   // liftpictures-fotos-tarzans.de wurde nie registriert; Tarzans laeuft
   // stattdessen unter /tarzans auf der Imst-Domain (selber bolt.new-Build).
   'e2da6436-6a83-4c39-add3-5f99eb6bd897': 'https://liftpictures-fotos.de/tarzans', // CSS-Alpine / Tarzans
+  // Gleiches Muster: Plose laeuft unter /plose auf der Imst-Domain.
+  '3b08e092-beb5-46ec-9811-5698e86dd83a': 'https://liftpictures-fotos.de/plose', // Plose
 };
 
 // Claim link a guest can open to get their photo (via email) - the DB code is
