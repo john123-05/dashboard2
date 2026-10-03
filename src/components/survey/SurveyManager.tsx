@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ArrowDown, ArrowUp, Check, Loader2, Plus, Star, Trash2 } from 'lucide-react';
 import GlassCard from '../ui/GlassCard';
 import SurveyResultsView from './SurveyResultsView';
-import { accentColorForPark } from '../../lib/parkBrand';
+import { accentColorForPark, accentTextColorForPark } from '../../lib/parkBrand';
 import {
   defaultQuestions,
   fetchSurveyConfig,
@@ -139,7 +139,15 @@ function PreviewQuestion({ q, index }: { q: SurveyQuestion; index: number }) {
   );
 }
 
-function SurveyPreview({ config, accentColor }: { config: SurveyConfig; accentColor: string }) {
+function SurveyPreview({
+  config,
+  accentColor,
+  accentTextColor,
+}: {
+  config: SurveyConfig;
+  accentColor: string;
+  accentTextColor: string;
+}) {
   const { settings, questions } = config;
   const intro = pickLocalized(settings.intro);
   const review = pickLocalized(settings.review_text) || 'Danke! Magst du uns kurz bei Google bewerten?';
@@ -153,8 +161,8 @@ function SurveyPreview({ config, accentColor }: { config: SurveyConfig; accentCo
         ))}
         <button
           type="button"
-          style={{ backgroundColor: accentColor }}
-          className="w-full rounded px-4 py-2.5 text-sm font-black uppercase italic text-slate-900"
+          style={{ backgroundColor: accentColor, color: accentTextColor }}
+          className="w-full rounded px-4 py-2.5 text-sm font-black uppercase italic"
         >
           Foto freischalten
         </button>
@@ -495,7 +503,11 @@ export default function SurveyManager({ parkId }: { parkId: string }) {
 
           {(
             <div className="xl:sticky xl:top-4 xl:self-start">
-              <SurveyPreview config={config} accentColor={accentColorForPark(parkId)} />
+              <SurveyPreview
+                config={config}
+                accentColor={accentColorForPark(parkId)}
+                accentTextColor={accentTextColorForPark(parkId)}
+              />
             </div>
           )}
         </div>
