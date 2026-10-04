@@ -522,9 +522,7 @@ export default function Overview() {
 
     const isOpen = nowMinutes >= openMinutes && nowMinutes < closeMinutes;
     const label = isOpen
-      ? closeMinutes - nowMinutes <= 180
-        ? `Park geöffnet · schließt in ${formatDurationShort(closeMinutes - nowMinutes)}`
-        : 'Park geöffnet'
+      ? `Park geöffnet · schließt in ${formatDurationShort(closeMinutes - nowMinutes)}`
       : nowMinutes < openMinutes
         ? `Park öffnet in ${formatDurationShort(openMinutes - nowMinutes)}`
         : 'Park heute bereits geschlossen';
