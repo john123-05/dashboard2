@@ -1359,7 +1359,7 @@ function LeadsContacts({
 
       {view === 'overview' && (
       <>
-      <div className="grid grid-cols-2 gap-4 xl:grid-cols-[210px_210px_210px_minmax(0,1fr)]">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
         <CompactMetricCard
           title="Fotos verkauft"
           value={lifetimeSold !== null ? formatNumber(lifetimeSold) : '–'}
@@ -1384,8 +1384,10 @@ function LeadsContacts({
           iconClassName="text-emerald-600"
           iconWrapClassName="bg-emerald-50"
         />
+      </div>
 
-        <GlassCard className="col-span-2 overflow-hidden xl:col-span-1">
+      <div className="grid grid-cols-1">
+        <GlassCard className="overflow-hidden">
           <div className="border-b border-slate-100/90 px-6 py-4">
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-500">Deine Besucher kennenlernen</p>
           </div>
