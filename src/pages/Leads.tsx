@@ -1562,8 +1562,8 @@ function LeadsContacts({
         </div>
 
         {claimSiteBaseFor(parkId) && (
-          <GlassCard className="flex flex-col overflow-hidden p-0 xl:sticky xl:top-4 xl:self-start">
-            <div className="border-b border-slate-100/90 px-4 py-3">
+          <GlassCard className="flex h-full min-h-[700px] flex-col overflow-hidden p-0">
+            <div className="shrink-0 border-b border-slate-100/90 px-4 py-3">
               <p className="text-sm font-semibold text-slate-800">Live-Vorschau</p>
               <p className="text-xs text-slate-500">
                 Die echte Freischaltseite mit dem letzten Foto, noch nicht freigeschaltet.
@@ -1573,7 +1573,7 @@ function LeadsContacts({
               src={claimLinkFor(parkId, latestPhotoCode) ?? claimSiteBaseFor(parkId) ?? undefined}
               title="Live-Vorschau der Freischaltseite"
               scrolling="yes"
-              className="h-[900px] w-full flex-1 border-0"
+              className="w-full flex-1 border-0"
             />
           </GlassCard>
         )}
