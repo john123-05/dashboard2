@@ -10,7 +10,7 @@ type Zeitraum = 'heute' | 'woche' | 'monat' | 'gesamt';
 const ZEITRAEUME: { key: Zeitraum; label: string }[] = [
   { key: 'heute', label: 'Heute' },
   { key: 'woche', label: '7 Tage' },
-  { key: 'monat', label: 'Dieser Monat' },
+  { key: 'monat', label: 'Monat' },
   { key: 'gesamt', label: 'Gesamt' },
 ];
 
@@ -40,7 +40,7 @@ export default function AutomatenUebersicht({ machines }: { machines: MachineRev
           key={z.key}
           type="button"
           onClick={() => setZeitraum(z.key)}
-          className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+          className={`whitespace-nowrap rounded-lg px-2.5 py-1.5 text-xs font-medium transition sm:px-3 sm:text-sm ${
             zeitraum === z.key ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
           }`}
         >
