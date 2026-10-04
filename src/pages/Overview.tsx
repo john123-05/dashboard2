@@ -62,6 +62,7 @@ import {
   type SurveyResults,
   type SocialResults,
 } from '../lib/surveyApi';
+import { fetchRecentPhotos, type BrowsablePhoto } from '../lib/photoBrowser';
 import { useAuth } from '../contexts/AuthContext';
 import { usePark } from '../contexts/ParkContext';
 import { useI18n } from '../lib/i18n';
@@ -135,6 +136,7 @@ export default function Overview() {
   const { t } = useI18n();
   const [kioskDays, setKioskDays] = useState<AggregatedDay[]>([]);
   const [leads, setLeads] = useState<Record<string, unknown>[]>([]);
+  const [recentPhotos, setRecentPhotos] = useState<BrowsablePhoto[]>([]);
   const [unlockMode, setUnlockMode] = useState<UnlockMode | null>(null);
   const [surveyToday, setSurveyToday] = useState<SurveyResults | null>(null);
   const [socialToday, setSocialToday] = useState<SocialResults | null>(null);
@@ -207,6 +209,7 @@ export default function Overview() {
           kioskResult,
           kioskPurchasesResult,
           leadsResult,
+          recentPhotosResult,
           parkDashboardResult,
           externalUsersResult,
           externalPhotosResult,
@@ -217,6 +220,7 @@ export default function Overview() {
             fetchKioskSales(parkId),
             fetchKioskPurchases(parkId).catch(() => null),
             invokeEdgeFunction<{ leads: Record<string, unknown>[] }>('external-leads', { query: { park_id: parkId } }),
+            fetchRecentPhotos(parkId, 4).catch(() => []),
             loadParkDashboardData(parkId).catch(() => ({ data: null, error: 'Operations feed unavailable' })),
             invokeEdgeFunction<{ customers: { id: string }[] }>('external-users', { query: { park_id: parkId } }),
             invokeEdgeFunction<{ photos: { id: string }[] }>('external-photos', { query: { park_id: parkId } }),
@@ -229,6 +233,7 @@ export default function Overview() {
 
         setKioskDays(aggregateByDate(kioskResult.days, kioskResult.priceCents ?? 0));
         setLeads(leadsResult.error ? [] : leadsResult.data?.leads ?? []);
+        setRecentPhotos(recentPhotosResult);
         const kioskParkData =
           parkDashboardResult.data ?? createEmptyParkDashboardData(parkId, parkName || 'Selected park');
         setParkData({
@@ -1199,6 +1204,7 @@ export default function Overview() {
       </div>
 
       {isKioskPark ? (
+      <div className="grid gap-6 xl:grid-cols-[1.8fr_1fr]">
         <GlassCard className="p-5 sm:p-6">
           <div className="mb-4 flex items-center justify-between">
             <div className="min-w-0">
@@ -1246,6 +1252,36 @@ export default function Overview() {
             </div>
           </div>
         </GlassCard>
+
+        <GlassCard className="flex flex-col p-5 sm:p-6">
+          <h3 className="text-base font-semibold text-slate-800">Letzte Fotos</h3>
+          {recentPhotos.length === 0 ? (
+            <p className="mt-6 text-sm text-slate-400">Noch keine Fotos.</p>
+          ) : (
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {recentPhotos.map((photo) => (
+                <div key={photo.id} className="relative aspect-square overflow-hidden rounded-xl bg-slate-100">
+                  {photo.imageUrl && (
+                    <img src={photo.imageUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
+                  )}
+                  {photo.speedKmh !== null && (
+                    <span className="absolute bottom-1 right-1 rounded-md bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                      {Math.round(photo.speedKmh)} km/h
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => navigate('/photos')}
+            className="glass-button-secondary mt-4 w-full justify-center"
+          >
+            Zu den Fotos
+          </button>
+        </GlassCard>
+      </div>
       ) : (
       <div className="grid gap-6 xl:grid-cols-[1.8fr_1fr]">
         <GlassCard className="p-5 sm:p-6">
