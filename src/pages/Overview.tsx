@@ -55,7 +55,7 @@ import {
   type AggregatedDay,
   type MachineRevenue,
 } from '../lib/kioskSales';
-import AutomatenUebersicht from '../components/AutomatenUebersicht';
+import { AUTOMAT_FARBEN } from '../lib/automatFarben';
 import { useAuth } from '../contexts/AuthContext';
 import { usePark } from '../contexts/ParkContext';
 import { useI18n } from '../lib/i18n';
@@ -912,9 +912,45 @@ export default function Overview() {
           {machines.length >= 2 && (
             <GlassCard className="p-5 sm:p-6">
               <h3 className="text-base font-semibold text-slate-800">Automaten</h3>
-              <div className="mt-3">
-                <AutomatenUebersicht machines={machines} />
+              <p className="mt-1 text-xs text-slate-500">Heute</p>
+              <div className="relative mx-auto mt-2 h-40 w-40">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={machines.map((m) => ({ name: m.machine_label, value: m.heute.anzahl }))}
+                      dataKey="value"
+                      innerRadius={44}
+                      outerRadius={70}
+                      strokeWidth={0}
+                      startAngle={90}
+                      endAngle={-270}
+                    >
+                      {machines.map((m, i) => (
+                        <Cell key={m.machine_id} fill={AUTOMAT_FARBEN[i % AUTOMAT_FARBEN.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => `${formatNumber(Number(value))} Käufe`} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-lg font-bold text-slate-800">
+                    {formatNumber(machines.reduce((sum, m) => sum + m.heute.anzahl, 0))}
+                  </span>
+                  <span className="text-[10px] text-slate-400">Käufe heute</span>
+                </div>
               </div>
+              <ul className="mt-3 space-y-1.5">
+                {machines.map((m, i) => (
+                  <li key={m.machine_id} className="flex items-center gap-2 text-sm">
+                    <span
+                      className="h-2.5 w-2.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: AUTOMAT_FARBEN[i % AUTOMAT_FARBEN.length] }}
+                    />
+                    <span className="flex-1 truncate text-slate-700">{m.machine_label}</span>
+                    <span className="tabular-nums text-slate-500">{formatNumber(m.heute.anzahl)}</span>
+                  </li>
+                ))}
+              </ul>
             </GlassCard>
           )}
 
