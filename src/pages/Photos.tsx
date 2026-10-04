@@ -12,6 +12,7 @@ import { fetchRecentPhotos, searchPhotosByCode, searchPhotosByDateTime, claimLin
 import { fetchKioskSales, fetchKioskPhotosForDay, aggregateByDate, todayInTimezone, type AggregatedDay } from '../lib/kioskSales';
 import { EXTERNAL_SUPABASE_URL, EXTERNAL_SUPABASE_ANON_KEY } from '../lib/supabase';
 import { getFunctionSession } from '../lib/functionAuth';
+import { fetchSurveyConfig, fetchSurveyResults, fetchSocialResults, type UnlockMode } from '../lib/surveyApi';
 
 const ASSETS_URL = `${EXTERNAL_SUPABASE_URL}/functions/v1/operator-liftpic-assets`;
 
@@ -65,8 +66,11 @@ export default function Photos({ embedded = false }: { embedded?: boolean } = {}
   const [soldLifetime, setSoldLifetime] = useState(0);
   const [attrName, setAttrName] = useState('Automat');
   const [selectedDate, setSelectedDate] = useState('');
-  // Kiosk-only: of the day's buyers, how many left an email (E-Mail-Erfassung).
+  // Kiosk-only: of the day's buyers, how many completed whatever the park's
+  // currently active unlock mode is (email/survey/social) - shown as
+  // "E-Mail-/Umfrage-/Social-Media-Erfassung" depending on unlockMode.
   const [emailDay, setEmailDay] = useState<{ given: number; total: number } | null>(null);
+  const [unlockMode, setUnlockMode] = useState<UnlockMode | null>(null);
   const [attractionStats, setAttractionStats] = useState<AttractionPhotoStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -187,29 +191,65 @@ export default function Photos({ embedded = false }: { embedded?: boolean } = {}
     setAttractionStats([{ name: attrName, total: taken, purchased: sold, available, expired: 0 }]);
   }, [isKioskPark, isStaff, kioskDays, selectedDate, soldLifetime, attrName]);
 
-  // Kiosk: how many of the selected day's buyers left an email address. Reads
-  // the day's individual purchases (each carries an email field), so it fills
-  // automatically once email capture is switched on at the kiosk.
+  // Which unlock mode is currently live (email/survey/social) - drives both
+  // the label ("E-Mail-/Umfrage-/Social-Media-Erfassung") and which source
+  // the day's "given" count below comes from.
   useEffect(() => {
-    if (!isKioskPark || isStaff || !parkId || !selectedDate) {
+    if (!isKioskPark || isStaff || !parkId) {
+      setUnlockMode(null);
+      return;
+    }
+    let cancelled = false;
+    fetchSurveyConfig(parkId)
+      .then((config) => { if (!cancelled) setUnlockMode(config.settings.mode); })
+      .catch(() => { if (!cancelled) setUnlockMode(null); });
+    return () => {
+      cancelled = true;
+    };
+  }, [isKioskPark, isStaff, parkId]);
+
+  // Kiosk: of the selected day's buyers, how many completed the currently
+  // active unlock mode. E-Mail-Modus liest die Käufe des Tages direkt (jede
+  // trägt ein email-Feld); Umfrage/Social lesen die Tages-Zeitreihe aus den
+  // jeweiligen Auswertungs-Functions, weil diese Claims keine einzelnen
+  // photos-Zeilen mit Kontakt sind.
+  useEffect(() => {
+    if (!isKioskPark || isStaff || !parkId || !selectedDate || !unlockMode) {
       setEmailDay(null);
       return;
     }
     let cancelled = false;
-    fetchKioskPhotosForDay(parkId, selectedDate)
-      .then((res) => {
-        if (cancelled) return;
-        const purchases = res.purchases ?? [];
-        const given = purchases.filter((p) => p.email && p.email.trim()).length;
-        setEmailDay({ given, total: purchases.length });
-      })
-      .catch(() => {
-        if (!cancelled) setEmailDay(null);
-      });
+
+    if (unlockMode === 'survey' || unlockMode === 'social') {
+      const today = todayInTimezone(kioskTimezone);
+      const daysBack = Math.min(
+        365,
+        Math.max(1, Math.round((Date.parse(today) - Date.parse(selectedDate)) / 86400000) + 2),
+      );
+      const total = kioskDays.find((d) => d.businessDate === selectedDate)?.soldCount ?? 0;
+      const request = unlockMode === 'survey'
+        ? fetchSurveyResults(parkId, daysBack).then((r) => r.timeline.find((t) => t.day === selectedDate)?.count ?? 0)
+        : fetchSocialResults(parkId, daysBack).then((r) => r.timeline.find((t) => t.day === selectedDate)?.unlocked ?? 0);
+      request
+        .then((given) => { if (!cancelled) setEmailDay({ given, total }); })
+        .catch(() => { if (!cancelled) setEmailDay(null); });
+    } else {
+      fetchKioskPhotosForDay(parkId, selectedDate)
+        .then((res) => {
+          if (cancelled) return;
+          const purchases = res.purchases ?? [];
+          const given = purchases.filter((p) => p.email && p.email.trim()).length;
+          setEmailDay({ given, total: purchases.length });
+        })
+        .catch(() => {
+          if (!cancelled) setEmailDay(null);
+        });
+    }
+
     return () => {
       cancelled = true;
     };
-  }, [isKioskPark, isStaff, parkId, selectedDate]);
+  }, [isKioskPark, isStaff, parkId, selectedDate, unlockMode, kioskDays, kioskTimezone]);
 
   useEffect(() => {
     setSelectedPhoto(null);
@@ -821,10 +861,20 @@ export default function Photos({ embedded = false }: { embedded?: boolean } = {}
             {!isStaff && emailDay && (
               <div className="flex items-center justify-between gap-3 rounded-xl bg-white/30 p-3.5 sm:gap-4 sm:p-4">
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-slate-700">E-Mail-Erfassung</p>
+                  <p className="text-sm font-medium text-slate-700">
+                    {unlockMode === 'survey'
+                      ? 'Umfrage-Erfassung'
+                      : unlockMode === 'social'
+                        ? 'Social-Media-Erfassung'
+                        : 'E-Mail-Erfassung'}
+                  </p>
                   <p className="mt-1 text-xs text-slate-400">
                     {emailDay.total > 0
-                      ? `${formatNumber(emailDay.given)} von ${formatNumber(emailDay.total)} Käufern`
+                      ? unlockMode === 'survey'
+                        ? `${formatNumber(emailDay.given)} von ${formatNumber(emailDay.total)} Käufern haben die Umfrage ausgefüllt`
+                        : unlockMode === 'social'
+                          ? `${formatNumber(emailDay.given)} von ${formatNumber(emailDay.total)} Käufern freigeschaltet`
+                          : `${formatNumber(emailDay.given)} von ${formatNumber(emailDay.total)} Käufern`
                       : 'Keine Käufe an diesem Tag'}
                   </p>
                 </div>
