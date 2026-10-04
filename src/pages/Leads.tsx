@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Camera, Download, ExternalLink, Mail, Minus, Plus, Trash2, UserPlus } from 'lucide-react';
 import { getOptionalSourceWarning, invokeEdgeFunction, isEdgeSourceUnavailable } from '../lib/edgeFunctions';
 import { fetchKioskPhotosForDay, fetchKioskSales, getClosingMinutesForDate, type KioskPurchaseRow } from '../lib/kioskSales';
-import { claimSiteBaseFor, fetchRecentPhotos, type BrowsablePhoto } from '../lib/photoBrowser';
+import { claimSiteBaseFor } from '../lib/photoBrowser';
 import { formatDate, formatNumber, exportToCSV } from '../lib/utils';
 import GlassCard from '../components/ui/GlassCard';
 import DataTable from '../components/ui/DataTable';
@@ -544,7 +544,6 @@ function LeadsContacts({
   const [lifetimeSold, setLifetimeSold] = useState<number | null>(null);
   const [overviewSurvey, setOverviewSurvey] = useState<SurveyResults | null>(null);
   const [overviewSocial, setOverviewSocial] = useState<SocialResults | null>(null);
-  const [latestPhoto, setLatestPhoto] = useState<BrowsablePhoto | null>(null);
 
   useEffect(() => {
     loadData();
@@ -559,10 +558,6 @@ function LeadsContacts({
         if (active) setLifetimeSold(res.days.reduce((sum, d) => sum + d.photos_sold_count, 0));
       })
       .catch(() => active && setLifetimeSold(null));
-
-    fetchRecentPhotos(parkId, 1)
-      .then((photos) => active && setLatestPhoto(photos[0] ?? null))
-      .catch(() => active && setLatestPhoto(null));
 
     fetchSurveyConfig(parkId)
       .then((config) => {
@@ -1294,97 +1289,87 @@ function LeadsContacts({
 
       {view === 'overview' && (
       <>
+      <div className="grid gap-4 xl:grid-cols-[1fr_360px] xl:items-start">
       <GlassCard className="p-5 sm:p-6">
-        <div className="grid gap-5 md:grid-cols-[1fr_auto] md:items-start">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2">
-                  {unlockMode && <span className="h-2 w-2 rounded-full bg-emerald-500" aria-hidden="true" />}
-                  <p className="text-sm font-medium text-slate-700">
-                    {unlockMode === 'email'
-                      ? 'Freischaltung läuft gerade über E-Mail / Telefon'
-                      : unlockMode === 'survey'
-                        ? 'Freischaltung läuft gerade über die Umfrage'
-                        : unlockMode === 'social'
-                          ? 'Freischaltung läuft gerade über Social Media'
-                          : 'Freischalt-Modus wird geladen…'}
-                  </p>
-                </div>
-                <p className="mt-1 text-sm text-slate-500">So sieht die Freischaltseite gerade für Gäste aus.</p>
-              </div>
-              {claimSiteBaseFor(parkId) && (
-                <a
-                  href={claimSiteBaseFor(parkId) ?? undefined}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="glass-button-secondary"
-                >
-                  Jetzt dahin kommen
-                  <ExternalLink className="h-4 w-4" />
-                </a>
-              )}
+            <div className="flex items-center gap-2">
+              {unlockMode && <span className="h-2 w-2 rounded-full bg-emerald-500" aria-hidden="true" />}
+              <p className="text-sm font-medium text-slate-700">
+                {unlockMode === 'email'
+                  ? 'Freischaltung läuft gerade über E-Mail / Telefon'
+                  : unlockMode === 'survey'
+                    ? 'Freischaltung läuft gerade über die Umfrage'
+                    : unlockMode === 'social'
+                      ? 'Freischaltung läuft gerade über Social Media'
+                      : 'Freischalt-Modus wird geladen…'}
+              </p>
             </div>
-
-            {unlockMode === 'survey' && overviewSurvey && (
-              <div className="mt-4 grid grid-cols-3 gap-3 border-t border-slate-100 pt-4">
-                <div>
-                  <p className="text-xs text-slate-500">Antworten (30 Tage)</p>
-                  <p className="text-lg font-bold text-slate-800">{formatNumber(overviewSurvey.total)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500">Ø Bewertung</p>
-                  <p className="text-lg font-bold text-slate-800">
-                    {overviewSurvey.average_score != null ? overviewSurvey.average_score.toFixed(1) : '–'}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500">NPS</p>
-                  <p className="text-lg font-bold text-slate-800">{overviewSurvey.nps ?? '–'}</p>
-                </div>
-              </div>
-            )}
-            {unlockMode === 'social' && overviewSocial && (
-              <div className="mt-4 grid grid-cols-3 gap-3 border-t border-slate-100 pt-4">
-                <div>
-                  <p className="text-xs text-slate-500">Freischaltungen (30 Tage)</p>
-                  <p className="text-lg font-bold text-slate-800">{formatNumber(overviewSocial.unlocked)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500">Geteilt</p>
-                  <p className="text-lg font-bold text-slate-800">{formatNumber(overviewSocial.posted)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500">Gewinnspiel-Teilnahmen</p>
-                  <p className="text-lg font-bold text-slate-800">{formatNumber(overviewSocial.giveaway)}</p>
-                </div>
-              </div>
-            )}
+            <p className="mt-1 text-sm text-slate-500">So sieht die Freischaltseite gerade für Gäste aus.</p>
           </div>
-
-          {latestPhoto?.imageUrl && (
-            <div className="flex gap-3">
-              <div className="w-28 sm:w-32">
-                <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-slate-100">
-                  <img
-                    src={latestPhoto.imageUrl}
-                    alt=""
-                    className="h-full w-full scale-105 object-cover blur-md"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-black/5" />
-                </div>
-                <p className="mt-1.5 text-center text-[11px] text-slate-500">Vor Freischaltung</p>
-              </div>
-              <div className="w-28 sm:w-32">
-                <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-slate-100">
-                  <img src={latestPhoto.imageUrl} alt="" className="h-full w-full object-cover" />
-                </div>
-                <p className="mt-1.5 text-center text-[11px] text-slate-500">Nach Freischaltung</p>
-              </div>
-            </div>
+          {claimSiteBaseFor(parkId) && (
+            <a
+              href={claimSiteBaseFor(parkId) ?? undefined}
+              target="_blank"
+              rel="noreferrer"
+              className="glass-button-secondary"
+            >
+              Jetzt dahin kommen
+              <ExternalLink className="h-4 w-4" />
+            </a>
           )}
         </div>
+
+        {unlockMode === 'survey' && overviewSurvey && (
+          <div className="mt-4 grid grid-cols-3 gap-3 border-t border-slate-100 pt-4">
+            <div>
+              <p className="text-xs text-slate-500">Antworten (30 Tage)</p>
+              <p className="text-lg font-bold text-slate-800">{formatNumber(overviewSurvey.total)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-500">Ø Bewertung</p>
+              <p className="text-lg font-bold text-slate-800">
+                {overviewSurvey.average_score != null ? overviewSurvey.average_score.toFixed(1) : '–'}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-500">NPS</p>
+              <p className="text-lg font-bold text-slate-800">{overviewSurvey.nps ?? '–'}</p>
+            </div>
+          </div>
+        )}
+        {unlockMode === 'social' && overviewSocial && (
+          <div className="mt-4 grid grid-cols-3 gap-3 border-t border-slate-100 pt-4">
+            <div>
+              <p className="text-xs text-slate-500">Freischaltungen (30 Tage)</p>
+              <p className="text-lg font-bold text-slate-800">{formatNumber(overviewSocial.unlocked)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-500">Geteilt</p>
+              <p className="text-lg font-bold text-slate-800">{formatNumber(overviewSocial.posted)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-500">Gewinnspiel-Teilnahmen</p>
+              <p className="text-lg font-bold text-slate-800">{formatNumber(overviewSocial.giveaway)}</p>
+            </div>
+          </div>
+        )}
       </GlassCard>
+
+      {claimSiteBaseFor(parkId) && (
+        <GlassCard className="overflow-hidden p-0">
+          <div className="border-b border-slate-100/90 px-4 py-3">
+            <p className="text-sm font-semibold text-slate-800">Live-Vorschau</p>
+            <p className="text-xs text-slate-500">Die echte Freischaltseite, wie Gäste sie gerade sehen.</p>
+          </div>
+          <iframe
+            src={claimSiteBaseFor(parkId) ?? undefined}
+            title="Live-Vorschau der Freischaltseite"
+            className="h-[520px] w-full border-0"
+          />
+        </GlassCard>
+      )}
+      </div>
       </>
       )}
 
