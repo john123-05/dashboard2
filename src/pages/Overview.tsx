@@ -860,11 +860,7 @@ export default function Overview() {
             </h2>
             {!isKioskPark && <span className={`status-badge ${statusTone}`}>{systemStatusLabel}</span>}
             {parkOpenStatus && (
-              <span
-                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${
-                  parkOpenStatus.isOpen ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'
-                }`}
-              >
+              <span className="inline-flex items-center gap-1.5 text-sm text-slate-500">
                 <span
                   className={`h-1.5 w-1.5 rounded-full ${parkOpenStatus.isOpen ? 'bg-emerald-500' : 'bg-slate-400'}`}
                   aria-hidden="true"
