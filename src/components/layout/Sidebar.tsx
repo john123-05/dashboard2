@@ -190,8 +190,19 @@ export default function Sidebar({
         key={item.to}
         className={`group/row relative flex items-center ${draggedTo === item.to ? 'opacity-40' : ''}`}
         draggable={draggable}
-        onDragStart={() => setDraggedTo(item.to)}
-        onDragOver={(event) => draggable && event.preventDefault()}
+        onDragStart={(event) => {
+          if (!draggable) return;
+          // Firefox silently refuses the whole drag unless dataTransfer
+          // actually carries something.
+          event.dataTransfer.effectAllowed = 'move';
+          event.dataTransfer.setData('text/plain', item.to);
+          setDraggedTo(item.to);
+        }}
+        onDragOver={(event) => {
+          if (!draggable) return;
+          event.preventDefault();
+          event.dataTransfer.dropEffect = 'move';
+        }}
         onDrop={(event) => {
           if (!draggable) return;
           event.preventDefault();
