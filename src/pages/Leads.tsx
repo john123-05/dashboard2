@@ -1295,6 +1295,16 @@ function LeadsContacts({
               onSaved={loadContactConfig}
             />
           )}
+          <div className="flex shrink-0 gap-3 rounded-xl border border-slate-200/70 bg-white/60 px-3 py-1.5 text-xs">
+            <div>
+              <p className="text-slate-400">Kontakte insgesamt</p>
+              <p className="font-semibold text-slate-800">{formatNumber(stats.total)}</p>
+            </div>
+            <div className="border-l border-slate-200 pl-3">
+              <p className="text-slate-400">Kontakte Opt-in</p>
+              <p className="font-semibold text-slate-800">{formatNumber(stats.optedIn)}</p>
+            </div>
+          </div>
           <button onClick={handleExport} className="glass-button-secondary">
             <Download className="h-4 w-4" />
             {t('leads.export')}
