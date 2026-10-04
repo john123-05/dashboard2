@@ -26,13 +26,17 @@ import {
 } from '../lib/parkDashboard';
 import {
   aggregateByDate,
+  bucketPurchasesByHour,
   daysAgoInTimezone,
+  fetchKioskPhotosForDay,
   fetchKioskPurchases,
   fetchKioskSales,
+  getOpeningHourRangeForDate,
   sumDays,
   todayInTimezone,
   toChartSeries,
   type AggregatedDay,
+  type HourlyBucket,
 } from '../lib/kioskSales';
 import { useAuth } from '../contexts/AuthContext';
 import { usePark } from '../contexts/ParkContext';
@@ -94,9 +98,19 @@ interface RecentSupportMessage {
 export default function Overview() {
   const navigate = useNavigate();
   const { profile } = useAuth();
-  const { parkId, parkName, isKioskPark, kioskTimezone, kioskCheckLoading } = usePark();
+  const {
+    parkId,
+    parkName,
+    isKioskPark,
+    kioskTimezone,
+    kioskOpeningHours,
+    kioskOpeningHoursConfig,
+    kioskPriceCents,
+    kioskCheckLoading,
+  } = usePark();
   const { t } = useI18n();
   const [kioskDays, setKioskDays] = useState<AggregatedDay[]>([]);
+  const [todayHourly, setTodayHourly] = useState<HourlyBucket[]>([]);
   const [parkData, setParkData] = useState<ParkDashboardData | null>(null);
   const [combinedDaily, setCombinedDaily] = useState<CombinedDailyPoint[]>([]);
   const [recentTransactions, setRecentTransactions] = useState<ActivityItem[]>([]);
@@ -162,6 +176,7 @@ export default function Overview() {
         const [
           kioskResult,
           kioskPurchasesResult,
+          todayPhotosResult,
           parkDashboardResult,
           externalUsersResult,
           externalPhotosResult,
@@ -171,6 +186,7 @@ export default function Overview() {
           await Promise.all([
             fetchKioskSales(parkId),
             fetchKioskPurchases(parkId).catch(() => null),
+            fetchKioskPhotosForDay(parkId, todayInTimezone(kioskTimezone)).catch(() => null),
             loadParkDashboardData(parkId).catch(() => ({ data: null, error: 'Operations feed unavailable' })),
             invokeEdgeFunction<{ customers: { id: string }[] }>('external-users', { query: { park_id: parkId } }),
             invokeEdgeFunction<{ photos: { id: string }[] }>('external-photos', { query: { park_id: parkId } }),
@@ -182,6 +198,17 @@ export default function Overview() {
           ]);
 
         setKioskDays(aggregateByDate(kioskResult.days, kioskResult.priceCents ?? 0));
+
+        const todayHourRange = getOpeningHourRangeForDate(
+          kioskOpeningHours,
+          todayInTimezone(kioskTimezone),
+          kioskOpeningHoursConfig,
+        );
+        setTodayHourly(
+          todayPhotosResult
+            ? bucketPurchasesByHour(todayPhotosResult.purchases, kioskPriceCents ?? 0, kioskTimezone, todayHourRange)
+            : [],
+        );
         const kioskParkData =
           parkDashboardResult.data ?? createEmptyParkDashboardData(parkId, parkName || 'Selected park');
         setParkData({
@@ -438,6 +465,26 @@ export default function Overview() {
 
   const kioskChartData = useMemo(() => toChartSeries(kioskDays), [kioskDays]);
 
+  const parkOpenStatus = useMemo(() => {
+    if (!isKioskPark) return null;
+    const range = getOpeningHourRangeForDate(kioskOpeningHours, todayInTimezone(kioskTimezone), kioskOpeningHoursConfig);
+    if (!range) return null;
+    const nowHour = Number(
+      new Intl.DateTimeFormat('en-GB', { timeZone: kioskTimezone, hour: '2-digit', hourCycle: 'h23' }).format(new Date()),
+    );
+    const isOpen = nowHour >= range.startHour && nowHour < range.endHour;
+    return { isOpen, range };
+  }, [isKioskPark, kioskOpeningHours, kioskOpeningHoursConfig, kioskTimezone]);
+
+  const peakHour = useMemo(() => {
+    if (todayHourly.length === 0) return null;
+    return todayHourly.reduce((best, current) => (current.soldCount > best.soldCount ? current : best));
+  }, [todayHourly]);
+  const maxHourlySold = useMemo(
+    () => todayHourly.reduce((max, bucket) => Math.max(max, bucket.soldCount), 0),
+    [todayHourly],
+  );
+
   const onlineRevenueCents = useMemo(
     () => Math.round(
       combinedDaily.reduce((sum, item) => sum + item.onlineRevenue, 0) * 100,
@@ -649,6 +696,17 @@ export default function Overview() {
               {t('overview.title')}
             </h2>
             {!isKioskPark && <span className={`status-badge ${statusTone}`}>{systemStatusLabel}</span>}
+            {parkOpenStatus && (
+              <span
+                className={`rounded-full px-3 py-1 text-xs font-medium ${
+                  parkOpenStatus.isOpen ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'
+                }`}
+              >
+                {parkOpenStatus.isOpen
+                  ? `Park ist jetzt geöffnet (bis ${parkOpenStatus.range.endHour}:00)`
+                  : `Park ist jetzt geschlossen (öffnet ${parkOpenStatus.range.startHour}:00)`}
+              </span>
+            )}
           </div>
           <p className="mt-1 text-sm text-slate-500">
             {parkName || parkData.park_name}
@@ -735,6 +793,37 @@ export default function Overview() {
             iconBg="bg-violet-50"
           />
         </div>
+      )}
+
+      {isKioskPark && todayHourly.length > 0 && (
+        <GlassCard className="p-5 sm:p-6">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h3 className="text-base font-semibold text-slate-800">Stoßzeiten heute</h3>
+            {peakHour && peakHour.soldCount > 0 && (
+              <p className="text-sm text-slate-500">
+                Am meisten verkauft: <span className="font-medium text-slate-700">{peakHour.label}</span> ({formatNumber(peakHour.soldCount)} Fotos)
+              </p>
+            )}
+          </div>
+          <div className="mt-4 flex items-end gap-1.5 overflow-x-auto pb-1">
+            {todayHourly.map((bucket) => {
+              const heightPercent = maxHourlySold > 0 ? Math.max(6, (bucket.soldCount / maxHourlySold) * 100) : 6;
+              const isPeak = peakHour && bucket.hour === peakHour.hour && bucket.soldCount > 0;
+              return (
+                <div key={bucket.hour} className="flex min-w-[28px] flex-col items-center gap-1">
+                  <div className="flex h-24 w-full items-end">
+                    <div
+                      className={`w-full rounded-t-md ${isPeak ? 'bg-sky-500' : 'bg-sky-200'}`}
+                      style={{ height: `${heightPercent}%` }}
+                      title={`${bucket.label}: ${bucket.soldCount} Fotos`}
+                    />
+                  </div>
+                  <span className="text-[10px] text-slate-400">{bucket.label}</span>
+                </div>
+              );
+            })}
+          </div>
+        </GlassCard>
       )}
 
       {!isKioskPark && (
