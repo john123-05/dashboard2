@@ -45,7 +45,6 @@ import {
   fetchKioskPhotosForDay,
   fetchKioskPurchases,
   fetchKioskSales,
-  fetchMachineRevenue,
   fetchRideSnapshots,
   getEffectiveScheduleForDate,
   getOpeningHourRangeForDate,
@@ -54,9 +53,7 @@ import {
   todayInTimezone,
   toChartSeries,
   type AggregatedDay,
-  type MachineRevenue,
 } from '../lib/kioskSales';
-import { AUTOMAT_FARBEN } from '../lib/automatFarben';
 import {
   fetchSurveyConfig,
   fetchSurveyResults,
@@ -137,7 +134,6 @@ export default function Overview() {
   } = usePark();
   const { t } = useI18n();
   const [kioskDays, setKioskDays] = useState<AggregatedDay[]>([]);
-  const [machines, setMachines] = useState<MachineRevenue[]>([]);
   const [leads, setLeads] = useState<Record<string, unknown>[]>([]);
   const [unlockMode, setUnlockMode] = useState<UnlockMode | null>(null);
   const [surveyToday, setSurveyToday] = useState<SurveyResults | null>(null);
@@ -210,7 +206,6 @@ export default function Overview() {
         const [
           kioskResult,
           kioskPurchasesResult,
-          machineRevenueResult,
           leadsResult,
           parkDashboardResult,
           externalUsersResult,
@@ -221,7 +216,6 @@ export default function Overview() {
           await Promise.all([
             fetchKioskSales(parkId),
             fetchKioskPurchases(parkId).catch(() => null),
-            fetchMachineRevenue(parkId).catch(() => []),
             invokeEdgeFunction<{ leads: Record<string, unknown>[] }>('external-leads', { query: { park_id: parkId } }),
             loadParkDashboardData(parkId).catch(() => ({ data: null, error: 'Operations feed unavailable' })),
             invokeEdgeFunction<{ customers: { id: string }[] }>('external-users', { query: { park_id: parkId } }),
@@ -234,7 +228,6 @@ export default function Overview() {
           ]);
 
         setKioskDays(aggregateByDate(kioskResult.days, kioskResult.priceCents ?? 0));
-        setMachines(machineRevenueResult);
         setLeads(leadsResult.error ? [] : leadsResult.data?.leads ?? []);
         const kioskParkData =
           parkDashboardResult.data ?? createEmptyParkDashboardData(parkId, parkName || 'Selected park');
@@ -991,58 +984,6 @@ export default function Overview() {
             </div>
           </GlassCard>
 
-          {machines.length >= 2 && (
-            <GlassCard className="p-5 sm:p-6">
-              <h3 className="text-base font-semibold text-slate-800">Verteilung nach Automaten</h3>
-              <p className="mt-1 text-xs text-slate-500">Heute</p>
-              <div className="relative mx-auto mt-2 h-40 w-40">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={machines.map((m) => ({ name: m.machine_label, value: m.heute.anzahl }))}
-                      dataKey="value"
-                      innerRadius={44}
-                      outerRadius={70}
-                      strokeWidth={0}
-                      startAngle={90}
-                      endAngle={-270}
-                    >
-                      {machines.map((m, i) => (
-                        <Cell key={m.machine_id} fill={AUTOMAT_FARBEN[i % AUTOMAT_FARBEN.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value) => `${formatNumber(Number(value))} Käufe`} />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-base font-semibold tabular-nums text-slate-800">
-                    {formatCurrency(machines.reduce((sum, m) => sum + m.heute.cent, 0), 'eur')}
-                  </span>
-                  <span className="text-[11px] text-slate-500">
-                    {formatNumber(machines.reduce((sum, m) => sum + m.heute.anzahl, 0))} Käufe
-                  </span>
-                </div>
-              </div>
-              <ul className="mt-3 space-y-1.5">
-                {(() => {
-                  const gesamt = machines.reduce((sum, m) => sum + m.heute.anzahl, 0);
-                  return machines.map((m, i) => (
-                    <li key={m.machine_id} className="flex items-center gap-2 text-sm">
-                      <span
-                        className="h-2.5 w-2.5 shrink-0 rounded-full"
-                        style={{ backgroundColor: AUTOMAT_FARBEN[i % AUTOMAT_FARBEN.length] }}
-                      />
-                      <span className="flex-1 truncate text-slate-700">{m.machine_label}</span>
-                      <span className="tabular-nums text-slate-500">
-                        {gesamt > 0 ? Math.round((m.heute.anzahl / gesamt) * 100) : 0} %
-                      </span>
-                    </li>
-                  ));
-                })()}
-              </ul>
-            </GlassCard>
-          )}
-
           <GlassCard className="p-5 sm:p-6">
             <h3 className="text-base font-semibold text-slate-800">Erfassung von Nutzerdaten</h3>
             {unlockMode && (
@@ -1122,6 +1063,54 @@ export default function Overview() {
                 </div>
               </dl>
             )}
+          </GlassCard>
+
+          <GlassCard className="overflow-hidden p-5 sm:p-6">
+            <h3 className="text-base font-semibold text-slate-800">Alerts & Activity</h3>
+            <div className="mt-3 max-h-[360px] space-y-3 overflow-y-auto pr-1">
+              {visibleActivityItems.length === 0 ? (
+                <p className="text-sm text-slate-500">
+                  {activityItems.length === 0 ? 'No alerts or activity found.' : 'All alerts have been cleared.'}
+                </p>
+              ) : (
+                visibleActivityItems.map((item) => (
+                  <div key={item.id} className="overflow-hidden rounded-xl bg-white/30 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="mb-1 flex items-center gap-2">
+                          {item.severity ? (
+                            <span className={`rounded-lg px-2 py-1 text-xs font-semibold ${severityColor(item.severity)}`}>
+                              {item.severity}
+                            </span>
+                          ) : (
+                            <span className="status-badge bg-slate-50 text-slate-600 ring-slate-200">
+                              {item.source === 'support' ? 'Support' : item.source === 'stripe' ? 'Stripe' : 'Ops'}
+                            </span>
+                          )}
+                          {item.status && (
+                            <span className={`status-badge ${statusColor(item.status)}`}>{item.status}</span>
+                          )}
+                        </div>
+                        <p className="break-words text-sm font-semibold text-slate-800">{item.title}</p>
+                        <p className="mt-1 break-words text-sm text-slate-500">{item.description}</p>
+                      </div>
+                      <div className="flex shrink-0 items-start gap-2">
+                        <span className="text-xs text-slate-400">{formatRelative(item.created_at)}</span>
+                        <button
+                          type="button"
+                          onClick={() => dismissActivityItem(item.id)}
+                          className="rounded-lg p-1 text-slate-300 transition-colors hover:bg-white/60 hover:text-slate-500"
+                          aria-label={`Clear ${item.title}`}
+                          title="Clear"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </GlassCard>
         </div>
       )}
@@ -1209,8 +1198,7 @@ export default function Overview() {
         ))}
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1.8fr_1fr]">
-        {isKioskPark && (
+      {isKioskPark ? (
         <GlassCard className="p-5 sm:p-6">
           <div className="mb-4 flex items-center justify-between">
             <div className="min-w-0">
@@ -1258,9 +1246,8 @@ export default function Overview() {
             </div>
           </div>
         </GlassCard>
-        )}
-
-        {!isKioskPark && (
+      ) : (
+      <div className="grid gap-6 xl:grid-cols-[1.8fr_1fr]">
         <GlassCard className="p-5 sm:p-6">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div className="min-w-0">
@@ -1328,7 +1315,6 @@ export default function Overview() {
             </div>
           </div>
         </GlassCard>
-        )}
 
         <GlassCard className="overflow-hidden p-5 sm:p-6">
           <div className="mb-4 flex items-center justify-between gap-3">
@@ -1385,6 +1371,7 @@ export default function Overview() {
           </div>
         </GlassCard>
       </div>
+      )}
 
       <GlassCard className="p-6">
         <h3 className="mb-4 text-base font-semibold text-slate-800">Recent Transactions</h3>
