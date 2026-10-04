@@ -911,7 +911,7 @@ export default function Overview() {
 
           {machines.length >= 2 && (
             <GlassCard className="p-5 sm:p-6">
-              <h3 className="text-base font-semibold text-slate-800">Automaten</h3>
+              <h3 className="text-base font-semibold text-slate-800">Verteilung nach Automaten</h3>
               <p className="mt-1 text-xs text-slate-500">Heute</p>
               <div className="relative mx-auto mt-2 h-40 w-40">
                 <ResponsiveContainer width="100%" height="100%">
@@ -933,23 +933,30 @@ export default function Overview() {
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-lg font-bold text-slate-800">
-                    {formatNumber(machines.reduce((sum, m) => sum + m.heute.anzahl, 0))}
+                  <span className="text-base font-semibold tabular-nums text-slate-800">
+                    {formatCurrency(machines.reduce((sum, m) => sum + m.heute.cent, 0), 'eur')}
                   </span>
-                  <span className="text-[10px] text-slate-400">Käufe heute</span>
+                  <span className="text-[11px] text-slate-500">
+                    {formatNumber(machines.reduce((sum, m) => sum + m.heute.anzahl, 0))} Käufe
+                  </span>
                 </div>
               </div>
               <ul className="mt-3 space-y-1.5">
-                {machines.map((m, i) => (
-                  <li key={m.machine_id} className="flex items-center gap-2 text-sm">
-                    <span
-                      className="h-2.5 w-2.5 shrink-0 rounded-full"
-                      style={{ backgroundColor: AUTOMAT_FARBEN[i % AUTOMAT_FARBEN.length] }}
-                    />
-                    <span className="flex-1 truncate text-slate-700">{m.machine_label}</span>
-                    <span className="tabular-nums text-slate-500">{formatNumber(m.heute.anzahl)}</span>
-                  </li>
-                ))}
+                {(() => {
+                  const gesamt = machines.reduce((sum, m) => sum + m.heute.anzahl, 0);
+                  return machines.map((m, i) => (
+                    <li key={m.machine_id} className="flex items-center gap-2 text-sm">
+                      <span
+                        className="h-2.5 w-2.5 shrink-0 rounded-full"
+                        style={{ backgroundColor: AUTOMAT_FARBEN[i % AUTOMAT_FARBEN.length] }}
+                      />
+                      <span className="flex-1 truncate text-slate-700">{m.machine_label}</span>
+                      <span className="tabular-nums text-slate-500">
+                        {gesamt > 0 ? Math.round((m.heute.anzahl / gesamt) * 100) : 0} %
+                      </span>
+                    </li>
+                  ));
+                })()}
               </ul>
             </GlassCard>
           )}
