@@ -73,32 +73,35 @@ export default function UnlockCenter({
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="inline-flex rounded-xl bg-white/50 p-1">
-          {TABS.map((t) => (
+        <h2 className="text-2xl font-bold tracking-tight text-slate-800">{shown?.label}</h2>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="inline-flex rounded-xl bg-white/50 p-1">
+            {TABS.map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setTab(t.key)}
+                className={`inline-flex items-center gap-2 rounded-lg px-4 py-1.5 text-sm font-medium transition ${
+                  tab === t.key ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                {active === t.mode && <span className="h-2 w-2 rounded-full bg-emerald-500" title="Für Gäste aktiv" />}
+                {t.label}
+              </button>
+            ))}
+          </div>
+          {shown?.mode && active !== shown.mode && (
             <button
-              key={t.key}
               type="button"
-              onClick={() => setTab(t.key)}
-              className={`inline-flex items-center gap-2 rounded-lg px-4 py-1.5 text-sm font-medium transition ${
-                tab === t.key ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-              }`}
+              onClick={() => { if (shown.mode) void activate(shown.mode); }}
+              disabled={!config || busy !== null}
+              className="glass-button-secondary"
             >
-              {active === t.mode && <span className="h-2 w-2 rounded-full bg-emerald-500" title="Für Gäste aktiv" />}
-              {t.label}
+              {busy === shown.mode ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              Für Gäste aktivieren
             </button>
-          ))}
+          )}
         </div>
-        {shown?.mode && active !== shown.mode && (
-          <button
-            type="button"
-            onClick={() => { if (shown.mode) void activate(shown.mode); }}
-            disabled={!config || busy !== null}
-            className="glass-button-secondary"
-          >
-            {busy === shown.mode ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            Für Gäste aktivieren
-          </button>
-        )}
       </div>
       {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
 

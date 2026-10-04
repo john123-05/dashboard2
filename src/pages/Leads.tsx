@@ -1271,19 +1271,14 @@ function LeadsContacts({
 
   return (
     <div className={embedded ? 'customer-embedded-root preview-leads space-y-5' : 'space-y-6'}>
-      <div className={`flex items-center justify-between gap-3 ${embedded ? 'customer-operator-pagehead' : ''}`}>
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-800">
-            {view === 'overview' ? 'Übersicht' : t('leads.title')}
-          </h2>
-        </div>
-        {view === 'list' && (
+      {view === 'list' && (
+        <div className={`flex items-center justify-end gap-3 ${embedded ? 'customer-operator-pagehead' : ''}`}>
           <button onClick={handleExport} className="glass-button-secondary">
             <Download className="h-4 w-4" />
             {t('leads.export')}
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {notice && (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
