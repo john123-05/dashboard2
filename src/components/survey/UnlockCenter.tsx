@@ -6,10 +6,11 @@ import ContactSettings from './ContactSettings';
 import TrackingManager from './TrackingManager';
 import { fetchSurveyConfig, setUnlockMode, type SurveyConfig, type UnlockMode } from '../../lib/surveyApi';
 
-export type TabKey = 'overview' | 'contacts' | 'survey' | 'social' | 'tracking';
+export type TabKey = 'overview' | 'allContacts' | 'contacts' | 'survey' | 'social' | 'tracking';
 
 const TABS: { key: TabKey; mode?: UnlockMode; label: string }[] = [
   { key: 'overview', label: 'Übersicht' },
+  { key: 'allContacts', label: 'Kontakte' },
   { key: 'contacts', mode: 'email', label: 'E-Mail / Telefon' },
   { key: 'survey', mode: 'survey', label: 'Umfrage' },
   { key: 'social', mode: 'social', label: 'Social Media' },
@@ -102,18 +103,14 @@ export default function UnlockCenter({
       {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
 
       {tab === 'overview' && <div className="space-y-5">{children('overview')}</div>}
-      {tab === 'contacts' && (
-        <div className="space-y-5">
-          {config && (
-            <ContactSettings
-              parkId={parkId}
-              email={config.settings.email_mode ?? 'required'}
-              phone={config.settings.phone_mode ?? 'off'}
-              onSaved={() => void load()}
-            />
-          )}
-          {children('list')}
-        </div>
+      {tab === 'allContacts' && <div className="space-y-5">{children('list')}</div>}
+      {tab === 'contacts' && config && (
+        <ContactSettings
+          parkId={parkId}
+          email={config.settings.email_mode ?? 'required'}
+          phone={config.settings.phone_mode ?? 'off'}
+          onSaved={() => void load()}
+        />
       )}
       {tab === 'survey' && <SurveyManager parkId={parkId} />}
       {tab === 'social' && config && (

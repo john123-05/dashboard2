@@ -89,7 +89,7 @@ export default function SocialManager({ parkId, initial, onSaved }: {
   initial: SocialSettings;
   onSaved: () => void;
 }) {
-  const [tab, setTab] = useState<'settings' | 'results'>('settings');
+  const [tab, setTab] = useState<'settings' | 'results'>('results');
   const [s, setS] = useState<SocialSettings>(initial);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -126,7 +126,7 @@ export default function SocialManager({ parkId, initial, onSaved }: {
   return (
     <div className="space-y-5">
       <div className="inline-flex rounded-xl bg-white/50 p-1">
-        {([['settings', 'Einstellungen'], ['results', 'Auswertung']] as const).map(([key, label]) => (
+        {([['results', 'Auswertung'], ['settings', 'Einstellungen']] as const).map(([key, label]) => (
           <button
             key={key}
             type="button"

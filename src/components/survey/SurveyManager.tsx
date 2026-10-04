@@ -185,7 +185,7 @@ function SurveyPreview({
 /* ---------------------------------------------------------------- Hauptteil */
 
 export default function SurveyManager({ parkId }: { parkId: string }) {
-  const [tab, setTab] = useState<'settings' | 'results'>('settings');
+  const [tab, setTab] = useState<'settings' | 'results'>('results');
   const [config, setConfig] = useState<SurveyConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -288,7 +288,7 @@ export default function SurveyManager({ parkId }: { parkId: string }) {
   return (
     <div className="space-y-5">
       <div className="inline-flex rounded-xl bg-white/50 p-1">
-        {([['settings', 'Einstellungen'], ['results', 'Auswertung']] as const).map(([key, label]) => (
+        {([['results', 'Auswertung'], ['settings', 'Einstellungen']] as const).map(([key, label]) => (
           <button
             key={key}
             type="button"
