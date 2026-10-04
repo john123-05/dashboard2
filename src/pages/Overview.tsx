@@ -103,7 +103,7 @@ interface CombinedDailyPoint {
 
 interface ActivityItem {
   id: string;
-  source: 'ops' | 'support' | 'stripe' | 'kiosk';
+  source: 'ops' | 'support' | 'stripe' | 'kiosk' | 'insight';
   title: string;
   description: string;
   created_at: string;
@@ -648,10 +648,29 @@ export default function Overview() {
       : systemStatus === 'down'
         ? 'Offline'
         : 'Degraded';
-  const visibleActivityItems = useMemo(
-    () => activityItems.filter((item) => !dismissedActivityIds.includes(item.id)),
-    [activityItems, dismissedActivityIds],
-  );
+  const revenueTrendItem = useMemo((): ActivityItem | null => {
+    if (!isKioskPark || kioskDays.length < 14) return null;
+    const sorted = [...kioskDays].sort((a, b) => b.businessDate.localeCompare(a.businessDate));
+    const last7 = sorted.slice(0, 7).reduce((sum, d) => sum + d.revenueCents, 0);
+    const prev7 = sorted.slice(7, 14).reduce((sum, d) => sum + d.revenueCents, 0);
+    if (prev7 === 0) return null;
+    const changePercent = Math.round(((last7 - prev7) / prev7) * 100);
+    if (changePercent === 0) return null;
+    const isUp = changePercent > 0;
+    return {
+      id: 'insight-revenue-trend',
+      source: 'insight',
+      title: isUp ? 'Umsatz steigt' : 'Umsatz sinkt',
+      description: `Dein Umsatz ist in den letzten 7 Tagen im Vergleich zu den 7 Tagen davor um ${Math.abs(changePercent)} % ${isUp ? 'gestiegen' : 'gefallen'}.`,
+      created_at: new Date().toISOString(),
+      severity: isUp ? undefined : 'warning',
+    };
+  }, [isKioskPark, kioskDays]);
+
+  const visibleActivityItems = useMemo(() => {
+    const items = revenueTrendItem ? [revenueTrendItem, ...activityItems] : activityItems;
+    return items.filter((item) => !dismissedActivityIds.includes(item.id));
+  }, [activityItems, revenueTrendItem, dismissedActivityIds]);
   const localRevenueDisplay =
     localRevenueCents > 0
       ? formatCurrency(localRevenueCents)
@@ -1071,11 +1090,11 @@ export default function Overview() {
           </GlassCard>
 
           <GlassCard className="overflow-hidden p-5 sm:p-6">
-            <h3 className="text-base font-semibold text-slate-800">Alerts & Activity</h3>
+            <h3 className="text-base font-semibold text-slate-800">Benachrichtigungen und Aktivitäten</h3>
             <div className="mt-3 max-h-[360px] space-y-3 overflow-y-auto pr-1">
               {visibleActivityItems.length === 0 ? (
                 <p className="text-sm text-slate-500">
-                  {activityItems.length === 0 ? 'No alerts or activity found.' : 'All alerts have been cleared.'}
+                  {activityItems.length === 0 ? 'Keine Benachrichtigungen oder Aktivitäten gefunden.' : 'Alle Benachrichtigungen wurden gelöscht.'}
                 </p>
               ) : (
                 visibleActivityItems.map((item) => (
@@ -1089,7 +1108,7 @@ export default function Overview() {
                             </span>
                           ) : (
                             <span className="status-badge bg-slate-50 text-slate-600 ring-slate-200">
-                              {item.source === 'support' ? 'Support' : item.source === 'stripe' ? 'Stripe' : 'Ops'}
+                              {item.source === 'support' ? 'Support' : item.source === 'stripe' ? 'Stripe' : item.source === 'insight' ? 'Einblick' : 'System'}
                             </span>
                           )}
                           {item.status && (
@@ -1105,8 +1124,8 @@ export default function Overview() {
                           type="button"
                           onClick={() => dismissActivityItem(item.id)}
                           className="rounded-lg p-1 text-slate-300 transition-colors hover:bg-white/60 hover:text-slate-500"
-                          aria-label={`Clear ${item.title}`}
-                          title="Clear"
+                          aria-label={`Entfernen ${item.title}`}
+                          title="Entfernen"
                         >
                           <X className="h-4 w-4" />
                         </button>
@@ -1355,7 +1374,7 @@ export default function Overview() {
         <GlassCard className="overflow-hidden p-5 sm:p-6">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <h3 className="text-base font-semibold text-slate-800">Alerts & Activity</h3>
+              <h3 className="text-base font-semibold text-slate-800">Benachrichtigungen und Aktivitäten</h3>
               <p className="mt-1 text-sm text-slate-500">
                 Live warnings, support updates and recent operational signals
               </p>
@@ -1364,7 +1383,7 @@ export default function Overview() {
           <div className="max-h-[360px] space-y-3 overflow-y-auto pr-1">
             {visibleActivityItems.length === 0 ? (
               <p className="text-sm text-slate-500">
-                {activityItems.length === 0 ? 'No alerts or activity found.' : 'All alerts have been cleared.'}
+                {activityItems.length === 0 ? 'Keine Benachrichtigungen oder Aktivitäten gefunden.' : 'Alle Benachrichtigungen wurden gelöscht.'}
               </p>
             ) : (
               visibleActivityItems.map((item) => (
@@ -1378,7 +1397,7 @@ export default function Overview() {
                           </span>
                         ) : (
                           <span className="status-badge bg-slate-50 text-slate-600 ring-slate-200">
-                            {item.source === 'support' ? 'Support' : item.source === 'stripe' ? 'Stripe' : 'Ops'}
+                            {item.source === 'support' ? 'Support' : item.source === 'stripe' ? 'Stripe' : item.source === 'insight' ? 'Einblick' : 'System'}
                           </span>
                         )}
                         {item.status && (
@@ -1394,8 +1413,8 @@ export default function Overview() {
                         type="button"
                         onClick={() => dismissActivityItem(item.id)}
                         className="rounded-lg p-1 text-slate-300 transition-colors hover:bg-white/60 hover:text-slate-500"
-                        aria-label={`Clear ${item.title}`}
-                        title="Clear"
+                        aria-label={`Entfernen ${item.title}`}
+                        title="Entfernen"
                       >
                         <X className="h-4 w-4" />
                       </button>
