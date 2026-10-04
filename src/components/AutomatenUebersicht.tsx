@@ -51,7 +51,7 @@ export default function AutomatenUebersicht({ machines }: { machines: MachineRev
   );
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(260px,320px)_minmax(0,1fr)]">
+    <div className="grid items-start gap-4 lg:grid-cols-[minmax(260px,320px)_minmax(0,1fr)]">
         <GlassCard className="p-5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h4 className="text-base font-semibold text-slate-800">Verteilung nach Automaten</h4>
