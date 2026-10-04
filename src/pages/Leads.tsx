@@ -1,13 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Download, Mail, Minus, Plus, Trash2, UserPlus } from 'lucide-react';
+import { Camera, Download, ExternalLink, Mail, Minus, Plus, Trash2, UserPlus } from 'lucide-react';
 import { getOptionalSourceWarning, invokeEdgeFunction, isEdgeSourceUnavailable } from '../lib/edgeFunctions';
-import { fetchKioskPhotosForDay, getClosingMinutesForDate, type KioskPurchaseRow } from '../lib/kioskSales';
+import { fetchKioskPhotosForDay, fetchKioskSales, getClosingMinutesForDate, type KioskPurchaseRow } from '../lib/kioskSales';
+import { claimSiteBaseFor } from '../lib/photoBrowser';
 import { formatDate, formatNumber, exportToCSV } from '../lib/utils';
 import GlassCard from '../components/ui/GlassCard';
 import DataTable from '../components/ui/DataTable';
 import { useI18n } from '../lib/i18n';
 import { usePark } from '../contexts/ParkContext';
 import UnlockCenter from '../components/survey/UnlockCenter';
+import {
+  fetchSurveyConfig,
+  fetchSurveyResults,
+  fetchSocialResults,
+  type UnlockMode,
+  type SurveyResults,
+  type SocialResults,
+} from '../lib/surveyApi';
 
 type CountryStat = {
   countryCode: string;
@@ -477,17 +486,23 @@ function leadLocaleBadge(item: Record<string, unknown>): string | null {
  */
 export default function Leads({ embedded = false }: { embedded?: boolean } = {}) {
   const { parkId } = usePark();
-  if (!parkId) return <LeadsContacts embedded={embedded} />;
+  if (!parkId) return <LeadsContacts embedded={embedded} view="overview" />;
   return (
     <div className={embedded ? 'space-y-5' : 'space-y-6'}>
       <UnlockCenter parkId={parkId}>
-        <LeadsContacts embedded={embedded} />
+        {(view) => <LeadsContacts embedded={embedded} view={view} />}
       </UnlockCenter>
     </div>
   );
 }
 
-function LeadsContacts({ embedded = false }: { embedded?: boolean } = {}) {
+function LeadsContacts({
+  embedded = false,
+  view,
+}: {
+  embedded?: boolean;
+  view: 'overview' | 'list';
+}) {
   const { t } = useI18n();
   const {
     parkId,
@@ -522,9 +537,44 @@ function LeadsContacts({ embedded = false }: { embedded?: boolean } = {}) {
   const [deleting, setDeleting] = useState(false);
   const [claimDelayLoading, setClaimDelayLoading] = useState(false);
 
+  // Nur für die Übersicht: aktiver Freischalt-Modus, Lebenszeit-Verkäufe und
+  // die letzten 30 Tage je Modus - unabhängig vom Freischalt-Reiter geladen,
+  // damit "Kontakte"/Liste nicht unnötig mitlädt.
+  const [unlockMode, setUnlockMode] = useState<UnlockMode | null>(null);
+  const [lifetimeSold, setLifetimeSold] = useState<number | null>(null);
+  const [overviewSurvey, setOverviewSurvey] = useState<SurveyResults | null>(null);
+  const [overviewSocial, setOverviewSocial] = useState<SocialResults | null>(null);
+
   useEffect(() => {
     loadData();
   }, [parkId]);
+
+  useEffect(() => {
+    if (view !== 'overview' || !parkId) return;
+    let active = true;
+
+    fetchKioskSales(parkId)
+      .then((res) => {
+        if (active) setLifetimeSold(res.days.reduce((sum, d) => sum + d.photos_sold_count, 0));
+      })
+      .catch(() => active && setLifetimeSold(null));
+
+    fetchSurveyConfig(parkId)
+      .then((config) => {
+        if (!active) return;
+        setUnlockMode(config.settings.mode);
+        if (config.settings.mode === 'survey') {
+          fetchSurveyResults(parkId, 30).then((r) => active && setOverviewSurvey(r)).catch(() => {});
+        } else if (config.settings.mode === 'social') {
+          fetchSocialResults(parkId, 30).then((r) => active && setOverviewSocial(r)).catch(() => {});
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      active = false;
+    };
+  }, [view, parkId]);
 
   useEffect(() => {
     let active = true;
@@ -1218,12 +1268,16 @@ function LeadsContacts({ embedded = false }: { embedded?: boolean } = {}) {
     <div className={embedded ? 'customer-embedded-root preview-leads space-y-5' : 'space-y-6'}>
       <div className={`flex items-center justify-between gap-3 ${embedded ? 'customer-operator-pagehead' : ''}`}>
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('leads.title')}</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-slate-800">
+            {view === 'overview' ? 'Übersicht' : t('leads.title')}
+          </h2>
         </div>
-        <button onClick={handleExport} className="glass-button-secondary">
-          <Download className="h-4 w-4" />
-          {t('leads.export')}
-        </button>
+        {view === 'list' && (
+          <button onClick={handleExport} className="glass-button-secondary">
+            <Download className="h-4 w-4" />
+            {t('leads.export')}
+          </button>
+        )}
       </div>
 
       {notice && (
@@ -1233,7 +1287,87 @@ function LeadsContacts({ embedded = false }: { embedded?: boolean } = {}) {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-4 xl:grid-cols-[210px_210px_minmax(0,1fr)]">
+      {view === 'overview' && (
+      <>
+      <GlassCard className="p-5 sm:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              {unlockMode && <span className="h-2 w-2 rounded-full bg-emerald-500" aria-hidden="true" />}
+              <p className="text-sm font-medium text-slate-700">
+                {unlockMode === 'email'
+                  ? 'Freischaltung läuft gerade über E-Mail / Telefon'
+                  : unlockMode === 'survey'
+                    ? 'Freischaltung läuft gerade über die Umfrage'
+                    : unlockMode === 'social'
+                      ? 'Freischaltung läuft gerade über Social Media'
+                      : 'Freischalt-Modus wird geladen…'}
+              </p>
+            </div>
+            <p className="mt-1 text-sm text-slate-500">So sieht die Freischaltseite gerade für Gäste aus.</p>
+          </div>
+          {claimSiteBaseFor(parkId) && (
+            <a
+              href={claimSiteBaseFor(parkId) ?? undefined}
+              target="_blank"
+              rel="noreferrer"
+              className="glass-button-secondary"
+            >
+              Jetzt dahin kommen
+              <ExternalLink className="h-4 w-4" />
+            </a>
+          )}
+        </div>
+
+        {unlockMode === 'survey' && overviewSurvey && (
+          <div className="mt-4 grid grid-cols-3 gap-3 border-t border-slate-100 pt-4">
+            <div>
+              <p className="text-xs text-slate-500">Antworten (30 Tage)</p>
+              <p className="text-lg font-bold text-slate-800">{formatNumber(overviewSurvey.total)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-500">Ø Bewertung</p>
+              <p className="text-lg font-bold text-slate-800">
+                {overviewSurvey.average_score != null ? overviewSurvey.average_score.toFixed(1) : '–'}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-500">NPS</p>
+              <p className="text-lg font-bold text-slate-800">{overviewSurvey.nps ?? '–'}</p>
+            </div>
+          </div>
+        )}
+        {unlockMode === 'social' && overviewSocial && (
+          <div className="mt-4 grid grid-cols-3 gap-3 border-t border-slate-100 pt-4">
+            <div>
+              <p className="text-xs text-slate-500">Freischaltungen (30 Tage)</p>
+              <p className="text-lg font-bold text-slate-800">{formatNumber(overviewSocial.unlocked)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-500">Geteilt</p>
+              <p className="text-lg font-bold text-slate-800">{formatNumber(overviewSocial.posted)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-500">Gewinnspiel-Teilnahmen</p>
+              <p className="text-lg font-bold text-slate-800">{formatNumber(overviewSocial.giveaway)}</p>
+            </div>
+          </div>
+        )}
+      </GlassCard>
+      </>
+      )}
+
+      {view === 'overview' && (
+      <>
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-[210px_210px_210px_minmax(0,1fr)]">
+        <CompactMetricCard
+          title="Fotos verkauft"
+          value={lifetimeSold !== null ? formatNumber(lifetimeSold) : '–'}
+          subtitle="Insgesamt am Automaten"
+          icon={Camera}
+          iconClassName="text-violet-600"
+          iconWrapClassName="bg-violet-50"
+        />
         <CompactMetricCard
           title={t('leads.total')}
           value={formatNumber(stats.total)}
@@ -1423,7 +1557,10 @@ function LeadsContacts({ embedded = false }: { embedded?: boolean } = {}) {
         </GlassCard>
         </div>
       )}
+      </>
+      )}
 
+      {view === 'list' && (
       <DataTable
         data={filtered}
         columns={columns}
@@ -1532,6 +1669,7 @@ function LeadsContacts({ embedded = false }: { embedded?: boolean } = {}) {
           </div>
         }
       />
+      )}
 
     </div>
   );

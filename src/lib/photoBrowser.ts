@@ -114,6 +114,13 @@ const CLAIM_BASE_BY_PARK: Record<string, string> = {
   '3b08e092-beb5-46ec-9811-5698e86dd83a': 'https://liftpictures-fotos.de/plose', // Plose
 };
 
+// The park's public claim site itself (no code), e.g. for a CRM "see your
+// live unlock page" link. null for a park with no registered claim site.
+export function claimSiteBaseFor(parkId: string | null): string | null {
+  if (!parkId) return null;
+  return CLAIM_BASE_BY_PARK[parkId] ?? null;
+}
+
 // Claim link a guest can open to get their photo (via email) - the DB code is
 // correct even when the printed QR was mis-assigned, so this rescues the
 // "Foto nicht gefunden" case at the kiosk.

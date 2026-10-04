@@ -6,9 +6,10 @@ import ContactSettings from './ContactSettings';
 import TrackingManager from './TrackingManager';
 import { fetchSurveyConfig, setUnlockMode, type SurveyConfig, type UnlockMode } from '../../lib/surveyApi';
 
-type TabKey = 'contacts' | 'survey' | 'social' | 'tracking';
+export type TabKey = 'overview' | 'contacts' | 'survey' | 'social' | 'tracking';
 
 const TABS: { key: TabKey; mode?: UnlockMode; label: string }[] = [
+  { key: 'overview', label: 'Übersicht' },
   { key: 'contacts', mode: 'email', label: 'E-Mail / Telefon' },
   { key: 'survey', mode: 'survey', label: 'Umfrage' },
   { key: 'social', mode: 'social', label: 'Social Media' },
@@ -19,14 +20,20 @@ const TABS: { key: TabKey; mode?: UnlockMode; label: string }[] = [
  * CRM-Kopf: eine Leiste mit den drei Wegen zum Freischalten (E-Mail / Telefon,
  * Umfrage, Social Media). Ein Punkt markiert den Weg, den Gäste gerade sehen;
  * „Aktivieren“ stellt den angezeigten Weg live. Pixel sind ein eigener Reiter
- * ohne Freischaltmodus. Der erste Reiter bekommt die Kontaktliste als `children`.
+ * ohne Freischaltmodus. Übersicht und Kontakte teilen sich dieselbe
+ * datenhaltende Kontaktliste (`children`), nur die Ansicht wechselt.
  */
-export default function UnlockCenter({ parkId, children }: { parkId: string; children: ReactNode }) {
+export default function UnlockCenter({
+  parkId,
+  children,
+}: {
+  parkId: string;
+  children: (view: 'overview' | 'list') => ReactNode;
+}) {
   const [config, setConfig] = useState<SurveyConfig | null>(null);
-  const [tab, setTab] = useState<TabKey>('contacts');
+  const [tab, setTab] = useState<TabKey>('overview');
   const [busy, setBusy] = useState<UnlockMode | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [first, setFirst] = useState(true);
 
   const load = useCallback(async () => {
     try {
@@ -41,13 +48,10 @@ export default function UnlockCenter({ parkId, children }: { parkId: string; chi
   }, [parkId]);
 
   useEffect(() => {
-    void load().then((c) => {
-      if (c && first) {
-        setTab(TABS.find((t) => t.mode === c.settings.mode)?.key ?? 'contacts');
-        setFirst(false);
-      }
-    });
-  }, [load, first]);
+    // Übersicht is the landing tab regardless of which mode happens to be
+    // live - it's the one place that already shows what's active.
+    void load();
+  }, [load]);
 
   async function activate(mode: UnlockMode) {
     if (!config || busy) return;
@@ -97,6 +101,7 @@ export default function UnlockCenter({ parkId, children }: { parkId: string; chi
       </div>
       {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
 
+      {tab === 'overview' && <div className="space-y-5">{children('overview')}</div>}
       {tab === 'contacts' && (
         <div className="space-y-5">
           {config && (
@@ -107,7 +112,7 @@ export default function UnlockCenter({ parkId, children }: { parkId: string; chi
               onSaved={() => void load()}
             />
           )}
-          {children}
+          {children('list')}
         </div>
       )}
       {tab === 'survey' && <SurveyManager parkId={parkId} />}
