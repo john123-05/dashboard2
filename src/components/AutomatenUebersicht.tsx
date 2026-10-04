@@ -16,7 +16,7 @@ const ZEITRAEUME: { key: Zeitraum; label: string }[] = [
 
 import { AUTOMAT_FARBEN as FARBEN } from '../lib/automatFarben';
 
-export default function AutomatenUebersicht({ machines }: { machines: MachineRevenue[] }) {
+export default function AutomatenUebersicht({ machines, className = '' }: { machines: MachineRevenue[]; className?: string }) {
   const [zeitraum, setZeitraum] = useState<Zeitraum>('monat');
   const summe = useMemo(
     () => machines.reduce(
@@ -51,7 +51,7 @@ export default function AutomatenUebersicht({ machines }: { machines: MachineRev
   );
 
   return (
-    <div className="space-y-3">
+    <div className={`space-y-3 ${className}`}>
       <div className="flex justify-end">{zeitraumSwitch}</div>
       <div className="grid gap-4 lg:grid-cols-[minmax(260px,320px)_minmax(0,1fr)]">
         <GlassCard className="p-5">

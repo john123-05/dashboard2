@@ -583,7 +583,7 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
 
           {/* Automaten im Vergleich: Ring + eine Karte je Automat. Nur bei mehr als
               einem Automaten; Quelle ist machine_sale_payments (mit machine_id). */}
-          <AutomatenUebersicht machines={machineRevenue} />
+          <AutomatenUebersicht machines={machineRevenue} className="-mt-3" />
 
           <GlassCard className="p-5 sm:p-6">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
