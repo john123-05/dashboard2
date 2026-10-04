@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Camera, Download, ExternalLink, Mail, Minus, Plus, Trash2, UserPlus } from 'lucide-react';
 import { getOptionalSourceWarning, invokeEdgeFunction, isEdgeSourceUnavailable } from '../lib/edgeFunctions';
 import { fetchKioskPhotosForDay, fetchKioskSales, getClosingMinutesForDate, type KioskPurchaseRow } from '../lib/kioskSales';
-import { claimSiteBaseFor } from '../lib/photoBrowser';
+import { claimLinkFor, claimSiteBaseFor, fetchRecentPhotos } from '../lib/photoBrowser';
 import { formatDate, formatNumber, exportToCSV } from '../lib/utils';
 import GlassCard from '../components/ui/GlassCard';
 import DataTable from '../components/ui/DataTable';
@@ -544,6 +544,7 @@ function LeadsContacts({
   const [lifetimeSold, setLifetimeSold] = useState<number | null>(null);
   const [overviewSurvey, setOverviewSurvey] = useState<SurveyResults | null>(null);
   const [overviewSocial, setOverviewSocial] = useState<SocialResults | null>(null);
+  const [latestPhotoCode, setLatestPhotoCode] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -558,6 +559,10 @@ function LeadsContacts({
         if (active) setLifetimeSold(res.days.reduce((sum, d) => sum + d.photos_sold_count, 0));
       })
       .catch(() => active && setLifetimeSold(null));
+
+    fetchRecentPhotos(parkId, 1)
+      .then((photos) => active && setLatestPhotoCode(photos[0]?.externalCode ?? null))
+      .catch(() => active && setLatestPhotoCode(null));
 
     fetchSurveyConfig(parkId)
       .then((config) => {
@@ -1288,294 +1293,291 @@ function LeadsContacts({
       )}
 
       {view === 'overview' && (
-      <>
-      <div className="grid gap-4 xl:grid-cols-[1fr_360px] xl:items-start">
-      <GlassCard className="p-5 sm:p-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              {unlockMode && <span className="h-2 w-2 rounded-full bg-emerald-500" aria-hidden="true" />}
-              <p className="text-sm font-medium text-slate-700">
-                {unlockMode === 'email'
-                  ? 'Freischaltung läuft gerade über E-Mail / Telefon'
-                  : unlockMode === 'survey'
-                    ? 'Freischaltung läuft gerade über die Umfrage'
-                    : unlockMode === 'social'
-                      ? 'Freischaltung läuft gerade über Social Media'
-                      : 'Freischalt-Modus wird geladen…'}
-              </p>
+      <div className="grid gap-4 xl:grid-cols-[1fr_380px]">
+        <div className="space-y-4">
+          <GlassCard className="p-5 sm:p-6">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  {unlockMode && <span className="h-2 w-2 rounded-full bg-emerald-500" aria-hidden="true" />}
+                  <p className="text-sm font-medium text-slate-700">
+                    {unlockMode === 'email'
+                      ? 'Freischaltung läuft gerade über E-Mail / Telefon'
+                      : unlockMode === 'survey'
+                        ? 'Freischaltung läuft gerade über die Umfrage'
+                        : unlockMode === 'social'
+                          ? 'Freischaltung läuft gerade über Social Media'
+                          : 'Freischalt-Modus wird geladen…'}
+                  </p>
+                </div>
+                <p className="mt-1 text-sm text-slate-500">So sieht die Freischaltseite gerade für Gäste aus.</p>
+              </div>
+              {claimSiteBaseFor(parkId) && (
+                <a
+                  href={claimLinkFor(parkId, latestPhotoCode) ?? claimSiteBaseFor(parkId) ?? undefined}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="glass-button-secondary"
+                >
+                  Jetzt dahin kommen
+                  <ExternalLink className="h-4 w-4" />
+                </a>
+              )}
             </div>
-            <p className="mt-1 text-sm text-slate-500">So sieht die Freischaltseite gerade für Gäste aus.</p>
+
+            {unlockMode === 'survey' && overviewSurvey && (
+              <div className="mt-4 grid grid-cols-3 gap-3 border-t border-slate-100 pt-4">
+                <div>
+                  <p className="text-xs text-slate-500">Antworten (30 Tage)</p>
+                  <p className="text-lg font-bold text-slate-800">{formatNumber(overviewSurvey.total)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500">Ø Bewertung</p>
+                  <p className="text-lg font-bold text-slate-800">
+                    {overviewSurvey.average_score != null ? overviewSurvey.average_score.toFixed(1) : '–'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500">NPS</p>
+                  <p className="text-lg font-bold text-slate-800">{overviewSurvey.nps ?? '–'}</p>
+                </div>
+              </div>
+            )}
+            {unlockMode === 'social' && overviewSocial && (
+              <div className="mt-4 grid grid-cols-3 gap-3 border-t border-slate-100 pt-4">
+                <div>
+                  <p className="text-xs text-slate-500">Freischaltungen (30 Tage)</p>
+                  <p className="text-lg font-bold text-slate-800">{formatNumber(overviewSocial.unlocked)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500">Geteilt</p>
+                  <p className="text-lg font-bold text-slate-800">{formatNumber(overviewSocial.posted)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500">Gewinnspiel-Teilnahmen</p>
+                  <p className="text-lg font-bold text-slate-800">{formatNumber(overviewSocial.giveaway)}</p>
+                </div>
+              </div>
+            )}
+          </GlassCard>
+
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+            <CompactMetricCard
+              title="Fotos verkauft"
+              value={lifetimeSold !== null ? formatNumber(lifetimeSold) : '–'}
+              subtitle="Insgesamt am Automaten"
+              icon={Camera}
+              iconClassName="text-violet-600"
+              iconWrapClassName="bg-violet-50"
+            />
+            <CompactMetricCard
+              title={t('leads.total')}
+              value={formatNumber(stats.total)}
+              subtitle="Gesammelte Kontakte"
+              icon={UserPlus}
+              iconClassName="text-sky-600"
+              iconWrapClassName="bg-sky-50"
+            />
+            <CompactMetricCard
+              title={t('leads.optins')}
+              value={formatNumber(stats.optedIn)}
+              subtitle={`${optInRate}% Opt-in-Quote`}
+              icon={Mail}
+              iconClassName="text-emerald-600"
+              iconWrapClassName="bg-emerald-50"
+            />
           </div>
-          {claimSiteBaseFor(parkId) && (
-            <a
-              href={claimSiteBaseFor(parkId) ?? undefined}
-              target="_blank"
-              rel="noreferrer"
-              className="glass-button-secondary"
-            >
-              Jetzt dahin kommen
-              <ExternalLink className="h-4 w-4" />
-            </a>
+
+          <GlassCard className="overflow-hidden">
+            <div className="border-b border-slate-100/90 px-6 py-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-500">Deine Besucher kennenlernen</p>
+            </div>
+
+            <div className="grid gap-0 lg:grid-cols-[1.15fr_0.85fr]">
+              <div className="px-6 py-5 lg:border-r lg:border-slate-100/90">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="text-base font-semibold text-slate-800">Besucher nach Standort</h3>
+                  <span className="text-xs text-slate-400 sm:text-sm">{resolvedCountryStats.length} Länder</span>
+                </div>
+                <div className="pb-2">
+                  <div className="w-full">
+                    <LeadWorldMap
+                      svgMarkup={worldMapMarkup}
+                      points={resolvedCountryStats}
+                      selectedCountry={selectedCountryStat?.countryCode || null}
+                      onSelectCountry={setSelectedCountry}
+                      offset={{ x: 0, y: 0 }}
+                      compact
+                    />
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShowLocationDetails((current) => {
+                      const next = !current;
+                      if (next) {
+                        resetDetailMapView();
+                      }
+                      return next;
+                    })
+                  }
+                  className="mt-3 text-sm font-medium text-sky-600 transition-colors hover:text-sky-700"
+                >
+                  {showLocationDetails ? 'Detaillierte Karte ausblenden' : 'Detaillierte Karte anzeigen'}
+                </button>
+              </div>
+
+              <div className="px-6 py-5">
+                <div className="mb-3">
+                  <h3 className="text-base font-semibold text-slate-800">Zeit zwischen Kauf und Einlösung</h3>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div className="rounded-2xl border border-slate-100 bg-white/70 p-3">
+                    <p className="text-[11px] font-bold tracking-[0.08em] text-slate-500">Durchschnittlich später</p>
+                    <p className="mt-1.5 text-base font-bold text-slate-800">{delayInsights.avgDelayLabel}</p>
+                    <p className="mt-1 text-xs leading-5 text-slate-500">zwischen Kauf und Einlösung</p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-100 bg-white/70 p-3">
+                    <p className="text-[11px] font-bold tracking-[0.08em] text-slate-500">Nach Parkschluss</p>
+                    <p className="mt-1.5 text-base font-bold text-slate-800">{delayInsights.afterCloseAvgLabel}</p>
+                    <p className="mt-1 text-xs leading-5 text-slate-500">{delayInsights.afterCloseRate}% der Einlösungen</p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-100 bg-white/70 p-3">
+                    <p className="text-[11px] font-bold tracking-[0.08em] text-slate-500">Schnellste Einlösung</p>
+                    <p className="mt-1.5 text-base font-bold text-slate-800">{delayInsights.minDelayLabel}</p>
+                    <p className="mt-1 text-xs leading-5 text-slate-500">frühester gemessener Abstand</p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-100 bg-white/70 p-3">
+                    <p className="text-[11px] font-bold tracking-[0.08em] text-slate-500">Nächster Tag oder später</p>
+                    <p className="mt-1.5 text-base font-bold text-slate-800">{delayInsights.laterDayRate}%</p>
+                    <p className="mt-1 text-xs leading-5 text-slate-500">{delayInsights.laterDayCount} von {delayInsights.matchedCount}</p>
+                  </div>
+                </div>
+
+                {claimDelayLoading && (
+                  <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/70 px-5 py-4 text-sm text-slate-500">
+                    Kauf und Einlösung werden gerade verknüpft…
+                  </div>
+                )}
+
+                {!claimDelayLoading && delayInsights.matchedCount === 0 && (
+                  <div className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 px-5 py-4 text-sm text-slate-500">
+                    Für die aktuelle Auswahl konnten Kauf und Einlösung noch nicht eindeutig verknüpft werden.
+                  </div>
+                )}
+              </div>
+            </div>
+          </GlassCard>
+
+          {showLocationDetails && (
+            <div ref={locationDetailsRef}>
+            <GlassCard className="overflow-hidden">
+              <div className="border-b border-slate-100 px-6 py-5">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-500">Besucher nach Standort</p>
+                <h3 className="mt-2 text-2xl font-semibold text-slate-800">Detaillierte Weltkarte</h3>
+                <p className="mt-1 text-sm text-slate-500">
+                  Klicke auf ein Land oder wähle rechts einen Eintrag aus, um die Leads gezielt anzusehen.
+                </p>
+              </div>
+
+              <div className="grid gap-6 p-4 sm:p-6 lg:grid-cols-[1.55fr_0.85fr]">
+                <div className="space-y-4">
+                  <div className="-mx-2 overflow-x-auto pb-2 sm:mx-0 sm:overflow-visible sm:pb-0">
+                    <div className="min-w-[320px] w-full sm:min-w-0">
+                      <LeadWorldMap
+                        svgMarkup={worldMapMarkup}
+                        points={resolvedCountryStats}
+                        selectedCountry={selectedCountryStat?.countryCode || null}
+                        onSelectCountry={setSelectedCountry}
+                        hoveredCountry={hoveredCountryInfo?.countryCode || null}
+                        hoverLabel={hoveredCountryLabel}
+                        hoverPosition={hoveredCountryInfo}
+                        zoom={detailMapZoom}
+                        offset={detailMapOffset}
+                        onOffsetChange={setDetailMapOffset}
+                        onZoomIn={zoomDetailMapIn}
+                        onZoomOut={zoomDetailMapOut}
+                        onResetView={resetDetailMapView}
+                        onHoverCountry={setHoveredCountryInfo}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                    <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Länder</p>
+                      <p className="mt-2 text-2xl font-bold text-slate-800">{resolvedCountryStats.length}</p>
+                    </div>
+                    <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Leads mit Land</p>
+                      <p className="mt-2 text-2xl font-bold text-slate-800">{formatNumber(totalMappedLeads)}</p>
+                    </div>
+                    <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                        {delayInsights.matchedCount > 0 ? 'Ø Kauf bis digital' : 'Digitale Zuordnungen'}
+                      </p>
+                      <p className="mt-2 text-lg font-bold text-slate-800">
+                        {delayInsights.matchedCount > 0 ? delayInsights.avgDelayLabel : '—'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="max-h-[420px] space-y-3 overflow-y-auto pr-2">
+                  {resolvedCountryStats.map((country) => {
+                    const share = totalMappedLeads > 0 ? Math.round((country.count / totalMappedLeads) * 100) : 0;
+                    const active = country.countryCode === selectedCountryStat?.countryCode;
+                    return (
+                      <button
+                        key={country.countryCode}
+                        type="button"
+                        onClick={() => setSelectedCountry(country.countryCode)}
+                        className={`w-full rounded-2xl border px-4 py-3 text-left transition-all ${
+                          active
+                            ? 'border-sky-200 bg-sky-50/80 shadow-sm'
+                            : 'border-slate-100 bg-white hover:border-slate-200'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className="font-medium text-slate-700">
+                              {countryCodeToFlag(country.countryCode)} {country.countryName}
+                            </p>
+                            <p className="mt-1 text-xs text-slate-400">{country.countryCode}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-semibold text-slate-800">{country.count}</p>
+                            <p className="text-xs text-slate-400">{share}%</p>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </GlassCard>
+            </div>
           )}
         </div>
 
-        {unlockMode === 'survey' && overviewSurvey && (
-          <div className="mt-4 grid grid-cols-3 gap-3 border-t border-slate-100 pt-4">
-            <div>
-              <p className="text-xs text-slate-500">Antworten (30 Tage)</p>
-              <p className="text-lg font-bold text-slate-800">{formatNumber(overviewSurvey.total)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-slate-500">Ø Bewertung</p>
-              <p className="text-lg font-bold text-slate-800">
-                {overviewSurvey.average_score != null ? overviewSurvey.average_score.toFixed(1) : '–'}
+        {claimSiteBaseFor(parkId) && (
+          <GlassCard className="flex flex-col overflow-hidden p-0 xl:sticky xl:top-4 xl:self-start">
+            <div className="border-b border-slate-100/90 px-4 py-3">
+              <p className="text-sm font-semibold text-slate-800">Live-Vorschau</p>
+              <p className="text-xs text-slate-500">
+                Die echte Freischaltseite mit dem letzten Foto, noch nicht freigeschaltet.
               </p>
             </div>
-            <div>
-              <p className="text-xs text-slate-500">NPS</p>
-              <p className="text-lg font-bold text-slate-800">{overviewSurvey.nps ?? '–'}</p>
-            </div>
-          </div>
+            <iframe
+              src={claimLinkFor(parkId, latestPhotoCode) ?? claimSiteBaseFor(parkId) ?? undefined}
+              title="Live-Vorschau der Freischaltseite"
+              scrolling="yes"
+              className="h-[900px] w-full flex-1 border-0"
+            />
+          </GlassCard>
         )}
-        {unlockMode === 'social' && overviewSocial && (
-          <div className="mt-4 grid grid-cols-3 gap-3 border-t border-slate-100 pt-4">
-            <div>
-              <p className="text-xs text-slate-500">Freischaltungen (30 Tage)</p>
-              <p className="text-lg font-bold text-slate-800">{formatNumber(overviewSocial.unlocked)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-slate-500">Geteilt</p>
-              <p className="text-lg font-bold text-slate-800">{formatNumber(overviewSocial.posted)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-slate-500">Gewinnspiel-Teilnahmen</p>
-              <p className="text-lg font-bold text-slate-800">{formatNumber(overviewSocial.giveaway)}</p>
-            </div>
-          </div>
-        )}
-      </GlassCard>
-
-      {claimSiteBaseFor(parkId) && (
-        <GlassCard className="overflow-hidden p-0">
-          <div className="border-b border-slate-100/90 px-4 py-3">
-            <p className="text-sm font-semibold text-slate-800">Live-Vorschau</p>
-            <p className="text-xs text-slate-500">Die echte Freischaltseite, wie Gäste sie gerade sehen.</p>
-          </div>
-          <iframe
-            src={claimSiteBaseFor(parkId) ?? undefined}
-            title="Live-Vorschau der Freischaltseite"
-            className="h-[520px] w-full border-0"
-          />
-        </GlassCard>
-      )}
       </div>
-      </>
-      )}
-
-      {view === 'overview' && (
-      <>
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-        <CompactMetricCard
-          title="Fotos verkauft"
-          value={lifetimeSold !== null ? formatNumber(lifetimeSold) : '–'}
-          subtitle="Insgesamt am Automaten"
-          icon={Camera}
-          iconClassName="text-violet-600"
-          iconWrapClassName="bg-violet-50"
-        />
-        <CompactMetricCard
-          title={t('leads.total')}
-          value={formatNumber(stats.total)}
-          subtitle="Gesammelte Kontakte"
-          icon={UserPlus}
-          iconClassName="text-sky-600"
-          iconWrapClassName="bg-sky-50"
-        />
-        <CompactMetricCard
-          title={t('leads.optins')}
-          value={formatNumber(stats.optedIn)}
-          subtitle={`${optInRate}% Opt-in-Quote`}
-          icon={Mail}
-          iconClassName="text-emerald-600"
-          iconWrapClassName="bg-emerald-50"
-        />
-      </div>
-
-      <div className="grid grid-cols-1">
-        <GlassCard className="overflow-hidden">
-          <div className="border-b border-slate-100/90 px-6 py-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-500">Deine Besucher kennenlernen</p>
-          </div>
-
-          <div className="grid gap-0 lg:grid-cols-[1.15fr_0.85fr]">
-            <div className="px-6 py-5 lg:border-r lg:border-slate-100/90">
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <h3 className="text-base font-semibold text-slate-800">Besucher nach Standort</h3>
-                <span className="text-xs text-slate-400 sm:text-sm">{resolvedCountryStats.length} Länder</span>
-              </div>
-              <div className="pb-2">
-                <div className="w-full">
-                  <LeadWorldMap
-                    svgMarkup={worldMapMarkup}
-                    points={resolvedCountryStats}
-                    selectedCountry={selectedCountryStat?.countryCode || null}
-                    onSelectCountry={setSelectedCountry}
-                    offset={{ x: 0, y: 0 }}
-                    compact
-                  />
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() =>
-                  setShowLocationDetails((current) => {
-                    const next = !current;
-                    if (next) {
-                      resetDetailMapView();
-                    }
-                    return next;
-                  })
-                }
-                className="mt-3 text-sm font-medium text-sky-600 transition-colors hover:text-sky-700"
-              >
-                {showLocationDetails ? 'Detaillierte Karte ausblenden' : 'Detaillierte Karte anzeigen'}
-              </button>
-            </div>
-
-            <div className="px-6 py-5">
-              <div className="mb-3">
-                <h3 className="text-base font-semibold text-slate-800">Zeit zwischen Kauf und Einlösung</h3>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2.5">
-                <div className="rounded-2xl border border-slate-100 bg-white/70 p-3">
-                  <p className="text-[11px] font-bold tracking-[0.08em] text-slate-500">Durchschnittlich später</p>
-                  <p className="mt-1.5 text-base font-bold text-slate-800">{delayInsights.avgDelayLabel}</p>
-                  <p className="mt-1 text-xs leading-5 text-slate-500">zwischen Kauf und Einlösung</p>
-                </div>
-                <div className="rounded-2xl border border-slate-100 bg-white/70 p-3">
-                  <p className="text-[11px] font-bold tracking-[0.08em] text-slate-500">Nach Parkschluss</p>
-                  <p className="mt-1.5 text-base font-bold text-slate-800">{delayInsights.afterCloseAvgLabel}</p>
-                  <p className="mt-1 text-xs leading-5 text-slate-500">{delayInsights.afterCloseRate}% der Einlösungen</p>
-                </div>
-                <div className="rounded-2xl border border-slate-100 bg-white/70 p-3">
-                  <p className="text-[11px] font-bold tracking-[0.08em] text-slate-500">Schnellste Einlösung</p>
-                  <p className="mt-1.5 text-base font-bold text-slate-800">{delayInsights.minDelayLabel}</p>
-                  <p className="mt-1 text-xs leading-5 text-slate-500">frühester gemessener Abstand</p>
-                </div>
-                <div className="rounded-2xl border border-slate-100 bg-white/70 p-3">
-                  <p className="text-[11px] font-bold tracking-[0.08em] text-slate-500">Nächster Tag oder später</p>
-                  <p className="mt-1.5 text-base font-bold text-slate-800">{delayInsights.laterDayRate}%</p>
-                  <p className="mt-1 text-xs leading-5 text-slate-500">{delayInsights.laterDayCount} von {delayInsights.matchedCount}</p>
-                </div>
-              </div>
-
-              {claimDelayLoading && (
-                <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/70 px-5 py-4 text-sm text-slate-500">
-                  Kauf und Einlösung werden gerade verknüpft…
-                </div>
-              )}
-
-              {!claimDelayLoading && delayInsights.matchedCount === 0 && (
-                <div className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 px-5 py-4 text-sm text-slate-500">
-                  Für die aktuelle Auswahl konnten Kauf und Einlösung noch nicht eindeutig verknüpft werden.
-                </div>
-              )}
-            </div>
-          </div>
-        </GlassCard>
-      </div>
-
-      {showLocationDetails && (
-        <div ref={locationDetailsRef}>
-        <GlassCard className="overflow-hidden">
-          <div className="border-b border-slate-100 px-6 py-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-500">Besucher nach Standort</p>
-            <h3 className="mt-2 text-2xl font-semibold text-slate-800">Detaillierte Weltkarte</h3>
-            <p className="mt-1 text-sm text-slate-500">
-              Klicke auf ein Land oder wähle rechts einen Eintrag aus, um die Leads gezielt anzusehen.
-            </p>
-          </div>
-
-          <div className="grid gap-6 p-4 sm:p-6 lg:grid-cols-[1.55fr_0.85fr]">
-            <div className="space-y-4">
-              <div className="-mx-2 overflow-x-auto pb-2 sm:mx-0 sm:overflow-visible sm:pb-0">
-                <div className="min-w-[320px] w-full sm:min-w-0">
-                  <LeadWorldMap
-                    svgMarkup={worldMapMarkup}
-                    points={resolvedCountryStats}
-                    selectedCountry={selectedCountryStat?.countryCode || null}
-                    onSelectCountry={setSelectedCountry}
-                    hoveredCountry={hoveredCountryInfo?.countryCode || null}
-                    hoverLabel={hoveredCountryLabel}
-                    hoverPosition={hoveredCountryInfo}
-                    zoom={detailMapZoom}
-                    offset={detailMapOffset}
-                    onOffsetChange={setDetailMapOffset}
-                    onZoomIn={zoomDetailMapIn}
-                    onZoomOut={zoomDetailMapOut}
-                    onResetView={resetDetailMapView}
-                    onHoverCountry={setHoveredCountryInfo}
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-                <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Länder</p>
-                  <p className="mt-2 text-2xl font-bold text-slate-800">{resolvedCountryStats.length}</p>
-                </div>
-                <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Leads mit Land</p>
-                  <p className="mt-2 text-2xl font-bold text-slate-800">{formatNumber(totalMappedLeads)}</p>
-                </div>
-                <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                    {delayInsights.matchedCount > 0 ? 'Ø Kauf bis digital' : 'Digitale Zuordnungen'}
-                  </p>
-                  <p className="mt-2 text-lg font-bold text-slate-800">
-                    {delayInsights.matchedCount > 0 ? delayInsights.avgDelayLabel : '—'}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="max-h-[420px] space-y-3 overflow-y-auto pr-2">
-              {resolvedCountryStats.map((country) => {
-                const share = totalMappedLeads > 0 ? Math.round((country.count / totalMappedLeads) * 100) : 0;
-                const active = country.countryCode === selectedCountryStat?.countryCode;
-                return (
-                  <button
-                    key={country.countryCode}
-                    type="button"
-                    onClick={() => setSelectedCountry(country.countryCode)}
-                    className={`w-full rounded-2xl border px-4 py-3 text-left transition-all ${
-                      active
-                        ? 'border-sky-200 bg-sky-50/80 shadow-sm'
-                        : 'border-slate-100 bg-white hover:border-slate-200'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="font-medium text-slate-700">
-                          {countryCodeToFlag(country.countryCode)} {country.countryName}
-                        </p>
-                        <p className="mt-1 text-xs text-slate-400">{country.countryCode}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-semibold text-slate-800">{country.count}</p>
-                        <p className="text-xs text-slate-400">{share}%</p>
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </GlassCard>
-        </div>
-      )}
-      </>
       )}
 
       {view === 'list' && (
