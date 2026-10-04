@@ -369,6 +369,10 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
     return buckets.map((bucket) => ({ ...bucket, rides: rideMap.get(bucket.hour) ?? 0 }));
   }, [dayPurchases, daySnapshots, kioskPriceCents, kioskTimezone, dayHourRange]);
   const hasRideData = useMemo(() => hourlyBuckets.some((bucket) => (bucket.rides ?? 0) > 0), [hourlyBuckets]);
+  const hasTrendRideData = useMemo(
+    () => kioskChartData.some((day) => (day.expectedCount ?? 0) > 0),
+    [kioskChartData],
+  );
   const dayTotalRevenueCents = dayPurchases.length * (kioskPriceCents ?? 0);
   const selectedDateLabel = selectedDate ? formatDateLabel(selectedDate) : '';
 
@@ -639,7 +643,7 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
               <div className="-mx-2 overflow-x-auto pb-2 sm:mx-0 sm:overflow-visible sm:pb-0">
                 <div className="h-[18rem] min-w-[320px] w-full sm:h-80">
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={kioskChartData} margin={chartMargin}>
+                    <ComposedChart data={kioskChartData} margin={chartMargin}>
                       <defs>
                         <linearGradient id="kioskRevenue" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="0%" stopColor="#0ea5e9" stopOpacity={0.22} />
@@ -656,11 +660,13 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
                         interval={isMobileChart ? 'preserveStartEnd' : 0}
                       />
                       <YAxis
+                        yAxisId="rev"
                         axisLine={false}
                         tickLine={false}
                         tick={chartYAxisTick}
                         tickFormatter={(value) => `€${value}`}
                       />
+                      <YAxis yAxisId="rides" orientation="right" hide domain={[0, 'auto']} />
                       <Tooltip
                         contentStyle={{
                           background: 'rgba(255,255,255,0.94)',
@@ -669,16 +675,34 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
                           borderRadius: '12px',
                           boxShadow: '0 8px 32px rgba(15,23,42,0.08)',
                         }}
-                        formatter={(value) => [`€${Number(value ?? 0).toFixed(2)}`, 'Umsatz']}
+                        formatter={(value, name) =>
+                          name === 'Fahrten'
+                            ? [formatNumber(Number(value ?? 0)), 'Fahrten']
+                            : [`€${Number(value ?? 0).toFixed(2)}`, 'Umsatz']
+                        }
                       />
+                      {hasTrendRideData && <Legend wrapperStyle={{ fontSize: 12 }} />}
                       <Area
+                        yAxisId="rev"
                         type="monotone"
                         dataKey="revenueEur"
+                        name="Umsatz"
                         stroke="#0ea5e9"
                         strokeWidth={2}
                         fill="url(#kioskRevenue)"
                       />
-                    </AreaChart>
+                      {hasTrendRideData && (
+                        <Line
+                          yAxisId="rides"
+                          type="monotone"
+                          dataKey="expectedCount"
+                          name="Fahrten"
+                          stroke="#10b981"
+                          strokeWidth={2}
+                          dot={false}
+                        />
+                      )}
+                    </ComposedChart>
                   </ResponsiveContainer>
                 </div>
               </div>
