@@ -47,6 +47,7 @@ import {
   fetchKioskSales,
   fetchMachineRevenue,
   fetchRideSnapshots,
+  getEffectiveScheduleForDate,
   getOpeningHourRangeForDate,
   ridesByHour,
   sumDays,
@@ -491,16 +492,57 @@ export default function Overview() {
 
   const kioskChartData = useMemo(() => toChartSeries(kioskDays), [kioskDays]);
 
+  function formatDurationShort(minutes: number): string {
+    if (minutes < 60) return `${minutes} Min.`;
+    const hours = Math.floor(minutes / 60);
+    const rest = minutes % 60;
+    return rest === 0 ? `${hours} Std.` : `${hours} Std. ${rest} Min.`;
+  }
+
   const parkOpenStatus = useMemo(() => {
     if (!isKioskPark) return null;
-    const range = getOpeningHourRangeForDate(kioskOpeningHours, todayInTimezone(kioskTimezone), kioskOpeningHoursConfig);
-    if (!range) return null;
-    const nowHour = Number(
-      new Intl.DateTimeFormat('en-GB', { timeZone: kioskTimezone, hour: '2-digit', hourCycle: 'h23' }).format(new Date()),
-    );
-    const isOpen = nowHour >= range.startHour && nowHour < range.endHour;
-    return { isOpen, range };
+    const today = todayInTimezone(kioskTimezone);
+    const schedule = getEffectiveScheduleForDate(kioskOpeningHoursConfig ?? null, today, kioskOpeningHours);
+    if (!schedule) return null;
+    const [openHour, openMinute] = schedule.open.split(':').map(Number);
+    const [closeHour, closeMinute] = schedule.close.split(':').map(Number);
+    if ([openHour, openMinute, closeHour, closeMinute].some(Number.isNaN)) return null;
+
+    const nowParts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: kioskTimezone,
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    }).formatToParts(new Date());
+    const nowHour = Number(nowParts.find((p) => p.type === 'hour')?.value ?? 0);
+    const nowMinute = Number(nowParts.find((p) => p.type === 'minute')?.value ?? 0);
+    const nowMinutes = nowHour * 60 + nowMinute;
+    const openMinutes = openHour * 60 + openMinute;
+    const closeMinutes = closeHour * 60 + closeMinute;
+
+    const isOpen = nowMinutes >= openMinutes && nowMinutes < closeMinutes;
+    const label = isOpen
+      ? closeMinutes - nowMinutes <= 180
+        ? `Park geöffnet · schließt in ${formatDurationShort(closeMinutes - nowMinutes)}`
+        : 'Park geöffnet'
+      : nowMinutes < openMinutes
+        ? `Park öffnet in ${formatDurationShort(openMinutes - nowMinutes)}`
+        : 'Park heute bereits geschlossen';
+
+    return { isOpen, label };
   }, [isKioskPark, kioskOpeningHours, kioskOpeningHoursConfig, kioskTimezone]);
+
+  const greeting = useMemo(() => {
+    const tz = isKioskPark && kioskTimezone ? kioskTimezone : Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const hour = Number(new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour: '2-digit', hourCycle: 'h23' }).format(new Date()));
+    if (hour < 11) return 'Guten Morgen';
+    if (hour < 14) return 'Guten Mittag';
+    if (hour < 18) return 'Guten Tag';
+    if (hour < 22) return 'Guten Abend';
+    return 'Gute Nacht';
+  }, [isKioskPark, kioskTimezone]);
+
+  const firstName = profile?.full_name?.split(' ')[0] ?? '';
 
   const selectedPeakDate = useMemo(() => {
     if (!isKioskPark) return '';
@@ -794,30 +836,31 @@ export default function Overview() {
     <div className="space-y-6 overflow-x-clip">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <div className="flex flex-wrap items-center gap-3">
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+            {t('overview.title')} · {parkName || parkData.park_name}
+          </p>
+          <div className="mt-1 flex flex-wrap items-center gap-3">
             <h2 className="text-2xl font-bold tracking-tight text-slate-800">
-              {t('overview.title')}
+              {greeting}{firstName ? `, ${firstName}` : ''}
             </h2>
             {!isKioskPark && <span className={`status-badge ${statusTone}`}>{systemStatusLabel}</span>}
             {parkOpenStatus && (
               <span
-                className={`rounded-full px-3 py-1 text-xs font-medium ${
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${
                   parkOpenStatus.isOpen ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'
                 }`}
               >
-                {parkOpenStatus.isOpen
-                  ? `Park ist jetzt geöffnet (bis ${parkOpenStatus.range.endHour}:00)`
-                  : `Park ist jetzt geschlossen (öffnet ${parkOpenStatus.range.startHour}:00)`}
+                <span
+                  className={`h-1.5 w-1.5 rounded-full ${parkOpenStatus.isOpen ? 'bg-emerald-500' : 'bg-slate-400'}`}
+                  aria-hidden="true"
+                />
+                {parkOpenStatus.label}
               </span>
             )}
           </div>
-          <p className="mt-1 text-sm text-slate-500">
-            {parkName || parkData.park_name}
-            {profile ? ` · ${profile.full_name}` : ''}
-            {!isKioskPark && parkData.summary.last_data_at
-              ? ` · Last data ${formatRelative(parkData.summary.last_data_at)}`
-              : ''}
-          </p>
+          {!isKioskPark && parkData.summary.last_data_at && (
+            <p className="mt-1 text-sm text-slate-500">Last data {formatRelative(parkData.summary.last_data_at)}</p>
+          )}
         </div>
         {!isKioskPark && (
         <div className="flex flex-wrap gap-2">
