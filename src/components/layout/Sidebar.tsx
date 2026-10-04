@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -15,6 +16,8 @@ import {
   ChevronRight,
   UserCog,
   X,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useI18n } from '../../lib/i18n';
@@ -65,6 +68,17 @@ export default function Sidebar({
   const location = useLocation();
   const { t } = useI18n();
   const { parkName, setPark, isKioskPark, parkId } = usePark();
+  // Scaffolding only for now: persists the choice and tags <html> so the
+  // rest of the dashboard's pages can opt into dark styles later without
+  // touching this component again. No page actually has dark styles yet,
+  // so toggling this doesn't visibly change anything beyond its own icon.
+  const [theme, setTheme] = useState<'light' | 'dark'>(
+    () => (localStorage.getItem('lp-operator-theme') === 'dark' ? 'dark' : 'light'),
+  );
+  useEffect(() => {
+    document.documentElement.setAttribute('data-operator-theme', theme);
+    localStorage.setItem('lp-operator-theme', theme);
+  }, [theme]);
   // Same park-gate as GuestActivityAwareOverlay: the Benutzer page only has
   // real content for CSS-ALPINE/Tarzans and Plose so far.
   const isTarzansPark =
@@ -172,13 +186,19 @@ export default function Sidebar({
               setPark(null, null);
               await signOut();
             }}
-            className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-slate-500 transition-colors hover:bg-white/[0.06] hover:text-rose-400 ${
-              showFull ? 'flex-1' : 'justify-center'
-            }`}
+            className="flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm text-slate-500 transition-colors hover:bg-white/[0.06] hover:text-rose-400"
             title={t('nav.sign_out')}
           >
             <LogOut className="h-4 w-4 shrink-0" />
             {showFull && <span>{t('nav.sign_out')}</span>}
+          </button>
+
+          <button
+            onClick={() => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))}
+            className="flex items-center justify-center rounded-xl px-3 py-2 text-slate-500 transition-colors hover:bg-white/[0.06] hover:text-slate-300"
+            title={theme === 'dark' ? 'Hellmodus' : 'Dunkelmodus'}
+          >
+            {theme === 'dark' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
           </button>
 
           <button
