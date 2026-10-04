@@ -33,28 +33,30 @@ export default function AutomatenUebersicht({ machines }: { machines: MachineRev
   const gesamtWert = nachUmsatz ? summe.cent : summe.anzahl;
   const wert = (m: MachineRevenue) => (nachUmsatz ? m[zeitraum].cent : m[zeitraum].anzahl);
 
-  return (
-    <div className="space-y-4">
-      <div className="flex justify-end">
-        <div className="inline-flex rounded-xl bg-white/50 p-1">
-          {ZEITRAEUME.map((z) => (
-            <button
-              key={z.key}
-              type="button"
-              onClick={() => setZeitraum(z.key)}
-              className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
-                zeitraum === z.key ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              {z.label}
-            </button>
-          ))}
-        </div>
-      </div>
+  const zeitraumSwitch = (
+    <div className="inline-flex rounded-xl bg-white/50 p-1">
+      {ZEITRAEUME.map((z) => (
+        <button
+          key={z.key}
+          type="button"
+          onClick={() => setZeitraum(z.key)}
+          className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+            zeitraum === z.key ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          {z.label}
+        </button>
+      ))}
+    </div>
+  );
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(260px,320px)_minmax(0,1fr)]">
+  return (
+    <div className="grid gap-4 lg:grid-cols-[minmax(260px,320px)_minmax(0,1fr)]">
         <GlassCard className="p-5">
-          <h4 className="text-base font-semibold text-slate-800">Verteilung nach Automaten</h4>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h4 className="text-base font-semibold text-slate-800">Verteilung nach Automaten</h4>
+            {zeitraumSwitch}
+          </div>
           {/* Derselbe Ring wie "Status-Verteilung" auf der Fotoseite (recharts,
               gleiche Maße): läuft beim Laden und beim Umschalten von selbst ein. */}
           <div className="relative mx-auto mt-4 h-40 w-40">
@@ -194,7 +196,6 @@ export default function AutomatenUebersicht({ machines }: { machines: MachineRev
             );
           })}
         </div>
-      </div>
     </div>
   );
 }
