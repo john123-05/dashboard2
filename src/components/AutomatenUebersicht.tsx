@@ -1,23 +1,29 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { CreditCard } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import GlassCard from './ui/GlassCard';
 import { formatCurrency, formatNumber } from '../lib/utils';
 import type { MachineRevenue } from '../lib/kioskSales';
 
-type Zeitraum = 'heute' | 'woche' | 'monat' | 'gesamt';
+export type Zeitraum = 'heute' | 'woche' | 'monat' | 'gesamt';
 
-const ZEITRAEUME: { key: Zeitraum; label: string }[] = [
+export const AUTOMATEN_ZEITRAEUME: { key: Zeitraum; label: string }[] = [
   { key: 'heute', label: 'Heute' },
   { key: 'woche', label: '7 Tage' },
   { key: 'monat', label: 'Monat' },
   { key: 'gesamt', label: 'Gesamt' },
 ];
+const ZEITRAEUME = AUTOMATEN_ZEITRAEUME;
 
 import { AUTOMAT_FARBEN as FARBEN } from '../lib/automatFarben';
 
-export default function AutomatenUebersicht({ machines, className = '' }: { machines: MachineRevenue[]; className?: string }) {
-  const [zeitraum, setZeitraum] = useState<Zeitraum>('monat');
+export default function AutomatenUebersicht({
+  machines,
+  zeitraum,
+}: {
+  machines: MachineRevenue[];
+  zeitraum: Zeitraum;
+}) {
   const summe = useMemo(
     () => machines.reduce(
       (acc, m) => ({ cent: acc.cent + m[zeitraum].cent, anzahl: acc.anzahl + m[zeitraum].anzahl }),
@@ -33,26 +39,7 @@ export default function AutomatenUebersicht({ machines, className = '' }: { mach
   const gesamtWert = nachUmsatz ? summe.cent : summe.anzahl;
   const wert = (m: MachineRevenue) => (nachUmsatz ? m[zeitraum].cent : m[zeitraum].anzahl);
 
-  const zeitraumSwitch = (
-    <div className="inline-flex rounded-xl bg-white/50 p-1">
-      {ZEITRAEUME.map((z) => (
-        <button
-          key={z.key}
-          type="button"
-          onClick={() => setZeitraum(z.key)}
-          className={`whitespace-nowrap rounded-lg px-2.5 py-1.5 text-xs font-medium transition sm:px-3 sm:text-sm ${
-            zeitraum === z.key ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-          }`}
-        >
-          {z.label}
-        </button>
-      ))}
-    </div>
-  );
-
   return (
-    <div className={`space-y-3 ${className}`}>
-      <div className="flex justify-end">{zeitraumSwitch}</div>
       <div className="grid gap-4 lg:grid-cols-[minmax(260px,320px)_minmax(0,1fr)]">
         <GlassCard className="p-5">
           <h4 className="text-base font-semibold text-slate-800">Verteilung nach Automaten</h4>
@@ -196,6 +183,5 @@ export default function AutomatenUebersicht({ machines, className = '' }: { mach
           })}
         </div>
       </div>
-    </div>
   );
 }

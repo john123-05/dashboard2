@@ -29,7 +29,7 @@ import {
 import { formatCurrency, formatNumber, formatPercent, exportToCSV } from '../lib/utils';
 import GlassCard from '../components/ui/GlassCard';
 import ZahlungsUebersicht from '../components/ZahlungsUebersicht';
-import AutomatenUebersicht from '../components/AutomatenUebersicht';
+import AutomatenUebersicht, { AUTOMATEN_ZEITRAEUME, type Zeitraum as AutomatenZeitraum } from '../components/AutomatenUebersicht';
 import KPICard from '../components/ui/KPICard';
 import { useI18n } from '../lib/i18n';
 import { usePark } from '../contexts/ParkContext';
@@ -87,6 +87,7 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
   const [issues, setIssues] = useState<string[]>([]);
   const [kioskDays, setKioskDays] = useState<AggregatedDay[]>([]);
   const [machineRevenue, setMachineRevenue] = useState<MachineRevenue[]>([]);
+  const [automatZeitraum, setAutomatZeitraum] = useState<AutomatenZeitraum>('monat');
 
   const [chartMode, setChartMode] = useState<'trend' | 'day'>('trend');
   // Explicit, not purely derived from selectedDate — "Anderer Tag" needs to
@@ -579,11 +580,29 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
               iconColor="text-fuchsia-600"
               iconBg="bg-fuchsia-50"
             />
+            {machineRevenue.length >= 2 && (
+              <div className="col-span-2 hidden items-end justify-end sm:flex">
+                <div className="inline-flex rounded-xl bg-white/50 p-1">
+                  {AUTOMATEN_ZEITRAEUME.map((z) => (
+                    <button
+                      key={z.key}
+                      type="button"
+                      onClick={() => setAutomatZeitraum(z.key)}
+                      className={`whitespace-nowrap rounded-lg px-2.5 py-1.5 text-xs font-medium transition sm:px-3 sm:text-sm ${
+                        automatZeitraum === z.key ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                      }`}
+                    >
+                      {z.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Automaten im Vergleich: Ring + eine Karte je Automat. Nur bei mehr als
               einem Automaten; Quelle ist machine_sale_payments (mit machine_id). */}
-          <AutomatenUebersicht machines={machineRevenue} className="-mt-96" />
+          <AutomatenUebersicht machines={machineRevenue} zeitraum={automatZeitraum} />
 
           <GlassCard className="p-5 sm:p-6">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
