@@ -56,6 +56,14 @@ import {
   type MachineRevenue,
 } from '../lib/kioskSales';
 import { AUTOMAT_FARBEN } from '../lib/automatFarben';
+import {
+  fetchSurveyConfig,
+  fetchSurveyResults,
+  fetchSocialResults,
+  type UnlockMode,
+  type SurveyResults,
+  type SocialResults,
+} from '../lib/surveyApi';
 import { useAuth } from '../contexts/AuthContext';
 import { usePark } from '../contexts/ParkContext';
 import { useI18n } from '../lib/i18n';
@@ -130,6 +138,9 @@ export default function Overview() {
   const [kioskDays, setKioskDays] = useState<AggregatedDay[]>([]);
   const [machines, setMachines] = useState<MachineRevenue[]>([]);
   const [leads, setLeads] = useState<Record<string, unknown>[]>([]);
+  const [unlockMode, setUnlockMode] = useState<UnlockMode | null>(null);
+  const [surveyToday, setSurveyToday] = useState<SurveyResults | null>(null);
+  const [socialToday, setSocialToday] = useState<SocialResults | null>(null);
   const [peakDayFilter, setPeakDayFilter] = useState<'today' | 'yesterday' | 'custom'>('today');
   const [peakCustomDate, setPeakCustomDate] = useState('');
   const [hourlyPoints, setHourlyPoints] = useState<{ hour: number; label: string; rides: number; sold: number }[]>([]);
@@ -529,23 +540,53 @@ export default function Overview() {
     };
   }, [isKioskPark, parkId, selectedPeakDate, kioskTimezone, kioskOpeningHours, kioskOpeningHoursConfig, kioskPriceCents]);
 
+  useEffect(() => {
+    if (!isKioskPark || !parkId) return;
+    let active = true;
+    fetchSurveyConfig(parkId).then((config) => {
+      if (!active) return;
+      const mode = config.settings.mode;
+      setUnlockMode(mode);
+      if (mode === 'survey') {
+        fetchSurveyResults(parkId, 1).then((results) => active && setSurveyToday(results)).catch(() => {});
+      } else if (mode === 'social') {
+        fetchSocialResults(parkId, 1).then((results) => active && setSocialToday(results)).catch(() => {});
+      }
+    }).catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [isKioskPark, parkId]);
+
+  const emailLeadsToday = useMemo(() => {
+    if (unlockMode !== 'email') return 0;
+    const today = todayInTimezone(kioskTimezone);
+    return leads.filter((lead) => {
+      if (lead.source !== 'photo_claim') return false;
+      const createdAt = lead.created_at as string;
+      if (!createdAt) return false;
+      return new Intl.DateTimeFormat('en-CA', { timeZone: kioskTimezone }).format(new Date(createdAt)) === today;
+    }).length;
+  }, [leads, unlockMode, kioskTimezone]);
+
   const peakHour = useMemo(() => {
     if (hourlyPoints.length === 0) return null;
     return hourlyPoints.reduce((best, current) => (current.sold > best.sold ? current : best));
   }, [hourlyPoints]);
 
   const userDataStats = useMemo(() => {
+    const today = todayInTimezone(kioskTimezone);
     const dayLeads = leads.filter((lead) => {
       const source = lead.source as string;
       if (source !== 'photo_claim' && source !== 'social_media') return false;
       const createdAt = lead.created_at as string;
       if (!createdAt) return false;
       const dateKey = new Intl.DateTimeFormat('en-CA', { timeZone: kioskTimezone }).format(new Date(createdAt));
-      return dateKey === selectedPeakDate;
+      return dateKey === today;
     });
     const optedIn = dayLeads.filter((lead) => lead.opted_in === true).length;
     return { total: dayLeads.length, optedIn, notOptedIn: dayLeads.length - optedIn };
-  }, [leads, selectedPeakDate, kioskTimezone]);
+  }, [leads, kioskTimezone]);
 
   const onlineRevenueCents = useMemo(
     () => Math.round(
@@ -963,39 +1004,82 @@ export default function Overview() {
 
           <GlassCard className="p-5 sm:p-6">
             <h3 className="text-base font-semibold text-slate-800">Erfassung von Nutzerdaten</h3>
-            <p className="mt-1 text-xs text-slate-500">
-              {peakDayFilter === 'today' ? 'Heute' : peakDayFilter === 'yesterday' ? 'Gestern' : selectedPeakDate}
-              {' · '}{formatNumber(userDataStats.total)} Freischaltungen
-            </p>
-            {userDataStats.total === 0 ? (
-              <p className="mt-6 text-sm text-slate-400">Keine Freischaltungen an diesem Tag.</p>
-            ) : (
-              <div className="relative mx-auto mt-2 h-40 w-40">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={[
-                        { name: 'Einwilligung erteilt', value: userDataStats.optedIn },
-                        { name: 'Keine Einwilligung', value: userDataStats.notOptedIn },
-                      ]}
-                      dataKey="value"
-                      innerRadius={45}
-                      outerRadius={70}
-                      paddingAngle={2}
-                    >
-                      <Cell fill="#10b981" />
-                      <Cell fill="#cbd5e1" />
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-lg font-bold text-slate-800">
-                    {userDataStats.total > 0 ? Math.round((userDataStats.optedIn / userDataStats.total) * 100) : 0}%
-                  </span>
-                  <span className="text-[10px] text-slate-400">Einwilligung</span>
-                </div>
+            {unlockMode && (
+              <div className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
+                <span className="h-2 w-2 rounded-full bg-emerald-500" aria-hidden="true" />
+                Aktiv: {unlockMode === 'email' ? 'E-Mail / Telefon' : unlockMode === 'survey' ? 'Umfrage' : 'Social Media'}
               </div>
+            )}
+
+            {unlockMode === 'email' && (
+              <>
+                <p className="mt-4 text-sm text-slate-500">Kontakte heute</p>
+                <p className="text-2xl font-bold text-slate-800">{formatNumber(emailLeadsToday)}</p>
+                {userDataStats.total > 0 && (
+                  <div className="relative mx-auto mt-3 h-32 w-32">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={[
+                            { name: 'Einwilligung erteilt', value: userDataStats.optedIn },
+                            { name: 'Keine Einwilligung', value: userDataStats.notOptedIn },
+                          ]}
+                          dataKey="value"
+                          innerRadius={38}
+                          outerRadius={58}
+                          paddingAngle={2}
+                        >
+                          <Cell fill="#10b981" />
+                          <Cell fill="#cbd5e1" />
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                      <span className="text-sm font-bold text-slate-800">
+                        {Math.round((userDataStats.optedIn / userDataStats.total) * 100)}%
+                      </span>
+                      <span className="text-[10px] text-slate-400">Einwilligung</span>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            {unlockMode === 'survey' && (
+              <dl className="mt-4 space-y-3 text-sm">
+                <div className="flex items-center justify-between">
+                  <dt className="text-slate-500">Antworten heute</dt>
+                  <dd className="text-lg font-bold text-slate-800">{formatNumber(surveyToday?.total ?? 0)}</dd>
+                </div>
+                <div className="flex items-center justify-between">
+                  <dt className="text-slate-500">Ø Bewertung</dt>
+                  <dd className="font-semibold text-slate-700">
+                    {surveyToday?.average_score != null ? surveyToday.average_score.toFixed(1) : '–'}
+                  </dd>
+                </div>
+                <div className="flex items-center justify-between">
+                  <dt className="text-slate-500">NPS</dt>
+                  <dd className="font-semibold text-slate-700">{surveyToday?.nps ?? '–'}</dd>
+                </div>
+              </dl>
+            )}
+
+            {unlockMode === 'social' && (
+              <dl className="mt-4 space-y-3 text-sm">
+                <div className="flex items-center justify-between">
+                  <dt className="text-slate-500">Freischaltungen heute</dt>
+                  <dd className="text-lg font-bold text-slate-800">{formatNumber(socialToday?.unlocked ?? 0)}</dd>
+                </div>
+                <div className="flex items-center justify-between">
+                  <dt className="text-slate-500">Geteilt</dt>
+                  <dd className="font-semibold text-slate-700">{formatNumber(socialToday?.posted ?? 0)}</dd>
+                </div>
+                <div className="flex items-center justify-between">
+                  <dt className="text-slate-500">Gewinnspiel-Teilnahmen</dt>
+                  <dd className="font-semibold text-slate-700">{formatNumber(socialToday?.giveaway ?? 0)}</dd>
+                </div>
+              </dl>
             )}
           </GlassCard>
         </div>
