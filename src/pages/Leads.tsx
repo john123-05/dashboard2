@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Camera, Download, ExternalLink, Mail, Minus, Plus, Trash2, UserPlus } from 'lucide-react';
 import { getOptionalSourceWarning, invokeEdgeFunction, isEdgeSourceUnavailable } from '../lib/edgeFunctions';
 import { fetchKioskPhotosForDay, fetchKioskSales, getClosingMinutesForDate, type KioskPurchaseRow } from '../lib/kioskSales';
@@ -9,11 +9,13 @@ import DataTable from '../components/ui/DataTable';
 import { useI18n } from '../lib/i18n';
 import { usePark } from '../contexts/ParkContext';
 import UnlockCenter from '../components/survey/UnlockCenter';
+import ContactSettings from '../components/survey/ContactSettings';
 import {
   fetchSurveyConfig,
   fetchSurveyResults,
   fetchSocialResults,
   type UnlockMode,
+  type SurveyConfig,
   type SurveyResults,
   type SocialResults,
 } from '../lib/surveyApi';
@@ -541,6 +543,7 @@ function LeadsContacts({
   // die letzten 30 Tage je Modus - unabhängig vom Freischalt-Reiter geladen,
   // damit "Kontakte"/Liste nicht unnötig mitlädt.
   const [unlockMode, setUnlockMode] = useState<UnlockMode | null>(null);
+  const [contactConfig, setContactConfig] = useState<SurveyConfig | null>(null);
   const [lifetimeSold, setLifetimeSold] = useState<number | null>(null);
   const [overviewSurvey, setOverviewSurvey] = useState<SurveyResults | null>(null);
   const [overviewSocial, setOverviewSocial] = useState<SocialResults | null>(null);
@@ -549,6 +552,22 @@ function LeadsContacts({
   useEffect(() => {
     loadData();
   }, [parkId]);
+
+  const loadContactConfig = useCallback(() => {
+    if (!parkId) return;
+    fetchSurveyConfig(parkId)
+      .then((c) => {
+        setContactConfig(c);
+        setUnlockMode(c.settings.mode);
+      })
+      .catch(() => {});
+  }, [parkId]);
+
+  // Geladen unabhängig vom Reiter: "Kontakte" braucht die Kontaktfeld-
+  // Einstellungen (E-Mail/Telefon/Adresse), "Übersicht" den aktiven Modus.
+  useEffect(() => {
+    loadContactConfig();
+  }, [loadContactConfig]);
 
   useEffect(() => {
     if (view !== 'overview' || !parkId) return;
@@ -564,22 +583,16 @@ function LeadsContacts({
       .then((photos) => active && setLatestPhotoCode(photos[0]?.externalCode ?? null))
       .catch(() => active && setLatestPhotoCode(null));
 
-    fetchSurveyConfig(parkId)
-      .then((config) => {
-        if (!active) return;
-        setUnlockMode(config.settings.mode);
-        if (config.settings.mode === 'survey') {
-          fetchSurveyResults(parkId, 30).then((r) => active && setOverviewSurvey(r)).catch(() => {});
-        } else if (config.settings.mode === 'social') {
-          fetchSocialResults(parkId, 30).then((r) => active && setOverviewSocial(r)).catch(() => {});
-        }
-      })
-      .catch(() => {});
+    if (unlockMode === 'survey') {
+      fetchSurveyResults(parkId, 30).then((r) => active && setOverviewSurvey(r)).catch(() => {});
+    } else if (unlockMode === 'social') {
+      fetchSocialResults(parkId, 30).then((r) => active && setOverviewSocial(r)).catch(() => {});
+    }
 
     return () => {
       active = false;
     };
-  }, [view, parkId]);
+  }, [view, parkId, unlockMode]);
 
   useEffect(() => {
     let active = true;
@@ -1272,7 +1285,16 @@ function LeadsContacts({
   return (
     <div className={embedded ? 'customer-embedded-root preview-leads space-y-5' : 'space-y-6'}>
       {view === 'list' && (
-        <div className={`flex items-center justify-end gap-3 ${embedded ? 'customer-operator-pagehead' : ''}`}>
+        <div className={`flex flex-wrap items-start justify-between gap-3 ${embedded ? 'customer-operator-pagehead' : ''}`}>
+          {contactConfig && (
+            <ContactSettings
+              parkId={parkId ?? ''}
+              email={contactConfig.settings.email_mode ?? 'required'}
+              phone={contactConfig.settings.phone_mode ?? 'off'}
+              address={contactConfig.settings.address_mode ?? 'off'}
+              onSaved={loadContactConfig}
+            />
+          )}
           <button onClick={handleExport} className="glass-button-secondary">
             <Download className="h-4 w-4" />
             {t('leads.export')}

@@ -32,27 +32,29 @@ function Choice({ label, value, onChange }: { label: string; value: FieldLevel; 
 }
 
 /** Welche Kontaktdaten Gäste beim Freischalten angeben (E-Mail-Modus und Social-Modus). */
-export default function ContactSettings({ parkId, email, phone, onSaved }: {
+export default function ContactSettings({ parkId, email, phone, address, onSaved }: {
   parkId: string;
   email: FieldLevel;
   phone: FieldLevel;
+  address: FieldLevel;
   onSaved: () => void;
 }) {
   const [emailMode, setEmailMode] = useState<FieldLevel>(email);
   const [phoneMode, setPhoneMode] = useState<FieldLevel>(phone);
+  const [addressMode, setAddressMode] = useState<FieldLevel>(address);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => { setEmailMode(email); setPhoneMode(phone); }, [email, phone]);
+  useEffect(() => { setEmailMode(email); setPhoneMode(phone); setAddressMode(address); }, [email, phone, address]);
 
-  const dirty = emailMode !== email || phoneMode !== phone;
+  const dirty = emailMode !== email || phoneMode !== phone || addressMode !== address;
 
   async function save() {
     setSaving(true);
     setError(null);
     try {
-      await saveContactSettings(parkId, emailMode, phoneMode);
+      await saveContactSettings(parkId, emailMode, phoneMode, addressMode);
       setSaved(true);
       onSaved();
     } catch (e) {
@@ -66,6 +68,7 @@ export default function ContactSettings({ parkId, email, phone, onSaved }: {
       <div className="flex flex-wrap items-end gap-6">
         <Choice label="E-Mail-Adresse" value={emailMode} onChange={(v) => { setEmailMode(v); setSaved(false); }} />
         <Choice label="Telefonnummer" value={phoneMode} onChange={(v) => { setPhoneMode(v); setSaved(false); }} />
+        <Choice label="Hausadresse" value={addressMode} onChange={(v) => { setAddressMode(v); setSaved(false); }} />
         <button type="button" onClick={save} disabled={saving || !dirty} className="glass-button-primary disabled:opacity-50">
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
           Speichern

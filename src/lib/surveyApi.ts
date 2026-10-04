@@ -30,6 +30,7 @@ export interface SurveySettings {
   mode: UnlockMode;
   email_mode: FieldLevel;
   phone_mode: FieldLevel;
+  address_mode: FieldLevel;
   social: SocialSettings;
   review_url: string | null;
   review_min_score: number;
@@ -166,9 +167,10 @@ export function saveContactSettings(
   parkId: string,
   email_mode: FieldLevel,
   phone_mode: FieldLevel,
+  address_mode: FieldLevel,
 ): Promise<SurveyConfig> {
   return call<SurveyConfig>(
-    { method: 'POST', body: JSON.stringify({ park_id: parkId, action: 'save_contact', email_mode, phone_mode }) },
+    { method: 'POST', body: JSON.stringify({ park_id: parkId, action: 'save_contact', email_mode, phone_mode, address_mode }) },
     { park_id: parkId },
   );
 }

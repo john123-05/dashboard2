@@ -11,7 +11,7 @@ import { requireOperatorForPark } from '../_shared/operatorAuth.ts';
  *   GET  ?park_id=…&view=social&days=N  -> Auswertung der Social-Media-Freischaltungen
  *   POST { park_id, settings, questions } -> Umfrage speichern (ohne Modus/Kontakt/Social)
  *   POST { park_id, action: 'set_mode', mode }         -> was Gäste zum Freischalten tun
- *   POST { park_id, action: 'save_contact', email_mode, phone_mode }
+ *   POST { park_id, action: 'save_contact', email_mode, phone_mode, address_mode }
  *   POST { park_id, action: 'save_social', social }
  *   GET  ?park_id=…&view=tracking -> independent ad-tag settings
  *   POST { park_id, action: 'save_tracking', tracking }
@@ -82,6 +82,7 @@ async function loadConfig(parkId: string) {
       thanks_text: {},
       email_mode: 'required',
       phone_mode: 'off',
+      address_mode: 'off',
       social: {},
     },
     questions: questions ?? [],
@@ -220,13 +221,14 @@ async function setMode(parkId: string, modeRaw: unknown) {
 async function saveContact(parkId: string, body: Record<string, unknown>) {
   const email = level(body.email_mode, 'required');
   const phone = level(body.phone_mode, 'off');
+  const address = level(body.address_mode, 'off');
   const { data: cur } = await supabaseService
     .from('park_survey_settings').select('mode').eq('park_id', parkId).maybeSingle();
   if ((cur?.mode ?? 'email') === 'email' && email === 'off' && phone === 'off') {
     return { error: 'Im E-Mail-Modus muss mindestens E-Mail oder Telefon abgefragt werden.' };
   }
   const { error } = await supabaseService.from('park_survey_settings').upsert(
-    { park_id: parkId, email_mode: email, phone_mode: phone, updated_at: new Date().toISOString() },
+    { park_id: parkId, email_mode: email, phone_mode: phone, address_mode: address, updated_at: new Date().toISOString() },
     { onConflict: 'park_id' },
   );
   return error ? { error: error.message } : { ok: true };

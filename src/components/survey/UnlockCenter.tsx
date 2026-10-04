@@ -2,16 +2,14 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Loader2 } from 'lucide-react';
 import SurveyManager from './SurveyManager';
 import SocialManager from './SocialManager';
-import ContactSettings from './ContactSettings';
 import TrackingManager from './TrackingManager';
 import { fetchSurveyConfig, setUnlockMode, type SurveyConfig, type UnlockMode } from '../../lib/surveyApi';
 
-export type TabKey = 'overview' | 'allContacts' | 'contacts' | 'survey' | 'social' | 'tracking';
+export type TabKey = 'overview' | 'allContacts' | 'survey' | 'social' | 'tracking';
 
 const TABS: { key: TabKey; mode?: UnlockMode; label: string }[] = [
   { key: 'overview', label: 'Übersicht' },
-  { key: 'allContacts', label: 'Kontakte' },
-  { key: 'contacts', mode: 'email', label: 'E-Mail / Telefon' },
+  { key: 'allContacts', mode: 'email', label: 'Kontakte' },
   { key: 'survey', mode: 'survey', label: 'Umfrage' },
   { key: 'social', mode: 'social', label: 'Social Media' },
   { key: 'tracking', label: 'Pixel installieren' },
@@ -20,9 +18,10 @@ const TABS: { key: TabKey; mode?: UnlockMode; label: string }[] = [
 /**
  * CRM-Kopf: eine Leiste mit den drei Wegen zum Freischalten (E-Mail / Telefon,
  * Umfrage, Social Media). Ein Punkt markiert den Weg, den Gäste gerade sehen;
- * „Aktivieren“ stellt den angezeigten Weg live. Pixel sind ein eigener Reiter
- * ohne Freischaltmodus. Übersicht und Kontakte teilen sich dieselbe
- * datenhaltende Kontaktliste (`children`), nur die Ansicht wechselt.
+ * „Aktivieren“ stellt den angezeigten Weg live. E-Mail/Telefon hat keinen
+ * eigenen Reiter mehr - die Kontaktfeld-Einstellungen leben jetzt direkt im
+ * "Kontakte"-Reiter (children), der auch den E-Mail-Modus aktiviert. Pixel
+ * ist ein eigener Reiter ohne Freischaltmodus.
  */
 export default function UnlockCenter({
   parkId,
@@ -107,14 +106,6 @@ export default function UnlockCenter({
 
       {tab === 'overview' && <div className="space-y-5">{children('overview')}</div>}
       {tab === 'allContacts' && <div className="space-y-5">{children('list')}</div>}
-      {tab === 'contacts' && config && (
-        <ContactSettings
-          parkId={parkId}
-          email={config.settings.email_mode ?? 'required'}
-          phone={config.settings.phone_mode ?? 'off'}
-          onSaved={() => void load()}
-        />
-      )}
       {tab === 'survey' && <SurveyManager parkId={parkId} />}
       {tab === 'social' && config && (
         <SocialManager parkId={parkId} initial={config.settings.social ?? {}} onSaved={() => void load()} />
