@@ -87,7 +87,8 @@ export default function Sidebar({
   // Same park-gate as GuestActivityAwareOverlay: the Benutzer page only has
   // real content for CSS-ALPINE/Tarzans and Plose so far.
   const isTarzansPark =
-    parkId === 'e2da6436-6a83-4c39-add3-5f99eb6bd897' || parkId === '3b08e092-beb5-46ec-9811-5698e86dd83a';
+    parkId === 'e2da6436-6a83-4c39-add3-5f99eb6bd897' || parkId === '3b08e092-beb5-46ec-9811-5698e86dd83a' ||
+    parkId === '25c1022b-4e2e-4fc4-b54d-72a4ced2522b';
   const showFull = !collapsed || mobileOpen;
 
   const visibleItemsDefaultOrder = navItems.filter((item) => {

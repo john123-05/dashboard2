@@ -112,6 +112,7 @@ const CLAIM_BASE_BY_PARK: Record<string, string> = {
   'e2da6436-6a83-4c39-add3-5f99eb6bd897': 'https://liftpictures-fotos.de/tarzans', // CSS-Alpine / Tarzans
   // Gleiches Muster: Plose laeuft unter /plose auf der Imst-Domain.
   '3b08e092-beb5-46ec-9811-5698e86dd83a': 'https://liftpictures-fotos.de/plose', // Plose
+  '25c1022b-4e2e-4fc4-b54d-72a4ced2522b': 'https://liftpictures-fotos.de/gruenberg', // Gruenberg-Flitzer
 };
 
 // The park's public claim site itself (no code), e.g. for a CRM "see your

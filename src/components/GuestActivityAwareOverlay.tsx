@@ -9,6 +9,7 @@ import ComingSoonOverlay from './ComingSoonOverlay';
 const GUEST_ACTIVITY_PARK_IDS = new Set([
   'e2da6436-6a83-4c39-add3-5f99eb6bd897', // CSS-ALPINE / Tarzans
   '3b08e092-beb5-46ec-9811-5698e86dd83a', // Plose
+  '25c1022b-4e2e-4fc4-b54d-72a4ced2522b', // Gruenberg-Flitzer
 ]);
 
 export default function GuestActivityAwareOverlay({
