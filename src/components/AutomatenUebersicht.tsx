@@ -51,12 +51,11 @@ export default function AutomatenUebersicht({ machines }: { machines: MachineRev
   );
 
   return (
-    <div className="grid items-start gap-4 lg:grid-cols-[minmax(260px,320px)_minmax(0,1fr)]">
+    <div className="space-y-2">
+      <div className="flex justify-end">{zeitraumSwitch}</div>
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(260px,320px)_minmax(0,1fr)]">
         <GlassCard className="p-5">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h4 className="text-base font-semibold text-slate-800">Verteilung nach Automaten</h4>
-            {zeitraumSwitch}
-          </div>
+          <h4 className="text-base font-semibold text-slate-800">Verteilung nach Automaten</h4>
           {/* Derselbe Ring wie "Status-Verteilung" auf der Fotoseite (recharts,
               gleiche Maße): läuft beim Laden und beim Umschalten von selbst ein. */}
           <div className="relative mx-auto mt-4 h-40 w-40">
@@ -196,6 +195,7 @@ export default function AutomatenUebersicht({ machines }: { machines: MachineRev
             );
           })}
         </div>
+      </div>
     </div>
   );
 }
