@@ -71,6 +71,10 @@ export interface OperatorProfile {
   avatar_url: string | null;
   created_at: string;
   updated_at: string;
+  // Nav items the user moved into "Mehr", by route (`NavItem.to`). Missing
+  // on older rows (migration default is '{}', but a stale cached profile
+  // fetched before the migration ran could still be undefined).
+  nav_unpinned_items?: string[];
 }
 
 export interface OrganizationMembership {

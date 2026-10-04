@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -14,14 +14,19 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   UserCog,
   X,
   Sun,
   Moon,
+  MoreHorizontal,
+  Pin,
+  PinOff,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useI18n } from '../../lib/i18n';
 import { usePark } from '../../contexts/ParkContext';
+import { supabase } from '../../lib/supabase';
 
 type NavItem = {
   to: string;
@@ -64,7 +69,7 @@ export default function Sidebar({
   mobileOpen,
   onCloseMobile,
 }: SidebarProps) {
-  const { profile, currentOrg, signOut, isStaff, isOwner } = useAuth();
+  const { profile, currentOrg, signOut, isStaff, isOwner, refreshProfile } = useAuth();
   const location = useLocation();
   const { t } = useI18n();
   const { parkName, setPark, isKioskPark, parkId } = usePark();
@@ -90,6 +95,129 @@ export default function Sidebar({
     if (item.ownerOnly) return isOwner;
     return true;
   });
+
+  // Which items the user moved into "Mehr" - per account (operator_profiles),
+  // not per device, so it follows them to another browser/computer.
+  const unpinnedIds = profile?.nav_unpinned_items ?? [];
+  const pinnedItems = visibleItems.filter((item) => !unpinnedIds.includes(item.to));
+  const unpinnedItems = visibleItems.filter((item) => unpinnedIds.includes(item.to));
+
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [menuOpenFor, setMenuOpenFor] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!menuOpenFor) return;
+    function onClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpenFor(null);
+      }
+    }
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, [menuOpenFor]);
+
+  async function setUnpinned(next: string[]) {
+    setMenuOpenFor(null);
+    if (!profile) return;
+    await supabase.from('operator_profiles').update({ nav_unpinned_items: next }).eq('id', profile.id);
+    await refreshProfile();
+  }
+
+  function unpinItem(to: string) {
+    if (!unpinnedIds.includes(to)) void setUnpinned([...unpinnedIds, to]);
+  }
+
+  function pinItem(to: string) {
+    void setUnpinned(unpinnedIds.filter((id) => id !== to));
+  }
+
+  function renderNavRow(item: NavItem, pinned: boolean) {
+    const isActive =
+      item.to === '/' ? location.pathname === '/' : location.pathname.startsWith(item.to);
+    const showComingSoon =
+      item.comingSoon &&
+      !(item.kioskUnlocks && isKioskPark) &&
+      !(item.guestActivityUnlocks && isTarzansPark);
+    const menuOpen = menuOpenFor === item.to;
+
+    return (
+      <div key={item.to} className="group/row relative flex items-center">
+        <NavLink
+          to={item.to}
+          className={`group flex flex-1 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
+            isActive
+              ? 'bg-white/[0.12] text-white shadow-sm shadow-black/10'
+              : 'text-slate-400 hover:bg-white/[0.06] hover:text-slate-200'
+          } ${showFull ? (showFull && pinned ? 'pr-8' : '') : 'justify-center'}`}
+          title={
+            showFull
+              ? undefined
+              : `${item.label ?? t(item.labelKey)}${showComingSoon ? ` (${t('nav.coming_soon')})` : ''}`
+          }
+        >
+          <item.icon
+            className={`h-[18px] w-[18px] shrink-0 transition-colors ${
+              isActive ? 'text-brand-400' : 'text-slate-500 group-hover:text-slate-300'
+            }`}
+          />
+          {showFull && (
+            <span className="animate-fade-in truncate">
+              {item.label ?? t(item.labelKey)}
+              {showComingSoon && (
+                <span className="ml-1 text-xs text-slate-500">({t('nav.coming_soon')})</span>
+              )}
+            </span>
+          )}
+        </NavLink>
+
+        {showFull && (
+          <div className="absolute right-1">
+            <button
+              type="button"
+              onClick={(event) => {
+                event.preventDefault();
+                setMenuOpenFor(menuOpen ? null : item.to);
+              }}
+              className={`rounded-lg p-1 text-slate-500 transition-opacity hover:bg-white/[0.08] hover:text-slate-200 ${
+                menuOpen ? 'opacity-100' : 'opacity-0 group-hover/row:opacity-100'
+              }`}
+              title="Optionen"
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </button>
+
+            {menuOpen && (
+              <div
+                ref={menuRef}
+                className="absolute right-0 top-full z-40 mt-1 w-56 rounded-xl border border-white/10 bg-[#1b1d24] p-1 shadow-xl"
+              >
+                {pinned ? (
+                  <button
+                    type="button"
+                    onClick={() => unpinItem(item.to)}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-slate-300 hover:bg-white/[0.08]"
+                  >
+                    <PinOff className="h-4 w-4 text-slate-400" />
+                    Von Navigation lösen
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => pinItem(item.to)}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-slate-300 hover:bg-white/[0.08]"
+                  >
+                    <Pin className="h-4 w-4 text-slate-400" />
+                    Zur Navigation hinzufügen
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <aside
@@ -126,48 +254,30 @@ export default function Sidebar({
 
       <nav className="flex-1 overflow-y-auto px-3 py-4 scrollbar-thin">
         <div className="space-y-1">
-          {visibleItems.map((item) => {
-            const isActive =
-              item.to === '/'
-                ? location.pathname === '/'
-                : location.pathname.startsWith(item.to);
-            const showComingSoon =
-              item.comingSoon &&
-              !(item.kioskUnlocks && isKioskPark) &&
-              !(item.guestActivityUnlocks && isTarzansPark);
-
-            return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
-                  isActive
-                    ? 'bg-white/[0.12] text-white shadow-sm shadow-black/10'
-                    : 'text-slate-400 hover:bg-white/[0.06] hover:text-slate-200'
-                } ${showFull ? '' : 'justify-center'}`}
-                title={
-                  showFull
-                    ? undefined
-                    : `${item.label ?? t(item.labelKey)}${showComingSoon ? ` (${t('nav.coming_soon')})` : ''}`
-                }
-              >
-                <item.icon
-                  className={`h-[18px] w-[18px] shrink-0 transition-colors ${
-                    isActive ? 'text-brand-400' : 'text-slate-500 group-hover:text-slate-300'
-                  }`}
-                />
-                {showFull && (
-                  <span className="animate-fade-in truncate">
-                    {item.label ?? t(item.labelKey)}
-                    {showComingSoon && (
-                      <span className="ml-1 text-xs text-slate-500">({t('nav.coming_soon')})</span>
-                    )}
-                  </span>
-                )}
-              </NavLink>
-            );
-          })}
+          {/* Collapsed rail has no room for a "Mehr" flyout, so it ignores the
+              pin split entirely - nothing becomes unreachable just because
+              the sidebar happens to be collapsed. */}
+          {(showFull ? pinnedItems : visibleItems).map((item) => renderNavRow(item, true))}
         </div>
+
+        {showFull && unpinnedItems.length > 0 && (
+          <div className="mt-1">
+            <button
+              type="button"
+              onClick={() => setMoreOpen((open) => !open)}
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-400 transition-colors hover:bg-white/[0.06] hover:text-slate-200"
+            >
+              <MoreHorizontal className="h-[18px] w-[18px] shrink-0 text-slate-500" />
+              <span className="flex-1 text-left">Mehr</span>
+              <ChevronDown className={`h-4 w-4 shrink-0 text-slate-500 transition-transform ${moreOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {moreOpen && (
+              <div className="mt-1 space-y-1 border-l border-white/[0.06] pl-2">
+                {unpinnedItems.map((item) => renderNavRow(item, false))}
+              </div>
+            )}
+          </div>
+        )}
       </nav>
 
       <div className="border-t border-white/[0.06] p-3">
