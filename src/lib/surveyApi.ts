@@ -19,6 +19,12 @@ export interface SocialSettings {
   post_link?: FieldLevel;
 }
 
+export interface TrackingSettings {
+  meta_pixel_id: string;
+  google_ads_id: string;
+  enabled: boolean;
+}
+
 export interface SurveySettings {
   park_id: string;
   mode: UnlockMode;
@@ -171,6 +177,17 @@ export function saveSocialSettings(parkId: string, social: SocialSettings): Prom
   return call<SurveyConfig>(
     { method: 'POST', body: JSON.stringify({ park_id: parkId, action: 'save_social', social }) },
     { park_id: parkId },
+  );
+}
+
+export function fetchTrackingSettings(parkId: string): Promise<TrackingSettings> {
+  return call<TrackingSettings>({ method: 'GET' }, { park_id: parkId, view: 'tracking' });
+}
+
+export function saveTrackingSettings(parkId: string, tracking: TrackingSettings): Promise<TrackingSettings> {
+  return call<TrackingSettings>(
+    { method: 'POST', body: JSON.stringify({ park_id: parkId, action: 'save_tracking', tracking }) },
+    { park_id: parkId, view: 'tracking' },
   );
 }
 

@@ -13,6 +13,8 @@ import { requireOperatorForPark } from '../_shared/operatorAuth.ts';
  *   POST { park_id, action: 'set_mode', mode }         -> was Gäste zum Freischalten tun
  *   POST { park_id, action: 'save_contact', email_mode, phone_mode }
  *   POST { park_id, action: 'save_social', social }
+ *   GET  ?park_id=…&view=tracking -> independent ad-tag settings
+ *   POST { park_id, action: 'save_tracking', tracking }
  *
  * Fragen werden nie gelöscht, sondern auf active=false gesetzt: bestehende
  * Antworten verweisen per Fragen-ID auf sie, und die Auswertung braucht den
@@ -253,6 +255,33 @@ async function saveSocial(parkId: string, body: Record<string, unknown>) {
   return error ? { error: error.message } : { ok: true };
 }
 
+async function loadTracking(parkId: string) {
+  const { data, error } = await supabaseService.from('park_tracking_settings')
+    .select('enabled, meta_pixel_id, google_ads_id').eq('park_id', parkId).maybeSingle();
+  if (error) return { error: error.message };
+  return { data: data ?? { enabled: false, meta_pixel_id: '', google_ads_id: '' } };
+}
+
+async function saveTracking(parkId: string, body: Record<string, unknown>) {
+  const raw = body.tracking;
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { error: 'Pixel-Einstellungen fehlen.' };
+  const input = raw as Record<string, unknown>;
+  const metaPixelId = typeof input.meta_pixel_id === 'string' ? input.meta_pixel_id.trim() : '';
+  const googleAdsId = typeof input.google_ads_id === 'string' ? input.google_ads_id.trim().toUpperCase() : '';
+  const enabled = input.enabled === true;
+  if (metaPixelId && !/^[0-9]{8,20}$/.test(metaPixelId)) return { error: 'Die Meta-Pixel-ID muss aus 8 bis 20 Ziffern bestehen.' };
+  if (googleAdsId && !/^AW-[0-9]{6,20}$/.test(googleAdsId)) return { error: 'Die Google Ads-ID muss mit AW- beginnen und danach 6 bis 20 Ziffern haben.' };
+  if (enabled && !metaPixelId && !googleAdsId) return { error: 'Zum Aktivieren ist mindestens eine Pixel-ID nötig.' };
+  const { error } = await supabaseService.from('park_tracking_settings').upsert({
+    park_id: parkId,
+    enabled,
+    meta_pixel_id: metaPixelId,
+    google_ads_id: googleAdsId,
+    updated_at: new Date().toISOString(),
+  }, { onConflict: 'park_id' });
+  return error ? { error: error.message } : { ok: true };
+}
+
 async function loadSocialResults(parkId: string, days: number) {
   const since = new Date(Date.now() - days * 86_400_000).toISOString();
   const { data } = await supabaseService
@@ -422,6 +451,10 @@ Deno.serve(async (req) => {
       const days = Math.min(Math.max(Number(url.searchParams.get('days')) || 30, 1), 730);
       return json({ ok: true, data: await loadSocialResults(auth.parkId, days) });
     }
+    if (url.searchParams.get('view') === 'tracking') {
+      const result = await loadTracking(auth.parkId);
+      return 'error' in result ? json({ error: result.error }, 500) : json({ ok: true, data: result.data });
+    }
     return json({ ok: true, data: await loadConfig(auth.parkId) });
   }
 
@@ -433,7 +466,9 @@ Deno.serve(async (req) => {
     if (!auth.ok) return json({ error: auth.message }, auth.status);
 
     const action = text(body.action);
-    const result = action === 'set_mode'
+    const result = action === 'save_tracking'
+      ? await saveTracking(auth.parkId, body)
+      : action === 'set_mode'
       ? await setMode(auth.parkId, body.mode)
       : action === 'save_contact'
         ? await saveContact(auth.parkId, body)
@@ -441,6 +476,10 @@ Deno.serve(async (req) => {
           ? await saveSocial(auth.parkId, body)
           : await saveConfig(auth.parkId, body);
     if ('error' in result) return json({ error: result.error }, 400);
+    if (action === 'save_tracking') {
+      const tracking = await loadTracking(auth.parkId);
+      return 'error' in tracking ? json({ error: tracking.error }, 500) : json({ ok: true, data: tracking.data });
+    }
     return json({ ok: true, data: await loadConfig(auth.parkId) });
   }
 

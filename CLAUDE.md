@@ -24,9 +24,8 @@ Two apps in one Vite+React+TS codebase, live at
   theme via CSS variables (Tailwind works here too but is not the house
   style).
 
-Deploy: **Netlify auto-deploys from `main`** - a plain `git push` goes
-live. (Unlike the `imst` claim-page repo, which has a bolt.new publish
-gate where pushing alone does NOT deploy.)
+Deploy: **bolt.new requires a manual Publish click** after a GitHub push.
+The same publish gate applies to the `imst` claim-page repo.
 
 ## The two Supabase projects (never confuse them)
 
@@ -315,6 +314,21 @@ a staff form silently does nothing, check the function actually exists.
 - `external-leads` (Projekt xcrx!) liefert jetzt `phone`, Quelle `social_media`, und kennt
   `DELETE {park_id, ids}` (vorher gab es kein Loeschen; Zugriff wird ueber die Sichtbarkeit
   des Parks fuer den Betreiber geprueft). Umfrage-Freischaltungen ohne Kontakt stehen nicht in der Liste.
+
+## CRM: Pixel installieren (Oct 2026)
+
+- Der Reiter „Pixel installieren“ ist unabhaengig vom Freischaltmodus. Pro Park
+  speichert `park_tracking_settings` im geteilten Projekt `enabled`,
+  `meta_pixel_id` und `google_ads_id` (AW-ID). `operator-survey` hat dafuer
+  `view=tracking` und `action=save_tracking` mit Park-Autorisierung und
+  serverseitiger ID-Pruefung. Die Claim-Seiten lesen die Einstellung als anon.
+- Im `imst`-Repo steuert `TrackingConsent` die Tags fuer Imst, Tarzans und
+  Plose. Tags laden erst nach ausdruecklicher Werbe-Einwilligung und erfassen
+  derzeit nur PageViews auf Start-/Rankingseiten. Claim-/Unlocked-Seiten mit
+  Foto-Code oder Access-Token werden nicht getrackt; bei SPA-Navigation mit
+  bereits geladenem Tag wandern diese Werte in `history.state` statt in die URL.
+- Noch keine Stripe-Entitlements oder Conversion-Events. Vor einer echten
+  Kundenaktivierung Datenschutztexte und Tag-Events mit dem Kunden abstimmen.
 
 ## Open items / next steps
 

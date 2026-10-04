@@ -3,21 +3,23 @@ import { Loader2 } from 'lucide-react';
 import SurveyManager from './SurveyManager';
 import SocialManager from './SocialManager';
 import ContactSettings from './ContactSettings';
+import TrackingManager from './TrackingManager';
 import { fetchSurveyConfig, setUnlockMode, type SurveyConfig, type UnlockMode } from '../../lib/surveyApi';
 
-type TabKey = 'contacts' | 'survey' | 'social';
+type TabKey = 'contacts' | 'survey' | 'social' | 'tracking';
 
-const TABS: { key: TabKey; mode: UnlockMode; label: string }[] = [
+const TABS: { key: TabKey; mode?: UnlockMode; label: string }[] = [
   { key: 'contacts', mode: 'email', label: 'E-Mail / Telefon' },
   { key: 'survey', mode: 'survey', label: 'Umfrage' },
   { key: 'social', mode: 'social', label: 'Social Media' },
+  { key: 'tracking', label: 'Pixel installieren' },
 ];
 
 /**
  * CRM-Kopf: eine Leiste mit den drei Wegen zum Freischalten (E-Mail / Telefon,
  * Umfrage, Social Media). Ein Punkt markiert den Weg, den Gäste gerade sehen;
- * „Aktivieren“ stellt den angezeigten Weg live. Der erste Reiter bekommt die
- * Kontaktliste als `children`.
+ * „Aktivieren“ stellt den angezeigten Weg live. Pixel sind ein eigener Reiter
+ * ohne Freischaltmodus. Der erste Reiter bekommt die Kontaktliste als `children`.
  */
 export default function UnlockCenter({ parkId, children }: { parkId: string; children: ReactNode }) {
   const [config, setConfig] = useState<SurveyConfig | null>(null);
@@ -81,10 +83,10 @@ export default function UnlockCenter({ parkId, children }: { parkId: string; chi
             </button>
           ))}
         </div>
-        {shown && active !== shown.mode && (
+        {shown?.mode && active !== shown.mode && (
           <button
             type="button"
-            onClick={() => void activate(shown.mode)}
+            onClick={() => { if (shown.mode) void activate(shown.mode); }}
             disabled={!config || busy !== null}
             className="glass-button-secondary"
           >
@@ -112,6 +114,7 @@ export default function UnlockCenter({ parkId, children }: { parkId: string; chi
       {tab === 'social' && config && (
         <SocialManager parkId={parkId} initial={config.settings.social ?? {}} onSaved={() => void load()} />
       )}
+      {tab === 'tracking' && <TrackingManager parkId={parkId} />}
     </div>
   );
 }
