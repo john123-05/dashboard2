@@ -17,7 +17,21 @@ import {
   Wallet,
   X,
 } from 'lucide-react';
-import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Legend,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
 import { getOptionalSourceWarning, invokeEdgeFunction } from '../lib/edgeFunctions';
 import {
   createEmptyParkDashboardData,
@@ -31,13 +45,17 @@ import {
   fetchKioskPhotosForDay,
   fetchKioskPurchases,
   fetchKioskSales,
+  fetchMachineRevenue,
+  fetchRideSnapshots,
   getOpeningHourRangeForDate,
+  ridesByHour,
   sumDays,
   todayInTimezone,
   toChartSeries,
   type AggregatedDay,
-  type HourlyBucket,
+  type MachineRevenue,
 } from '../lib/kioskSales';
+import AutomatenUebersicht from '../components/AutomatenUebersicht';
 import { useAuth } from '../contexts/AuthContext';
 import { usePark } from '../contexts/ParkContext';
 import { useI18n } from '../lib/i18n';
@@ -110,7 +128,11 @@ export default function Overview() {
   } = usePark();
   const { t } = useI18n();
   const [kioskDays, setKioskDays] = useState<AggregatedDay[]>([]);
-  const [todayHourly, setTodayHourly] = useState<HourlyBucket[]>([]);
+  const [machines, setMachines] = useState<MachineRevenue[]>([]);
+  const [leads, setLeads] = useState<Record<string, unknown>[]>([]);
+  const [peakDayFilter, setPeakDayFilter] = useState<'today' | 'yesterday' | 'custom'>('today');
+  const [peakCustomDate, setPeakCustomDate] = useState('');
+  const [hourlyPoints, setHourlyPoints] = useState<{ hour: number; label: string; rides: number; sold: number }[]>([]);
   const [parkData, setParkData] = useState<ParkDashboardData | null>(null);
   const [combinedDaily, setCombinedDaily] = useState<CombinedDailyPoint[]>([]);
   const [recentTransactions, setRecentTransactions] = useState<ActivityItem[]>([]);
@@ -176,7 +198,8 @@ export default function Overview() {
         const [
           kioskResult,
           kioskPurchasesResult,
-          todayPhotosResult,
+          machineRevenueResult,
+          leadsResult,
           parkDashboardResult,
           externalUsersResult,
           externalPhotosResult,
@@ -186,7 +209,8 @@ export default function Overview() {
           await Promise.all([
             fetchKioskSales(parkId),
             fetchKioskPurchases(parkId).catch(() => null),
-            fetchKioskPhotosForDay(parkId, todayInTimezone(kioskTimezone)).catch(() => null),
+            fetchMachineRevenue(parkId).catch(() => []),
+            invokeEdgeFunction<{ leads: Record<string, unknown>[] }>('external-leads', { query: { park_id: parkId } }),
             loadParkDashboardData(parkId).catch(() => ({ data: null, error: 'Operations feed unavailable' })),
             invokeEdgeFunction<{ customers: { id: string }[] }>('external-users', { query: { park_id: parkId } }),
             invokeEdgeFunction<{ photos: { id: string }[] }>('external-photos', { query: { park_id: parkId } }),
@@ -198,17 +222,8 @@ export default function Overview() {
           ]);
 
         setKioskDays(aggregateByDate(kioskResult.days, kioskResult.priceCents ?? 0));
-
-        const todayHourRange = getOpeningHourRangeForDate(
-          kioskOpeningHours,
-          todayInTimezone(kioskTimezone),
-          kioskOpeningHoursConfig,
-        );
-        setTodayHourly(
-          todayPhotosResult
-            ? bucketPurchasesByHour(todayPhotosResult.purchases, kioskPriceCents ?? 0, kioskTimezone, todayHourRange)
-            : [],
-        );
+        setMachines(machineRevenueResult);
+        setLeads(leadsResult.error ? [] : leadsResult.data?.leads ?? []);
         const kioskParkData =
           parkDashboardResult.data ?? createEmptyParkDashboardData(parkId, parkName || 'Selected park');
         setParkData({
@@ -476,14 +491,61 @@ export default function Overview() {
     return { isOpen, range };
   }, [isKioskPark, kioskOpeningHours, kioskOpeningHoursConfig, kioskTimezone]);
 
+  const selectedPeakDate = useMemo(() => {
+    if (!isKioskPark) return '';
+    if (peakDayFilter === 'today') return todayInTimezone(kioskTimezone);
+    if (peakDayFilter === 'yesterday') return daysAgoInTimezone(kioskTimezone, 1);
+    return peakCustomDate || todayInTimezone(kioskTimezone);
+  }, [isKioskPark, kioskTimezone, peakDayFilter, peakCustomDate]);
+
+  useEffect(() => {
+    if (!isKioskPark || !parkId || !selectedPeakDate) return;
+    let active = true;
+    Promise.all([
+      fetchKioskPhotosForDay(parkId, selectedPeakDate).catch(() => null),
+      fetchRideSnapshots(parkId, selectedPeakDate).catch(() => []),
+    ]).then(([photosResult, snapshots]) => {
+      if (!active) return;
+      const hourRange = getOpeningHourRangeForDate(kioskOpeningHours, selectedPeakDate, kioskOpeningHoursConfig);
+      const soldBuckets = photosResult
+        ? bucketPurchasesByHour(photosResult.purchases, kioskPriceCents ?? 0, kioskTimezone, hourRange)
+        : [];
+      const rideMap = ridesByHour(snapshots, kioskTimezone);
+      const startHour = hourRange?.startHour ?? (soldBuckets[0]?.hour ?? 0);
+      const endHour = hourRange?.endHour ?? (soldBuckets[soldBuckets.length - 1]?.hour ?? 23);
+      const hours = Array.from({ length: Math.max(0, endHour - startHour + 1) }, (_, i) => startHour + i);
+      const soldByHour = new Map(soldBuckets.map((b) => [b.hour, b.soldCount]));
+      setHourlyPoints(
+        hours.map((hour) => ({
+          hour,
+          label: `${String(hour).padStart(2, '0')}:00`,
+          rides: rideMap.get(hour) ?? 0,
+          sold: soldByHour.get(hour) ?? 0,
+        })),
+      );
+    });
+    return () => {
+      active = false;
+    };
+  }, [isKioskPark, parkId, selectedPeakDate, kioskTimezone, kioskOpeningHours, kioskOpeningHoursConfig, kioskPriceCents]);
+
   const peakHour = useMemo(() => {
-    if (todayHourly.length === 0) return null;
-    return todayHourly.reduce((best, current) => (current.soldCount > best.soldCount ? current : best));
-  }, [todayHourly]);
-  const maxHourlySold = useMemo(
-    () => todayHourly.reduce((max, bucket) => Math.max(max, bucket.soldCount), 0),
-    [todayHourly],
-  );
+    if (hourlyPoints.length === 0) return null;
+    return hourlyPoints.reduce((best, current) => (current.sold > best.sold ? current : best));
+  }, [hourlyPoints]);
+
+  const userDataStats = useMemo(() => {
+    const dayLeads = leads.filter((lead) => {
+      const source = lead.source as string;
+      if (source !== 'photo_claim' && source !== 'social_media') return false;
+      const createdAt = lead.created_at as string;
+      if (!createdAt) return false;
+      const dateKey = new Intl.DateTimeFormat('en-CA', { timeZone: kioskTimezone }).format(new Date(createdAt));
+      return dateKey === selectedPeakDate;
+    });
+    const optedIn = dayLeads.filter((lead) => lead.opted_in === true).length;
+    return { total: dayLeads.length, optedIn, notOptedIn: dayLeads.length - optedIn };
+  }, [leads, selectedPeakDate, kioskTimezone]);
 
   const onlineRevenueCents = useMemo(
     () => Math.round(
@@ -795,35 +857,105 @@ export default function Overview() {
         </div>
       )}
 
-      {isKioskPark && todayHourly.length > 0 && (
-        <GlassCard className="p-5 sm:p-6">
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h3 className="text-base font-semibold text-slate-800">Stoßzeiten heute</h3>
-            {peakHour && peakHour.soldCount > 0 && (
-              <p className="text-sm text-slate-500">
-                Am meisten verkauft: <span className="font-medium text-slate-700">{peakHour.label}</span> ({formatNumber(peakHour.soldCount)} Fotos)
+      {isKioskPark && (
+        <div className="grid gap-4 lg:grid-cols-3">
+          <GlassCard className="p-5 sm:p-6">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h3 className="text-base font-semibold text-slate-800">Stoßzeiten</h3>
+              <div className="inline-flex rounded-xl bg-white/50 p-1">
+                {([
+                  { key: 'today', label: 'Heute' },
+                  { key: 'yesterday', label: 'Gestern' },
+                  { key: 'custom', label: 'Anderer Tag' },
+                ] as const).map((opt) => (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    onClick={() => setPeakDayFilter(opt.key)}
+                    className={`rounded-lg px-2.5 py-1 text-xs font-medium transition ${
+                      peakDayFilter === opt.key ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {peakDayFilter === 'custom' && (
+              <input
+                type="date"
+                value={peakCustomDate}
+                max={todayInTimezone(kioskTimezone)}
+                onChange={(event) => setPeakCustomDate(event.target.value)}
+                className="mt-2 rounded-lg border border-slate-200 px-2 py-1 text-xs"
+              />
+            )}
+            {peakHour && peakHour.sold > 0 && (
+              <p className="mt-2 text-xs text-slate-500">
+                Am meisten verkauft: <span className="font-medium text-slate-700">{peakHour.label}</span> ({formatNumber(peakHour.sold)} Fotos)
               </p>
             )}
-          </div>
-          <div className="mt-4 flex items-end gap-1.5 overflow-x-auto pb-1">
-            {todayHourly.map((bucket) => {
-              const heightPercent = maxHourlySold > 0 ? Math.max(6, (bucket.soldCount / maxHourlySold) * 100) : 6;
-              const isPeak = peakHour && bucket.hour === peakHour.hour && bucket.soldCount > 0;
-              return (
-                <div key={bucket.hour} className="flex min-w-[28px] flex-col items-center gap-1">
-                  <div className="flex h-24 w-full items-end">
-                    <div
-                      className={`w-full rounded-t-md ${isPeak ? 'bg-sky-500' : 'bg-sky-200'}`}
-                      style={{ height: `${heightPercent}%` }}
-                      title={`${bucket.label}: ${bucket.soldCount} Fotos`}
-                    />
-                  </div>
-                  <span className="text-[10px] text-slate-400">{bucket.label}</span>
+            <div className="mt-3 h-48">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={hourlyPoints} barGap={2}>
+                  <XAxis dataKey="label" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
+                  <YAxis tick={{ fontSize: 10 }} allowDecimals={false} width={28} />
+                  <Tooltip />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                  <Bar dataKey="rides" name="Fahrten" fill="#3b82f6" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="sold" name="Bildverkäufe" fill="#f97316" radius={[3, 3, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </GlassCard>
+
+          {machines.length >= 2 && (
+            <GlassCard className="p-5 sm:p-6">
+              <h3 className="text-base font-semibold text-slate-800">Automaten</h3>
+              <div className="mt-3">
+                <AutomatenUebersicht machines={machines} />
+              </div>
+            </GlassCard>
+          )}
+
+          <GlassCard className="p-5 sm:p-6">
+            <h3 className="text-base font-semibold text-slate-800">Erfassung von Nutzerdaten</h3>
+            <p className="mt-1 text-xs text-slate-500">
+              {peakDayFilter === 'today' ? 'Heute' : peakDayFilter === 'yesterday' ? 'Gestern' : selectedPeakDate}
+              {' · '}{formatNumber(userDataStats.total)} Freischaltungen
+            </p>
+            {userDataStats.total === 0 ? (
+              <p className="mt-6 text-sm text-slate-400">Keine Freischaltungen an diesem Tag.</p>
+            ) : (
+              <div className="relative mx-auto mt-2 h-40 w-40">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={[
+                        { name: 'Einwilligung erteilt', value: userDataStats.optedIn },
+                        { name: 'Keine Einwilligung', value: userDataStats.notOptedIn },
+                      ]}
+                      dataKey="value"
+                      innerRadius={45}
+                      outerRadius={70}
+                      paddingAngle={2}
+                    >
+                      <Cell fill="#10b981" />
+                      <Cell fill="#cbd5e1" />
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-lg font-bold text-slate-800">
+                    {userDataStats.total > 0 ? Math.round((userDataStats.optedIn / userDataStats.total) * 100) : 0}%
+                  </span>
+                  <span className="text-[10px] text-slate-400">Einwilligung</span>
                 </div>
-              );
-            })}
-          </div>
-        </GlassCard>
+              </div>
+            )}
+          </GlassCard>
+        </div>
       )}
 
       {!isKioskPark && (
