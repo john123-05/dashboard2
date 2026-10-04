@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ComposedChart, Legend, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Camera, ChevronDown, ChevronLeft, ChevronRight, CreditCard, Download, Gauge, Percent, Receipt, Ticket, Wallet } from 'lucide-react';
 import { getOptionalSourceWarning, invokeEdgeFunction } from '../lib/edgeFunctions';
@@ -68,6 +69,7 @@ interface RevenueSeriesRow {
 
 export default function Revenue({ embedded = false }: { embedded?: boolean } = {}) {
   const { t } = useI18n();
+  const navigate = useNavigate();
   const {
     parkId,
     isKioskPark,
@@ -480,10 +482,27 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
             Umsatz und Verkäufe im Überblick
           </p>
         </div>
-        <button onClick={handleExport} className="glass-button-secondary customer-operator-btn">
-          <Download className="h-4 w-4" />
-          {t('revenue.export')}
-        </button>
+        <div className="flex flex-wrap items-center gap-3">
+          {isKioskPark && (
+            <div className="flex items-center gap-2 rounded-xl border border-slate-200/70 bg-white/60 px-3 py-1.5 text-xs">
+              <div>
+                <p className="text-slate-400">Aktueller Preis</p>
+                <p className="font-semibold text-slate-800">{formatCurrency(kioskPriceCents ?? 0, 'eur')}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate('/settings')}
+                className="rounded-lg px-2 py-1 font-medium text-sky-600 hover:bg-sky-50"
+              >
+                Bearbeiten
+              </button>
+            </div>
+          )}
+          <button onClick={handleExport} className="glass-button-secondary customer-operator-btn">
+            <Download className="h-4 w-4" />
+            {t('revenue.export')}
+          </button>
+        </div>
       </div>
 
       {issues.length > 0 && (
@@ -504,16 +523,6 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
 
       {isKioskPark && kioskKpis && (
         <>
-          {!embedded && (
-          <GlassCard className="p-5 sm:p-6">
-            <h3 className="text-base font-semibold text-slate-800">Selbstbedienungs-Automat</h3>
-            <p className="mt-2 text-sm text-slate-500">
-              Kein eigener Webshop hier — jedes gespeicherte Foto ist bereits ein bezahlter Kauf am Automaten
-              ({formatCurrency(kioskPriceCents ?? 0, 'eur')} pro Foto).
-            </p>
-          </GlassCard>
-          )}
-
           <div className="grid grid-cols-2 gap-4 sm:gap-6 xl:grid-cols-4">
             <KPICard
               title="Heute"
