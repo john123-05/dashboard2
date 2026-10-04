@@ -75,6 +75,9 @@ export interface OperatorProfile {
   // on older rows (migration default is '{}', but a stale cached profile
   // fetched before the migration ran could still be undefined).
   nav_unpinned_items?: string[];
+  // Drag-reordered position of nav items, by route. Same "missing = default
+  // order" caveat as nav_unpinned_items above.
+  nav_item_order?: string[];
 }
 
 export interface OrganizationMembership {

@@ -90,10 +90,23 @@ export default function Sidebar({
     parkId === 'e2da6436-6a83-4c39-add3-5f99eb6bd897' || parkId === '3b08e092-beb5-46ec-9811-5698e86dd83a';
   const showFull = !collapsed || mobileOpen;
 
-  const visibleItems = navItems.filter((item) => {
+  const visibleItemsDefaultOrder = navItems.filter((item) => {
     if (isStaff) return item.staffAllowed;
     if (item.ownerOnly) return isOwner;
     return true;
+  });
+
+  // Custom drag order, per account. Items not in it yet (nothing reordered
+  // so far, or a nav item added after the user last reordered) keep their
+  // default relative position, appended after the known ones.
+  const itemOrder = profile?.nav_item_order ?? [];
+  const visibleItems = [...visibleItemsDefaultOrder].sort((a, b) => {
+    const ai = itemOrder.indexOf(a.to);
+    const bi = itemOrder.indexOf(b.to);
+    if (ai === -1 && bi === -1) return 0;
+    if (ai === -1) return 1;
+    if (bi === -1) return -1;
+    return ai - bi;
   });
 
   // Which items the user moved into "Mehr" - per account (operator_profiles),
@@ -132,6 +145,36 @@ export default function Sidebar({
     void setUnpinned(unpinnedIds.filter((id) => id !== to));
   }
 
+  // Drag-to-reorder within the pinned list only (native HTML5 DnD - mouse
+  // only, no touch support, acceptable for an admin dashboard used on desktop).
+  const [draggedTo, setDraggedTo] = useState<string | null>(null);
+
+  async function persistOrder(nextPinnedOrder: string[]) {
+    if (!profile) return;
+    // Keep unpinned items' relative order at the end, untouched.
+    const fullOrder = [...nextPinnedOrder, ...unpinnedItems.map((i) => i.to)];
+    await supabase.from('operator_profiles').update({ nav_item_order: fullOrder }).eq('id', profile.id);
+    await refreshProfile();
+  }
+
+  function onDropOnto(targetTo: string) {
+    if (!draggedTo || draggedTo === targetTo) {
+      setDraggedTo(null);
+      return;
+    }
+    const order = pinnedItems.map((i) => i.to);
+    const from = order.indexOf(draggedTo);
+    const to = order.indexOf(targetTo);
+    if (from === -1 || to === -1) {
+      setDraggedTo(null);
+      return;
+    }
+    order.splice(from, 1);
+    order.splice(to, 0, draggedTo);
+    setDraggedTo(null);
+    void persistOrder(order);
+  }
+
   function renderNavRow(item: NavItem, pinned: boolean) {
     const isActive =
       item.to === '/' ? location.pathname === '/' : location.pathname.startsWith(item.to);
@@ -140,16 +183,30 @@ export default function Sidebar({
       !(item.kioskUnlocks && isKioskPark) &&
       !(item.guestActivityUnlocks && isTarzansPark);
     const menuOpen = menuOpenFor === item.to;
+    const draggable = showFull && pinned;
 
     return (
-      <div key={item.to} className="group/row relative flex items-center">
+      <div
+        key={item.to}
+        className={`group/row relative flex items-center ${draggedTo === item.to ? 'opacity-40' : ''}`}
+        draggable={draggable}
+        onDragStart={() => setDraggedTo(item.to)}
+        onDragOver={(event) => draggable && event.preventDefault()}
+        onDrop={(event) => {
+          if (!draggable) return;
+          event.preventDefault();
+          onDropOnto(item.to);
+        }}
+        onDragEnd={() => setDraggedTo(null)}
+      >
         <NavLink
           to={item.to}
+          draggable={false}
           className={`group flex flex-1 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
             isActive
               ? 'bg-white/[0.12] text-white shadow-sm shadow-black/10'
               : 'text-slate-400 hover:bg-white/[0.06] hover:text-slate-200'
-          } ${showFull ? (showFull && pinned ? 'pr-8' : '') : 'justify-center'}`}
+          } ${showFull ? (showFull && pinned ? 'pr-8' : '') : 'justify-center'} ${draggable ? 'cursor-grab active:cursor-grabbing' : ''}`}
           title={
             showFull
               ? undefined
@@ -179,8 +236,8 @@ export default function Sidebar({
                 event.preventDefault();
                 setMenuOpenFor(menuOpen ? null : item.to);
               }}
-              className={`rounded-lg p-1 text-slate-500 transition-opacity hover:bg-white/[0.08] hover:text-slate-200 ${
-                menuOpen ? 'opacity-100' : 'opacity-0 group-hover/row:opacity-100'
+              className={`rounded-lg p-1 text-slate-400 transition-opacity hover:bg-white/[0.08] hover:text-white ${
+                menuOpen ? 'opacity-100' : 'opacity-60 group-hover/row:opacity-100'
               }`}
               title="Optionen"
             >
