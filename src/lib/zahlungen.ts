@@ -76,6 +76,10 @@ export type ZahlungsAutomat = {
   payments?: Zahlungsuebersicht | null;
   payments_days?: number | null;
   prices_cent?: number[] | null;
+  card_only?: boolean;
+  hardware_version?: 'neu' | 'alt' | null;
+  video_enabled?: boolean;
+  speed_enabled?: boolean;
 };
 
 export async function ladeZahlungen(parkId: string): Promise<ZahlungsAutomat[]> {

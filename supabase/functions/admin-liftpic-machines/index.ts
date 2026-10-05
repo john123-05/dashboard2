@@ -12,6 +12,8 @@ const selectColumns = `
   mode,
   qr_enabled,
   speed_enabled,
+  video_enabled,
+  hardware_version,
   count_rides_enabled,
   upload_all_photos,
   shadow_mode,
@@ -75,6 +77,11 @@ function configPayload(payload: Record<string, unknown>, userId: string, isUpdat
     mode,
     qr_enabled: bool(payload.qr_enabled, mode !== 'count_only'),
     speed_enabled: bool(payload.speed_enabled, true),
+    video_enabled: bool(payload.video_enabled, false),
+    hardware_version:
+      typeof payload.hardware_version === 'string' && ['neu', 'alt'].includes(payload.hardware_version)
+        ? payload.hardware_version
+        : null,
     count_rides_enabled: bool(payload.count_rides_enabled, true),
     upload_all_photos: bool(payload.upload_all_photos, mode === 'all_photos'),
     shadow_mode: bool(payload.shadow_mode, true),

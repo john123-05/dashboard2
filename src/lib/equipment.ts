@@ -1,7 +1,7 @@
 import { EXTERNAL_SUPABASE_URL, EXTERNAL_SUPABASE_ANON_KEY } from './supabase';
 import { getFunctionSession } from './functionAuth';
 
-export type EquipmentKategorie = 'Automat' | 'Kamera' | 'Zubehoer' | 'Software' | 'Sonstiges';
+export type EquipmentKategorie = 'Automat' | 'Kamera' | 'Zubehoer' | 'Software' | 'Webshop' | 'Sonstiges';
 export type EquipmentStatus = 'vorhanden' | 'empfohlen' | 'bestellt';
 
 export interface EquipmentItem {
@@ -12,6 +12,9 @@ export interface EquipmentItem {
   status: EquipmentStatus;
   geschaetzter_mehrumsatz_cents: number | null;
   sortierung: number;
+  image_url: string | null;
+  before_image_url: string | null;
+  after_image_url: string | null;
 }
 
 /** Vom Staff gepflegte "Konfiguration/Shop"-Liste - was der Park hat / haben könnte. */
@@ -32,4 +35,24 @@ export async function fetchParkEquipment(parkId: string): Promise<EquipmentItem[
   const body = await res.json().catch(() => null);
   if (!res.ok) throw new Error(body?.error || `HTTP ${res.status}`);
   return (body?.items ?? []) as EquipmentItem[];
+}
+
+/** "Interesse anmelden"-Button: legt eine Staff-Benachrichtigung an, keine Bestellung. */
+export async function meldeAusstattungsInteresse(parkId: string, itemId: string): Promise<void> {
+  const {
+    data: { session },
+  } = await getFunctionSession();
+  if (!session?.access_token) throw new Error('Nicht angemeldet');
+
+  const res = await fetch(`${EXTERNAL_SUPABASE_URL}/functions/v1/operator-equipment-interest`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${session.access_token}`,
+      apikey: EXTERNAL_SUPABASE_ANON_KEY,
+    },
+    body: JSON.stringify({ park_id: parkId, item_id: itemId }),
+  });
+  const body = await res.json().catch(() => null);
+  if (!res.ok) throw new Error(body?.error || `HTTP ${res.status}`);
 }

@@ -25,7 +25,9 @@ Deno.serve(async (req) => {
 
   const { data, error } = await supabaseService
     .from('park_equipment_items')
-    .select('id, kategorie, titel, beschreibung, status, geschaetzter_mehrumsatz_cents, sortierung')
+    .select(
+      'id, kategorie, titel, beschreibung, status, geschaetzter_mehrumsatz_cents, sortierung, image_url, before_image_url, after_image_url',
+    )
     .eq('park_id', auth.parkId)
     .order('sortierung', { ascending: true });
 

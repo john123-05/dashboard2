@@ -44,6 +44,8 @@ export interface LiftpicMachineConfig {
   mode: LiftpicMachineMode;
   qr_enabled: boolean;
   speed_enabled: boolean;
+  video_enabled: boolean;
+  hardware_version: 'neu' | 'alt' | null;
   count_rides_enabled: boolean;
   upload_all_photos: boolean;
   shadow_mode: boolean;

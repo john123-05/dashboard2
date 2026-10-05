@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Camera, CreditCard, Gauge, Printer, Server } from 'lucide-react';
+import { Camera, CreditCard, Gauge, Printer, Server, ShoppingBag, Video } from 'lucide-react';
 import GlassCard from '../components/ui/GlassCard';
+import BeforeAfterSlider from '../components/ui/BeforeAfterSlider';
 import { usePark } from '../contexts/ParkContext';
-import { fetchMachineRevenue, type MachineRevenue } from '../lib/kioskSales';
+import { ladeZahlungen, type ZahlungsAutomat } from '../lib/zahlungen';
 import { loadParkDashboardData } from '../lib/parkDashboard';
-import { fetchRecentPhotos } from '../lib/photoBrowser';
-import { fetchParkEquipment, type EquipmentItem } from '../lib/equipment';
+import { fetchParkEquipment, meldeAusstattungsInteresse, type EquipmentItem } from '../lib/equipment';
 import { formatNumber } from '../lib/utils';
 
 const KATEGORIE_ICON: Record<string, typeof Camera> = {
@@ -13,35 +13,41 @@ const KATEGORIE_ICON: Record<string, typeof Camera> = {
   Kamera: Camera,
   Zubehoer: Printer,
   Software: Gauge,
+  Webshop: ShoppingBag,
   Sonstiges: Gauge,
 };
 
+function Chip({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-sky-50 px-3 py-1 text-xs font-medium text-sky-700">
+      {children}
+    </span>
+  );
+}
+
 export default function Configuration() {
   const { parkId, isKioskPark } = usePark();
-  const [machines, setMachines] = useState<MachineRevenue[]>([]);
+  const [machines, setMachines] = useState<ZahlungsAutomat[]>([]);
   const [paperRemaining, setPaperRemaining] = useState<number | null>(null);
-  const [hasSpeedMeasurement, setHasSpeedMeasurement] = useState<boolean | null>(null);
   const [items, setItems] = useState<EquipmentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [interestId, setInterestId] = useState<string | null>(null);
+  const [interestDone, setInterestDone] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!parkId) return;
     let active = true;
     setLoading(true);
     Promise.all([
-      fetchMachineRevenue(parkId).catch(() => []),
+      ladeZahlungen(parkId).catch(() => []),
       loadParkDashboardData(parkId).catch(() => ({ data: null, error: null })),
-      fetchRecentPhotos(parkId, 20).catch(() => []),
       fetchParkEquipment(parkId).catch(() => []),
     ])
-      .then(([machineRows, parkDashboard, recentPhotos, equipmentItems]) => {
+      .then(([machineRows, parkDashboard, equipmentItems]) => {
         if (!active) return;
         setMachines(machineRows);
         setPaperRemaining(parkDashboard.data?.summary.printer_paper_remaining ?? null);
-        setHasSpeedMeasurement(
-          recentPhotos.length === 0 ? null : recentPhotos.some((p) => p.speedKmh !== null),
-        );
         setItems(equipmentItems);
         setError(null);
       })
@@ -51,6 +57,19 @@ export default function Configuration() {
       active = false;
     };
   }, [parkId]);
+
+  async function handleInteresse(itemId: string) {
+    if (!parkId) return;
+    setInterestId(itemId);
+    try {
+      await meldeAusstattungsInteresse(parkId, itemId);
+      setInterestDone((prev) => new Set(prev).add(itemId));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Anfrage fehlgeschlagen.');
+    } finally {
+      setInterestId(null);
+    }
+  }
 
   if (!isKioskPark) {
     return (
@@ -66,6 +85,10 @@ export default function Configuration() {
   const vorhanden = items.filter((i) => i.status === 'vorhanden');
   const empfohlen = items.filter((i) => i.status === 'empfohlen');
   const cardOnlyCount = machines.filter((m) => m.card_only).length;
+  const istNurKarte = machines.length > 0 && cardOnlyCount === machines.length;
+  const hatSpeedmessung = machines.some((m) => m.speed_enabled);
+  const hatVideo = machines.some((m) => m.video_enabled);
+  const version = machines.find((m) => m.hardware_version)?.hardware_version ?? null;
 
   return (
     <div className="space-y-6">
@@ -81,58 +104,91 @@ export default function Configuration() {
         {loading ? (
           <p className="mt-4 text-sm text-slate-400">Wird geladen…</p>
         ) : (
-          <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <div className="rounded-xl bg-white/50 p-4">
-              <Server className="h-5 w-5 text-slate-500" />
-              <p className="mt-2 text-lg font-semibold text-slate-800">
-                {machines.length > 0 ? formatNumber(machines.length) : '1'}
-              </p>
-              <p className="text-xs text-slate-500">{machines.length === 1 ? 'Automat' : 'Automaten'}</p>
+          <>
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2 rounded-xl bg-white/60 px-4 py-2">
+                <Server className="h-5 w-5 text-slate-500" />
+                <span className="text-lg font-semibold text-slate-800">
+                  {machines.length > 1 ? `${machines.length} SB-Automaten` : 'SB-Automat'}
+                </span>
+                {version && <Chip>Version: {version === 'neu' ? 'Neu' : 'Alt'}</Chip>}
+              </div>
             </div>
-            <div className="rounded-xl bg-white/50 p-4">
-              <CreditCard className="h-5 w-5 text-slate-500" />
-              <p className="mt-2 text-lg font-semibold text-slate-800">
-                {cardOnlyCount === machines.length && machines.length > 0 ? 'Nur Karte' : 'Bar & Karte'}
-              </p>
-              <p className="text-xs text-slate-500">Zahlungsarten</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Chip>
+                <CreditCard className="h-3.5 w-3.5" />
+                {istNurKarte ? 'Nur Karte' : 'Bar & Karte'}
+              </Chip>
+              {hatSpeedmessung && (
+                <Chip>
+                  <Gauge className="h-3.5 w-3.5" />
+                  Speed-Messung
+                </Chip>
+              )}
+              {hatVideo && (
+                <Chip>
+                  <Video className="h-3.5 w-3.5" />
+                  Video-Add-on
+                </Chip>
+              )}
             </div>
-            <div className="rounded-xl bg-white/50 p-4">
-              <Gauge className="h-5 w-5 text-slate-500" />
-              <p className="mt-2 text-lg font-semibold text-slate-800">
-                {hasSpeedMeasurement === null ? '—' : hasSpeedMeasurement ? 'Vorhanden' : 'Keine'}
-              </p>
-              <p className="text-xs text-slate-500">Speedmessung</p>
+            <div className="mt-4 flex items-center justify-between rounded-xl bg-white/50 p-4">
+              <div className="flex items-center gap-2">
+                <Printer className="h-5 w-5 text-slate-500" />
+                <div>
+                  <p className="text-sm font-semibold text-slate-800">
+                    {paperRemaining != null ? `${formatNumber(paperRemaining)} Fotopapier übrig` : 'Fotopapier'}
+                  </p>
+                  <p className="text-xs text-slate-500">Bestand wird aus deinen Automaten gemeldet.</p>
+                </div>
+              </div>
+              <a
+                href="mailto:info@liftpictures.com?subject=Fotopapier%20nachbestellen"
+                className="rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700"
+              >
+                Nachbestellen
+              </a>
             </div>
-            <div className="rounded-xl bg-white/50 p-4">
-              <Printer className="h-5 w-5 text-slate-500" />
-              <p className="mt-2 text-lg font-semibold text-slate-800">
-                {paperRemaining != null ? formatNumber(paperRemaining) : '—'}
-              </p>
-              <p className="text-xs text-slate-500">Fotopapier übrig</p>
-            </div>
-          </div>
+          </>
         )}
       </GlassCard>
 
       {!loading && empfohlen.length > 0 && (
         <GlassCard className="p-5 sm:p-6">
-          <h3 className="text-base font-semibold text-slate-800">Empfohlen für dich</h3>
-          <div className="mt-4 space-y-3">
+          <h3 className="text-base font-semibold text-slate-800">Mehr aus deinem Automaten holen</h3>
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
             {empfohlen.map((item) => {
               const Icon = KATEGORIE_ICON[item.kategorie] ?? Gauge;
+              const angefragt = interestDone.has(item.id);
               return (
-                <div key={item.id} className="flex items-start gap-3 rounded-xl bg-white/50 p-4">
-                  <div className="rounded-lg bg-sky-50 p-2">
-                    <Icon className="h-4 w-4 text-sky-600" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-slate-800">{item.titel}</p>
-                    {item.beschreibung && <p className="mt-0.5 text-sm text-slate-500">{item.beschreibung}</p>}
+                <div key={item.id} className="flex flex-col overflow-hidden rounded-xl bg-white/60">
+                  {item.before_image_url && item.after_image_url ? (
+                    <BeforeAfterSlider beforeUrl={item.before_image_url} afterUrl={item.after_image_url} />
+                  ) : item.image_url ? (
+                    <img src={item.image_url} alt={item.titel} className="aspect-video w-full object-cover" />
+                  ) : null}
+                  <div className="flex flex-1 flex-col gap-2 p-4">
+                    <div className="flex items-center gap-2">
+                      <div className="rounded-lg bg-sky-50 p-1.5">
+                        <Icon className="h-4 w-4 text-sky-600" />
+                      </div>
+                      <p className="text-sm font-semibold text-slate-800">{item.titel}</p>
+                    </div>
+                    {item.beschreibung && <p className="text-sm text-slate-500">{item.beschreibung}</p>}
                     {item.geschaetzter_mehrumsatz_cents != null && (
-                      <p className="mt-1 text-xs font-medium text-emerald-700">
-                        +{(item.geschaetzter_mehrumsatz_cents / 100).toLocaleString('de-DE')} € geschätzter Mehrumsatz/Monat
+                      <p className="text-xs font-medium text-emerald-700">
+                        +{(item.geschaetzter_mehrumsatz_cents / 100).toLocaleString('de-DE')} € geschätzte
+                        Umsatzsteigerung/Monat
                       </p>
                     )}
+                    <button
+                      type="button"
+                      onClick={() => void handleInteresse(item.id)}
+                      disabled={interestId === item.id || angefragt}
+                      className="mt-auto inline-flex w-fit items-center justify-center rounded-lg bg-sky-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-sky-500 disabled:opacity-60"
+                    >
+                      {angefragt ? 'Anfrage gesendet' : interestId === item.id ? 'Wird gesendet…' : 'Interesse anmelden'}
+                    </button>
                   </div>
                 </div>
               );

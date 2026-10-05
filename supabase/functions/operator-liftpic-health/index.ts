@@ -44,7 +44,9 @@ Deno.serve(async (req) => {
 
   const { data: machines, error } = await supabaseService
     .from('liftpic_machine_configs')
-    .select('id, machine_id, machine_label, camera_code, last_seen_at, is_active, last_status, settings, paper_capacity, paper_warn_remaining')
+    .select(
+      'id, machine_id, machine_label, camera_code, last_seen_at, is_active, last_status, settings, paper_capacity, paper_warn_remaining, hardware_version, video_enabled, speed_enabled',
+    )
     .eq('park_id', auth.parkId)
     .eq('is_active', true)
     .order('machine_label', { ascending: true });
@@ -314,6 +316,9 @@ Deno.serve(async (req) => {
       // Bestand. Ein altes CoinStats.txt (z. B. vom Klon-Quell-PC) soll dort
       // nicht als Bestand erscheinen.
       card_only: cardOnly.has(text(m.machine_id)),
+      hardware_version: m.hardware_version ?? null,
+      video_enabled: m.video_enabled === true,
+      speed_enabled: m.speed_enabled !== false,
       coin_inventory:
         cardOnly.has(text(m.machine_id)) ||
         (parkHatLedger && !ledgerByMachine.has(text(m.machine_id)))

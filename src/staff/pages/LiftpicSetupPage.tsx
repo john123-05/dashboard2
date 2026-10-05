@@ -23,6 +23,8 @@ type MachineForm = {
   mode: LiftpicMachineMode;
   qr_enabled: boolean;
   speed_enabled: boolean;
+  video_enabled: boolean;
+  hardware_version: '' | 'neu' | 'alt';
   count_rides_enabled: boolean;
   upload_all_photos: boolean;
   shadow_mode: boolean;
@@ -57,6 +59,8 @@ const defaultForm: MachineForm = {
   mode: 'sold_only',
   qr_enabled: true,
   speed_enabled: true,
+  video_enabled: false,
+  hardware_version: '',
   count_rides_enabled: true,
   upload_all_photos: false,
   shadow_mode: true,
@@ -183,6 +187,8 @@ function toForm(config: LiftpicMachineConfig): MachineForm {
     mode: config.mode,
     qr_enabled: config.qr_enabled,
     speed_enabled: config.speed_enabled,
+    video_enabled: config.video_enabled ?? false,
+    hardware_version: config.hardware_version ?? '',
     count_rides_enabled: config.count_rides_enabled,
     upload_all_photos: config.upload_all_photos,
     shadow_mode: config.shadow_mode,
@@ -623,6 +629,17 @@ export default function LiftpicSetupPage() {
                   placeholder={suggestedMachineLabel}
                 />
               </div>
+              <div>
+                <label>Automat-Version</label>
+                <select
+                  value={form.hardware_version}
+                  onChange={(e) => patchForm({ hardware_version: e.target.value as MachineForm['hardware_version'] })}
+                >
+                  <option value="">Unbekannt</option>
+                  <option value="neu">Neu</option>
+                  <option value="alt">Alt</option>
+                </select>
+              </div>
             </div>
 
             <div>
@@ -652,6 +669,12 @@ export default function LiftpicSetupPage() {
                 <input type="checkbox" checked={form.speed_enabled} onChange={(e) => patchForm({ speed_enabled: e.target.checked })} />
                 <span>
                   <strong>Speedmessung</strong>
+                </span>
+              </label>
+              <label className="liftpic-toggle-card">
+                <input type="checkbox" checked={form.video_enabled} onChange={(e) => patchForm({ video_enabled: e.target.checked })} />
+                <span>
+                  <strong>Video-Add-on</strong>
                 </span>
               </label>
               <label className="liftpic-toggle-card">
@@ -865,6 +888,8 @@ export default function LiftpicSetupPage() {
                       {[
                         config.qr_enabled ? 'QR' : null,
                         config.speed_enabled ? 'Speed' : null,
+                        config.video_enabled ? 'Video' : null,
+                        config.hardware_version ? `Version ${config.hardware_version}` : null,
                         config.count_rides_enabled ? 'Fahrten' : null,
                         config.upload_all_photos ? 'Alle Fotos' : null,
                         config.shadow_mode ? 'Shadow' : null,

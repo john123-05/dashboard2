@@ -1,14 +1,14 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import { supabaseBrowser } from '../lib/supabase';
 import { edgeFetch } from '../lib/edge-fetch';
 import { getApiErrorMessage } from '../lib/api-error';
 import type { Park } from '../lib/types';
 
-type Kategorie = 'Automat' | 'Kamera' | 'Zubehoer' | 'Software' | 'Sonstiges';
+type Kategorie = 'Automat' | 'Kamera' | 'Zubehoer' | 'Software' | 'Webshop' | 'Sonstiges';
 type Status = 'vorhanden' | 'empfohlen' | 'bestellt';
 
-const KATEGORIEN: Kategorie[] = ['Automat', 'Kamera', 'Zubehoer', 'Software', 'Sonstiges'];
+const KATEGORIEN: Kategorie[] = ['Automat', 'Kamera', 'Zubehoer', 'Software', 'Webshop', 'Sonstiges'];
 const STATUS_OPTIONS: { value: Status; label: string }[] = [
   { value: 'vorhanden', label: 'Vorhanden' },
   { value: 'empfohlen', label: 'Empfohlen' },
@@ -24,6 +24,9 @@ type EquipmentItem = {
   status: Status;
   geschaetzter_mehrumsatz_cents: number | null;
   sortierung: number;
+  image_url: string | null;
+  before_image_url: string | null;
+  after_image_url: string | null;
 };
 
 const emptyForm = {
@@ -37,18 +40,25 @@ const emptyForm = {
 
 /**
  * "Konfiguration/Shop"-Liste je Park: was der Kunde hat, was man ihm
- * empfehlen koennte. Freie Liste (keine Katalog-Tabelle) - Grundlage fuer
- * die Operator-Seite "Konfiguration".
+ * empfehlen koennte, inkl. Produktbild + Vorher/Nachher-Bild. Freie Liste
+ * (keine Katalog-Tabelle) - Grundlage fuer die Operator-Seite "Konfiguration".
  */
 export default function EquipmentPage() {
   const [parks, setParks] = useState<Park[]>([]);
   const [selectedParkId, setSelectedParkId] = useState('');
   const [items, setItems] = useState<EquipmentItem[]>([]);
   const [form, setForm] = useState(emptyForm);
+  const [image, setImage] = useState<File | null>(null);
+  const [beforeImage, setBeforeImage] = useState<File | null>(null);
+  const [afterImage, setAfterImage] = useState<File | null>(null);
+  const [editingPreview, setEditingPreview] = useState<EquipmentItem | null>(null);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const beforeInputRef = useRef<HTMLInputElement>(null);
+  const afterInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     void loadParks();
@@ -76,7 +86,9 @@ export default function EquipmentPage() {
   async function loadItems(parkId: string) {
     const { data, error: itemsError } = await supabaseBrowser
       .from('park_equipment_items')
-      .select('id, park_id, kategorie, titel, beschreibung, status, geschaetzter_mehrumsatz_cents, sortierung')
+      .select(
+        'id, park_id, kategorie, titel, beschreibung, status, geschaetzter_mehrumsatz_cents, sortierung, image_url, before_image_url, after_image_url',
+      )
       .eq('park_id', parkId)
       .order('sortierung', { ascending: true });
     if (itemsError) {
@@ -84,6 +96,17 @@ export default function EquipmentPage() {
       return;
     }
     setItems((data || []) as EquipmentItem[]);
+  }
+
+  function resetForm() {
+    setForm(emptyForm);
+    setEditingPreview(null);
+    setImage(null);
+    setBeforeImage(null);
+    setAfterImage(null);
+    if (imageInputRef.current) imageInputRef.current.value = '';
+    if (beforeInputRef.current) beforeInputRef.current.value = '';
+    if (afterInputRef.current) afterInputRef.current.value = '';
   }
 
   function startEdit(item: EquipmentItem) {
@@ -96,6 +119,10 @@ export default function EquipmentPage() {
       geschaetzterMehrumsatzEuro:
         item.geschaetzter_mehrumsatz_cents != null ? String(item.geschaetzter_mehrumsatz_cents / 100) : '',
     });
+    setEditingPreview(item);
+    setImage(null);
+    setBeforeImage(null);
+    setAfterImage(null);
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -105,25 +132,26 @@ export default function EquipmentPage() {
     setError(null);
     setStatus(null);
     try {
-      const res = await edgeFetch('/api/admin/park-equipment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: form.id || undefined,
-          park_id: selectedParkId,
-          kategorie: form.kategorie,
-          titel: form.titel.trim(),
-          beschreibung: form.beschreibung.trim(),
-          status: form.status,
-          geschaetzter_mehrumsatz_cents: form.geschaetzterMehrumsatzEuro
-            ? Math.round(Number(form.geschaetzterMehrumsatzEuro) * 100)
-            : null,
-          sortierung: items.length,
-        }),
-      });
-      const body = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(getApiErrorMessage(body, 'Speichern fehlgeschlagen'));
-      setForm(emptyForm);
+      const body = new FormData();
+      if (form.id) body.set('id', form.id);
+      body.set('park_id', selectedParkId);
+      body.set('kategorie', form.kategorie);
+      body.set('titel', form.titel.trim());
+      body.set('beschreibung', form.beschreibung.trim());
+      body.set('status', form.status);
+      body.set(
+        'geschaetzter_mehrumsatz_cents',
+        form.geschaetzterMehrumsatzEuro ? String(Math.round(Number(form.geschaetzterMehrumsatzEuro) * 100)) : '',
+      );
+      body.set('sortierung', String(items.length));
+      if (image) body.set('image', image);
+      if (beforeImage) body.set('before_image', beforeImage);
+      if (afterImage) body.set('after_image', afterImage);
+
+      const res = await edgeFetch('/api/admin/park-equipment', { method: 'POST', body });
+      const resBody = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(getApiErrorMessage(resBody, 'Speichern fehlgeschlagen'));
+      resetForm();
       setStatus('Gespeichert.');
       await loadItems(selectedParkId);
     } catch (e) {
@@ -154,7 +182,8 @@ export default function EquipmentPage() {
         <h2>Ausstattung</h2>
         <p className="note">
           Was der Park aktuell hat und was man ihm empfehlen könnte - die Grundlage für die Operator-Seite
-          „Konfiguration".
+          „Konfiguration". Produktbild und Vorher/Nachher-Bild sind optional, ein Vorher/Nachher-Paar zeigt dem
+          Betreiber einen Schieberegler statt nur eines Bilds.
         </p>
         <form className="grid" onSubmit={handleSubmit}>
           <div>
@@ -178,7 +207,7 @@ export default function EquipmentPage() {
             <input
               value={form.titel}
               onChange={(e) => setForm({ ...form, titel: e.target.value })}
-              placeholder="z. B. SB-Automat Kartenlese-Modul"
+              placeholder="z. B. DSLR-Kamera-Upgrade"
               required
             />
           </div>
@@ -209,11 +238,40 @@ export default function EquipmentPage() {
               rows={2}
             />
           </div>
+          <div className="row">
+            <div>
+              <label>Produktbild (optional)</label>
+              <input ref={imageInputRef} type="file" accept="image/*" onChange={(e) => setImage(e.target.files?.[0] ?? null)} />
+              {editingPreview?.image_url && !image && (
+                <div className="note">Aktuell gesetzt - neue Datei wählen zum Ersetzen.</div>
+              )}
+            </div>
+          </div>
+          <div className="row">
+            <div>
+              <label>Vorher-Bild (optional)</label>
+              <input
+                ref={beforeInputRef}
+                type="file"
+                accept="image/*"
+                onChange={(e) => setBeforeImage(e.target.files?.[0] ?? null)}
+              />
+            </div>
+            <div>
+              <label>Nachher-Bild (optional)</label>
+              <input
+                ref={afterInputRef}
+                type="file"
+                accept="image/*"
+                onChange={(e) => setAfterImage(e.target.files?.[0] ?? null)}
+              />
+            </div>
+          </div>
           <button type="submit" className="setup-primary-btn" disabled={saving || !form.titel.trim()}>
             {form.id ? 'Änderungen speichern' : 'Hinzufügen'}
           </button>
           {form.id && (
-            <button type="button" className="setup-secondary-btn" onClick={() => setForm(emptyForm)}>
+            <button type="button" className="setup-secondary-btn" onClick={resetForm}>
               Abbrechen
             </button>
           )}
@@ -226,6 +284,7 @@ export default function EquipmentPage() {
           <table className="table">
             <thead>
               <tr>
+                <th>Bild</th>
                 <th>Kategorie</th>
                 <th>Titel</th>
                 <th>Status</th>
@@ -236,6 +295,13 @@ export default function EquipmentPage() {
             <tbody>
               {items.map((item) => (
                 <tr key={item.id}>
+                  <td>
+                    {item.image_url ? (
+                      <img src={item.image_url} alt={item.titel} style={{ width: 48, height: 32, objectFit: 'cover', borderRadius: 4 }} />
+                    ) : (
+                      '—'
+                    )}
+                  </td>
                   <td>{item.kategorie}</td>
                   <td>
                     {item.titel}
@@ -266,7 +332,7 @@ export default function EquipmentPage() {
               ))}
               {items.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="note">Noch keine Einträge für diesen Park.</td>
+                  <td colSpan={6} className="note">Noch keine Einträge für diesen Park.</td>
                 </tr>
               )}
             </tbody>
