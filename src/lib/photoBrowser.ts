@@ -1,4 +1,5 @@
 import { externalSupabase } from './supabase';
+import { todayInTimezone } from './kioskSales';
 
 export interface BrowsablePhoto {
   id: string;
@@ -50,6 +51,30 @@ export async function fetchRecentPhotos(parkId: string, limit = 24): Promise<Bro
 
   if (error) throw new Error(error.message);
   return (data || []).map(toBrowsablePhoto);
+}
+
+// Alle heutigen Geschwindigkeits-Messwerte - unabhaengig davon, ob das Foto
+// gekauft wurde (anders als die Kiosk-Verkaufszahlen, die nur bezahlte
+// Fotos zaehlen). "Heute" ist das Kalenderdatum in der Park-Zeitzone.
+export async function fetchTodaysSpeeds(parkId: string, timezone: string): Promise<number[]> {
+  const today = todayInTimezone(timezone);
+  const { data, error } = await externalSupabase
+    .from('photos')
+    .select('captured_at, created_at, speed_kmh')
+    .eq('park_id', parkId)
+    .order('captured_at', { ascending: false })
+    .limit(1000);
+
+  if (error) throw new Error(error.message);
+
+  const dayFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: timezone });
+  return (data || [])
+    .filter((row) => {
+      const capturedAt = (row.captured_at ?? row.created_at) as string | null;
+      return capturedAt && dayFormatter.format(new Date(capturedAt)) === today;
+    })
+    .map((row) => row.speed_kmh as number | null)
+    .filter((v): v is number => typeof v === 'number' && v > 0);
 }
 
 export async function searchPhotosByCode(parkId: string, code: string): Promise<BrowsablePhoto[]> {
