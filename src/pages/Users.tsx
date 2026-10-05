@@ -476,11 +476,10 @@ export default function Users() {
                   href={`${claimSiteBaseFor(parkId)}/ranking`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  title="Im Browser öffnen"
-                  aria-label="Im Browser öffnen"
-                  className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-black/10 transition hover:bg-black/20"
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-black/10 px-3 py-1.5 text-xs font-medium transition hover:bg-black/20"
                 >
                   <ExternalLink className="h-3.5 w-3.5" />
+                  Im Browser öffnen
                 </a>
               )}
             </div>
@@ -489,7 +488,7 @@ export default function Users() {
                 src={`${claimSiteBaseFor(parkId)}/ranking`}
                 title="Live-Vorschau der Tagesbestenliste"
                 scrolling="yes"
-                className="w-full min-h-[700px] flex-1 border-0"
+                className="w-full min-h-[1400px] flex-1 border-0"
               />
             ) : (
               <p className="p-6 text-center text-sm text-slate-500">Für diesen Park gibt es noch keine Bestenlisten-Seite.</p>
