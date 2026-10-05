@@ -462,26 +462,25 @@ export default function Users() {
         </div>
 
         {parkId && (
+          <div className="space-y-2">
+            {claimSiteBaseFor(parkId) && (
+              <a
+                href={`${claimSiteBaseFor(parkId)}/ranking`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex w-fit items-center gap-1.5 rounded-lg border border-slate-200 bg-white/70 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-white"
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+                Im Browser öffnen
+              </a>
+            )}
           <GlassCard className="flex flex-col overflow-hidden p-0">
             <div
-              className="flex flex-col gap-2 px-4 py-3"
+              className="flex items-center gap-2 px-4 py-3"
               style={{ backgroundColor: accentColorForPark(parkId), color: accentTextColorForPark(parkId) }}
             >
-              <div className="flex items-center gap-2">
-                <Trophy className="h-4 w-4" />
-                <span className="text-sm font-semibold">Live-Vorschau · Tagesbestenliste</span>
-              </div>
-              {claimSiteBaseFor(parkId) && (
-                <a
-                  href={`${claimSiteBaseFor(parkId)}/ranking`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex w-fit items-center gap-1.5 rounded-lg bg-black/10 px-3 py-1.5 text-xs font-medium transition hover:bg-black/20"
-                >
-                  <ExternalLink className="h-3.5 w-3.5" />
-                  Im Browser öffnen
-                </a>
-              )}
+              <Trophy className="h-4 w-4" />
+              <span className="text-sm font-semibold">Live-Vorschau · Tagesbestenliste</span>
             </div>
             {claimSiteBaseFor(parkId) ? (
               <iframe
@@ -494,6 +493,7 @@ export default function Users() {
               <p className="p-6 text-center text-sm text-slate-500">Für diesen Park gibt es noch keine Bestenlisten-Seite.</p>
             )}
           </GlassCard>
+          </div>
         )}
       </div>
     </div>
