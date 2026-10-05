@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Camera, CreditCard, Gauge, Printer, Server, ShoppingBag, Video } from 'lucide-react';
 import GlassCard from '../components/ui/GlassCard';
 import BeforeAfterSlider from '../components/ui/BeforeAfterSlider';
+import OrderStatusStepper from '../components/ui/OrderStatusStepper';
 import { usePark } from '../contexts/ParkContext';
 import { ladeZahlungen, type ZahlungsAutomat } from '../lib/zahlungen';
 import { loadParkDashboardData } from '../lib/parkDashboard';
@@ -84,6 +85,7 @@ export default function Configuration() {
 
   const vorhanden = items.filter((i) => i.status === 'vorhanden');
   const empfohlen = items.filter((i) => i.status === 'empfohlen');
+  const bestellt = items.filter((i) => i.status === 'bestellt');
   const cardOnlyCount = machines.filter((m) => m.card_only).length;
   const istNurKarte = machines.length > 0 && cardOnlyCount === machines.length;
   const hatSpeedmessung = machines.some((m) => m.speed_enabled);
@@ -175,6 +177,9 @@ export default function Configuration() {
                       <p className="text-sm font-semibold text-slate-800">{item.titel}</p>
                     </div>
                     {item.beschreibung && <p className="text-sm text-slate-500">{item.beschreibung}</p>}
+                    {item.mehrwert_text && (
+                      <p className="text-xs font-medium text-sky-700">{item.mehrwert_text}</p>
+                    )}
                     {item.geschaetzter_mehrumsatz_cents != null && (
                       <p className="text-xs font-medium text-emerald-700">
                         +{(item.geschaetzter_mehrumsatz_cents / 100).toLocaleString('de-DE')} € geschätzte
@@ -189,6 +194,30 @@ export default function Configuration() {
                     >
                       {angefragt ? 'Anfrage gesendet' : interestId === item.id ? 'Wird gesendet…' : 'Interesse anmelden'}
                     </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </GlassCard>
+      )}
+
+      {!loading && bestellt.length > 0 && (
+        <GlassCard className="p-5 sm:p-6">
+          <h3 className="text-base font-semibold text-slate-800">Deine Bestellungen</h3>
+          <div className="mt-4 space-y-5">
+            {bestellt.map((item) => {
+              const Icon = KATEGORIE_ICON[item.kategorie] ?? Gauge;
+              return (
+                <div key={item.id} className="rounded-xl bg-white/60 p-4">
+                  <div className="flex items-center gap-2">
+                    <div className="rounded-lg bg-sky-50 p-1.5">
+                      <Icon className="h-4 w-4 text-sky-600" />
+                    </div>
+                    <p className="text-sm font-semibold text-slate-800">{item.titel}</p>
+                  </div>
+                  <div className="mt-4 overflow-x-auto">
+                    <OrderStatusStepper status={item.bestellstatus ?? 'bestellung_erhalten'} />
                   </div>
                 </div>
               );

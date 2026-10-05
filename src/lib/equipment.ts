@@ -3,6 +3,7 @@ import { getFunctionSession } from './functionAuth';
 
 export type EquipmentKategorie = 'Automat' | 'Kamera' | 'Zubehoer' | 'Software' | 'Webshop' | 'Sonstiges';
 export type EquipmentStatus = 'vorhanden' | 'empfohlen' | 'bestellt';
+export type Bestellstatus = 'bestellung_erhalten' | 'in_bearbeitung' | 'versendet' | 'installiert';
 
 export interface EquipmentItem {
   id: string;
@@ -11,6 +12,8 @@ export interface EquipmentItem {
   beschreibung: string | null;
   status: EquipmentStatus;
   geschaetzter_mehrumsatz_cents: number | null;
+  mehrwert_text: string | null;
+  bestellstatus: Bestellstatus | null;
   sortierung: number;
   image_url: string | null;
   before_image_url: string | null;
