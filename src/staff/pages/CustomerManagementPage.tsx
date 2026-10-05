@@ -14,6 +14,7 @@ import {
   Monitor,
   Moon,
   Mountain,
+  Package,
   PencilLine,
   RefreshCw,
   RotateCcw,
@@ -56,11 +57,12 @@ import type {
 } from '../lib/types';
 import { useCopyToClipboard } from '../lib/useCopyToClipboard';
 import CamerasPage from './CamerasPage';
+import EquipmentPage from './EquipmentPage';
 import LiftpicSetupPage from './LiftpicSetupPage';
 import ParksPage from './ParksPage';
 
 type CustomerView = 'customers' | 'setup';
-type LegacySetupTab = 'parks' | 'cameras' | 'liftpic';
+type LegacySetupTab = 'parks' | 'cameras' | 'liftpic' | 'equipment';
 type CustomerPanel = 'details' | 'edit';
 type CustomerSection = 'revenue' | 'photos' | 'health' | 'emails' | 'access' | 'structure' | 'cameras' | 'machines' | 'support';
 
@@ -135,6 +137,7 @@ const legacyTabs = [
   { id: 'parks', label: 'Park & Zugang', icon: Mountain },
   { id: 'cameras', label: 'Foto-Codes', icon: Camera },
   { id: 'liftpic', label: 'PCs', icon: Monitor },
+  { id: 'equipment', label: 'Ausstattung', icon: Package },
 ] as const;
 
 const sectionMeta: Array<{
@@ -2706,6 +2709,7 @@ export default function CustomerManagementPage() {
               {legacyTab === 'parks' && <ParksPage />}
               {legacyTab === 'cameras' && <CamerasPage />}
               {legacyTab === 'liftpic' && <LiftpicSetupPage />}
+              {legacyTab === 'equipment' && <EquipmentPage />}
             </div>
           </>
         )}

@@ -12,6 +12,7 @@ const routeMap: Record<string, string> = {
   '/api/admin/park-prefixes': 'admin-park-prefixes',
   '/api/admin/attractions': 'admin-attractions',
   '/api/admin/park-cameras': 'admin-park-cameras',
+  '/api/admin/park-equipment': 'admin-park-equipment',
   '/api/admin/liftpic-machines': 'admin-liftpic-machines',
   '/api/admin/liftpic-assets': 'admin-liftpic-assets',
   '/api/admin/preview-parse': 'admin-preview-parse',
