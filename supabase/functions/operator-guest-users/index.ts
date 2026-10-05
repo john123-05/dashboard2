@@ -149,7 +149,7 @@ async function loadOverview(parkId: string) {
       .filter((p) => emailByPhoto.has(p.id as string) && !profileByEmail.get(emailByPhoto.get(p.id as string) ?? '')?.optOut)
       .sort((a, b) => (b.speed_kmh as number) - (a.speed_kmh as number));
     totalToday = eligible.length;
-    rows = eligible.slice(0, 10).map((p, i) => {
+    rows = eligible.slice(0, 50).map((p, i) => {
       const profile = profileByEmail.get(emailByPhoto.get(p.id as string) ?? '');
       return {
         rank: i + 1,

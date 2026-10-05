@@ -187,8 +187,9 @@ export default function Users() {
         </div>
       )}
 
-      {parkId && (
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="min-w-0 space-y-6">
+          {parkId && (
           <GlassCard className="p-5">
             <div className="flex items-baseline justify-between gap-3">
               <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
@@ -306,8 +307,116 @@ export default function Users() {
               </div>
             )}
           </GlassCard>
+          )}
 
-          <GlassCard className="self-start overflow-hidden p-0">
+          <div className="grid gap-4 sm:grid-cols-3">
+            <GlassCard className="p-5">
+              <div className="flex items-center gap-3">
+                <div className="rounded-xl bg-sky-50 p-2.5">
+                  <UsersIcon className="h-5 w-5 text-sky-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-slate-800">{customers.length}</p>
+                  <p className="text-xs text-slate-500">{t('users.total')}</p>
+                </div>
+              </div>
+            </GlassCard>
+            <GlassCard className="p-5">
+              <div className="flex items-center gap-3">
+                <div className="rounded-xl bg-emerald-50 p-2.5">
+                  <UsersIcon className="h-5 w-5 text-emerald-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-slate-800">
+                    {customers.filter((c) => c.purchase_count > 0).length}
+                  </p>
+                  <p className="text-xs text-slate-500">{t('users.paying')}</p>
+                </div>
+              </div>
+            </GlassCard>
+            <GlassCard className="p-5">
+              <div className="flex items-center gap-3">
+                <div className="rounded-xl bg-cyan-50 p-2.5">
+                  <UsersIcon className="h-5 w-5 text-cyan-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-slate-800">
+                    {customers.filter((c) => c.opted_in_marketing).length}
+                  </p>
+                  <p className="text-xs text-slate-500">{t('users.optins')}</p>
+                </div>
+              </div>
+            </GlassCard>
+          </div>
+
+          <GlassCard className="overflow-hidden">
+            <div className="border-b border-slate-100/80 px-6 py-4">
+              <div className="relative max-w-sm">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder={t('users.search')}
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="glass-input py-2 pl-9 pr-4 text-sm"
+                />
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-slate-100/80">
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">{t('users.table.customer')}</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">{t('users.table.contact')}</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">{t('users.table.purchases')}</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">{t('users.table.total_spent')}</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">{t('users.table.joined')}</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">{t('users.table.marketing')}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {filtered.slice(0, 20).map((c) => (
+                    <tr key={c.id} className="transition-colors hover:bg-white/40">
+                      <td className="px-6 py-3.5">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600">
+                            {(c.full_name || 'A')[0].toUpperCase()}
+                          </div>
+                          <span className="text-sm font-medium text-slate-800">{c.full_name || t('app.unknown')}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-3.5 text-sm text-slate-600">{c.email || c.phone || '-'}</td>
+                      <td className="px-6 py-3.5 text-sm font-medium text-slate-700">{c.purchase_count}</td>
+                      <td className="px-6 py-3.5 text-sm font-semibold text-slate-800">
+                        {c.total_spent > 0 ? formatCurrency(c.total_spent) : '-'}
+                      </td>
+                      <td className="px-6 py-3.5 text-sm text-slate-500">{formatDate(c.created_at)}</td>
+                      <td className="px-6 py-3.5">
+                        <span
+                          className={`status-badge ${
+                            c.opted_in_marketing
+                              ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
+                              : 'bg-slate-50 text-slate-500 ring-slate-200'
+                          }`}
+                        >
+                          {c.opted_in_marketing ? t('leads.opted_in') : t('leads.opted_out')}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {filtered.length > 20 && (
+              <div className="border-t border-slate-100/80 px-6 py-3 text-center text-xs text-slate-400">
+                Showing 20 of {filtered.length} customers
+              </div>
+            )}
+          </GlassCard>
+        </div>
+
+        {parkId && (
+          <GlassCard className="flex flex-col overflow-hidden p-0">
             <div
               className="flex items-center gap-2 px-4 py-3"
               style={{ backgroundColor: accentColorForPark(parkId), color: accentTextColorForPark(parkId) }}
@@ -315,7 +424,7 @@ export default function Users() {
               <Trophy className="h-4 w-4" />
               <span className="text-sm font-semibold">Live-Vorschau · Tagesbestenliste</span>
             </div>
-            <div className="p-4">
+            <div className="flex-1 overflow-y-auto p-4">
               {!overview ? (
                 <div className="h-40 animate-pulse rounded-xl bg-white/40" />
               ) : overview.leaderboard.rows.length === 0 ? (
@@ -361,113 +470,8 @@ export default function Users() {
               )}
             </div>
           </GlassCard>
-        </div>
-      )}
-
-      <div className="grid gap-4 sm:grid-cols-3">
-        <GlassCard className="p-5">
-          <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-sky-50 p-2.5">
-              <UsersIcon className="h-5 w-5 text-sky-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-slate-800">{customers.length}</p>
-              <p className="text-xs text-slate-500">{t('users.total')}</p>
-            </div>
-          </div>
-        </GlassCard>
-        <GlassCard className="p-5">
-          <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-emerald-50 p-2.5">
-              <UsersIcon className="h-5 w-5 text-emerald-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-slate-800">
-                {customers.filter((c) => c.purchase_count > 0).length}
-              </p>
-              <p className="text-xs text-slate-500">{t('users.paying')}</p>
-            </div>
-          </div>
-        </GlassCard>
-        <GlassCard className="p-5">
-          <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-cyan-50 p-2.5">
-              <UsersIcon className="h-5 w-5 text-cyan-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-slate-800">
-                {customers.filter((c) => c.opted_in_marketing).length}
-              </p>
-              <p className="text-xs text-slate-500">{t('users.optins')}</p>
-            </div>
-          </div>
-        </GlassCard>
-      </div>
-
-      <GlassCard className="overflow-hidden">
-        <div className="border-b border-slate-100/80 px-6 py-4">
-          <div className="relative max-w-sm">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              placeholder={t('users.search')}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="glass-input py-2 pl-9 pr-4 text-sm"
-            />
-          </div>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-slate-100/80">
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">{t('users.table.customer')}</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">{t('users.table.contact')}</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">{t('users.table.purchases')}</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">{t('users.table.total_spent')}</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">{t('users.table.joined')}</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">{t('users.table.marketing')}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {filtered.slice(0, 20).map((c) => (
-                <tr key={c.id} className="transition-colors hover:bg-white/40">
-                  <td className="px-6 py-3.5">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600">
-                        {(c.full_name || 'A')[0].toUpperCase()}
-                      </div>
-                      <span className="text-sm font-medium text-slate-800">{c.full_name || t('app.unknown')}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-3.5 text-sm text-slate-600">{c.email || c.phone || '-'}</td>
-                  <td className="px-6 py-3.5 text-sm font-medium text-slate-700">{c.purchase_count}</td>
-                  <td className="px-6 py-3.5 text-sm font-semibold text-slate-800">
-                    {c.total_spent > 0 ? formatCurrency(c.total_spent) : '-'}
-                  </td>
-                  <td className="px-6 py-3.5 text-sm text-slate-500">{formatDate(c.created_at)}</td>
-                  <td className="px-6 py-3.5">
-                    <span
-                      className={`status-badge ${
-                        c.opted_in_marketing
-                          ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
-                          : 'bg-slate-50 text-slate-500 ring-slate-200'
-                      }`}
-                    >
-                      {c.opted_in_marketing ? t('leads.opted_in') : t('leads.opted_out')}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {filtered.length > 20 && (
-          <div className="border-t border-slate-100/80 px-6 py-3 text-center text-xs text-slate-400">
-            Showing 20 of {filtered.length} customers
-          </div>
         )}
-      </GlassCard>
+      </div>
     </div>
   );
 }
