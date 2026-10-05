@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   Camera,
   ChevronRight,
+  ExternalLink,
   Gauge,
   Info,
   Printer,
@@ -352,7 +353,18 @@ export default function Configuration() {
                         </span>
                       )}
                     </div>
-                    <div className="mt-auto pt-2">
+                    <div className="mt-auto flex flex-col gap-2 pt-2">
+                      {item.preview_url && (
+                        <a
+                          href={item.preview_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                          Vorschau ansehen
+                        </a>
+                      )}
                       <button
                         type="button"
                         onClick={() => void handleAnfrage(item.id, { itemId: item.id })}

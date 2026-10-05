@@ -22,7 +22,7 @@ const STATUS = ['vorhanden', 'empfohlen', 'bestellt'];
 const BESTELLSTATUS = ['bestellung_erhalten', 'in_bearbeitung', 'versendet', 'installiert'];
 const MAX_FILE_BYTES = 8 * 1024 * 1024;
 const SELECT_COLUMNS =
-  'id, park_id, kategorie, titel, beschreibung, status, geschaetzter_mehrumsatz_cents, mehrwert_text, bestellstatus, sortierung, image_url, before_image_url, after_image_url';
+  'id, park_id, kategorie, titel, beschreibung, status, geschaetzter_mehrumsatz_cents, mehrwert_text, bestellstatus, preview_url, sortierung, image_url, before_image_url, after_image_url';
 
 function text(value: unknown, fallback = ''): string {
   return typeof value === 'string' && value.trim() ? value.trim() : fallback;
@@ -100,6 +100,7 @@ Deno.serve(async (req) => {
           ? Math.round(Number(payload.geschaetzter_mehrumsatz_cents)) || null
           : null,
       mehrwert_text: text(payload.mehrwert_text) || null,
+      preview_url: text(payload.preview_url) || null,
       bestellstatus:
         oneOf(payload.status, STATUS, 'empfohlen') === 'bestellt'
           ? (typeof payload.bestellstatus === 'string' && BESTELLSTATUS.includes(payload.bestellstatus)

@@ -14,6 +14,7 @@ export interface EquipmentItem {
   geschaetzter_mehrumsatz_cents: number | null;
   mehrwert_text: string | null;
   bestellstatus: Bestellstatus | null;
+  preview_url: string | null;
   sortierung: number;
   image_url: string | null;
   before_image_url: string | null;
