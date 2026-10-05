@@ -17,7 +17,7 @@ export default function BeforeAfterSlider({
   const [position, setPosition] = useState(50);
 
   return (
-    <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-slate-100">
+    <div className="relative h-full w-full overflow-hidden bg-slate-100">
       <img src={afterUrl} alt={afterLabel} className="absolute inset-0 h-full w-full object-cover" />
       <div className="absolute inset-0 overflow-hidden" style={{ width: `${position}%` }}>
         <img src={beforeUrl} alt={beforeLabel} className="h-full w-full object-cover" />

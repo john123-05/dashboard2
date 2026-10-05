@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Camera, CreditCard, Gauge, Printer, Server, ShoppingBag, Video } from 'lucide-react';
 import GlassCard from '../components/ui/GlassCard';
 import BeforeAfterSlider from '../components/ui/BeforeAfterSlider';
@@ -18,11 +18,40 @@ const KATEGORIE_ICON: Record<string, typeof Camera> = {
   Sonstiges: Gauge,
 };
 
-function Chip({ children }: { children: React.ReactNode }) {
+function SectionCard({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-sky-50 px-3 py-1 text-xs font-medium text-sky-700">
+    <GlassCard className="p-5 sm:p-6">
+      <h3 className="text-base font-semibold text-slate-800">{title}</h3>
       {children}
-    </span>
+    </GlassCard>
+  );
+}
+
+function SpecTile({
+  icon: Icon,
+  label,
+  value,
+  sub,
+  action,
+}: {
+  icon: typeof Server;
+  label: string;
+  value: string;
+  sub?: string;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-2 rounded-xl bg-white/60 p-4">
+      <div className="flex items-center justify-between">
+        <Icon className="h-4 w-4 text-slate-400" />
+        {action}
+      </div>
+      <div>
+        <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">{label}</p>
+        <p className="text-sm font-semibold text-slate-800">{value}</p>
+        {sub && <p className="text-xs text-slate-500">{sub}</p>}
+      </div>
+    </div>
   );
 }
 
@@ -74,7 +103,7 @@ export default function Configuration() {
 
   if (!isKioskPark) {
     return (
-      <div className="space-y-6">
+      <div className="mx-auto max-w-5xl space-y-6">
         <h2 className="text-2xl font-bold tracking-tight text-slate-800">Konfiguration</h2>
         <GlassCard className="p-6">
           <p className="text-sm text-slate-500">Diese Seite gilt aktuell nur für Selbstbedienungs-Automaten.</p>
@@ -93,7 +122,7 @@ export default function Configuration() {
   const version = machines.find((m) => m.hardware_version)?.hardware_version ?? null;
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-5xl space-y-6">
       <div>
         <h2 className="text-2xl font-bold tracking-tight text-slate-800">Konfiguration</h2>
         <p className="mt-1 text-sm text-slate-500">Deine aktuelle Ausstattung und was du dazu haben könntest.</p>
@@ -101,111 +130,103 @@ export default function Configuration() {
 
       {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
 
-      <GlassCard className="p-5 sm:p-6">
-        <h3 className="text-base font-semibold text-slate-800">Deine aktuelle Konfiguration</h3>
+      <SectionCard title="Deine aktuelle Konfiguration">
         {loading ? (
           <p className="mt-4 text-sm text-slate-400">Wird geladen…</p>
         ) : (
-          <>
-            <div className="mt-4 flex flex-wrap items-center gap-3">
-              <div className="flex items-center gap-2 rounded-xl bg-white/60 px-4 py-2">
-                <Server className="h-5 w-5 text-slate-500" />
-                <span className="text-lg font-semibold text-slate-800">
-                  {machines.length > 1 ? `${machines.length} SB-Automaten` : 'SB-Automat'}
-                </span>
-                {version && <Chip>Version: {version === 'neu' ? 'Neu' : 'Alt'}</Chip>}
-              </div>
-            </div>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Chip>
-                <CreditCard className="h-3.5 w-3.5" />
-                {istNurKarte ? 'Nur Karte' : 'Bar & Karte'}
-              </Chip>
-              {hatSpeedmessung && (
-                <Chip>
-                  <Gauge className="h-3.5 w-3.5" />
-                  Speed-Messung
-                </Chip>
-              )}
-              {hatVideo && (
-                <Chip>
-                  <Video className="h-3.5 w-3.5" />
-                  Video-Add-on
-                </Chip>
-              )}
-            </div>
-            <div className="mt-4 flex items-center justify-between rounded-xl bg-white/50 p-4">
-              <div className="flex items-center gap-2">
-                <Printer className="h-5 w-5 text-slate-500" />
-                <div>
-                  <p className="text-sm font-semibold text-slate-800">
-                    {paperRemaining != null ? `${formatNumber(paperRemaining)} Fotopapier übrig` : 'Fotopapier'}
-                  </p>
-                  <p className="text-xs text-slate-500">Bestand wird aus deinen Automaten gemeldet.</p>
-                </div>
-              </div>
-              <a
-                href="mailto:info@liftpictures.com?subject=Fotopapier%20nachbestellen"
-                className="rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700"
-              >
-                Nachbestellen
-              </a>
-            </div>
-          </>
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            <SpecTile
+              icon={Server}
+              label="Automat"
+              value={machines.length > 1 ? `${machines.length}x SB-Automat` : 'SB-Automat'}
+              sub={version ? `Version ${version === 'neu' ? 'Neu' : 'Alt'}` : undefined}
+            />
+            <SpecTile icon={CreditCard} label="Zahlungsart" value={istNurKarte ? 'Nur Karte' : 'Bar & Karte'} />
+            {hatSpeedmessung && <SpecTile icon={Gauge} label="Speed-Messung" value="Vorhanden" />}
+            {hatVideo && <SpecTile icon={Video} label="Video-Add-on" value="Vorhanden" />}
+            <SpecTile
+              icon={Printer}
+              label="Fotopapier"
+              value={paperRemaining != null ? formatNumber(paperRemaining) : '—'}
+              action={
+                <a
+                  href="mailto:info@liftpictures.com?subject=Fotopapier%20nachbestellen"
+                  className="rounded-lg bg-slate-800 px-2.5 py-1 text-[11px] font-medium text-white hover:bg-slate-700"
+                >
+                  Nachbestellen
+                </a>
+              }
+            />
+          </div>
         )}
-      </GlassCard>
+      </SectionCard>
 
       {!loading && empfohlen.length > 0 && (
-        <GlassCard className="p-5 sm:p-6">
-          <h3 className="text-base font-semibold text-slate-800">Mehr aus deinem Automaten holen</h3>
-          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <SectionCard title="Mehr aus deinem Automaten holen">
+          <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
             {empfohlen.map((item) => {
               const Icon = KATEGORIE_ICON[item.kategorie] ?? Gauge;
               const angefragt = interestDone.has(item.id);
               return (
-                <div key={item.id} className="flex flex-col overflow-hidden rounded-xl bg-white/60">
+                <div
+                  key={item.id}
+                  className="flex flex-col overflow-hidden rounded-xl border border-slate-200/60 bg-white/70"
+                >
                   {item.before_image_url && item.after_image_url ? (
-                    <BeforeAfterSlider beforeUrl={item.before_image_url} afterUrl={item.after_image_url} />
-                  ) : item.image_url ? (
-                    <img src={item.image_url} alt={item.titel} className="aspect-video w-full object-cover" />
-                  ) : null}
-                  <div className="flex flex-1 flex-col gap-2 p-4">
-                    <div className="flex items-center gap-2">
-                      <div className="rounded-lg bg-sky-50 p-1.5">
-                        <Icon className="h-4 w-4 text-sky-600" />
-                      </div>
-                      <p className="text-sm font-semibold text-slate-800">{item.titel}</p>
+                    <div className="h-44 w-full shrink-0">
+                      <BeforeAfterSlider beforeUrl={item.before_image_url} afterUrl={item.after_image_url} />
                     </div>
-                    {item.beschreibung && <p className="text-sm text-slate-500">{item.beschreibung}</p>}
-                    {item.mehrwert_text && (
-                      <p className="text-xs font-medium text-sky-700">{item.mehrwert_text}</p>
+                  ) : item.image_url ? (
+                    <div className="h-44 w-full shrink-0 overflow-hidden bg-slate-100">
+                      <img src={item.image_url} alt={item.titel} className="h-full w-full object-cover" />
+                    </div>
+                  ) : (
+                    <div className="flex h-44 w-full shrink-0 items-center justify-center bg-slate-50">
+                      <Icon className="h-8 w-8 text-slate-300" />
+                    </div>
+                  )}
+                  <div className="flex flex-1 flex-col gap-2 p-4">
+                    <span className="inline-flex w-fit items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide text-slate-500">
+                      <Icon className="h-3 w-3" />
+                      {item.kategorie}
+                    </span>
+                    <p className="text-sm font-semibold text-slate-800">{item.titel}</p>
+                    {item.beschreibung && (
+                      <p className="line-clamp-2 text-sm text-slate-500">{item.beschreibung}</p>
                     )}
-                    {item.geschaetzter_mehrumsatz_cents != null && (
-                      <p className="text-xs font-medium text-emerald-700">
-                        +{(item.geschaetzter_mehrumsatz_cents / 100).toLocaleString('de-DE')} € geschätzte
-                        Umsatzsteigerung/Monat
-                      </p>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => void handleInteresse(item.id)}
-                      disabled={interestId === item.id || angefragt}
-                      className="mt-auto inline-flex w-fit items-center justify-center rounded-lg bg-sky-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-sky-500 disabled:opacity-60"
-                    >
-                      {angefragt ? 'Anfrage gesendet' : interestId === item.id ? 'Wird gesendet…' : 'Interesse anmelden'}
-                    </button>
+                    <div className="flex flex-wrap gap-1.5">
+                      {item.mehrwert_text && (
+                        <span className="inline-flex items-center rounded-full bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-700">
+                          {item.mehrwert_text}
+                        </span>
+                      )}
+                      {item.geschaetzter_mehrumsatz_cents != null && (
+                        <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
+                          +{(item.geschaetzter_mehrumsatz_cents / 100).toLocaleString('de-DE')} €/Monat
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-auto pt-2">
+                      <button
+                        type="button"
+                        onClick={() => void handleInteresse(item.id)}
+                        disabled={interestId === item.id || angefragt}
+                        className="inline-flex w-full items-center justify-center rounded-lg bg-sky-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-sky-500 disabled:opacity-60"
+                      >
+                        {angefragt ? 'Anfrage gesendet' : interestId === item.id ? 'Wird gesendet…' : 'Interesse anmelden'}
+                      </button>
+                    </div>
                   </div>
                 </div>
               );
             })}
           </div>
-        </GlassCard>
+        </SectionCard>
       )}
 
       {!loading && bestellt.length > 0 && (
-        <GlassCard className="p-5 sm:p-6">
-          <h3 className="text-base font-semibold text-slate-800">Deine Bestellungen</h3>
-          <div className="mt-4 space-y-5">
+        <SectionCard title="Deine Bestellungen">
+          <div className="mt-4 space-y-4">
             {bestellt.map((item) => {
               const Icon = KATEGORIE_ICON[item.kategorie] ?? Gauge;
               return (
@@ -223,21 +244,25 @@ export default function Configuration() {
               );
             })}
           </div>
-        </GlassCard>
+        </SectionCard>
       )}
 
       {!loading && vorhanden.length > 0 && (
-        <GlassCard className="p-5 sm:p-6">
-          <h3 className="text-base font-semibold text-slate-800">Bereits vorhanden</h3>
-          <ul className="mt-4 space-y-2">
-            {vorhanden.map((item) => (
-              <li key={item.id} className="flex items-center gap-2 text-sm text-slate-700">
-                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
-                {item.titel}
-              </li>
-            ))}
-          </ul>
-        </GlassCard>
+        <SectionCard title="Bereits vorhanden">
+          <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {vorhanden.map((item) => {
+              const Icon = KATEGORIE_ICON[item.kategorie] ?? Gauge;
+              return (
+                <div key={item.id} className="flex items-center gap-2.5 rounded-xl bg-white/60 px-3 py-2.5">
+                  <div className="rounded-lg bg-emerald-50 p-1.5">
+                    <Icon className="h-3.5 w-3.5 text-emerald-600" />
+                  </div>
+                  <span className="text-sm text-slate-700">{item.titel}</span>
+                </div>
+              );
+            })}
+          </div>
+        </SectionCard>
       )}
 
       {!loading && items.length === 0 && (
