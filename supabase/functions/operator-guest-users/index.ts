@@ -14,10 +14,21 @@ import { requireOperatorForPark } from '../_shared/operatorAuth.ts';
  *                      und Adresse in den Freischaltungen dieses Gastes geleert und
  *                      das Marketing-Opt-in entzogen (anonymisiert statt geloescht,
  *                      damit Zaehler und Fotos stimmen bleiben).
+ *  - POST multipart/form-data {park_id, email, action: 'set_avatar', image} ->
+ *      Staff/Betreiber setzt das Profilbild eines bereits eingetragenen Gastes.
+ *  - POST {park_id, email, action: 'delete_avatar'} -> nur das Profilbild
+ *      entfernen, Name/Bestenlisten-Eintrag bleiben.
+ *
+ * Alle Aktionen wirken nur auf bereits vorhandene park_guest_profiles-Zeilen
+ * (also Gaeste, die sich tatsaechlich fuer die Tagesbestenliste eingetragen
+ * haben) - fuer alle anderen gibt es hier nichts zu verwalten.
  *
  * Laeuft mit verify_jwt = false; der Operator-Token stammt aus dem anderen
  * Projekt und wird in requireOperatorForPark selbst geprueft.
  */
+
+const AVATAR_BUCKET = 'avatars';
+const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
 
 function businessDate(timeZone: string, iso: string): string {
   const parts = new Intl.DateTimeFormat('en-CA', {
@@ -181,12 +192,30 @@ Deno.serve(async (req) => {
   }
 
   if (req.method === 'POST') {
-    const payload = await req.json().catch(() => null);
-    const parkId = typeof payload?.park_id === 'string' ? payload.park_id.trim() : '';
-    const email = typeof payload?.email === 'string' ? payload.email.trim().toLowerCase() : '';
-    const action = payload?.action;
-    if (!parkId || !email || (action !== 'delete_profile' && action !== 'delete_user')) {
-      return json({ error: 'park_id, email und action (delete_profile | delete_user) sind Pflicht' }, 400);
+    const contentType = req.headers.get('content-type') || '';
+    let parkId = '';
+    let email = '';
+    let action = '';
+    let imageFile: File | null = null;
+
+    if (contentType.includes('multipart/form-data')) {
+      const form = await req.formData().catch(() => null);
+      if (!form) return json({ error: 'Invalid form data' }, 400);
+      parkId = String(form.get('park_id') || '').trim();
+      email = String(form.get('email') || '').trim().toLowerCase();
+      action = String(form.get('action') || '').trim();
+      const img = form.get('image');
+      if (img instanceof File && img.size > 0) imageFile = img;
+    } else {
+      const payload = await req.json().catch(() => null);
+      parkId = typeof payload?.park_id === 'string' ? payload.park_id.trim() : '';
+      email = typeof payload?.email === 'string' ? payload.email.trim().toLowerCase() : '';
+      action = typeof payload?.action === 'string' ? payload.action : '';
+    }
+
+    const VALID_ACTIONS = ['delete_profile', 'delete_user', 'set_avatar', 'delete_avatar'];
+    if (!parkId || !email || !VALID_ACTIONS.includes(action)) {
+      return json({ error: 'park_id, email und eine gueltige action sind Pflicht' }, 400);
     }
     const auth = await requireOperatorForPark(req, parkId);
     if (!auth.ok) return json({ error: auth.message }, auth.status);
@@ -199,9 +228,55 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (!profile) return json({ error: 'Gast nicht gefunden' }, 404);
 
+    if (action === 'set_avatar') {
+      if (!imageFile) return json({ error: 'Bild fehlt' }, 400);
+      if (imageFile.size > MAX_AVATAR_BYTES) return json({ error: 'Bild zu groß (max. 5 MB)' }, 400);
+      if (!imageFile.type.startsWith('image/')) return json({ error: 'Nur Bilder erlaubt' }, 400);
+
+      const oldPath = avatarObjectPath(profile.avatar_url as string | null);
+      const ext = imageFile.name.includes('.') ? imageFile.name.slice(imageFile.name.lastIndexOf('.')) : '.jpg';
+      const storagePath = `${auth.parkId}/${encodeURIComponent(email)}-${crypto.randomUUID()}${ext}`;
+
+      const { error: uploadError } = await supabaseService.storage
+        .from(AVATAR_BUCKET)
+        .upload(storagePath, imageFile, { contentType: imageFile.type || undefined });
+      if (uploadError) return json({ error: uploadError.message }, 400);
+
+      const { data: pub } = supabaseService.storage.from(AVATAR_BUCKET).getPublicUrl(storagePath);
+
+      const { error: updateError } = await supabaseService
+        .from('park_guest_profiles')
+        .update({ avatar_url: pub.publicUrl })
+        .eq('park_id', auth.parkId)
+        .eq('email', email);
+      if (updateError) {
+        await supabaseService.storage.from(AVATAR_BUCKET).remove([storagePath]);
+        return json({ error: updateError.message }, 500);
+      }
+
+      if (oldPath) await supabaseService.storage.from(AVATAR_BUCKET).remove([oldPath]);
+
+      return json({ ok: true, data: { avatarUrl: pub.publicUrl } });
+    }
+
+    if (action === 'delete_avatar') {
+      const avatarPath = avatarObjectPath(profile.avatar_url as string | null);
+      if (avatarPath) await supabaseService.storage.from(AVATAR_BUCKET).remove([avatarPath]);
+
+      const { error: updateError } = await supabaseService
+        .from('park_guest_profiles')
+        .update({ avatar_url: null })
+        .eq('park_id', auth.parkId)
+        .eq('email', email);
+      if (updateError) return json({ error: updateError.message }, 500);
+
+      return json({ ok: true });
+    }
+
+    // delete_profile / delete_user
     const avatarPath = avatarObjectPath(profile.avatar_url as string | null);
     if (avatarPath) {
-      await supabaseService.storage.from('avatars').remove([avatarPath]);
+      await supabaseService.storage.from(AVATAR_BUCKET).remove([avatarPath]);
     }
 
     const { error: deleteError } = await supabaseService

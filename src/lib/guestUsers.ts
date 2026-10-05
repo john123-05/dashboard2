@@ -68,3 +68,39 @@ export async function deleteGuest(parkId: string, email: string, action: GuestDe
   const body = await res.json().catch(() => null);
   if (!res.ok) throw new Error(body?.error || `HTTP ${res.status}`);
 }
+
+// Setzt/ersetzt das Profilbild eines bereits in der Tagesbestenliste eingetragenen
+// Gasts - nur fuer bestehende park_guest_profiles-Zeilen.
+export async function setGuestAvatar(parkId: string, email: string, file: File): Promise<string> {
+  const headers = await authHeaders();
+  if (!headers) throw new Error('Nicht angemeldet');
+
+  const body = new FormData();
+  body.set('park_id', parkId);
+  body.set('email', email);
+  body.set('action', 'set_avatar');
+  body.set('image', file);
+
+  const res = await fetch(`${EXTERNAL_SUPABASE_URL}/functions/v1/operator-guest-users`, {
+    method: 'POST',
+    headers,
+    body,
+  });
+  const responseBody = await res.json().catch(() => null);
+  if (!res.ok) throw new Error(responseBody?.error || `HTTP ${res.status}`);
+  return responseBody?.data?.avatarUrl as string;
+}
+
+// Entfernt nur das Profilbild, Name/Bestenlisten-Eintrag bleiben erhalten.
+export async function deleteGuestAvatar(parkId: string, email: string): Promise<void> {
+  const headers = await authHeaders();
+  if (!headers) throw new Error('Nicht angemeldet');
+
+  const res = await fetch(`${EXTERNAL_SUPABASE_URL}/functions/v1/operator-guest-users`, {
+    method: 'POST',
+    headers: { ...headers, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ park_id: parkId, email, action: 'delete_avatar' }),
+  });
+  const body = await res.json().catch(() => null);
+  if (!res.ok) throw new Error(body?.error || `HTTP ${res.status}`);
+}
