@@ -17,6 +17,7 @@ import {
   ChevronDown,
   UserCog,
   Package,
+  Store,
   X,
   Sun,
   Moon,
@@ -54,6 +55,7 @@ const navItems: NavItem[] = [
   { to: '/health', icon: Activity, labelKey: 'nav.system_health', staffAllowed: true },
   { to: '/kamera', icon: Camera, labelKey: 'nav.camera', staffAllowed: true },
   { to: '/configuration', icon: Package, labelKey: 'nav.configuration', label: 'Konfiguration' },
+  { to: '/shop', icon: Store, labelKey: 'nav.shop', label: 'Shop' },
   { to: '/team', icon: UserCog, labelKey: 'nav.team', label: 'Mitarbeiter', ownerOnly: true },
   { to: '/settings', icon: Settings, labelKey: 'nav.settings' },
 ];
