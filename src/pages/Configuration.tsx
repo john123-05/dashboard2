@@ -5,7 +5,6 @@ import {
   ChevronRight,
   Gauge,
   Info,
-  Package,
   Printer,
   Search,
   Server,
@@ -15,9 +14,13 @@ import GlassCard from '../components/ui/GlassCard';
 import BeforeAfterSlider from '../components/ui/BeforeAfterSlider';
 import { usePark } from '../contexts/ParkContext';
 import { ladeZahlungen, type ZahlungsAutomat } from '../lib/zahlungen';
+import { loadParkDashboardData } from '../lib/parkDashboard';
 import { fetchParkEquipment, meldeAusstattungsInteresse, type EquipmentItem } from '../lib/equipment';
+import { formatNumber } from '../lib/utils';
 
-type Gruppe = 'Hardware' | 'Software' | 'Wartung' | 'Support' | 'Services';
+type Gruppe = 'Hardware' | 'Materialien' | 'Software' | 'Wartung' | 'Support' | 'Services';
+
+const FOTOPAPIER_KEY = '__fotopapier__';
 
 const KATEGORIE_ICON: Record<string, typeof Camera> = {
   Automat: Server,
@@ -37,7 +40,7 @@ const KATEGORIE_GRUPPE: Record<string, Gruppe> = {
   Sonstiges: 'Services',
 };
 
-const GRUPPEN_REIHENFOLGE: Gruppe[] = ['Hardware', 'Software', 'Wartung', 'Support', 'Services'];
+const GRUPPEN_REIHENFOLGE: Gruppe[] = ['Hardware', 'Materialien', 'Software', 'Wartung', 'Support', 'Services'];
 
 function SectionCard({ title, subtitle, action, children }: { title: string; subtitle?: string; action?: ReactNode; children: ReactNode }) {
   return (
@@ -54,12 +57,17 @@ function SectionCard({ title, subtitle, action, children }: { title: string; sub
   );
 }
 
-function SpecTile({ sub, label, value }: { sub: string; label: string; value: string }) {
+function SpecTile({ sub, label, value, action }: { sub: string; label: string; value: string; action?: ReactNode }) {
   return (
-    <div className="flex flex-col gap-1 rounded-xl bg-white/60 p-4">
-      <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">{sub}</p>
-      <p className="text-base font-semibold text-slate-800">{value}</p>
-      <p className="text-xs text-slate-500">{label}</p>
+    <div className="flex flex-col gap-2 rounded-xl bg-white/60 p-4">
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">{sub}</p>
+        {action}
+      </div>
+      <div>
+        <p className="text-base font-semibold text-slate-800">{value}</p>
+        <p className="text-xs text-slate-500">{label}</p>
+      </div>
     </div>
   );
 }
@@ -80,6 +88,7 @@ function HeaderIconLink({ to, label, icon: Icon }: { to: string; label: string; 
 export default function Configuration() {
   const { parkId, isKioskPark } = usePark();
   const [machines, setMachines] = useState<ZahlungsAutomat[]>([]);
+  const [paperRemaining, setPaperRemaining] = useState<number | null>(null);
   const [items, setItems] = useState<EquipmentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -92,10 +101,15 @@ export default function Configuration() {
     if (!parkId) return;
     let active = true;
     setLoading(true);
-    Promise.all([ladeZahlungen(parkId).catch(() => []), fetchParkEquipment(parkId).catch(() => [])])
-      .then(([machineRows, equipmentItems]) => {
+    Promise.all([
+      ladeZahlungen(parkId).catch(() => []),
+      loadParkDashboardData(parkId).catch(() => ({ data: null, error: null })),
+      fetchParkEquipment(parkId).catch(() => []),
+    ])
+      .then(([machineRows, parkDashboard, equipmentItems]) => {
         if (!active) return;
         setMachines(machineRows);
+        setPaperRemaining(parkDashboard.data?.summary.printer_paper_remaining ?? null);
         setItems(equipmentItems);
         setError(null);
       })
@@ -142,8 +156,9 @@ export default function Configuration() {
   });
 
   const ausstattungsGruppen = useMemo(() => {
-    const gruppen: Record<Gruppe, { sub: string; label: string; value: string; key: string }[]> = {
+    const gruppen: Record<Gruppe, { sub: string; label: string; value: string; key: string; action?: ReactNode }[]> = {
       Hardware: [],
+      Materialien: [],
       Software: [],
       Wartung: [],
       Support: [],
@@ -172,9 +187,26 @@ export default function Configuration() {
       const gruppe = KATEGORIE_GRUPPE[item.kategorie] ?? 'Services';
       gruppen[gruppe].push({ key: item.id, sub: item.kategorie, label: item.kategorie, value: item.titel });
     }
+    gruppen.Materialien.push({
+      key: FOTOPAPIER_KEY,
+      sub: 'Verbrauchsmaterial',
+      label: 'Fotopapier',
+      value: paperRemaining != null ? `${formatNumber(paperRemaining)} Blatt übrig` : '—',
+      action: (
+        <button
+          type="button"
+          onClick={() => void handleAnfrage(FOTOPAPIER_KEY, { label: 'Fotopapier nachbestellen' })}
+          disabled={requestKey === FOTOPAPIER_KEY || requestedKeys.has(FOTOPAPIER_KEY)}
+          className="rounded-lg bg-slate-800 px-2.5 py-1 text-[11px] font-medium text-white hover:bg-slate-700 disabled:opacity-60"
+        >
+          {anfrageLabel(FOTOPAPIER_KEY, 'Nachbestellen')}
+        </button>
+      ),
+    });
 
     return gruppen;
-  }, [machines, version, istNurKarte, hatSpeedmessung, hatVideo, vorhandenGefiltert]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [machines, version, istNurKarte, hatSpeedmessung, hatVideo, vorhandenGefiltert, paperRemaining, requestKey, requestedKeys]);
 
   const empfohlenKategorien = useMemo(
     () => Array.from(new Set(empfohlen.map((i) => i.kategorie))),
@@ -210,7 +242,6 @@ export default function Configuration() {
         </div>
         <div className="flex items-center gap-2">
           <HeaderIconLink to="/configuration/faq" label="Fragen und Antworten" icon={Info} />
-          <HeaderIconLink to="/configuration/materialien" label="Materialien" icon={Package} />
           <Link
             to="/configuration/bestellungen"
             className="inline-flex items-center gap-1.5 rounded-lg bg-slate-800 px-3.5 py-2 text-sm font-medium text-white hover:bg-slate-700"
@@ -233,7 +264,7 @@ export default function Configuration() {
                 <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">{gruppe}</p>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {ausstattungsGruppen[gruppe].map((tile) => (
-                    <SpecTile key={tile.key} sub={tile.sub} label={tile.label} value={tile.value} />
+                    <SpecTile key={tile.key} sub={tile.sub} label={tile.label} value={tile.value} action={tile.action} />
                   ))}
                 </div>
               </div>
