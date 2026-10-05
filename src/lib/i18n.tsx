@@ -80,8 +80,8 @@ const translations: Record<Language, Record<string, string>> = {
     'purchases.table.status': 'Status',
     'purchases.table.stripe_id': 'Stripe‑ID',
     // Users
-    'users.title': 'Benutzer',
-    'users.subtitle': 'Nur‑Lesen‑Ansicht der Kunden',
+    'users.title': 'Bring den Videospiel-Charakter an deine Attraktion',
+    'users.subtitle': 'Lass Gäste gegeneinander antreten',
     'users.total': 'Gesamtbenutzer',
     'users.paying': 'Zahlende Benutzer',
     'users.optins': 'Marketing‑Opt‑ins',
