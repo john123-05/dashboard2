@@ -462,21 +462,22 @@ export default function Users() {
         </div>
 
         {parkId && (
-          <div className="flex h-full flex-col gap-3">
+          <GlassCard className="flex max-h-[calc(100vh-180px)] flex-col overflow-hidden p-0">
             {claimSiteBaseFor(parkId) && (
-              <a
-                href={`${claimSiteBaseFor(parkId)}/ranking`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex w-fit items-center gap-2 rounded-lg border border-slate-200 bg-white/70 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-white"
-              >
-                <ExternalLink className="h-4 w-4" />
-                Im Browser öffnen
-              </a>
+              <div className="px-4 pt-4">
+                <a
+                  href={`${claimSiteBaseFor(parkId)}/ranking`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex w-fit items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Im Browser öffnen
+                </a>
+              </div>
             )}
-          <GlassCard className="flex max-h-[calc(100vh-220px)] flex-1 flex-col overflow-hidden p-0">
             <div
-              className="flex items-center gap-2 px-4 py-3"
+              className="mt-4 flex items-center gap-2 px-4 py-3"
               style={{ backgroundColor: accentColorForPark(parkId), color: accentTextColorForPark(parkId) }}
             >
               <Trophy className="h-4 w-4" />
@@ -493,7 +494,6 @@ export default function Users() {
               <p className="p-6 text-center text-sm text-slate-500">Für diesen Park gibt es noch keine Bestenlisten-Seite.</p>
             )}
           </GlassCard>
-          </div>
         )}
       </div>
     </div>
