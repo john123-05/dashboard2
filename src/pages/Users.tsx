@@ -1,14 +1,18 @@
 import { useEffect, useState } from 'react';
-import { Users as UsersIcon, Search, Trash2, Trophy } from 'lucide-react';
+import { Users as UsersIcon, Search, Trash2, Trophy, Gauge, TrendingDown, TrendingUp, ExternalLink } from 'lucide-react';
 import { getOptionalSourceWarning, invokeEdgeFunction, isEdgeSourceUnavailable } from '../lib/edgeFunctions';
 import { formatDate, formatCurrency } from '../lib/utils';
 import { fetchGuestActivity, type GuestActivityRow } from '../lib/guestActivity';
 import { fetchGuestOverview, deleteGuest, type GuestOverview, type GuestDeleteAction } from '../lib/guestUsers';
 import { accentColorForPark, accentTextColorForPark } from '../lib/parkBrand';
-import { claimSiteBaseFor } from '../lib/photoBrowser';
+import { claimSiteBaseFor, fetchTodaysSpeeds } from '../lib/photoBrowser';
 import GlassCard from '../components/ui/GlassCard';
 import { useI18n } from '../lib/i18n';
 import { usePark } from '../contexts/ParkContext';
+
+function formatSpeed(value: number | null): string {
+  return value != null ? `${value.toLocaleString('de-DE', { maximumFractionDigits: 1 })} km/h` : '—';
+}
 
 interface CustomerRow {
   id: string;
@@ -23,8 +27,10 @@ interface CustomerRow {
 
 export default function Users() {
   const { t } = useI18n();
-  const { parkId } = usePark();
+  const { parkId, kioskTimezone } = usePark();
   const [customers, setCustomers] = useState<CustomerRow[]>([]);
+  const [speeds, setSpeeds] = useState<number[]>([]);
+  const [speedsLoading, setSpeedsLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -39,6 +45,20 @@ export default function Users() {
   useEffect(() => {
     loadData();
   }, [parkId]);
+
+  // Tagesbeste/-schlechteste/Durchschnitt - unabhaengig vom Kauf.
+  useEffect(() => {
+    if (!parkId) return;
+    let active = true;
+    setSpeedsLoading(true);
+    fetchTodaysSpeeds(parkId, kioskTimezone)
+      .then((v) => active && setSpeeds(v))
+      .catch((err) => console.error('Failed to fetch today\'s speeds:', err))
+      .finally(() => active && setSpeedsLoading(false));
+    return () => {
+      active = false;
+    };
+  }, [parkId, kioskTimezone]);
 
   useEffect(() => {
     if (!parkId) return;
@@ -138,6 +158,10 @@ export default function Users() {
     setLoading(false);
   }
 
+  const schnellster = speeds.length ? Math.max(...speeds) : null;
+  const langsamster = speeds.length ? Math.min(...speeds) : null;
+  const durchschnitt = speeds.length ? speeds.reduce((a, b) => a + b, 0) / speeds.length : null;
+
   const filtered = customers.filter((c) => {
     if (!search) return true;
     const s = search.toLowerCase();
@@ -179,6 +203,44 @@ export default function Users() {
         <p className="mt-1 text-sm text-slate-500">
           {t('users.subtitle')}
         </p>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <GlassCard className="p-5">
+          <div className="flex items-center gap-3">
+            <div className="rounded-xl bg-emerald-50 p-2.5">
+              <TrendingUp className="h-5 w-5 text-emerald-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-slate-800">{speedsLoading ? '…' : formatSpeed(schnellster)}</p>
+              <p className="text-xs text-slate-500">Schnellster heute</p>
+            </div>
+          </div>
+        </GlassCard>
+        <GlassCard className="p-5">
+          <div className="flex items-center gap-3">
+            <div className="rounded-xl bg-rose-50 p-2.5">
+              <TrendingDown className="h-5 w-5 text-rose-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-slate-800">{speedsLoading ? '…' : formatSpeed(langsamster)}</p>
+              <p className="text-xs text-slate-500">Langsamster heute</p>
+            </div>
+          </div>
+        </GlassCard>
+        <GlassCard className="p-5">
+          <div className="flex items-center gap-3">
+            <div className="rounded-xl bg-sky-50 p-2.5">
+              <Gauge className="h-5 w-5 text-sky-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-slate-800">{speedsLoading ? '…' : formatSpeed(durchschnitt)}</p>
+              <p className="text-xs text-slate-500">
+                Durchschnitt heute{!speedsLoading && speeds.length > 0 ? ` · ${speeds.length} Messungen` : ''}
+              </p>
+            </div>
+          </div>
+        </GlassCard>
       </div>
 
       {notice && (
@@ -419,11 +481,25 @@ export default function Users() {
         {parkId && (
           <GlassCard className="flex flex-col overflow-hidden p-0">
             <div
-              className="flex items-center gap-2 px-4 py-3"
+              className="flex items-center justify-between gap-2 px-4 py-3"
               style={{ backgroundColor: accentColorForPark(parkId), color: accentTextColorForPark(parkId) }}
             >
-              <Trophy className="h-4 w-4" />
-              <span className="text-sm font-semibold">Live-Vorschau · Tagesbestenliste</span>
+              <div className="flex items-center gap-2">
+                <Trophy className="h-4 w-4" />
+                <span className="text-sm font-semibold">Live-Vorschau · Tagesbestenliste</span>
+              </div>
+              {claimSiteBaseFor(parkId) && (
+                <a
+                  href={`${claimSiteBaseFor(parkId)}/ranking`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Im Browser öffnen"
+                  aria-label="Im Browser öffnen"
+                  className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-black/10 transition hover:bg-black/20"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </a>
+              )}
             </div>
             {claimSiteBaseFor(parkId) ? (
               <iframe
