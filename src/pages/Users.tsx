@@ -462,19 +462,19 @@ export default function Users() {
         </div>
 
         {parkId && (
-          <div className="space-y-2">
+          <div className="flex h-full flex-col gap-3">
             {claimSiteBaseFor(parkId) && (
               <a
                 href={`${claimSiteBaseFor(parkId)}/ranking`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex w-fit items-center gap-1.5 rounded-lg border border-slate-200 bg-white/70 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-white"
+                className="inline-flex w-fit items-center gap-2 rounded-lg border border-slate-200 bg-white/70 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-white"
               >
-                <ExternalLink className="h-3.5 w-3.5" />
+                <ExternalLink className="h-4 w-4" />
                 Im Browser öffnen
               </a>
             )}
-          <GlassCard className="flex flex-col overflow-hidden p-0">
+          <GlassCard className="flex max-h-[calc(100vh-220px)] flex-1 flex-col overflow-hidden p-0">
             <div
               className="flex items-center gap-2 px-4 py-3"
               style={{ backgroundColor: accentColorForPark(parkId), color: accentTextColorForPark(parkId) }}
@@ -487,7 +487,7 @@ export default function Users() {
                 src={`${claimSiteBaseFor(parkId)}/ranking`}
                 title="Live-Vorschau der Tagesbestenliste"
                 scrolling="yes"
-                className="w-full min-h-[1000px] flex-1 border-0"
+                className="w-full flex-1 border-0"
               />
             ) : (
               <p className="p-6 text-center text-sm text-slate-500">Für diesen Park gibt es noch keine Bestenlisten-Seite.</p>
