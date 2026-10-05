@@ -2,25 +2,22 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Camera,
-  ChevronDown,
   ChevronRight,
-  CreditCard,
   Gauge,
+  Info,
+  Package,
   Printer,
   Search,
   Server,
   ShoppingBag,
-  Video,
 } from 'lucide-react';
 import GlassCard from '../components/ui/GlassCard';
 import BeforeAfterSlider from '../components/ui/BeforeAfterSlider';
 import { usePark } from '../contexts/ParkContext';
 import { ladeZahlungen, type ZahlungsAutomat } from '../lib/zahlungen';
-import { loadParkDashboardData } from '../lib/parkDashboard';
 import { fetchParkEquipment, meldeAusstattungsInteresse, type EquipmentItem } from '../lib/equipment';
-import { formatNumber } from '../lib/utils';
 
-type Gruppe = 'Hardware' | 'Software' | 'Wartung' | 'Support' | 'Materialien' | 'Services';
+type Gruppe = 'Hardware' | 'Software' | 'Wartung' | 'Support' | 'Services';
 
 const KATEGORIE_ICON: Record<string, typeof Camera> = {
   Automat: Server,
@@ -40,25 +37,7 @@ const KATEGORIE_GRUPPE: Record<string, Gruppe> = {
   Sonstiges: 'Services',
 };
 
-const GRUPPEN_REIHENFOLGE: Gruppe[] = ['Hardware', 'Materialien', 'Software', 'Wartung', 'Support', 'Services'];
-
-const FOTOPAPIER_KEY = '__fotopapier__';
-
-const FAQ: { frage: string; antwort: string }[] = [
-  {
-    frage: 'Was passiert, wenn ich "Jetzt anfragen" klicke?',
-    antwort:
-      'Wir bekommen eine Benachrichtigung und melden uns bei dir - es wird noch nichts automatisch bestellt oder berechnet.',
-  },
-  {
-    frage: 'Wo sehe ich den Status einer laufenden Bestellung?',
-    antwort: 'Über den Button "Meine Bestellungen" oben rechts - dort siehst du den Fortschritt jeder Bestellung.',
-  },
-  {
-    frage: 'Woher kommen die Umsatz-Schätzungen?',
-    antwort: 'Die hinterlegt unser Team individuell für deinen Park, basierend auf deinen Analyse-Daten.',
-  },
-];
+const GRUPPEN_REIHENFOLGE: Gruppe[] = ['Hardware', 'Software', 'Wartung', 'Support', 'Services'];
 
 function SectionCard({ title, subtitle, action, children }: { title: string; subtitle?: string; action?: ReactNode; children: ReactNode }) {
   return (
@@ -75,40 +54,32 @@ function SectionCard({ title, subtitle, action, children }: { title: string; sub
   );
 }
 
-function SpecTile({
-  icon: Icon,
-  sub,
-  label,
-  value,
-  action,
-}: {
-  icon: typeof Server;
-  sub: string;
-  label: string;
-  value: string;
-  action?: ReactNode;
-}) {
+function SpecTile({ sub, label, value }: { sub: string; label: string; value: string }) {
   return (
-    <div className="flex flex-col gap-3 rounded-xl bg-white/60 p-5">
-      <div className="flex items-center justify-between">
-        <div className="rounded-lg bg-slate-100 p-2">
-          <Icon className="h-4 w-4 text-slate-500" />
-        </div>
-        {action}
-      </div>
-      <div>
-        <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">{sub}</p>
-        <p className="mt-0.5 text-base font-semibold text-slate-800">{value}</p>
-        <p className="text-xs text-slate-500">{label}</p>
-      </div>
+    <div className="flex flex-col gap-1 rounded-xl bg-white/60 p-4">
+      <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">{sub}</p>
+      <p className="text-base font-semibold text-slate-800">{value}</p>
+      <p className="text-xs text-slate-500">{label}</p>
     </div>
+  );
+}
+
+function HeaderIconLink({ to, label, icon: Icon }: { to: string; label: string; icon: typeof Info }) {
+  return (
+    <Link
+      to={to}
+      title={label}
+      aria-label={label}
+      className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-white/60 text-slate-500 transition hover:bg-white hover:text-slate-700"
+    >
+      <Icon className="h-4 w-4" />
+    </Link>
   );
 }
 
 export default function Configuration() {
   const { parkId, isKioskPark } = usePark();
   const [machines, setMachines] = useState<ZahlungsAutomat[]>([]);
-  const [paperRemaining, setPaperRemaining] = useState<number | null>(null);
   const [items, setItems] = useState<EquipmentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -116,21 +87,15 @@ export default function Configuration() {
   const [requestedKeys, setRequestedKeys] = useState<Set<string>>(new Set());
   const [suche, setSuche] = useState('');
   const [filterKategorie, setFilterKategorie] = useState<string | null>(null);
-  const [offeneFrage, setOffeneFrage] = useState<number | null>(null);
 
   useEffect(() => {
     if (!parkId) return;
     let active = true;
     setLoading(true);
-    Promise.all([
-      ladeZahlungen(parkId).catch(() => []),
-      loadParkDashboardData(parkId).catch(() => ({ data: null, error: null })),
-      fetchParkEquipment(parkId).catch(() => []),
-    ])
-      .then(([machineRows, parkDashboard, equipmentItems]) => {
+    Promise.all([ladeZahlungen(parkId).catch(() => []), fetchParkEquipment(parkId).catch(() => [])])
+      .then(([machineRows, equipmentItems]) => {
         if (!active) return;
         setMachines(machineRows);
-        setPaperRemaining(parkDashboard.data?.summary.printer_paper_remaining ?? null);
         setItems(equipmentItems);
         setError(null);
       })
@@ -177,9 +142,8 @@ export default function Configuration() {
   });
 
   const ausstattungsGruppen = useMemo(() => {
-    const gruppen: Record<Gruppe, { icon: typeof Server; sub: string; label: string; value: string; action?: ReactNode; key: string }[]> = {
+    const gruppen: Record<Gruppe, { sub: string; label: string; value: string; key: string }[]> = {
       Hardware: [],
-      Materialien: [],
       Software: [],
       Wartung: [],
       Support: [],
@@ -188,50 +152,29 @@ export default function Configuration() {
 
     gruppen.Hardware.push({
       key: 'automat',
-      icon: Server,
       sub: 'Verkauf',
       label: machines.length > 1 ? `${machines.length} Automaten` : 'Selbstbedienung',
       value: machines.length > 1 ? `${machines.length}x SB-Automat` : 'SB-Automat',
     });
     gruppen.Hardware.push({
       key: 'zahlung',
-      icon: CreditCard,
       sub: 'Verkauf',
       label: version ? `Version ${version === 'neu' ? 'Neu' : 'Alt'}` : 'Zahlungsart',
       value: istNurKarte ? 'Nur Karte' : 'Bar & Karte',
     });
     if (hatSpeedmessung) {
-      gruppen.Hardware.push({ key: 'speed', icon: Gauge, sub: 'Sensorik', label: 'Lichtschranke', value: 'Speed-Messung' });
+      gruppen.Hardware.push({ key: 'speed', sub: 'Sensorik', label: 'Lichtschranke', value: 'Speed-Messung' });
     }
     if (hatVideo) {
-      gruppen.Hardware.push({ key: 'video', icon: Video, sub: 'Aufnahme', label: 'Zusatzfunktion', value: 'Video-Add-on' });
+      gruppen.Hardware.push({ key: 'video', sub: 'Aufnahme', label: 'Zusatzfunktion', value: 'Video-Add-on' });
     }
     for (const item of vorhandenGefiltert) {
-      const Icon = KATEGORIE_ICON[item.kategorie] ?? Gauge;
       const gruppe = KATEGORIE_GRUPPE[item.kategorie] ?? 'Services';
-      gruppen[gruppe].push({ key: item.id, icon: Icon, sub: item.kategorie, label: item.kategorie, value: item.titel });
+      gruppen[gruppe].push({ key: item.id, sub: item.kategorie, label: item.kategorie, value: item.titel });
     }
-    gruppen.Materialien.push({
-      key: FOTOPAPIER_KEY,
-      icon: Printer,
-      sub: 'Verbrauchsmaterial',
-      label: 'Fotopapier',
-      value: paperRemaining != null ? `${formatNumber(paperRemaining)} Blatt übrig` : '—',
-      action: (
-        <button
-          type="button"
-          onClick={() => void handleAnfrage(FOTOPAPIER_KEY, { label: 'Fotopapier nachbestellen' })}
-          disabled={requestKey === FOTOPAPIER_KEY || requestedKeys.has(FOTOPAPIER_KEY)}
-          className="rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700 disabled:opacity-60"
-        >
-          {anfrageLabel(FOTOPAPIER_KEY, 'Nachbestellen')}
-        </button>
-      ),
-    });
 
     return gruppen;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [machines, version, istNurKarte, hatSpeedmessung, hatVideo, vorhandenGefiltert, paperRemaining, requestKey, requestedKeys]);
+  }, [machines, version, istNurKarte, hatSpeedmessung, hatVideo, vorhandenGefiltert]);
 
   const empfohlenKategorien = useMemo(
     () => Array.from(new Set(empfohlen.map((i) => i.kategorie))),
@@ -265,13 +208,17 @@ export default function Configuration() {
           <h2 className="text-2xl font-bold tracking-tight text-slate-800">Konfiguration</h2>
           <p className="mt-1 text-sm text-slate-500">Deine aktuelle Ausstattung und was du dazu haben könntest.</p>
         </div>
-        <Link
-          to="/configuration/bestellungen"
-          className="inline-flex items-center gap-1.5 rounded-lg bg-slate-800 px-3.5 py-2 text-sm font-medium text-white hover:bg-slate-700"
-        >
-          Meine Bestellungen
-          <ChevronRight className="h-4 w-4" />
-        </Link>
+        <div className="flex items-center gap-2">
+          <HeaderIconLink to="/configuration/faq" label="Fragen und Antworten" icon={Info} />
+          <HeaderIconLink to="/configuration/materialien" label="Materialien" icon={Package} />
+          <Link
+            to="/configuration/bestellungen"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-slate-800 px-3.5 py-2 text-sm font-medium text-white hover:bg-slate-700"
+          >
+            Meine Bestellungen
+            <ChevronRight className="h-4 w-4" />
+          </Link>
+        </div>
       </div>
 
       {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
@@ -286,7 +233,7 @@ export default function Configuration() {
                 <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">{gruppe}</p>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {ausstattungsGruppen[gruppe].map((tile) => (
-                    <SpecTile key={tile.key} icon={tile.icon} sub={tile.sub} label={tile.label} value={tile.value} action={tile.action} />
+                    <SpecTile key={tile.key} sub={tile.sub} label={tile.label} value={tile.value} />
                   ))}
                 </div>
               </div>
@@ -394,24 +341,6 @@ export default function Configuration() {
           </div>
         </SectionCard>
       )}
-
-      <SectionCard title="Fragen und Antworten">
-        <div className="mt-4 divide-y divide-slate-200/70">
-          {FAQ.map((entry, i) => (
-            <div key={entry.frage}>
-              <button
-                type="button"
-                onClick={() => setOffeneFrage(offeneFrage === i ? null : i)}
-                className="flex w-full items-center justify-between gap-3 py-3 text-left text-sm font-medium text-slate-700"
-              >
-                {entry.frage}
-                <ChevronDown className={`h-4 w-4 shrink-0 text-slate-400 transition ${offeneFrage === i ? 'rotate-180' : ''}`} />
-              </button>
-              {offeneFrage === i && <p className="pb-3 text-sm text-slate-500">{entry.antwort}</p>}
-            </div>
-          ))}
-        </div>
-      </SectionCard>
     </div>
   );
 }

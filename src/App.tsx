@@ -17,6 +17,8 @@ const SystemHealth = seiteNachladen(() => import('./pages/SystemHealth'));
 const Kamera = seiteNachladen(() => import('./pages/Kamera'));
 const Configuration = seiteNachladen(() => import('./pages/Configuration'));
 const ConfigurationOrders = seiteNachladen(() => import('./pages/ConfigurationOrders'));
+const ConfigurationFaq = seiteNachladen(() => import('./pages/ConfigurationFaq'));
+const ConfigurationMaterials = seiteNachladen(() => import('./pages/ConfigurationMaterials'));
 const Settings = seiteNachladen(() => import('./pages/Settings'));
 const PrivacyPolicy = seiteNachladen(() => import('./pages/PrivacyPolicy'));
 const LegalSupport = seiteNachladen(() => import('./pages/LegalSupport'));
@@ -164,6 +166,8 @@ export default function App() {
                 <Route path="/photos" element={<Photos />} />
                 <Route path="/configuration" element={<Configuration />} />
                 <Route path="/configuration/bestellungen" element={<ConfigurationOrders />} />
+                <Route path="/configuration/faq" element={<ConfigurationFaq />} />
+                <Route path="/configuration/materialien" element={<ConfigurationMaterials />} />
                 <Route path="/leads" element={<OwnerOnly><Leads /></OwnerOnly>} />
                 <Route path="/personalization" element={<Personalization />} />
                 <Route path="/tickets" element={<Support />} />
