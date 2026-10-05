@@ -5,6 +5,7 @@ import { formatDate, formatCurrency } from '../lib/utils';
 import { fetchGuestActivity, type GuestActivityRow } from '../lib/guestActivity';
 import { fetchGuestOverview, deleteGuest, type GuestOverview, type GuestDeleteAction } from '../lib/guestUsers';
 import { accentColorForPark, accentTextColorForPark } from '../lib/parkBrand';
+import { claimSiteBaseFor } from '../lib/photoBrowser';
 import GlassCard from '../components/ui/GlassCard';
 import { useI18n } from '../lib/i18n';
 import { usePark } from '../contexts/ParkContext';
@@ -424,51 +425,16 @@ export default function Users() {
               <Trophy className="h-4 w-4" />
               <span className="text-sm font-semibold">Live-Vorschau · Tagesbestenliste</span>
             </div>
-            <div className="flex-1 overflow-y-auto p-4">
-              {!overview ? (
-                <div className="h-40 animate-pulse rounded-xl bg-white/40" />
-              ) : overview.leaderboard.rows.length === 0 ? (
-                <p className="py-6 text-center text-sm text-slate-500">
-                  Heute noch keine freigeschalteten Fahrten mit Messung.
-                </p>
-              ) : (
-                <ol className="space-y-1.5">
-                  {overview.leaderboard.rows.map((r) => (
-                    <li
-                      key={`${r.rank}-${r.capturedAt}`}
-                      className="flex items-center gap-2.5 rounded-xl border border-slate-100 bg-white/60 px-2.5 py-2"
-                    >
-                      <span
-                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold"
-                        style={
-                          r.rank <= 3
-                            ? { backgroundColor: accentColorForPark(parkId), color: accentTextColorForPark(parkId) }
-                            : { backgroundColor: '#f1f5f9', color: '#64748b' }
-                        }
-                      >
-                        {r.rank}
-                      </span>
-                      <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-100 text-[11px] font-semibold text-slate-600">
-                        {r.avatarUrl ? (
-                          <img src={r.avatarUrl} alt="" className="h-full w-full object-cover" />
-                        ) : (
-                          ((r.displayName || 'G')[0] || 'G').toUpperCase()
-                        )}
-                      </div>
-                      <span className="min-w-0 flex-1 truncate text-sm text-slate-800">{r.displayName || 'Gast'}</span>
-                      <span className="shrink-0 text-sm font-semibold tabular-nums text-slate-800">
-                        {r.speedKmh.toFixed(1)} <span className="text-xs font-normal text-slate-400">km/h</span>
-                      </span>
-                    </li>
-                  ))}
-                </ol>
-              )}
-              {overview && overview.leaderboard.totalToday > 0 && (
-                <p className="mt-3 text-center text-xs text-slate-400">
-                  {overview.leaderboard.totalToday} gewertete Fahrten heute · aktualisiert sich automatisch
-                </p>
-              )}
-            </div>
+            {claimSiteBaseFor(parkId) ? (
+              <iframe
+                src={`${claimSiteBaseFor(parkId)}/ranking`}
+                title="Live-Vorschau der Tagesbestenliste"
+                scrolling="yes"
+                className="w-full min-h-[700px] flex-1 border-0"
+              />
+            ) : (
+              <p className="p-6 text-center text-sm text-slate-500">Für diesen Park gibt es noch keine Bestenlisten-Seite.</p>
+            )}
           </GlassCard>
         )}
       </div>
