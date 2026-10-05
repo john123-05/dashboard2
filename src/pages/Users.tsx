@@ -216,11 +216,24 @@ export default function Users() {
 
   return (
     <div className="flex min-h-[calc(100vh-4rem)] flex-col gap-6">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('users.title')}</h2>
-        <p className="mt-1 text-sm text-slate-500">
-          {t('users.subtitle')}
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('users.title')}</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            {t('users.subtitle')}
+          </p>
+        </div>
+        {parkId && claimSiteBaseFor(parkId) && (
+          <a
+            href={`${claimSiteBaseFor(parkId)}/ranking`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex w-fit items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+          >
+            <ExternalLink className="h-4 w-4" />
+            Im Browser öffnen
+          </a>
+        )}
       </div>
 
       {notice && (
@@ -463,21 +476,8 @@ export default function Users() {
 
         {parkId && (
           <GlassCard className="flex h-full flex-col overflow-hidden p-0">
-            {claimSiteBaseFor(parkId) && (
-              <div className="px-4 pt-4">
-                <a
-                  href={`${claimSiteBaseFor(parkId)}/ranking`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex w-fit items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  Im Browser öffnen
-                </a>
-              </div>
-            )}
             <div
-              className="mt-4 flex items-center gap-2 px-4 py-3"
+              className="flex items-center gap-2 px-4 py-3"
               style={{ backgroundColor: accentColorForPark(parkId), color: accentTextColorForPark(parkId) }}
             >
               <Trophy className="h-4 w-4" />
