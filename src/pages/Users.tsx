@@ -215,7 +215,7 @@ export default function Users() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex min-h-[calc(100vh-4rem)] flex-col gap-6">
       <div>
         <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('users.title')}</h2>
         <p className="mt-1 text-sm text-slate-500">
@@ -230,7 +230,7 @@ export default function Users() {
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_440px] xl:grid-cols-[minmax(0,1fr)_520px]">
+      <div className="grid flex-1 gap-6 lg:grid-cols-[minmax(0,1fr)_440px] xl:grid-cols-[minmax(0,1fr)_520px]">
         <div className="min-w-0 space-y-6">
           <div className="grid gap-4 sm:grid-cols-3">
             <GlassCard className="p-5">
@@ -462,7 +462,7 @@ export default function Users() {
         </div>
 
         {parkId && (
-          <GlassCard className="flex max-h-[calc(100vh-180px)] flex-col overflow-hidden p-0">
+          <GlassCard className="flex h-full flex-col overflow-hidden p-0">
             {claimSiteBaseFor(parkId) && (
               <div className="px-4 pt-4">
                 <a
