@@ -18,10 +18,13 @@ const KATEGORIE_ICON: Record<string, typeof Camera> = {
   Sonstiges: Gauge,
 };
 
-function SectionCard({ title, children }: { title: string; children: ReactNode }) {
+const FOTOPAPIER_KEY = '__fotopapier__';
+
+function SectionCard({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode }) {
   return (
     <GlassCard className="p-5 sm:p-6">
       <h3 className="text-base font-semibold text-slate-800">{title}</h3>
+      {subtitle && <p className="mt-0.5 text-xs text-slate-500">{subtitle}</p>}
       {children}
     </GlassCard>
   );
@@ -62,8 +65,8 @@ export default function Configuration() {
   const [items, setItems] = useState<EquipmentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [interestId, setInterestId] = useState<string | null>(null);
-  const [interestDone, setInterestDone] = useState<Set<string>>(new Set());
+  const [requestKey, setRequestKey] = useState<string | null>(null);
+  const [requestedKeys, setRequestedKeys] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!parkId) return;
@@ -88,17 +91,23 @@ export default function Configuration() {
     };
   }, [parkId]);
 
-  async function handleInteresse(itemId: string) {
+  async function handleAnfrage(key: string, target: { itemId: string } | { label: string }) {
     if (!parkId) return;
-    setInterestId(itemId);
+    setRequestKey(key);
     try {
-      await meldeAusstattungsInteresse(parkId, itemId);
-      setInterestDone((prev) => new Set(prev).add(itemId));
+      await meldeAusstattungsInteresse(parkId, target);
+      setRequestedKeys((prev) => new Set(prev).add(key));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Anfrage fehlgeschlagen.');
     } finally {
-      setInterestId(null);
+      setRequestKey(null);
     }
+  }
+
+  function anfrageLabel(key: string, idle = 'Jetzt anfragen') {
+    if (requestedKeys.has(key)) return 'Anfrage gesendet';
+    if (requestKey === key) return 'Wird gesendet…';
+    return idle;
   }
 
   if (!isKioskPark) {
@@ -130,7 +139,7 @@ export default function Configuration() {
 
       {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
 
-      <SectionCard title="Deine aktuelle Konfiguration">
+      <SectionCard title="Deine aktuelle Ausstattung">
         {loading ? (
           <p className="mt-4 text-sm text-slate-400">Wird geladen…</p>
         ) : (
@@ -149,14 +158,20 @@ export default function Configuration() {
               label="Fotopapier"
               value={paperRemaining != null ? formatNumber(paperRemaining) : '—'}
               action={
-                <a
-                  href="mailto:info@liftpictures.com?subject=Fotopapier%20nachbestellen"
-                  className="rounded-lg bg-slate-800 px-2.5 py-1 text-[11px] font-medium text-white hover:bg-slate-700"
+                <button
+                  type="button"
+                  onClick={() => void handleAnfrage(FOTOPAPIER_KEY, { label: 'Fotopapier nachbestellen' })}
+                  disabled={requestKey === FOTOPAPIER_KEY || requestedKeys.has(FOTOPAPIER_KEY)}
+                  className="rounded-lg bg-slate-800 px-2.5 py-1 text-[11px] font-medium text-white hover:bg-slate-700 disabled:opacity-60"
                 >
-                  Nachbestellen
-                </a>
+                  {anfrageLabel(FOTOPAPIER_KEY, 'Nachbestellen')}
+                </button>
               }
             />
+            {vorhanden.map((item) => {
+              const Icon = KATEGORIE_ICON[item.kategorie] ?? Gauge;
+              return <SpecTile key={item.id} icon={Icon} label={item.kategorie} value={item.titel} />;
+            })}
           </div>
         )}
       </SectionCard>
@@ -166,7 +181,6 @@ export default function Configuration() {
           <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
             {empfohlen.map((item) => {
               const Icon = KATEGORIE_ICON[item.kategorie] ?? Gauge;
-              const angefragt = interestDone.has(item.id);
               return (
                 <div
                   key={item.id}
@@ -209,11 +223,11 @@ export default function Configuration() {
                     <div className="mt-auto pt-2">
                       <button
                         type="button"
-                        onClick={() => void handleInteresse(item.id)}
-                        disabled={interestId === item.id || angefragt}
+                        onClick={() => void handleAnfrage(item.id, { itemId: item.id })}
+                        disabled={requestKey === item.id || requestedKeys.has(item.id)}
                         className="inline-flex w-full items-center justify-center rounded-lg bg-sky-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-sky-500 disabled:opacity-60"
                       >
-                        {angefragt ? 'Anfrage gesendet' : interestId === item.id ? 'Wird gesendet…' : 'Interesse anmelden'}
+                        {anfrageLabel(item.id)}
                       </button>
                     </div>
                   </div>
@@ -224,8 +238,12 @@ export default function Configuration() {
         </SectionCard>
       )}
 
-      {!loading && bestellt.length > 0 && (
-        <SectionCard title="Deine Bestellungen">
+      <SectionCard title="Meine Bestellungen" subtitle="Fortschritt deiner laufenden Bestellungen">
+        {loading ? (
+          <p className="mt-4 text-sm text-slate-400">Wird geladen…</p>
+        ) : bestellt.length === 0 ? (
+          <p className="mt-4 text-sm text-slate-400">Aktuell nichts bestellt.</p>
+        ) : (
           <div className="mt-4 space-y-4">
             {bestellt.map((item) => {
               const Icon = KATEGORIE_ICON[item.kategorie] ?? Gauge;
@@ -244,30 +262,8 @@ export default function Configuration() {
               );
             })}
           </div>
-        </SectionCard>
-      )}
-
-      {!loading && vorhanden.length > 0 && (
-        <SectionCard title="Bereits vorhanden">
-          <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {vorhanden.map((item) => {
-              const Icon = KATEGORIE_ICON[item.kategorie] ?? Gauge;
-              return (
-                <div key={item.id} className="flex items-center gap-2.5 rounded-xl bg-white/60 px-3 py-2.5">
-                  <div className="rounded-lg bg-emerald-50 p-1.5">
-                    <Icon className="h-3.5 w-3.5 text-emerald-600" />
-                  </div>
-                  <span className="text-sm text-slate-700">{item.titel}</span>
-                </div>
-              );
-            })}
-          </div>
-        </SectionCard>
-      )}
-
-      {!loading && items.length === 0 && (
-        <p className="text-sm text-slate-400">Noch keine Empfehlungen hinterlegt.</p>
-      )}
+        )}
+      </SectionCard>
     </div>
   );
 }

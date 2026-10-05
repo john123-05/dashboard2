@@ -40,8 +40,16 @@ export async function fetchParkEquipment(parkId: string): Promise<EquipmentItem[
   return (body?.items ?? []) as EquipmentItem[];
 }
 
-/** "Interesse anmelden"-Button: legt eine Staff-Benachrichtigung an, keine Bestellung. */
-export async function meldeAusstattungsInteresse(parkId: string, itemId: string): Promise<void> {
+/**
+ * "Jetzt anfragen"-Button: legt eine Staff-Benachrichtigung an, keine Bestellung.
+ * Entweder zu einem konkreten Ausstattungs-Eintrag (itemId) oder frei (label,
+ * z. B. "Fotopapier nachbestellen") - absichtlich derselbe Mechanismus fuer
+ * beides, damit sich das fuer den Betreiber gleich anfuehlt.
+ */
+export async function meldeAusstattungsInteresse(
+  parkId: string,
+  target: { itemId: string } | { label: string },
+): Promise<void> {
   const {
     data: { session },
   } = await getFunctionSession();
@@ -54,7 +62,10 @@ export async function meldeAusstattungsInteresse(parkId: string, itemId: string)
       Authorization: `Bearer ${session.access_token}`,
       apikey: EXTERNAL_SUPABASE_ANON_KEY,
     },
-    body: JSON.stringify({ park_id: parkId, item_id: itemId }),
+    body: JSON.stringify({
+      park_id: parkId,
+      ...('itemId' in target ? { item_id: target.itemId } : { label: target.label }),
+    }),
   });
   const body = await res.json().catch(() => null);
   if (!res.ok) throw new Error(body?.error || `HTTP ${res.status}`);
