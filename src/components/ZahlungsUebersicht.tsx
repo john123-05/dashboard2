@@ -4,6 +4,7 @@ import GlassCard from './ui/GlassCard';
 import { usePark } from '../contexts/ParkContext';
 import { EXTERNAL_SUPABASE_URL, EXTERNAL_SUPABASE_ANON_KEY } from '../lib/supabase';
 import { getFunctionSession } from '../lib/functionAuth';
+import { useI18n, useLocaleTag } from '../lib/i18n';
 
 const HEALTH_URL = `${EXTERNAL_SUPABASE_URL}/functions/v1/operator-liftpic-health`;
 
@@ -73,19 +74,20 @@ type Automat = {
   prices_cent?: number[] | null;
 };
 
-function euro(cent: number | null | undefined): string {
+function euro(cent: number | null | undefined, locale = 'de-DE'): string {
   if (cent === null || cent === undefined) return '–';
-  return (cent / 100).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+  return (cent / 100).toLocaleString(locale, { style: 'currency', currency: 'EUR' });
 }
 
 const ZEITRAeUME = [
-  { tage: 1, label: 'Heute' },
-  { tage: 7, label: '7 Tage' },
-  { tage: 30, label: '30 Tage' },
-  { tage: 90, label: '90 Tage' },
+  { tage: 1, label: 'pay.period_today' },
+  { tage: 7, label: 'survey.period_7' },
+  { tage: 30, label: 'survey.period_30' },
+  { tage: 90, label: 'survey.period_90' },
 ] as const;
 
 export default function ZahlungsUebersicht() {
+  const { t } = useI18n();
   const { parkId } = usePark();
   const [automaten, setAutomaten] = useState<Automat[]>([]);
   const [laedt, setLaedt] = useState(true);
@@ -114,14 +116,14 @@ export default function ZahlungsUebersicht() {
         if (!res.ok) setFehler(body?.error || `HTTP ${res.status}`);
         else setAutomaten((body?.data?.machines || []) as Automat[]);
       } catch {
-        if (!abgebrochen) setFehler('Die Zahlungsdaten konnten nicht geladen werden.');
+        if (!abgebrochen) setFehler(t('pay.loading_failed'));
       }
       if (!abgebrochen) setLaedt(false);
     }
 
     void laden();
-    const t = setInterval(() => void laden(), 120_000);
-    return () => { abgebrochen = true; clearInterval(t); };
+    const timer = setInterval(() => void laden(), 120_000);
+    return () => { abgebrochen = true; clearInterval(timer); };
   }, [parkId, zeitraumTage]);
 
   // Alle konfigurierten Automaten anzeigen (der Endpunkt liefert nur aktive) -
@@ -134,9 +136,9 @@ export default function ZahlungsUebersicht() {
     <GlassCard className="p-5 sm:p-6">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="text-base font-semibold text-slate-800">Bar oder Karte</h3>
+          <h3 className="text-base font-semibold text-slate-800">{t('pay.title')}</h3>
           <p className="mt-0.5 text-sm text-slate-500">
-            Wie am Automaten bezahlt wurde, und wie viel Wechselgeld noch bereitliegt.
+            {t('pay.subtitle')}
           </p>
         </div>
         <select
@@ -145,14 +147,14 @@ export default function ZahlungsUebersicht() {
           className="rounded-lg border border-slate-200/70 bg-white/70 px-2.5 py-1 text-sm text-slate-700"
         >
           {ZEITRAeUME.map((z) => (
-            <option key={z.tage} value={z.tage}>{z.label}</option>
+            <option key={z.tage} value={z.tage}>{t(z.label)}</option>
           ))}
         </select>
       </div>
 
       {laedt && (
         <p className="flex items-center gap-2 text-sm text-slate-500">
-          <Loader2 className="h-4 w-4 animate-spin" /> wird geladen…
+          <Loader2 className="h-4 w-4 animate-spin" /> {t('survey.loading')}
         </p>
       )}
       {fehler && <p className="text-sm text-rose-700">{fehler}</p>}
@@ -167,6 +169,8 @@ export default function ZahlungsUebersicht() {
 }
 
 function AutomatBlock({ a }: { a: Automat }) {
+  const { t } = useI18n();
+  const loc = useLocaleTag();
   const z = a.payments;
   const gesamt = (z?.bar_anzahl ?? 0) + (z?.karte_anzahl ?? 0);
   // `null` heißt hier "zu wenig erkannt, um einen Anteil zu zeigen" (F-037) -
@@ -194,7 +198,7 @@ function AutomatBlock({ a }: { a: Automat }) {
               {!nurKarte && (
                 <Anteil
                   Icon={Banknote}
-                  titel="Bar"
+                  titel={t('pay.cash')}
                   anzahl={z.bar_anzahl}
                   betrag={z.bar_cent}
                   anteil={z.bar_anteil}
@@ -204,7 +208,7 @@ function AutomatBlock({ a }: { a: Automat }) {
               )}
               <Anteil
                 Icon={CreditCard}
-                titel={nurKarte ? 'Nur Karte' : 'Karte'}
+                titel={nurKarte ? t('pay.card_only') : t('pay.card')}
                 anzahl={z.karte_anzahl}
                 betrag={z.karte_cent}
                 anteil={nurKarte ? null : z.karte_anteil}
@@ -216,23 +220,19 @@ function AutomatBlock({ a }: { a: Automat }) {
 
           {!nurKarte && !anteileBekannt && (
             <p className="mt-3 rounded-lg bg-slate-100/80 px-3 py-2 text-xs leading-relaxed text-slate-500">
-              Kein Anteil in Prozent, weil zu wenige Käufe eindeutig einer
-              Zahlungsart zugeordnet werden konnten
-              {z.erkannt_anteil != null && (
-                <> ({Math.round(z.erkannt_anteil * 100)} % erkannt)</>
-              )}
-              . Anzahl und Betrag oben sind trotzdem echt gezählt, nur der
-              Anteil am Ganzen wäre eine Schätzung aus zu wenigen Fällen.
+              {t('pay.no_share_note', {
+                recognized: z.erkannt_anteil != null ? t('pay.recognized_percent', { percent: Math.round(z.erkannt_anteil * 100) }) : '',
+              })}
             </p>
           )}
 
           <p className="mt-2 text-xs text-slate-400">
-            {gesamt} Käufe{a.payments_days ? ` in den letzten ${a.payments_days} Tagen` : ''}
+            {t('pay.purchases_count', { count: gesamt })}{a.payments_days ? ` ${t('pay.in_last_days', { days: a.payments_days })}` : ''}
             {!nurKarte && z.unbekannt_anzahl > 0 && (
-              <> · {z.unbekannt_anzahl} ohne erkennbare Zahlung</>
+              <> · {t('pay.without_payment', { count: z.unbekannt_anzahl })}</>
             )}
             {a.prices_cent?.length ? (
-              <> · eingestellte Preise: {a.prices_cent.map((c) => euro(c)).join(', ')}</>
+              <> · {t('pay.set_prices', { prices: a.prices_cent.map((c) => euro(c, loc)).join(', ') })}</>
             ) : null}
           </p>
 
@@ -240,13 +240,13 @@ function AutomatBlock({ a }: { a: Automat }) {
               Kommt aus den hobex-Händlerbelegen, rückwirkend zugeordnet. */}
           {(z.kartenmarken?.length ?? 0) > 0 && (
             <div className="mt-3">
-              <p className="mb-1.5 text-xs font-medium text-slate-600">Kartenmarken</p>
+              <p className="mb-1.5 text-xs font-medium text-slate-600">{t('pay.card_brands')}</p>
               <div className="flex flex-wrap gap-1.5">
                 {z.kartenmarken!.map((k) => (
                   <span
                     key={k.marke}
                     className="inline-flex items-center gap-1.5 rounded-full bg-sky-50 px-2.5 py-1 text-xs text-sky-800"
-                    title={`${k.anzahl} Käufe · ${euro(k.cent)}`}
+                    title={t('pay.brand_tooltip', { count: k.anzahl, amount: euro(k.cent, loc) })}
                   >
                     <CreditCard className="h-3 w-3" />
                     <span className="font-medium">{k.marke}</span>
@@ -262,26 +262,26 @@ function AutomatBlock({ a }: { a: Automat }) {
         </>
       ) : (
         <p className="text-sm text-slate-500">
-          Noch keine Käufe im ausgewerteten Zeitraum
-          {a.payments_days ? ` (letzte ${a.payments_days} Tage)` : ''}.
+          {t('pay.no_purchases')}
+          {a.payments_days ? ` ${t('pay.no_purchases_days', { days: a.payments_days })}` : ''}.
         </p>
       )}
 
       {a.coin_inventory && !nurKarte && (
         <div className="mt-4 rounded-xl bg-white/40 px-4 py-3">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <span className="text-sm font-medium text-slate-700">Wechselgeld im Gerät</span>
+            <span className="text-sm font-medium text-slate-700">{t('pay.change_in_machine')}</span>
             <span className={`text-lg font-semibold tabular-nums ${
               a.coin_inventory.verlaesslich === false
                 ? 'text-slate-400 line-through' : 'text-slate-800'
             }`}>
-              {euro(a.coin_inventory.summe_cent)}
+              {euro(a.coin_inventory.summe_cent, loc)}
             </span>
           </div>
 
           {a.coin_inventory.verlaesslich === false && a.coin_inventory.hinweis && (
             <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs leading-snug text-amber-900">
-              <b className="font-semibold">Betrag nicht gesichert:</b>{' '}
+              <b className="font-semibold">{t('pay.amount_unreliable')}</b>{' '}
               {a.coin_inventory.hinweis}
             </p>
           )}
@@ -293,7 +293,7 @@ function AutomatBlock({ a }: { a: Automat }) {
               return (
                 <div key={s.cent} className="flex items-center gap-2 text-xs">
                   <span className="w-12 shrink-0 text-right tabular-nums text-slate-500">
-                    {euro(s.cent)}
+                    {euro(s.cent, loc)}
                   </span>
                   <span className="h-2 flex-1 overflow-hidden rounded-full bg-slate-200">
                     <span
@@ -305,7 +305,7 @@ function AutomatBlock({ a }: { a: Automat }) {
                     />
                   </span>
                   <span className="w-16 shrink-0 tabular-nums text-slate-500">
-                    {s.anzahl} St.
+                    {t('pay.pieces', { count: s.anzahl })}
                   </span>
                 </div>
               );
@@ -319,14 +319,14 @@ function AutomatBlock({ a }: { a: Automat }) {
                   className={w.stufe === 'leer' ? 'text-rose-700' : 'text-amber-800'}
                 >
                   {w.text}
-                  {w.stufe === 'leer' && ' – bitte nachfüllen, sonst bekommen Gäste zu wenig zurück.'}
+                  {w.stufe === 'leer' && t('pay.refill_hint')}
                 </li>
               ))}
             </ul>
           )}
           {a.coin_inventory.gemessen_am && (
             <p className="mt-1.5 text-[11px] text-slate-400">
-              Stand {new Date(a.coin_inventory.gemessen_am).toLocaleString('de-DE')}
+              {t('pay.as_of', { time: new Date(a.coin_inventory.gemessen_am).toLocaleString(loc) })}
             </p>
           )}
         </div>
@@ -334,24 +334,24 @@ function AutomatBlock({ a }: { a: Automat }) {
 
       {z?.letzte && z.letzte.length > 0 && (
         <div className="mt-4">
-          <p className="mb-1.5 text-sm font-medium text-slate-700">Die letzten Käufe</p>
+          <p className="mb-1.5 text-sm font-medium text-slate-700">{t('pay.latest_purchases')}</p>
           <div className="overflow-x-auto rounded-xl border border-white/50 bg-white/40">
             <table className="w-full text-xs">
               <thead className="text-left text-slate-500">
                 <tr className="border-b border-white/60">
-                  <th className="px-3 py-2 font-medium">Zeitpunkt</th>
-                  <th className="px-3 py-2 font-medium">Foto</th>
-                  <th className="px-3 py-2 font-medium">Bezahlt mit</th>
-                  <th className="px-3 py-2 text-right font-medium">Betrag</th>
-                  {!nurKarte && <th className="px-3 py-2 text-right font-medium">Gegeben</th>}
-                  {!nurKarte && <th className="px-3 py-2 text-right font-medium">Zurück</th>}
+                  <th className="px-3 py-2 font-medium">{t('pay.col_time')}</th>
+                  <th className="px-3 py-2 font-medium">{t('pay.col_photo')}</th>
+                  <th className="px-3 py-2 font-medium">{t('pay.col_paid_with')}</th>
+                  <th className="px-3 py-2 text-right font-medium">{t('pay.col_amount')}</th>
+                  {!nurKarte && <th className="px-3 py-2 text-right font-medium">{t('pay.col_given')}</th>}
+                  {!nurKarte && <th className="px-3 py-2 text-right font-medium">{t('pay.col_back')}</th>}
                 </tr>
               </thead>
               <tbody className="text-slate-700">
                 {z.letzte.slice(0, 15).map((b, i) => (
                   <tr key={i} className="border-t border-white/50">
                     <td className="whitespace-nowrap px-3 py-1.5 tabular-nums">
-                      {new Date(b.zeit).toLocaleString('de-DE')}
+                      {new Date(b.zeit).toLocaleString(loc)}
                     </td>
                     <td className="px-3 py-1.5 text-slate-500">
                       {b.foto.split('\\').pop()}
@@ -359,18 +359,18 @@ function AutomatBlock({ a }: { a: Automat }) {
                     <td className="px-3 py-1.5">
                       {b.zahlungsart === 'bar' ? (
                         <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 font-medium text-emerald-700">
-                          <Banknote className="h-3 w-3" /> Bar
+                          <Banknote className="h-3 w-3" /> {t('pay.cash')}
                         </span>
                       ) : b.zahlungsart === 'karte' ? (
                         <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-0.5 font-medium text-sky-700">
-                          <CreditCard className="h-3 w-3" /> Karte{b.kartenmarke ? ` · ${b.kartenmarke}` : ''}
+                          <CreditCard className="h-3 w-3" /> {t('pay.card')}{b.kartenmarke ? ` · ${b.kartenmarke}` : ''}
                         </span>
                       ) : (
                         <span
                           className="cursor-help rounded-full bg-slate-100 px-2 py-0.5 text-slate-500 underline decoration-dotted"
-                          title={b.hinweis || 'Kein Grund ermittelbar'}
+                          title={b.hinweis || t('pay.no_reason')}
                         >
-                          unbekannt
+                          {t('pay.unknown')}
                         </span>
                       )}
                     </td>
@@ -378,18 +378,18 @@ function AutomatBlock({ a }: { a: Automat }) {
                       {/* Vorher stand hier ueberhaupt kein Betrag - eine
                           Kartenzahlung war in dieser Tabelle unsichtbar,
                           egal wie viel bezahlt wurde (F-051). */}
-                      {b.zahlungsart !== 'unbekannt' ? euro(b.betrag_cent) : '–'}
+                      {b.zahlungsart !== 'unbekannt' ? euro(b.betrag_cent, loc) : '–'}
                     </td>
                     {!nurKarte && (
                       <td className="px-3 py-1.5 text-right tabular-nums">
-                        {b.zahlungsart === 'bar' ? euro(b.eingeworfen_cent) : '–'}
+                        {b.zahlungsart === 'bar' ? euro(b.eingeworfen_cent, loc) : '–'}
                       </td>
                     )}
                     {!nurKarte && (
                       <td className={`px-3 py-1.5 text-right tabular-nums ${
                         b.abweichung_cent !== 0 && b.sicher ? 'font-semibold text-rose-700' : ''
                       }`}>
-                        {b.zahlungsart === 'bar' ? euro(b.ausgezahlt_cent) : '–'}
+                        {b.zahlungsart === 'bar' ? euro(b.ausgezahlt_cent, loc) : '–'}
                       </td>
                     )}
                   </tr>
@@ -398,10 +398,7 @@ function AutomatBlock({ a }: { a: Automat }) {
             </table>
           </div>
           <p className="mt-1 text-[11px] text-slate-400">
-            Zahlungsart und Wechselgeld stammen aus dem Münz- und Kartenprotokoll
-            des Automaten, über die Uhrzeit dem Kauf zugeordnet. Bei „unbekannt"
-            steht der Grund unter der Zeile - auf einem Bildschirm mit Maus auch
-            beim Zeigen auf den Chip.
+            {t('pay.table_note')}
           </p>
           {z.letzte.some((b) => b.zahlungsart === 'unbekannt' && b.hinweis) && (
             <ul className="mt-2 space-y-1 text-[11px] text-slate-500">
@@ -411,7 +408,7 @@ function AutomatBlock({ a }: { a: Automat }) {
                 .map((b, i) => (
                   <li key={i} className="flex gap-1.5">
                     <span className="tabular-nums text-slate-400">
-                      {new Date(b.zeit).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
+                      {new Date(b.zeit).toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit' })}
                     </span>
                     <span>{b.hinweis}</span>
                   </li>
@@ -425,37 +422,36 @@ function AutomatBlock({ a }: { a: Automat }) {
         <details className="group mt-4 rounded-xl border border-rose-200 bg-rose-50/80 p-3">
           <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-semibold text-rose-800 [&::-webkit-details-marker]:hidden">
             <AlertTriangle className="h-4 w-4 shrink-0" />
-            {z.auffaellig.length} Käufe mit falschem Wechselgeld
+            {t('pay.wrong_change', { count: z.auffaellig.length })}
             <ChevronDown className="ml-auto h-4 w-4 shrink-0 transition group-open:rotate-180" />
           </summary>
           <p className="mt-1.5 text-xs text-rose-700">
-            Eingeworfen minus Preis muss dem ausgezahlten Wechselgeld entsprechen.
-            Wo das nicht stimmt, gibt der Münzwechsler zu viel oder zu wenig heraus.
+            {t('pay.wrong_change_note')}
           </p>
           <div className="mt-2 overflow-x-auto">
             <table className="w-full text-xs">
               <thead className="text-left text-rose-700">
                 <tr>
-                  <th className="py-1 pr-3 font-medium">Zeitpunkt</th>
-                  <th className="py-1 pr-3 font-medium">Eingeworfen</th>
-                  <th className="py-1 pr-3 font-medium">Erwartet</th>
-                  <th className="py-1 pr-3 font-medium">Ausgezahlt</th>
-                  <th className="py-1 font-medium">Abweichung</th>
+                  <th className="py-1 pr-3 font-medium">{t('pay.col_time')}</th>
+                  <th className="py-1 pr-3 font-medium">{t('pay.col_inserted')}</th>
+                  <th className="py-1 pr-3 font-medium">{t('pay.col_expected')}</th>
+                  <th className="py-1 pr-3 font-medium">{t('pay.col_paid_out')}</th>
+                  <th className="py-1 font-medium">{t('pay.col_deviation')}</th>
                 </tr>
               </thead>
               <tbody className="text-rose-900">
                 {z.auffaellig.slice(0, 10).map((b, i) => (
                   <tr key={i} className="border-t border-rose-200/60">
                     <td className="py-1 pr-3 tabular-nums">
-                      {new Date(b.zeit).toLocaleString('de-DE')}
+                      {new Date(b.zeit).toLocaleString(loc)}
                     </td>
-                    <td className="py-1 pr-3 tabular-nums">{euro(b.eingeworfen_cent)}</td>
+                    <td className="py-1 pr-3 tabular-nums">{euro(b.eingeworfen_cent, loc)}</td>
                     <td className="py-1 pr-3 tabular-nums">
-                      {euro(b.erwartetes_wechselgeld_cent)}
+                      {euro(b.erwartetes_wechselgeld_cent, loc)}
                     </td>
-                    <td className="py-1 pr-3 tabular-nums">{euro(b.ausgezahlt_cent)}</td>
+                    <td className="py-1 pr-3 tabular-nums">{euro(b.ausgezahlt_cent, loc)}</td>
                     <td className="py-1 font-semibold tabular-nums">
-                      {b.abweichung_cent > 0 ? '+' : ''}{euro(b.abweichung_cent)}
+                      {b.abweichung_cent > 0 ? '+' : ''}{euro(b.abweichung_cent, loc)}
                     </td>
                   </tr>
                 ))}
@@ -469,38 +465,35 @@ function AutomatBlock({ a }: { a: Automat }) {
         <details className="group mt-4 rounded-xl border border-amber-200 bg-amber-50/80 p-3">
           <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-semibold text-amber-800 [&::-webkit-details-marker]:hidden">
             <HelpCircle className="h-4 w-4 shrink-0" />
-            {z.unzugeordnet!.length} Geldbewegungen ohne zugehörigen Kauf
+            {t('pay.unassigned', { count: z.unzugeordnet!.length })}
             <ChevronDown className="ml-auto h-4 w-4 shrink-0 transition group-open:rotate-180" />
           </summary>
           <p className="mt-1.5 text-xs text-amber-700">
-            Münze angenommen oder Karte gebucht, aber in der Nähe steht kein Kauf,
-            zu dem es gehören könnte - zum Beispiel ein Testeinwurf, oder eine
-            Auszahlung, die scheiterte, weil die Wechselgeldröhre gerade
-            herausgenommen war. Dieses Geld ist real, aber keinem Foto zugeordnet.
+            {t('pay.unassigned_note')}
           </p>
           <div className="mt-2 overflow-x-auto">
             <table className="w-full text-xs">
               <thead className="text-left text-amber-700">
                 <tr>
-                  <th className="py-1 pr-3 font-medium">Zeitpunkt</th>
-                  <th className="py-1 pr-3 font-medium">Art</th>
-                  <th className="py-1 pr-3 text-right font-medium">Betrag</th>
-                  <th className="py-1 font-medium">Hinweis</th>
+                  <th className="py-1 pr-3 font-medium">{t('pay.col_time')}</th>
+                  <th className="py-1 pr-3 font-medium">{t('pay.col_kind')}</th>
+                  <th className="py-1 pr-3 text-right font-medium">{t('pay.col_amount')}</th>
+                  <th className="py-1 font-medium">{t('pay.col_note')}</th>
                 </tr>
               </thead>
               <tbody className="text-amber-900">
                 {z.unzugeordnet!.slice(0, 15).map((e, i) => (
                   <tr key={i} className="border-t border-amber-200/60">
                     <td className="py-1 pr-3 tabular-nums">
-                      {new Date(e.zeit).toLocaleString('de-DE')}
+                      {new Date(e.zeit).toLocaleString(loc)}
                     </td>
                     <td className="py-1 pr-3">
-                      {e.art === 'muenze_ein' ? 'Münze angenommen'
-                        : e.art === 'muenze_aus_fehlgeschlagen' ? 'Auszahlung fehlgeschlagen'
-                        : e.art === 'karte' ? 'Kartenzahlung'
+                      {e.art === 'muenze_ein' ? t('pay.kind_coin_in')
+                        : e.art === 'muenze_aus_fehlgeschlagen' ? t('pay.kind_payout_failed')
+                        : e.art === 'karte' ? t('pay.kind_card')
                         : e.art}
                     </td>
-                    <td className="py-1 pr-3 text-right tabular-nums">{euro(e.cent)}</td>
+                    <td className="py-1 pr-3 text-right tabular-nums">{euro(e.cent, loc)}</td>
                     <td className="py-1 text-amber-700">{e.hinweis}</td>
                   </tr>
                 ))}
@@ -522,6 +515,7 @@ function AutomatBlock({ a }: { a: Automat }) {
  * steht der Barteil, weil das die Zahl ist, nach der man hier sucht.
  */
 function Ring({ barAnteil }: { barAnteil: number }) {
+  const { t } = useI18n();
   const r = 42;
   const umfang = 2 * Math.PI * r;
   const bar = umfang * barAnteil;
@@ -529,7 +523,7 @@ function Ring({ barAnteil }: { barAnteil: number }) {
   return (
     <div className="relative shrink-0">
       <svg width="112" height="112" viewBox="0 0 112 112" role="img"
-        aria-label={`${Math.round(barAnteil * 100)} Prozent bar, ${Math.round((1 - barAnteil) * 100)} Prozent Karte`}>
+        aria-label={t('pay.ring_label', { cash: Math.round(barAnteil * 100), card: Math.round((1 - barAnteil) * 100) })}>
         {/* Karte als voller Kreis, Bar als Bogen darüber - so bleibt bei 0 %
             Bar trotzdem ein sauberer Ring stehen. */}
         <circle cx="56" cy="56" r={r} fill="none" strokeWidth="14"
@@ -546,7 +540,7 @@ function Ring({ barAnteil }: { barAnteil: number }) {
         <span className="text-xl font-bold tabular-nums text-slate-800">
           {Math.round(barAnteil * 100)}&nbsp;%
         </span>
-        <span className="text-[11px] text-slate-500">bar</span>
+        <span className="text-[11px] text-slate-500">{t('pay.ring_cash')}</span>
       </div>
     </div>
   );
@@ -557,6 +551,8 @@ function Anteil({ Icon, titel, anzahl, betrag, anteil, farbe, hintergrund }: {
   titel: string; anzahl: number; betrag: number; anteil: number | null;
   farbe: string; hintergrund: string;
 }) {
+  const { t } = useI18n();
+  const loc = useLocaleTag();
   return (
     <div className={`rounded-xl px-4 py-3 ${hintergrund}`}>
       <div className="flex items-center gap-2">
@@ -572,7 +568,7 @@ function Anteil({ Icon, titel, anzahl, betrag, anteil, farbe, hintergrund }: {
         )}
       </div>
       <p className="mt-1 text-xs text-slate-600">
-        <b className="tabular-nums">{anzahl}</b> Käufe · {euro(betrag)}
+        <b className="tabular-nums">{t('pay.purchases_count', { count: anzahl })}</b> · {euro(betrag, loc)}
       </p>
     </div>
   );
