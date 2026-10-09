@@ -73,6 +73,20 @@ function preisAus(text: string | undefined): number | null {
   return Number.isFinite(zahl) ? zahl : null;
 }
 
+/** Preise eines Eintrags: "749 € einmalig · 99 € pro Monat" oder nur "149 € pro Monat · 12 Monate". */
+function preisSplit(item: EquipmentItem): { einmalig: number; monatlich: number } {
+  const teile = (item.mehrwert_text ?? '').split('·').map((t) => t.trim());
+  const erster = preisAus(teile[0]) ?? 0;
+  if (/monat/i.test(teile[0] ?? '')) return { einmalig: 0, monatlich: erster };
+  return { einmalig: erster, monatlich: preisAus(teile[1]) ?? 0 };
+}
+
+const SPEED_PAKETE = [
+  { key: 'basis', titel: 'Speedmessung', zeile: '149 € / Monat', text: '12 Monate Laufzeit. Hardware an der Bahn kostenlos.' },
+  { key: 'display', titel: 'Speedmessung + Display', zeile: '249 € / Monat im 1. Jahr, ab Jahr 2 149 €', text: 'Mit großem Display direkt an der Bahn, ohne Einmalkosten. 12 Monate Laufzeit.', badge: 'Beliebt' },
+  { key: 'langzeit', titel: 'Speedmessung 48 Monate', zeile: '99 € / Monat', text: 'Günstigster Monatspreis bei langer Laufzeit, 48 Monate festgeschrieben.', badge: 'Sparpreis' },
+] as const;
+
 const eur = (wert: number) =>
   wert.toLocaleString('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
 const eurGenau = (wert: number) =>
@@ -94,6 +108,7 @@ export default function ConfigurationProduct() {
   const [bundleAus, setBundleAus] = useState<string[]>([]);
   const [bundleSendet, setBundleSendet] = useState(false);
   const [bundleGesendet, setBundleGesendet] = useState(false);
+  const [speedPaket, setSpeedPaket] = useState<'basis' | 'display' | 'langzeit'>('display');
   const [shopPlan, setShopPlan] = useState<'monatlich' | 'jaehrlich' | 'revshare'>('jaehrlich');
 
   const preisTexte = (item?.mehrwert_text ?? '').split('·').map((t) => t.trim()).filter(Boolean);
@@ -104,6 +119,7 @@ export default function ConfigurationProduct() {
   const einmalig = (basis ?? 0) + zusatzSumme;
   const monatlichGesamt = (monatlich ?? 0) + verfuegbar.filter((z) => gewaehlt.includes(z.key)).reduce((sum, z) => sum + (z.monatlich ?? 0), 0);
   const istShop = item?.kategorie === 'Webshop';
+  const istSpeed = item?.titel === 'Speedmessung';
   const istVerkauf = (item?.kategorie === 'Verkauf' || item?.kategorie === 'Zubehoer') && basis != null;
 
   useEffect(() => {
@@ -133,7 +149,9 @@ export default function ConfigurationProduct() {
         ? ['Digitale Nachkäufe und Merchandising', 'PrintBox']
         : item?.titel === 'Digitale Nachkäufe und Merchandising'
           ? ['PrintBox', 'Cashbox']
-          : [];
+          : item?.titel === 'Speedmessung'
+            ? ['Digitale Nachkäufe und Merchandising']
+            : [];
   const buendel = item
     ? [item, ...partnerTitel.map((t) => alle.find((a) => a.titel === t)).filter((a): a is EquipmentItem => !!a)]
     : [];
@@ -142,16 +160,10 @@ export default function ConfigurationProduct() {
   const hatHardware = buendelAktiv.some((b) => !istShopItem(b));
   const buendelEinmalig = buendelAktiv.reduce((sum, b) => {
     if (istShopItem(b) && hatHardware) return sum;
-    return sum + (preisAus((b.mehrwert_text ?? '').split('·')[0]) ?? 0);
+    return sum + preisSplit(b).einmalig;
   }, 0);
-  const buendelMonatlich = buendelAktiv.reduce(
-    (sum, b) => sum + (preisAus((b.mehrwert_text ?? '').split('·')[1]) ?? 0),
-    0,
-  );
-  const buendelVorher = buendelAktiv.reduce(
-    (sum, b) => sum + (preisAus((b.mehrwert_text ?? '').split('·')[0]) ?? 0),
-    0,
-  );
+  const buendelMonatlich = buendelAktiv.reduce((sum, b) => sum + preisSplit(b).monatlich, 0);
+  const buendelVorher = buendelAktiv.reduce((sum, b) => sum + preisSplit(b).einmalig, 0);
 
   async function buendelAnfragen() {
     if (!parkId) return;
@@ -183,6 +195,11 @@ export default function ConfigurationProduct() {
           monatlichGesamt > 0 ? ` + ${eur(monatlichGesamt)}/Monat` : ''
         }${raten ? `, in ${RATEN} Raten à ${eurGenau(einmalig / RATEN)}` : ''}`;
         await meldeAusstattungsInteresse(parkId, { label });
+      } else if (istSpeed) {
+        const paket = SPEED_PAKETE.find((p) => p.key === speedPaket);
+        await meldeAusstattungsInteresse(parkId, {
+          label: `Speedmessung nachrüsten: ${paket?.titel}, ${paket?.zeile}, Hardware kostenlos`,
+        });
       } else if (istShop) {
         const planText =
           shopPlan === 'monatlich'
@@ -449,6 +466,37 @@ export default function ConfigurationProduct() {
               </div>
             )}
 
+
+            {istSpeed && (
+              <div>
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Paket wählen</p>
+                <div className="grid gap-2.5">
+                  {SPEED_PAKETE.map((paket) => (
+                    <button
+                      key={paket.key}
+                      type="button"
+                      onClick={() => setSpeedPaket(paket.key)}
+                      aria-pressed={speedPaket === paket.key}
+                      className={`rounded-xl border-2 p-3 text-left transition ${
+                        speedPaket === paket.key ? 'border-sky-500 bg-sky-50/60' : 'border-slate-200 bg-white hover:border-slate-300'
+                      }`}
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-slate-800">{paket.titel}</span>
+                        {'badge' in paket && (
+                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800">
+                            {paket.badge}
+                          </span>
+                        )}
+                      </span>
+                      <span className="mt-0.5 block text-sm font-semibold text-slate-700">{paket.zeile}</span>
+                      <span className="mt-1 block text-xs text-slate-500">{paket.text}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <button
               type="button"
               onClick={() => void anfragen()}
@@ -505,14 +553,16 @@ export default function ConfigurationProduct() {
                         </Link>
                       )}
                       <p className="mt-0.5 font-bold text-slate-900">
-                        {eur(shopImKombi ? 0 : preis ?? 0)}
+                        {preisSplit(b).einmalig > 0 || preisSplit(b).monatlich === 0
+                          ? eur(shopImKombi ? 0 : preis ?? 0)
+                          : `${eur(preisSplit(b).monatlich)} / Monat`}
                         {shopImKombi && preis != null && (
                           <span className="ml-1.5 font-normal text-slate-400 line-through">{eur(preis)}</span>
                         )}
                       </p>
                       <p className="text-xs text-slate-500">
-                        {(b.mehrwert_text ?? '').split('·')[1]?.trim()
-                          ? `+ ${(b.mehrwert_text ?? '').split('·')[1].trim()}`
+                        {preisSplit(b).einmalig > 0 && preisSplit(b).monatlich > 0
+                          ? `+ ${eur(preisSplit(b).monatlich)} pro Monat`
                           : ''}
                       </p>
                     </div>
