@@ -36,7 +36,14 @@ const PLANS: {
   image?: string;
   extras: string[];
 }[] = [
-  { key: 'basis', name: 'Speedmessung', monthly: 150, months: 12, extras: ['12 Monate Laufzeit'] },
+  {
+    key: 'basis',
+    name: 'Speedmessung',
+    monthly: 150,
+    months: 12,
+    image: '/speedmessung/langzeit.jpg',
+    extras: ['12 Monate Laufzeit'],
+  },
   {
     key: 'display',
     name: 'Speedmessung + Display',
