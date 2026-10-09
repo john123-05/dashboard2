@@ -217,14 +217,14 @@ export default function Personalization() {
       }
       setViewMode('preview');
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'Speichern fehlgeschlagen.');
+      setActionError(err instanceof Error ? err.message : t('perso.save_failed'));
     } finally {
       setBuilderSaving(false);
     }
   }
 
   async function uploadOverlayFile(file: File) {
-    if (!parkId || !user) throw new Error('Please select a park and sign in.');
+    if (!parkId || !user) throw new Error(t('perso.select_park_sign_in'));
 
     const normalized = file.name.toLowerCase().replace(/[^a-z0-9._-]+/g, '-');
     const extension = normalized.includes('.') ? normalized.split('.').pop() : 'png';
@@ -263,7 +263,7 @@ export default function Personalization() {
   }
 
   async function activateUploadedOverlay(asset: OverlayAsset) {
-    if (!parkId) throw new Error('Please select a park first.');
+    if (!parkId) throw new Error(t('perso.select_park'));
 
     await supabase
       .from('overlay_campaigns')
@@ -325,7 +325,7 @@ export default function Personalization() {
         setViewMode('preview');
       }
     } catch (error) {
-      setActionError(error instanceof Error ? error.message : 'Upload failed.');
+      setActionError(error instanceof Error ? error.message : t('perso.upload_failed'));
     } finally {
       setUploading(false);
     }
@@ -333,7 +333,7 @@ export default function Personalization() {
 
   async function handleGenerate(message: string, prompt: string) {
     if (!parkId || !user) {
-      setGenerateError('Please select a park and sign in.');
+      setGenerateError(t('perso.select_park_sign_in'));
       return;
     }
 
@@ -377,7 +377,7 @@ export default function Personalization() {
       setGenerateError(
         uploadError instanceof Error
           ? uploadError.message
-          : 'Overlay generated but upload failed.'
+          : t('perso.generated_upload_failed')
       );
     } finally {
       setGenerating(false);
@@ -427,7 +427,7 @@ export default function Personalization() {
       await loadOverlayData();
       setSelectedCampaignId(campaignId);
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'Konnte Overlay nicht aktivieren.');
+      setActionError(err instanceof Error ? err.message : t('perso.activate_failed'));
     } finally {
       setActivatingAssetId(null);
     }
@@ -445,7 +445,7 @@ export default function Personalization() {
       {!parkId && (
         <GlassCard className="p-4">
           <p className="text-sm text-amber-700">
-            Please select a park first. Overlay assets and campaigns are park-scoped.
+            {t('perso.no_park_note')}
           </p>
         </GlassCard>
       )}
@@ -459,11 +459,11 @@ export default function Personalization() {
       <GlassCard className="p-4 sm:p-6">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h3 className="text-base font-semibold text-slate-800">Overlay-Bilder</h3>
+            <h3 className="text-base font-semibold text-slate-800">{t('perso.overlay_images')}</h3>
             <p className="mt-1 text-sm text-slate-500">
               {viewMode === 'preview'
-                ? 'So sieht dein aktuelles Foto mit Overlay aus.'
-                : 'Overlay bauen, Element fuer Element - oder von der KI generieren lassen.'}
+                ? t('perso.preview_sub')
+                : t('perso.edit_sub')}
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
@@ -475,7 +475,7 @@ export default function Personalization() {
                   viewMode === 'edit' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
                 }`}
               >
-                Overlay erstellen
+                {t('perso.create_overlay')}
               </button>
               <button
                 type="button"
@@ -484,7 +484,7 @@ export default function Personalization() {
                   viewMode === 'preview' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
                 }`}
               >
-                Vorschau
+                {t('perso.preview')}
               </button>
             </div>
             {viewMode === 'preview' && (
@@ -534,8 +534,8 @@ export default function Personalization() {
             <div className="rounded-2xl bg-white/30 p-4">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <div>
-                  <h4 className="text-sm font-semibold text-slate-800">Gespeicherte Overlays</h4>
-                  <p className="text-xs text-slate-500">Anklicken zum Anwenden.</p>
+                  <h4 className="text-sm font-semibold text-slate-800">{t('perso.saved_overlays')}</h4>
+                  <p className="text-xs text-slate-500">{t('perso.click_to_apply')}</p>
                 </div>
                 <span className="rounded-full bg-white/60 px-2.5 py-1 text-xs font-medium text-slate-600">
                   {assets.length}
@@ -567,7 +567,7 @@ export default function Personalization() {
                               isActive ? 'bg-brand-100 text-brand-700' : 'bg-slate-100 text-slate-500'
                             }`}
                           >
-                            {isActivating ? 'Wird aktiv...' : isActive ? 'Aktiv' : 'Overlay'}
+                            {isActivating ? t('perso.activating') : isActive ? t('perso.active') : 'Overlay'}
                           </span>
                           <span
                             role="button"
@@ -576,7 +576,7 @@ export default function Personalization() {
                               e.stopPropagation();
                               void handleDeleteAsset(asset);
                             }}
-                            aria-label={`Delete ${pathBasename(asset.path)}`}
+                            aria-label={t('perso.delete_asset', { name: pathBasename(asset.path) })}
                             className="rounded-full p-1 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
                           >
                             {isDeleting ? (
@@ -610,7 +610,7 @@ export default function Personalization() {
                 </div>
               ) : (
                 <p className="text-sm text-slate-400">
-                  Noch keine Overlays gespeichert. Wechsle zu &bdquo;Overlay erstellen&ldquo;, um eins zu erstellen.
+                  {t('perso.no_overlays')}
                 </p>
               )}
             </div>
@@ -632,7 +632,7 @@ export default function Personalization() {
                 disabled={!parkId || uploading}
               >
                 <Upload className="h-4 w-4" />
-                {uploading ? 'Uploading...' : 'Fertige Datei hochladen'}
+                {uploading ? t('perso.uploading') : t('perso.upload_ready')}
               </button>
               <label className="flex items-center gap-2 text-xs text-slate-500">
                 <input
@@ -640,7 +640,7 @@ export default function Personalization() {
                   checked={autoApplyUpload}
                   onChange={(e) => setAutoApplyUpload(e.target.checked)}
                 />
-                Beim Speichern sofort verwenden
+                {t('perso.use_on_save')}
               </label>
             </div>
 
