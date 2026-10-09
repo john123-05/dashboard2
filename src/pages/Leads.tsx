@@ -318,6 +318,7 @@ function LeadWorldMap({
   onOffsetChange?: (next: { x: number; y: number }) => void;
   compact?: boolean;
 }) {
+  const { t } = useI18n();
   const mapRef = useRef<HTMLDivElement | null>(null);
   const dragStateRef = useRef<{ startX: number; startY: number; originX: number; originY: number } | null>(null);
   const viewBox = useMemo(() => parseSvgViewBox(svgMarkup), [svgMarkup]);
@@ -401,7 +402,7 @@ function LeadWorldMap({
               onZoomOut?.();
             }}
             className="rounded-full p-1.5 text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-700"
-            aria-label="Karte herauszoomen"
+            aria-label={t('leads.map_zoom_out')}
           >
             <Minus className="h-4 w-4" />
           </button>
@@ -412,7 +413,7 @@ function LeadWorldMap({
               onZoomIn?.();
             }}
             className="rounded-full p-1.5 text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-700"
-            aria-label="Karte hineinzoomen"
+            aria-label={t('leads.map_zoom_in')}
           >
             <Plus className="h-4 w-4" />
           </button>
@@ -1199,7 +1200,7 @@ function LeadsContacts({
           checked={filtered.filter(isDeletableLead).length > 0 && filtered.filter(isDeletableLead).every((lead) => selectedLeadIds.includes(String(lead.id)))}
           onChange={toggleVisibleSelection}
           className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
-          aria-label="Alle sichtbaren Leads auswählen"
+          aria-label={t('leads.select_all_visible')}
         />
       ),
       className: 'w-12',
@@ -1308,7 +1309,7 @@ function LeadsContacts({
             onClick={() => deleteLeadIds([String(item.id)])}
             disabled={deleting}
             className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-40"
-            title="Lead löschen"
+            title={t('leads.delete_contact_title')}
             aria-label={t('leads.delete_contact', { email: item.email as string })}
           >
             <Trash2 className="h-4 w-4" />
@@ -1489,7 +1490,7 @@ function LeadsContacts({
 
                 <div className="grid grid-cols-2 gap-2.5">
                   <div className="rounded-2xl border border-slate-100 bg-white/70 p-3">
-                    <p className="text-[11px] font-bold tracking-[0.08em] text-slate-500">Durchschnittlich später</p>
+                    <p className="text-[11px] font-bold tracking-[0.08em] text-slate-500">{t('leads.avg_later')}</p>
                     <p className="mt-1.5 text-base font-bold text-slate-800">{delayInsights.avgDelayLabel}</p>
                     <p className="mt-1 text-xs leading-5 text-slate-500">{t('leads.between_purchase_claim')}</p>
                   </div>
@@ -1501,7 +1502,7 @@ function LeadsContacts({
                   <div className="rounded-2xl border border-slate-100 bg-white/70 p-3">
                     <p className="text-[11px] font-bold tracking-[0.08em] text-slate-500">{t('leads.fastest_claim')}</p>
                     <p className="mt-1.5 text-base font-bold text-slate-800">{delayInsights.minDelayLabel}</p>
-                    <p className="mt-1 text-xs leading-5 text-slate-500">frühester gemessener Abstand</p>
+                    <p className="mt-1 text-xs leading-5 text-slate-500">{t('leads.earliest_gap')}</p>
                   </div>
                   <div className="rounded-2xl border border-slate-100 bg-white/70 p-3">
                     <p className="text-[11px] font-bold tracking-[0.08em] text-slate-500">{t('leads.next_day')}</p>
@@ -1575,7 +1576,7 @@ function LeadsContacts({
                       <p className="mt-2 text-2xl font-bold text-slate-800">{resolvedCountryStats.length}</p>
                     </div>
                     <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Leads mit Land</p>
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{t('leads.with_country')}</p>
                       <p className="mt-2 text-2xl font-bold text-slate-800">{formatNumber(totalMappedLeads, locale)}</p>
                     </div>
                     <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
@@ -1639,7 +1640,7 @@ function LeadsContacts({
             </div>
             <iframe
               src={claimLinkFor(parkId, latestPhotoCode) ?? claimSiteBaseFor(parkId) ?? undefined}
-              title="Live-Vorschau der Freischaltseite"
+              title={t('leads.preview_title')}
               scrolling="yes"
               className="w-full flex-1 border-0"
             />
@@ -1682,7 +1683,7 @@ function LeadsContacts({
                   setSelectedLeadIds(extraDuplicateIds);
                 }}
                 className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-800 transition-colors hover:bg-amber-100"
-                title="Wählt alle Zeilen mit „Doppelt“ vor. Danach kannst du einzelne abwählen und „löschen“ drücken."
+                title={t('leads.preselect_duplicates_hint')}
               >
                 {t('leads.preselect_duplicates', { count: extraDuplicateIds.length })}
               </button>

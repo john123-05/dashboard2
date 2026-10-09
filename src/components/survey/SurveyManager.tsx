@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowDown, ArrowUp, Check, Loader2, Plus, Star, Trash2 } from 'lucide-react';
+import { useI18n } from '../../lib/i18n';
 import GlassCard from '../ui/GlassCard';
 import SurveyResultsView from './SurveyResultsView';
 import { accentColorForPark, accentTextColorForPark } from '../../lib/parkBrand';
@@ -15,11 +16,11 @@ import {
 } from '../../lib/surveyApi';
 
 const TYPE_LABEL: Record<QuestionType, string> = {
-  nps: 'Weiterempfehlung (0–10)',
-  stars: 'Sterne (1–5)',
-  yesno: 'Ja / Nein',
-  choice: 'Auswahl',
-  text: 'Freitext',
+  nps: 'survey.type_nps',
+  stars: 'survey.type_stars',
+  yesno: 'survey.type_yesno',
+  choice: 'survey.type_choice',
+  text: 'survey.type_text',
 };
 
 export const inputClass =
@@ -63,8 +64,9 @@ export function LocalizedField({
 /* ------------------------------------------------------------------ Vorschau */
 
 function PreviewQuestion({ q, index }: { q: SurveyQuestion; index: number }) {
+  const { t } = useI18n();
   const [value, setValue] = useState<number | string | boolean | null>(null);
-  const prompt = pickLocalized(q.prompt) || 'Fragetext fehlt';
+  const prompt = pickLocalized(q.prompt) || t('survey.question_missing');
   return (
     <div className="rounded-lg border border-slate-200/70 bg-white p-3">
       <p className="text-sm font-semibold text-slate-800">
@@ -110,7 +112,7 @@ function PreviewQuestion({ q, index }: { q: SurveyQuestion; index: number }) {
                   value === v ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600'
                 }`}
               >
-                {v ? 'Ja' : 'Nein'}
+                {v ? t('survey.yes') : t('survey.no')}
               </button>
             ))}
           </div>
@@ -126,13 +128,13 @@ function PreviewQuestion({ q, index }: { q: SurveyQuestion; index: number }) {
                   value === i ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600'
                 }`}
               >
-                {pickLocalized(o) || `Antwort ${i + 1}`}
+                {pickLocalized(o) || t('survey.answer_n', { n: i + 1 })}
               </button>
             ))}
           </div>
         )}
         {q.type === 'text' && (
-          <textarea rows={2} className={inputClass} placeholder="Antwort des Gastes" onChange={() => setValue('x')} />
+          <textarea rows={2} className={inputClass} placeholder={t('survey.guest_answer_placeholder')} onChange={() => setValue('x')} />
         )}
       </div>
     </div>
@@ -148,12 +150,13 @@ function SurveyPreview({
   accentColor: string;
   accentTextColor: string;
 }) {
+  const { t } = useI18n();
   const { settings, questions } = config;
   const intro = pickLocalized(settings.intro);
-  const review = pickLocalized(settings.review_text) || 'Danke! Magst du uns kurz bei Google bewerten?';
+  const review = pickLocalized(settings.review_text) || t('survey.default_review_text');
   return (
     <div className="space-y-3">
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Vorschau für den Gast</p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{t('survey.preview_for_guest')}</p>
       <div className="mx-auto max-w-sm space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
         {intro && <p className="text-sm text-slate-600">{intro}</p>}
         {questions.map((q, i) => (
@@ -164,16 +167,16 @@ function SurveyPreview({
           style={{ backgroundColor: accentColor, color: accentTextColor }}
           className="w-full rounded px-4 py-2.5 text-sm font-black uppercase italic"
         >
-          Foto freischalten
+          {t('survey.unlock_photo')}
         </button>
         {settings.review_url && (
           <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
             <p className="text-xs font-semibold uppercase text-emerald-700">
-              Nach der Freischaltung · ab Score {settings.review_min_score}
+              {t('survey.after_unlock_min_score', { score: settings.review_min_score })}
             </p>
             <p className="mt-1 text-sm text-emerald-900">{review}</p>
             <span className="mt-2 inline-block rounded bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white">
-              Bei Google bewerten
+              {t('survey.rate_on_google')}
             </span>
           </div>
         )}
@@ -185,6 +188,7 @@ function SurveyPreview({
 /* ---------------------------------------------------------------- Hauptteil */
 
 export default function SurveyManager({ parkId }: { parkId: string }) {
+  const { t } = useI18n();
   const [tab, setTab] = useState<'settings' | 'results'>('results');
   const [config, setConfig] = useState<SurveyConfig | null>(null);
   const [loading, setLoading] = useState(true);
@@ -202,7 +206,7 @@ export default function SurveyManager({ parkId }: { parkId: string }) {
         setConfig(c);
         setError(null);
       })
-      .catch((e) => active && setError(e instanceof Error ? e.message : 'Laden fehlgeschlagen.'))
+      .catch((e) => active && setError(e instanceof Error ? e.message : t('survey.load_failed')))
       .finally(() => active && setLoading(false));
     return () => {
       active = false;
@@ -270,7 +274,7 @@ export default function SurveyManager({ parkId }: { parkId: string }) {
       setDirty(false);
       setSaved(true);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Speichern fehlgeschlagen.');
+      setError(e instanceof Error ? e.message : t('survey.save_failed'));
     }
     setSaving(false);
   }
@@ -280,7 +284,7 @@ export default function SurveyManager({ parkId }: { parkId: string }) {
   if (loading) {
     return (
       <p className="flex items-center gap-2 text-sm text-slate-500">
-        <Loader2 className="h-4 w-4 animate-spin" /> wird geladen…
+        <Loader2 className="h-4 w-4 animate-spin" /> {t('survey.loading')}
       </p>
     );
   }
@@ -288,7 +292,7 @@ export default function SurveyManager({ parkId }: { parkId: string }) {
   return (
     <div className="space-y-5">
       <div className="inline-flex rounded-xl bg-white/50 p-1">
-        {([['results', 'Auswertung'], ['settings', 'Einstellungen']] as const).map(([key, label]) => (
+        {([['results', t('survey.tab_results')], ['settings', t('survey.tab_settings')]] as const).map(([key, label]) => (
           <button
             key={key}
             type="button"
@@ -313,21 +317,21 @@ export default function SurveyManager({ parkId }: { parkId: string }) {
               <>
                 <GlassCard className="p-5 sm:p-6">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h3 className="text-base font-semibold text-slate-800">Fragen</h3>
+                    <h3 className="text-base font-semibold text-slate-800">{t('survey.questions')}</h3>
                     {config.questions.length === 0 && (
                       <button
                         type="button"
                         className="glass-button-secondary"
                         onClick={() => change({ ...config, questions: defaultQuestions() })}
                       >
-                        Vorlage laden
+                        {t('survey.load_template')}
                       </button>
                     )}
                   </div>
 
                   <div className="mt-4 space-y-4">
                     <LocalizedField
-                      label="Einleitung (optional)"
+                      label={t('survey.intro_optional')}
                       value={config.settings.intro}
                       onChange={(intro) => patchSettings({ intro })}
                       multiline
@@ -336,7 +340,7 @@ export default function SurveyManager({ parkId }: { parkId: string }) {
                     {config.questions.map((q, index) => (
                       <div key={q.id ?? `new-${index}`} className="rounded-xl border border-slate-200/70 bg-white/60 p-4">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-xs font-semibold text-slate-400">Frage {index + 1}</span>
+                          <span className="text-xs font-semibold text-slate-400">{t('survey.question_n', { n: index + 1 })}</span>
                           <select
                             value={q.type}
                             onChange={(e) => {
@@ -349,8 +353,8 @@ export default function SurveyManager({ parkId }: { parkId: string }) {
                             }}
                             className="rounded-lg border border-slate-200/70 bg-white px-2 py-1 text-sm"
                           >
-                            {(Object.keys(TYPE_LABEL) as QuestionType[]).map((t) => (
-                              <option key={t} value={t}>{TYPE_LABEL[t]}</option>
+                            {(Object.keys(TYPE_LABEL) as QuestionType[]).map((typeKey) => (
+                              <option key={typeKey} value={typeKey}>{t(TYPE_LABEL[typeKey])}</option>
                             ))}
                           </select>
                           <label className="ml-2 flex items-center gap-1.5 text-xs text-slate-600">
@@ -359,20 +363,20 @@ export default function SurveyManager({ parkId }: { parkId: string }) {
                               checked={q.required}
                               onChange={(e) => patchQuestion(index, { required: e.target.checked })}
                             />
-                            Pflicht
+                            {t('survey.required')}
                           </label>
                           <div className="ml-auto flex gap-1">
-                            <button type="button" onClick={() => move(index, -1)} className="rounded p-1 text-slate-400 hover:bg-slate-100" aria-label="Nach oben">
+                            <button type="button" onClick={() => move(index, -1)} className="rounded p-1 text-slate-400 hover:bg-slate-100" aria-label={t('survey.move_up')}>
                               <ArrowUp className="h-4 w-4" />
                             </button>
-                            <button type="button" onClick={() => move(index, 1)} className="rounded p-1 text-slate-400 hover:bg-slate-100" aria-label="Nach unten">
+                            <button type="button" onClick={() => move(index, 1)} className="rounded p-1 text-slate-400 hover:bg-slate-100" aria-label={t('survey.move_down')}>
                               <ArrowDown className="h-4 w-4" />
                             </button>
                             <button
                               type="button"
                               onClick={() => change({ ...config, questions: config.questions.filter((_, i) => i !== index) })}
                               className="rounded p-1 text-rose-400 hover:bg-rose-50"
-                              aria-label="Frage entfernen"
+                              aria-label={t('survey.remove_question')}
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>
@@ -380,11 +384,11 @@ export default function SurveyManager({ parkId }: { parkId: string }) {
                         </div>
 
                         <div className="mt-3 space-y-3">
-                          <LocalizedField label="Fragetext" value={q.prompt} onChange={(prompt) => patchQuestion(index, { prompt })} />
+                          <LocalizedField label={t('survey.question_text')} value={q.prompt} onChange={(prompt) => patchQuestion(index, { prompt })} />
 
                           {q.type === 'choice' && (
                             <div>
-                              <p className="mb-1 text-xs font-medium text-slate-600">Antworten (je Zeile eine)</p>
+                              <p className="mb-1 text-xs font-medium text-slate-600">{t('survey.answers_per_line')}</p>
                               <div className="grid gap-2 sm:grid-cols-2">
                                 {(['de', 'en'] as const).map((lang) => (
                                   <textarea
@@ -417,7 +421,7 @@ export default function SurveyManager({ parkId }: { parkId: string }) {
                                 checked={q.is_score_question}
                                 onChange={() => setScoreQuestion(index)}
                               />
-                              Diese Frage entscheidet über den Bewertungs-Link
+                              {t('survey.score_question_decides')}
                             </label>
                           )}
                         </div>
@@ -425,15 +429,15 @@ export default function SurveyManager({ parkId }: { parkId: string }) {
                     ))}
 
                     <div className="flex flex-wrap gap-2">
-                      {(Object.keys(TYPE_LABEL) as QuestionType[]).map((t) => (
+                      {(Object.keys(TYPE_LABEL) as QuestionType[]).map((typeKey) => (
                         <button
-                          key={t}
+                          key={typeKey}
                           type="button"
-                          onClick={() => addQuestion(t)}
+                          onClick={() => addQuestion(typeKey)}
                           disabled={config.questions.length >= 12}
                           className="inline-flex items-center gap-1 rounded-lg border border-dashed border-slate-300 bg-white/50 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-white disabled:opacity-40"
                         >
-                          <Plus className="h-3.5 w-3.5" /> {TYPE_LABEL[t]}
+                          <Plus className="h-3.5 w-3.5" /> {t(TYPE_LABEL[typeKey])}
                         </button>
                       ))}
                     </div>
@@ -441,10 +445,10 @@ export default function SurveyManager({ parkId }: { parkId: string }) {
                 </GlassCard>
 
                 <GlassCard className="p-5 sm:p-6">
-                  <h3 className="text-base font-semibold text-slate-800">Bewertung bei Google</h3>
+                  <h3 className="text-base font-semibold text-slate-800">{t('survey.google_review')}</h3>
                   <div className="mt-4 space-y-4">
                     <div>
-                      <p className="mb-1 text-xs font-medium text-slate-600">Link zur Bewertungsseite</p>
+                      <p className="mb-1 text-xs font-medium text-slate-600">{t('survey.review_link')}</p>
                       <input
                         type="url"
                         value={config.settings.review_url ?? ''}
@@ -455,8 +459,8 @@ export default function SurveyManager({ parkId }: { parkId: string }) {
                     </div>
                     <div>
                       <p className="mb-1 text-xs font-medium text-slate-600">
-                        Link anzeigen ab Score{' '}
-                        {scoreQuestion ? '' : <span className="text-amber-600">(keine Score-Frage gewählt – dann sehen alle den Link)</span>}
+                        {t('survey.show_link_from_score')}{' '}
+                        {scoreQuestion ? '' : <span className="text-amber-600">{t('survey.no_score_question')}</span>}
                       </p>
                       <select
                         value={config.settings.review_min_score}
@@ -465,19 +469,19 @@ export default function SurveyManager({ parkId }: { parkId: string }) {
                       >
                         {Array.from({ length: 11 }, (_, n) => (
                           <option key={n} value={n}>
-                            {n === 0 ? '0 – allen Antwortenden' : `ab ${n}`}
+                            {n === 0 ? t('survey.min_score_all') : t('survey.min_score_from', { n })}
                           </option>
                         ))}
                       </select>
                     </div>
                     <LocalizedField
-                      label="Text neben dem Link"
+                      label={t('survey.text_next_to_link')}
                       value={config.settings.review_text}
                       onChange={(review_text) => patchSettings({ review_text })}
                       multiline
                     />
                     <LocalizedField
-                      label="Dankestext (wenn kein Link erscheint)"
+                      label={t('survey.thanks_text')}
                       value={config.settings.thanks_text}
                       onChange={(thanks_text) => patchSettings({ thanks_text })}
                       multiline
@@ -490,14 +494,14 @@ export default function SurveyManager({ parkId }: { parkId: string }) {
             <div className="flex items-center gap-3">
               <button type="button" onClick={save} disabled={saving || !dirty} className="glass-button-primary disabled:opacity-50">
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                Speichern
+                {t('survey.save')}
               </button>
               {saved && !dirty && (
                 <span className="flex items-center gap-1 text-sm text-emerald-700">
-                  <Check className="h-4 w-4" /> Gespeichert – gilt sofort auf der Claim-Seite
+                  <Check className="h-4 w-4" /> {t('survey.saved_live')}
                 </span>
               )}
-              {dirty && <span className="text-sm text-amber-700">Nicht gespeicherte Änderungen</span>}
+              {dirty && <span className="text-sm text-amber-700">{t('survey.unsaved')}</span>}
             </div>
           </div>
 
