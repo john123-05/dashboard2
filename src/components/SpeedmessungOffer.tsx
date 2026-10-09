@@ -10,11 +10,19 @@ const eur = (value: number) =>
 
 const INCLUDED = [
   'Geschwindigkeits-Hardware an der Bahn',
-  'Tagesschnellster, Langsamster & Durchschnitt live',
-  'Gäste-Rangliste mit Profilbild & Namen',
-  'Geschwindigkeit direkt auf dem Foto',
-  'Einrichtung & Support durch uns',
   'Hardware kostenlos – wir schicken sie dir',
+  'Einrichtung & Support durch uns',
+  'Tagesschnellster, Langsamster & Durchschnitt live im Dashboard',
+  'Gäste-Rangliste mit Profilbild & Namen',
+  'Tagesbestenliste als Seite für Gäste, im Design deines Parks',
+  'Geschwindigkeit direkt auf dem Foto',
+  'Gäste tragen sich per Foto-Code ein, kein Passwort nötig',
+];
+
+const STEPS = [
+  { title: 'Fahrt wird gemessen', text: 'Die Hardware an der Bahn misst jede Fahrt automatisch.' },
+  { title: 'Tempo steht auf dem Foto', text: 'Gäste sehen ihre km/h direkt auf ihrem Erinnerungsfoto.' },
+  { title: 'Rangliste motiviert', text: 'Wer es in die Tagesbestenliste schafft, kommt gern nochmal.' },
 ];
 
 const PLANS: {
@@ -22,22 +30,28 @@ const PLANS: {
   name: string;
   monthly: number;
   months: number;
-  oneTime?: number;
   fromYear2?: number;
   highlight?: boolean;
   badge?: string;
-  points: string[];
+  image?: string;
+  extras: string[];
 }[] = [
-  { key: 'basis', name: 'Speedmessung', monthly: 150, months: 12, points: ['Alles aus „Enthalten“', '12 Monate Laufzeit'] },
+  { key: 'basis', name: 'Speedmessung', monthly: 150, months: 12, extras: ['12 Monate Laufzeit'] },
   {
     key: 'display',
     name: 'Speedmessung + Display',
     monthly: 250,
-    fromYear2: 150,
     months: 12,
+    fromYear2: 150,
     highlight: true,
     badge: 'Beliebt',
-    points: ['Alles aus „Enthalten“', 'Großes Display an der Bahn – ohne Einmalkosten', 'Ab dem 2. Jahr nur 150 € pro Monat', '12 Monate Laufzeit'],
+    image: '/speedmessung/display.jpg',
+    extras: [
+      'Großes Display an der Bahn: Zeit & km/h für alle Gäste sichtbar',
+      'Display ohne Einmalkosten',
+      'Ab dem 2. Jahr nur 150 € pro Monat',
+      '12 Monate Laufzeit',
+    ],
   },
   {
     key: 'long',
@@ -45,7 +59,8 @@ const PLANS: {
     monthly: 99,
     months: 48,
     badge: 'Sparpreis',
-    points: ['Alles aus „Enthalten“', 'Günstiger bei langer Laufzeit', '48 Monate Laufzeit'],
+    image: '/speedmessung/langzeit.jpg',
+    extras: ['Günstigster Monatspreis bei langer Laufzeit', 'Preis 48 Monate festgeschrieben', '48 Monate Laufzeit'],
   },
 ];
 
@@ -75,24 +90,28 @@ export default function SpeedmessungOffer() {
 
   return (
     <section className="space-y-5">
-      <div className="rounded-3xl bg-slate-900 p-6 text-white shadow-lg">
-        <span className="inline-block rounded-full bg-amber-400/15 px-3 py-1 text-xs font-semibold text-amber-300">
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <span className="inline-block rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
           Noch nicht freigeschaltet
         </span>
-        <h3 className="mt-3 text-2xl font-bold tracking-tight">Mach aus jeder Fahrt einen Wettkampf</h3>
-        <p className="mt-2 max-w-xl text-sm leading-relaxed text-slate-300">
-          Gäste sehen ihre Geschwindigkeit auf dem Foto und treten in der Tagesrangliste gegeneinander an. Das bringt
-          sie zurück und lässt sie öfter fahren.
+        <h3 className="mt-3 text-xl font-bold tracking-tight text-slate-900">Wer war heute der Schnellste?</h3>
+        <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-slate-600">
+          Mit der Speedmessung wird jede Fahrt zum kleinen Wettkampf. Gäste fahren öfter, vergleichen sich und kommen
+          wieder.
         </p>
-        <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-400">Enthalten in jedem Paket</p>
-        <ul className="mt-2 grid gap-x-6 gap-y-1.5 sm:grid-cols-2">
-          {INCLUDED.map((f) => (
-            <li key={f} className="flex items-start gap-2 text-[13px] leading-snug text-slate-100">
-              <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-300" />
-              {f}
+        <ol className="mt-5 grid gap-4 sm:grid-cols-3">
+          {STEPS.map((step, i) => (
+            <li key={step.title} className="flex gap-3">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-bold text-white">
+                {i + 1}
+              </span>
+              <span>
+                <span className="block text-sm font-semibold text-slate-800">{step.title}</span>
+                <span className="mt-0.5 block text-xs leading-snug text-slate-500">{step.text}</span>
+              </span>
             </li>
           ))}
-        </ul>
+        </ol>
       </div>
 
       {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-center text-sm text-rose-700">{error}</p>}
@@ -104,53 +123,61 @@ export default function SpeedmessungOffer() {
           return (
             <div
               key={plan.key}
-              className={`relative flex flex-col rounded-2xl bg-white p-4 shadow-sm ring-1 ${
+              className={`relative flex flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ${
                 hl ? 'ring-2 ring-amber-400' : 'ring-slate-200'
               }`}
             >
-              {plan.badge && (
-                <span
-                  className={`absolute -top-2.5 left-4 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
-                    hl ? 'bg-amber-400 text-slate-900' : 'bg-emerald-100 text-emerald-800'
-                  }`}
-                >
-                  {plan.badge}
-                </span>
-              )}
-              <h4 className="text-sm font-bold text-slate-800">{plan.name}</h4>
-              <div className="mt-3 flex items-end gap-1">
-                <span className="text-3xl font-black leading-none tracking-tight text-slate-900">{eur(plan.monthly)}</span>
-                <span className="pb-0.5 text-xs text-slate-500">/ Monat</span>
-              </div>
-              <p className="mt-1.5 min-h-[2rem] text-[11px] leading-snug text-slate-500">
-                {plan.fromYear2 ? `im 1. Jahr, ab Jahr 2 ${eur(plan.fromYear2)} / Monat` : 'Hardware 0 €'} · zzgl. MwSt.
-              </p>
-              <ul className="mt-3 flex-1 space-y-1.5">
-                {plan.points.map((p) => (
-                  <li key={p} className="flex items-start gap-1.5 text-xs leading-snug text-slate-600">
-                    <Check className="mt-0.5 h-3 w-3 shrink-0 text-emerald-600" />
-                    {p}
-                  </li>
-                ))}
-              </ul>
-              {done ? (
-                <div className="mt-4 flex items-center justify-center gap-1.5 rounded-xl bg-emerald-50 px-2 py-2 text-xs font-semibold text-emerald-700">
-                  <Check className="h-3.5 w-3.5" />
-                  Angefragt
+              {plan.image && (
+                <div className="relative aspect-[16/10] w-full bg-slate-100">
+                  <img src={plan.image} alt="" loading="lazy" className="h-full w-full object-cover" />
                 </div>
-              ) : (
-                <button
-                  type="button"
-                  disabled={busy !== null}
-                  onClick={() => void request(plan.key)}
-                  className={`mt-4 inline-flex items-center justify-center gap-1.5 rounded-xl px-2 py-2 text-xs font-semibold transition disabled:opacity-60 ${
-                    hl ? 'bg-amber-400 text-slate-900 hover:bg-amber-300' : 'bg-slate-900 text-white hover:bg-slate-800'
-                  }`}
-                >
-                  <Send className="h-3.5 w-3.5" />
-                  {busy === plan.key ? 'Wird gesendet…' : 'Freischalten'}
-                </button>
               )}
+              <div className="flex flex-1 flex-col p-4">
+                {plan.badge && (
+                  <span
+                    className={`mb-2 w-fit rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                      hl ? 'bg-amber-400 text-slate-900' : 'bg-emerald-100 text-emerald-800'
+                    }`}
+                  >
+                    {plan.badge}
+                  </span>
+                )}
+                <h4 className="text-sm font-bold text-slate-800">{plan.name}</h4>
+                <div className="mt-3 flex items-end gap-1">
+                  <span className="text-3xl font-black leading-none tracking-tight text-slate-900">{eur(plan.monthly)}</span>
+                  <span className="pb-0.5 text-xs text-slate-500">/ Monat</span>
+                </div>
+                <p className="mt-1.5 min-h-[2rem] text-[11px] leading-snug text-slate-500">
+                  {plan.fromYear2 ? `im 1. Jahr, ab Jahr 2 ${eur(plan.fromYear2)} / Monat` : 'Hardware 0 €'} · zzgl. MwSt.
+                </p>
+                <p className="mt-3 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Das ist dabei</p>
+                <ul className="mt-2 flex-1 space-y-1.5">
+                  {[...INCLUDED, ...plan.extras].map((p) => (
+                    <li key={p} className="flex items-start gap-1.5 text-xs leading-snug text-slate-600">
+                      <Check className="mt-0.5 h-3 w-3 shrink-0 text-emerald-600" />
+                      {p}
+                    </li>
+                  ))}
+                </ul>
+                {done ? (
+                  <div className="mt-4 flex items-center justify-center gap-1.5 rounded-xl bg-emerald-50 px-2 py-2 text-xs font-semibold text-emerald-700">
+                    <Check className="h-3.5 w-3.5" />
+                    Angefragt
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={busy !== null}
+                    onClick={() => void request(plan.key)}
+                    className={`mt-4 inline-flex items-center justify-center gap-1.5 rounded-xl px-2 py-2 text-xs font-semibold transition disabled:opacity-60 ${
+                      hl ? 'bg-amber-400 text-slate-900 hover:bg-amber-300' : 'bg-slate-900 text-white hover:bg-slate-800'
+                    }`}
+                  >
+                    <Send className="h-3.5 w-3.5" />
+                    {busy === plan.key ? 'Wird gesendet…' : 'Freischalten'}
+                  </button>
+                )}
+              </div>
             </div>
           );
         })}
