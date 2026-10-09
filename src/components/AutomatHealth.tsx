@@ -9,6 +9,7 @@ import { benenne } from '../lib/geraeteNamen';
 import { automatFarbe } from '../lib/automatFarben';
 import { EXTERNAL_SUPABASE_URL, EXTERNAL_SUPABASE_ANON_KEY } from '../lib/supabase';
 import { getFunctionSession } from '../lib/functionAuth';
+import { useI18n, translate as t, currentLocaleTag } from '../lib/i18n';
 
 const HEALTH_URL = `${EXTERNAL_SUPABASE_URL}/functions/v1/operator-liftpic-health`;
 const ASSETS_URL = `${EXTERNAL_SUPABASE_URL}/functions/v1/operator-liftpic-assets`;
@@ -81,7 +82,7 @@ type Zahlungsuebersicht = {
 
 function euro(cent: number | null | undefined): string {
   if (cent === null || cent === undefined) return '–';
-  return (cent / 100).toLocaleString('de-DE', {
+  return (cent / 100).toLocaleString(currentLocaleTag(), {
     style: 'currency', currency: 'EUR',
   });
 }
@@ -125,40 +126,48 @@ type Machine = {
  */
 type Ton = 'ok' | 'warn' | 'bad' | 'ruhig' | 'aus' | 'unklar';
 
-const ZUSTAND: Record<Ton, {
+const ZUSTAND_DATEN: Record<Ton, {
   label: string; erklaerung: string; punkt: string; chip: string; rang: number;
 }> = {
   bad: {
-    label: 'Ausgefallen', rang: 5,
-    erklaerung: 'Arbeitet nicht mehr.',
+    label: 'health.state.bad', rang: 5,
+    erklaerung: 'health.state.bad_text',
     punkt: 'bg-rose-500', chip: 'bg-rose-100 text-rose-700',
   },
   warn: {
-    label: 'Eingeschränkt', rang: 4,
-    erklaerung: 'Läuft, meldet aber ein Problem.',
+    label: 'health.state.warn', rang: 4,
+    erklaerung: 'health.state.warn_text',
     punkt: 'bg-amber-500', chip: 'bg-amber-100 text-amber-800',
   },
   ok: {
-    label: 'Läuft', rang: 3,
-    erklaerung: 'Arbeitet normal.',
+    label: 'health.state.ok', rang: 3,
+    erklaerung: 'health.state.ok_text',
     punkt: 'bg-emerald-500', chip: 'bg-emerald-100 text-emerald-700',
   },
   ruhig: {
-    label: 'Ruhig', rang: 2,
-    erklaerung: 'Läuft, meldet aber länger nichts. Nachts normal.',
+    label: 'health.state.quiet', rang: 2,
+    erklaerung: 'health.state.quiet_text',
     punkt: 'bg-sky-400', chip: 'bg-sky-100 text-sky-700',
   },
   aus: {
-    label: 'Aus', rang: 1,
-    erklaerung: 'Nicht gestartet oder nicht angeschlossen.',
+    label: 'health.state.off', rang: 1,
+    erklaerung: 'health.state.off_text',
     punkt: 'bg-slate-300', chip: 'bg-slate-100 text-slate-500',
   },
   unklar: {
-    label: 'Unklar', rang: 0,
-    erklaerung: 'Zustand nicht ermittelbar.',
+    label: 'health.state.unknown', rang: 0,
+    erklaerung: 'health.state.unknown_text',
     punkt: 'bg-slate-300', chip: 'bg-slate-100 text-slate-500',
   },
 };
+
+// Beschriftungen werden beim Zugriff übersetzt, damit ein Sprachwechsel greift.
+const ZUSTAND = new Proxy(ZUSTAND_DATEN, {
+  get(ziel, schluessel: string) {
+    const eintrag = ziel[schluessel as Ton];
+    return eintrag ? { ...eintrag, label: t(eintrag.label), erklaerung: t(eintrag.erklaerung) } : undefined;
+  },
+}) as typeof ZUSTAND_DATEN;
 
 function ton(s: Status): Ton {
   if (s === 'ok' || s === 'operational') return 'ok';
@@ -174,11 +183,11 @@ const ORDER = ['camera', 'process', 'viewer', 'cash', 'terminal', 'printer',
   'uploader', 'network', 'config', 'mail', 'system'];
 
 function seit(min: number | null | undefined): string {
-  if (min === null || min === undefined) return 'unbekannt';
-  if (min < 1) return 'gerade eben';
-  if (min < 90) return `${min} Min.`;
+  if (min === null || min === undefined) return t('health.time.unknown');
+  if (min < 1) return t('health.time.just_now');
+  if (min < 90) return t('health.time.min', { n: min });
   const h = min / 60;
-  return h < 48 ? `${h.toFixed(1)} Std.` : `${(h / 24).toFixed(1)} Tagen`;
+  return h < 48 ? t('health.time.hours', { n: h.toFixed(1) }) : t('health.time.days', { n: (h / 24).toFixed(1) });
 }
 
 /* ------------------------------------------------------------------ Zusammenführung
@@ -298,20 +307,20 @@ function zusammenfuehren(m: Machine): Eintrag[] {
 function kurzText(e: Eintrag): string {
   const g = e.gemessen;
   if (g) {
-    if (g.status === 'off') return 'Nicht gestartet';
+    if (g.status === 'off') return t('health.short.not_started');
     if (g.since_minutes !== null && g.since_minutes !== undefined) {
-      return `Läuft seit ${seit(g.since_minutes)}`;
+      return t('health.short.running_since', { time: seit(g.since_minutes) });
     }
     return g.detail;
   }
   const p = e.protokoll;
   if (p) {
     if (p.idle_minutes !== null && p.idle_minutes > 240) {
-      return `Letzte Meldung vor ${seit(p.idle_minutes)}`;
+      return t('health.short.last_report', { time: seit(p.idle_minutes) });
     }
     return p.plain || p.detail;
   }
-  return 'Keine Angabe';
+  return t('health.short.no_info');
 }
 
 /**
@@ -330,7 +339,7 @@ function warnText(e: Eintrag): string | null {
   // Läuft, meldet aber seit Stunden nichts - das gehört an die Oberfläche,
   // sonst sieht ein grüner Punkt über einer stillen Kamera zu beruhigend aus.
   if (e.gemessen?.status === 'ok' && e.protokoll?.status === 'idle') {
-    return `Still seit ${seit(e.protokoll.idle_minutes)}`;
+    return t('health.short.quiet_since', { time: seit(e.protokoll.idle_minutes) });
   }
   return null;
 }
@@ -393,29 +402,29 @@ function phasen(m: Machine, n: LaufenderNeustart, jetzt: number): Phase[] {
 
   return [
     {
-      titel: 'Auftrag gespeichert',
+      titel: t('health.phase.saved'),
       zustand: 'fertig',
     },
     {
-      titel: 'Automat holt den Auftrag ab',
+      titel: t('health.phase.pickup'),
       zustand: abgeholt ? 'fertig' : 'laeuft',
       hinweis: abgeholt
         ? undefined
         : n.mode === 'tonight'
-          ? `Wird in der Ruhezeit ausgeführt${nacht ? ` (${nacht[0]}–${nacht[1]})` : ''}.`
+          ? t('health.phase.tonight_hint', { window: nacht ? ` (${nacht[0]}–${nacht[1]})` : '' })
           : wartezeit !== null
-            ? `Der Automat fragt alle ${wartezeit} Sekunden nach.`
-            : 'Der Automat holt den Auftrag beim nächsten Abruf.',
+            ? t('health.phase.poll_hint', { seconds: wartezeit })
+            : t('health.phase.next_poll'),
     },
     {
-      titel: 'Programm wird neu gestartet',
+      titel: t('health.phase.restarting'),
       zustand: !abgeholt ? 'offen' : laeuftFrisch ? 'fertig' : 'laeuft',
     },
     {
-      titel: `${n.name} läuft wieder`,
+      titel: t('health.phase.running_again', { name: n.name }),
       zustand: laeuftFrisch ? 'fertig' : 'offen',
       hinweis: laeuftFrisch && seit !== null && seit !== undefined
-        ? seit < 1 ? 'Gerade eben gestartet.' : `Läuft seit ${seit} Min.`
+        ? seit < 1 ? t('health.phase.just_started') : t('health.phase.running_min', { n: seit })
         : undefined,
     },
   ];
@@ -432,6 +441,7 @@ function phasen(m: Machine, n: LaufenderNeustart, jetzt: number): Phase[] {
 export default function AutomatHealth({ onVerlauf }: {
   onVerlauf?: (eintraege: HistoryEntry[], verfuegbar: boolean) => void;
 } = {}) {
+  useI18n();
   const { parkId } = usePark();
   const [machines, setMachines] = useState<Machine[]>([]);
   const [detailed, setDetailed] = useState(false);
@@ -480,7 +490,7 @@ export default function AutomatHealth({ onVerlauf }: {
     if (!parkId) { setMachines([]); setLoading(false); return; }
     setError(null);
     const h = await headers();
-    if (!h) { setError('Deine Sitzung ist abgelaufen. Bitte melde dich neu an.'); setLoading(false); return; }
+    if (!h) { setError(t('camera.session_expired_relogin')); setLoading(false); return; }
 
     try {
       const res = await fetch(`${HEALTH_URL}?park_id=${encodeURIComponent(parkId)}`, { headers: h });
@@ -513,27 +523,20 @@ export default function AutomatHealth({ onVerlauf }: {
     programm: Neustartbar | null,
   ) {
     if (mode === 'now' && programm && !confirm(
-      `${programm.name} (${programm.tech}) wird beendet und neu gestartet.\n\n`
-      + `${programm.folge}\n\n`
-      + 'Nur ausführen, wenn gerade niemand am Automaten steht.\n\nFortfahren?'
+      t('health.confirm_restart', { name: programm.name, tech: programm.tech, effect: programm.folge }),
     )) return;
 
     // Beenden ist folgenreicher als neu starten, deshalb eine deutlichere
     // Frage: es startet NICHTS nach. Keines dieser Programme steht in einem
     // Autostart - was hier ausgeht, bleibt aus, bis es jemand wieder startet.
     if (mode === 'stop' && programm && !confirm(
-      `${programm.name} (${programm.tech}) wird beendet und NICHT wieder gestartet.\n\n`
-      + `${programm.folge}\n\n`
-      + 'Es startet nichts nach. Das Programm bleibt aus, bis du es hier wieder '
-      + 'startest oder jemand es am Automaten von Hand startet.\n\n'
-      + 'Beim Verkaufsprogramm heisst das: der Automat verkauft ab sofort nichts mehr.'
-      + '\n\nWirklich beenden?'
+      t('health.confirm_stop', { name: programm.name, tech: programm.tech, effect: programm.folge }),
     )) return;
 
     setBusyMachine(`${machine.id}:${programm?.key ?? 'cancel'}`);
     setNotice(null);
     const h = await headers();
-    if (!h) { setError('Sitzung abgelaufen.'); setBusyMachine(null); return; }
+    if (!h) { setError(t('camera.session_expired')); setBusyMachine(null); return; }
 
     try {
       const res = await fetch(ASSETS_URL, {
@@ -550,13 +553,10 @@ export default function AutomatHealth({ onVerlauf }: {
       if (!res.ok) {
         setError(body?.error || `HTTP ${res.status}`);
       } else if (mode === 'cancel') {
-        setNotice('Der geplante Neustart wurde zurückgenommen.');
+        setNotice(t('health.restart_cancelled'));
         setLaufend(null);
       } else if (mode === 'stop') {
-        setNotice(
-          `${programm?.name ?? 'Das Programm'} wird beendet. Das Ergebnis steht `
-          + 'gleich unten im Verlauf – auch, wenn es sich nicht beenden ließ.',
-        );
+        setNotice(t('health.stopping', { name: programm?.name ?? t('health.the_program') }));
       } else if (programm) {
         // Ab hier führt die Phasenanzeige - sie zeigt echte Schritte statt
         // eines Satzes, der eine Sekundenzahl behauptet.
@@ -585,15 +585,12 @@ export default function AutomatHealth({ onVerlauf }: {
    * Auslöser meldet auch dann Erfolg, wenn die Kamera gar nicht reagiert hat.
    */
   async function testfotoAusloesen(machine: Machine) {
-    if (!confirm(
-      'Der Automat nimmt jetzt ein Foto auf und schickt es durch die ganze '
-      + 'Kette – bis zum Upload.\n\nFortfahren?'
-    )) return;
+    if (!confirm(t('health.confirm_test_photo'))) return;
 
     setBusyMachine(`${machine.id}:testphoto`);
     setNotice(null);
     const h = await headers();
-    if (!h) { setError('Sitzung abgelaufen.'); setBusyMachine(null); return; }
+    if (!h) { setError(t('camera.session_expired')); setBusyMachine(null); return; }
 
     try {
       const res = await fetch(ASSETS_URL, {
@@ -608,10 +605,7 @@ export default function AutomatHealth({ onVerlauf }: {
       });
       const body = await res.json().catch(() => null);
       if (!res.ok) setError(body?.error || `HTTP ${res.status}`);
-      else setNotice(
-        'Testfoto beauftragt. Das Ergebnis erscheint gleich unten im Verlauf – '
-        + 'auch wenn kein Bild zustande kam.',
-      );
+      else setNotice(t('health.test_photo_ordered'));
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Auftrag fehlgeschlagen.');
@@ -630,9 +624,8 @@ export default function AutomatHealth({ onVerlauf }: {
     if (offline.length === machines.length) {
       return {
         ton: 'bad' as Ton,
-        titel: 'Der Automat meldet sich nicht',
-        text: 'Seit einigen Minuten kommen keine Daten mehr an. Prüfe Strom und '
-          + 'Internetverbindung am Automaten.',
+        titel: t('health.verdict.offline_title'),
+        text: t('health.verdict.offline_text'),
       };
     }
     // Ein nicht hinterlegter Abholcode wiegt schwerer als jede Gerätestörung:
@@ -641,22 +634,22 @@ export default function AutomatHealth({ onVerlauf }: {
     if (codeFehlt.length) {
       return {
         ton: 'bad' as Ton,
-        titel: 'Abholcode nicht hinterlegt',
-        text: 'Fotos werden einem fremden Park zugeordnet. Details unten beim Automaten.',
+        titel: t('health.verdict.code_title'),
+        text: t('health.verdict.code_text'),
       };
     }
     if (bad.length) {
       return {
         ton: 'bad' as Ton,
-        titel: bad.length === 1 ? '1 Störung' : `${bad.length} Störungen`,
-        text: `Betroffen: ${bad.map((e) => e.name).join(', ')}.`,
+        titel: bad.length === 1 ? t('health.verdict.faults_one') : t('health.verdict.faults_many', { count: bad.length }),
+        text: t('health.verdict.affected', { names: bad.map((e) => e.name).join(', ') }),
       };
     }
     if (warn.length) {
       return {
         ton: 'warn' as Ton,
-        titel: warn.length === 1 ? '1 Warnung' : `${warn.length} Warnungen`,
-        text: `Betroffen: ${warn.map((e) => e.name).join(', ')}. Der Verkauf läuft weiter.`,
+        titel: warn.length === 1 ? t('health.verdict.warnings_one') : t('health.verdict.warnings_many', { count: warn.length }),
+        text: t('health.verdict.affected_selling', { names: warn.map((e) => e.name).join(', ') }),
       };
     }
     // Kein einziger Eintrag heisst NICHT "alles in Ordnung", sondern "wir
@@ -666,17 +659,15 @@ export default function AutomatHealth({ onVerlauf }: {
     if (eintraege.length === 0) {
       return {
         ton: 'unklar' as Ton,
-        titel: 'Keine Gerätedaten',
-        text: 'Dieser Automat meldet noch keinen Zustand seiner Programme. '
-          + 'Das ist bei einer älteren Version der Automaten-Software normal – '
-          + 'Fotos und Umsatz laufen davon unberührt weiter.',
+        titel: t('health.verdict.no_data_title'),
+        text: t('health.verdict.no_data_text'),
       };
     }
 
     return {
       ton: 'ok' as Ton,
-      titel: 'Alles in Ordnung',
-      text: 'Alle Programme und Geräte am Automaten arbeiten normal.',
+      titel: t('health.verdict.ok_title'),
+      text: t('health.verdict.ok_text'),
     };
   }, [machines]);
 
@@ -686,7 +677,7 @@ export default function AutomatHealth({ onVerlauf }: {
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
-          <h3 className="text-lg font-semibold text-slate-800">Anlagenstatus</h3>
+          <h3 className="text-lg font-semibold text-slate-800">{t('health.title')}</h3>
           <ZustandsHilfe />
         </div>
         <div className="flex shrink-0 items-center gap-2">
@@ -695,24 +686,24 @@ export default function AutomatHealth({ onVerlauf }: {
               onClick={() => setDetailed(false)}
               className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${!detailed ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
             >
-              Einfach
+              {t('health.simple')}
             </button>
             <button
               onClick={() => setDetailed(true)}
               className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${detailed ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
             >
-              Ausführlich
+              {t('health.detailed')}
             </button>
           </div>
           <button onClick={() => void load()} className="glass-button-secondary" disabled={loading}>
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Aktualisieren'}
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : t('health.refresh')}
           </button>
         </div>
       </div>
 
       {notDeployed && (
         <Hinweis ton="warn">
-          Diese Ansicht ist auf dem Server noch nicht freigeschaltet
+          {t('health.not_deployed')}
           (<code className="rounded bg-amber-100 px-1">operator-liftpic-health</code>).
         </Hinweis>
       )}
@@ -720,7 +711,7 @@ export default function AutomatHealth({ onVerlauf }: {
       {notice && <Hinweis ton="ok">{notice}</Hinweis>}
 
       {!loading && !notDeployed && machines.length === 0 && (
-        <p className="text-sm text-slate-500">Für diesen Park ist kein Automat eingerichtet.</p>
+        <p className="text-sm text-slate-500">{t('health.no_machine')}</p>
       )}
 
       {urteil && (
@@ -824,7 +815,7 @@ function Automat({ m, farbe, mehrere, detailed, busyKey, laufend, jetzt, onResta
         <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${
           m.reachable ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
         }`}>
-          {m.reachable ? 'verbunden' : `keine Daten seit ${seit(m.offline_minutes)}`}
+          {m.reachable ? t('health.connected') : t('health.no_data_since', { time: seit(m.offline_minutes) })}
         </span>
         {(m.photos_taken_today !== null || typeof m.paper_remaining === 'number') && (
           <div className="ml-auto flex gap-2">
@@ -834,7 +825,7 @@ function Automat({ m, farbe, mehrere, detailed, busyKey, laufend, jetzt, onResta
               const knapp = m.paper_remaining <= warn;
               return (
                 <div className={`rounded-lg px-3 py-1.5 text-right ${knapp ? 'bg-amber-100/80' : 'bg-white/60'}`}>
-                  <p className="text-[11px] text-slate-400">Papier übrig</p>
+                  <p className="text-[11px] text-slate-400">{t('health.paper_left')}</p>
                   <p className={`text-sm font-semibold tabular-nums ${knapp ? 'text-amber-800' : 'text-slate-800'}`}>
                     {m.paper_remaining}
                     {m.paper_capacity ? (
@@ -846,7 +837,7 @@ function Automat({ m, farbe, mehrere, detailed, busyKey, laufend, jetzt, onResta
             })()}
             {m.photos_taken_today !== null && (
               <div className="rounded-lg bg-white/60 px-3 py-1.5 text-right">
-                <p className="text-[11px] text-slate-400">Fotos heute</p>
+                <p className="text-[11px] text-slate-400">{t('health.photos_today')}</p>
                 <p className="text-sm font-semibold tabular-nums text-slate-800">{m.photos_taken_today}</p>
               </div>
             )}
@@ -855,7 +846,7 @@ function Automat({ m, farbe, mehrere, detailed, busyKey, laufend, jetzt, onResta
                 Meldet der Automat die Verkäufe nicht, bleibt die Angabe weg. */}
             {m.photos_sold_today !== null && m.photos_sold_today !== undefined && (
               <div className="rounded-lg bg-white/60 px-3 py-1.5 text-right">
-                <p className="text-[11px] text-slate-400">Verkauft</p>
+                <p className="text-[11px] text-slate-400">{t('health.sold')}</p>
                 <p className="text-sm font-semibold tabular-nums text-slate-800">{m.photos_sold_today}</p>
               </div>
             )}
@@ -871,16 +862,14 @@ function Automat({ m, farbe, mehrere, detailed, busyKey, laufend, jetzt, onResta
       {m.customer_code_registered === false && (
         <div className="mb-3 rounded-xl border border-rose-300 bg-rose-50/90 p-3">
           <p className="text-sm font-semibold text-rose-800">
-            Abholcode {m.customer_code} ist für diesen Park nicht hinterlegt
+            {t('health.code_missing_title', { code: m.customer_code ?? '' })}
           </p>
           <p className="mt-1 text-xs text-rose-700">
-            Fotos dieses Automaten werden dadurch einem fremden Park zugeordnet –
-            mitsamt Umsatz. Bitte {m.customer_code} für diesen Park eintragen
-            lassen.
+            {t('health.code_missing_text', { code: m.customer_code ?? '' })}
             {m.park_customer_codes?.length ? (
-              <> Hinterlegt ist derzeit: {m.park_customer_codes.join(', ')}.</>
+              <> {t('health.code_registered_now', { codes: m.park_customer_codes.join(', ') })}</>
             ) : (
-              <> Für diesen Park ist bisher gar keine Nummer hinterlegt.</>
+              <> {t('health.code_none')}</>
             )}
           </p>
         </div>
@@ -893,23 +882,16 @@ function Automat({ m, farbe, mehrere, detailed, busyKey, laufend, jetzt, onResta
           Dann bleibt hier bewusst eine Erklärung statt einer leeren Fläche. */}
       {eintraege.length === 0 && (
         <p className="rounded-xl bg-white/40 px-3 py-3 text-sm text-slate-500">
-          Dieser Automat meldet noch keine einzelnen Programme und Geräte, und
-          deshalb auch keine Neustart-Knöpfe. Das ist bei einem älteren Stand
-          der Automaten-Software normal
-          {m.agent_version && <> (hier Version {m.agent_version})</>} &ndash;
-          beides erscheint von selbst, sobald dort die neue Version läuft.
-          Fotos, Verkäufe und Umsatz laufen davon unberührt weiter.
+          {t('health.old_agent', { version: m.agent_version ? t('health.version_suffix', { version: m.agent_version }) : '' })}
         </p>
       )}
 
       {testfotoOhneKachel && (
         <div className="mb-2 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white/40 px-3 py-3">
           <div className="min-w-0">
-            <p className="text-sm font-medium text-slate-700">Testfoto auslösen</p>
+            <p className="text-sm font-medium text-slate-700">{t('health.trigger_test')}</p>
             <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
-              Die Kamera meldet seit über zwei Tagen nichts &ndash; das heißt nicht,
-              dass sie defekt ist, sondern nur, dass niemand gefahren ist. Ein
-              Testfoto sagt dir, ob sie antwortet.
+              {t('health.test_quiet_note')}
             </p>
           </div>
           <button
@@ -919,10 +901,10 @@ function Automat({ m, farbe, mehrere, detailed, busyKey, laufend, jetzt, onResta
             className="shrink-0 rounded-xl bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50"
           >
             {busyKey === `${m.id}:testphoto`
-              ? 'wird ausgelöst…'
+              ? t('health.triggering')
               : m.pending_restart?.target === 'testphoto'
-                ? 'wartet auf den Automaten…'
-                : 'Testfoto auslösen'}
+                ? t('health.waiting_kiosk')
+                : t('health.trigger_test')}
           </button>
         </div>
       )}
@@ -982,11 +964,11 @@ function Automat({ m, farbe, mehrere, detailed, busyKey, laufend, jetzt, onResta
             {/* „0 Quellen überwacht" klingt wie ein Ausfall, ist aber eine
                 Wissenslücke, wenn der Automat das Feld gar nicht schickt. */}
             {typeof m.monitored_sources === 'number'
-              ? `${m.monitored_sources} Quellen überwacht`
-              : 'Anzahl überwachter Quellen unbekannt'}
-            {m.agent_version && <> · Version {m.agent_version}</>}
-            {(m.pending_health_events || 0) > 0 && <> · {m.pending_health_events} Meldung(en) warten</>}
-            {m.last_restart_at && <> · zuletzt neu gestartet {new Date(m.last_restart_at).toLocaleString()}</>}
+              ? t('health.sources_monitored', { count: m.monitored_sources })
+              : t('health.sources_unknown')}
+            {m.agent_version && <> · {t('health.version', { version: m.agent_version })}</>}
+            {(m.pending_health_events || 0) > 0 && <> · {t('health.events_waiting', { count: m.pending_health_events ?? 0 })}</>}
+            {m.last_restart_at && <> · {t('health.last_restart', { time: new Date(m.last_restart_at).toLocaleString(currentLocaleTag()) })}</>}
           </p>
         )}
       </div>
@@ -1050,7 +1032,7 @@ function Zeile({
         {wartend && (
           <span className="flex shrink-0 items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">
             <RotateCw className="h-3 w-3 animate-spin" />
-            {pendingMode === 'tonight' ? 'heute Nacht' : 'startet neu'}
+            {pendingMode === 'tonight' ? t('health.tonight') : t('health.restarting_chip')}
           </span>
         )}
         <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${z.chip}`}>
@@ -1071,11 +1053,11 @@ function Zeile({
             <Zahlungen uebersicht={geld.zahlungen} tage={geld.tage} />
           )}
           {e.gemessen && (
-            <Befund titel="Gemessen" text={e.gemessen.detail} />
+            <Befund titel={t('health.measured')} text={e.gemessen.detail} />
           )}
           {e.protokoll && (
             <Befund
-              titel={`Protokoll · vor ${seit(e.protokoll.idle_minutes)}`}
+              titel={t('health.log_ago', { time: seit(e.protokoll.idle_minutes) })}
               text={e.protokoll.detail}
               datei={e.protokoll.source_file?.split('\\').pop()}
             />
@@ -1094,13 +1076,12 @@ function Zeile({
                 {testfoto.busy
                   ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   : <Camera className="h-3.5 w-3.5" />}
-                Testfoto auslösen
+                {t('health.trigger_test')}
               </button>
               <p className="mt-1 text-slate-400">
                 {testfoto.wartend
-                  ? 'Auftrag läuft – das Ergebnis steht gleich im Verlauf.'
-                  : 'Nimmt ein Bild auf und schickt es durch die ganze Kette. '
-                    + 'Erfolg zählt erst, wenn wirklich eine Bilddatei entstanden ist.'}
+                  ? t('health.test_running')
+                  : t('health.test_note')}
               </p>
             </div>
           )}
@@ -1109,8 +1090,7 @@ function Zeile({
             <div className="border-t border-white/60 pt-2">
               {gesperrt && !wartend ? (
                 <p className="text-slate-400">
-                  Ein anderer Neustart ist bereits vorgemerkt. Der Automat führt
-                  einen nach dem anderen aus.
+                  {t('health.other_restart_pending')}
                 </p>
               ) : (
                 <>
@@ -1128,7 +1108,7 @@ function Zeile({
                       {busy
                         ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
                         : <RotateCw className="h-3.5 w-3.5" />}
-                      Jetzt neu starten
+                      {t('health.restart_now')}
                     </button>
                     <button
                       onClick={() => onRestart('tonight')}
@@ -1136,7 +1116,7 @@ function Zeile({
                       className="glass-button-secondary px-3 py-1.5 text-xs disabled:opacity-40"
                     >
                       <Moon className="h-3.5 w-3.5" />
-                      Heute Nacht
+                      {t('health.tonight_button')}
                     </button>
                     {/* Beenden ohne Neustart. Steht bewusst rechts und in
                         gedeckter Farbe: es ist die seltenere Handlung, und
@@ -1148,7 +1128,7 @@ function Zeile({
                       className="glass-button-secondary px-3 py-1.5 text-xs text-rose-900 disabled:opacity-40"
                     >
                       <Square className="h-3.5 w-3.5" />
-                      Beenden
+                      {t('health.stop')}
                     </button>
                     {wartend && (
                       <button
@@ -1156,7 +1136,7 @@ function Zeile({
                         disabled={busy}
                         className="glass-button-secondary px-3 py-1.5 text-xs text-amber-900 disabled:opacity-40"
                       >
-                        Zurücknehmen
+                        {t('health.cancel')}
                       </button>
                     )}
                   </div>
@@ -1223,7 +1203,7 @@ function Muenzbestand({ bestand, warnungen }: {
     <div className="rounded-lg bg-white/60 px-2.5 py-2">
       <div className="mb-1.5 flex items-baseline justify-between gap-2">
         <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-          Wechselgeld im Gerät
+          {t('health.change_in_machine')}
         </span>
         <span className={`text-sm font-semibold tabular-nums ${
           bestand.verlaesslich === false ? 'text-slate-400 line-through' : 'text-slate-800'
@@ -1237,7 +1217,7 @@ function Muenzbestand({ bestand, warnungen }: {
           der Grund genannt, statt ihn als Tatsache zu zeigen. */}
       {bestand.verlaesslich === false && bestand.hinweis && (
         <p className="mb-1.5 rounded-md bg-amber-50 px-2 py-1.5 text-[11px] leading-snug text-amber-900">
-          <b className="font-semibold">Betrag nicht gesichert:</b> {bestand.hinweis}
+          <b className="font-semibold">{t('health.amount_unreliable')}</b> {bestand.hinweis}
         </p>
       )}
 
@@ -1258,7 +1238,7 @@ function Muenzbestand({ bestand, warnungen }: {
                 />
               </span>
               <span className="w-14 shrink-0 tabular-nums text-slate-500">
-                {sorte.anzahl}&nbsp;St.
+                {t('health.pieces', { count: sorte.anzahl })}
               </span>
             </div>
           );
@@ -1273,7 +1253,7 @@ function Muenzbestand({ bestand, warnungen }: {
               className={w.stufe === 'leer' ? 'text-rose-700' : 'text-amber-800'}
             >
               {w.text}
-              {w.stufe === 'leer' && ' – Gäste bekommen zu wenig zurück.'}
+              {w.stufe === 'leer' && t('health.too_little_change')}
             </li>
           ))}
         </ul>
@@ -1281,8 +1261,7 @@ function Muenzbestand({ bestand, warnungen }: {
 
       {bestand.gemessen_am && (
         <p className="mt-1 text-[11px] text-slate-400">
-          Stand {new Date(bestand.gemessen_am).toLocaleString('de-DE')} &ndash; der
-          Automat schreibt ihn etwa zweimal täglich.
+          {t('health.coin_as_of', { time: new Date(bestand.gemessen_am).toLocaleString(currentLocaleTag()) })}
         </p>
       )}
     </div>
@@ -1304,11 +1283,11 @@ function Zahlungen({ uebersicht, tage }: {
   return (
     <div className="rounded-lg bg-white/60 px-2.5 py-2">
       <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-        Zahlungen{tage ? ` · letzte ${tage} Tage` : ''}
+        {t('health.payments')}{tage ? t('health.last_days', { days: tage }) : ''}
       </p>
 
       {gesamt === 0 ? (
-        <p className="text-slate-500">Keine Zahlungen in diesem Zeitraum.</p>
+        <p className="text-slate-500">{t('health.no_payments')}</p>
       ) : (
         <>
           {anteileBekannt && (
@@ -1320,7 +1299,7 @@ function Zahlungen({ uebersicht, tage }: {
           <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-0.5">
             <span className="flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-emerald-500" />
-              Bar <b className="tabular-nums">{uebersicht.bar_anzahl}</b>
+              {t('pay.cash')} <b className="tabular-nums">{uebersicht.bar_anzahl}</b>
               <span className="text-slate-400">
                 ({anteileBekannt && `${Math.round(barAnteil * 100)} %, `}
                 {euro(uebersicht.bar_cent)})
@@ -1328,7 +1307,7 @@ function Zahlungen({ uebersicht, tage }: {
             </span>
             <span className="flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-sky-500" />
-              Karte <b className="tabular-nums">{uebersicht.karte_anzahl}</b>
+              {t('pay.card')} <b className="tabular-nums">{uebersicht.karte_anzahl}</b>
               <span className="text-slate-400">
                 ({anteileBekannt && `${Math.round(karteAnteil * 100)} %, `}
                 {euro(uebersicht.karte_cent)})
@@ -1341,12 +1320,12 @@ function Zahlungen({ uebersicht, tage }: {
       {uebersicht.auffaellig.length > 0 && (
         <div className="mt-2 rounded-lg bg-rose-50 px-2 py-1.5">
           <p className="font-semibold text-rose-800">
-            {uebersicht.auffaellig.length} Verkäufe mit falschem Wechselgeld
+            {t('health.wrong_change', { count: uebersicht.auffaellig.length })}
           </p>
           <ul className="mt-0.5 space-y-0.5 text-rose-700">
             {uebersicht.auffaellig.slice(0, 4).map((b, i) => (
               <li key={i} className="tabular-nums">
-                {new Date(b.zeit).toLocaleString('de-DE')}:{' '}
+                {new Date(b.zeit).toLocaleString(currentLocaleTag())}:{' '}
                 {b.abweichung_cent > 0 ? '+' : ''}{euro(b.abweichung_cent)}
                 <span className="text-rose-600"> ({b.hinweis})</span>
               </li>
@@ -1386,7 +1365,7 @@ function ZustandsHilfe() {
     <span className="group relative inline-flex">
       <button
         type="button"
-        aria-label="Was bedeuten die Zustände?"
+        aria-label={t('health.states_help')}
         className="flex h-5 w-5 items-center justify-center rounded-full bg-white/60 text-slate-500 transition hover:bg-white hover:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
       >
         <HelpCircle className="h-3.5 w-3.5" />
@@ -1396,14 +1375,14 @@ function ZustandsHilfe() {
         className="pointer-events-none absolute left-0 top-7 z-20 w-72 origin-top-left scale-95 rounded-xl border border-white/60 bg-white/95 p-3 opacity-0 shadow-lg backdrop-blur transition group-focus-within:scale-100 group-focus-within:opacity-100 group-hover:scale-100 group-hover:opacity-100"
       >
         <span className="mb-1.5 block text-xs font-semibold text-slate-700">
-          Was die Zustände bedeuten
+          {t('health.states_title')}
         </span>
-        {(['ok', 'ruhig', 'warn', 'bad', 'aus', 'unklar'] as Ton[]).map((t) => (
-          <span key={t} className="mt-1 flex items-start gap-2">
-            <span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${ZUSTAND[t].punkt}`} />
+        {(['ok', 'ruhig', 'warn', 'bad', 'aus', 'unklar'] as Ton[]).map((zustand) => (
+          <span key={zustand} className="mt-1 flex items-start gap-2">
+            <span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${ZUSTAND[zustand].punkt}`} />
             <span className="text-xs leading-snug">
-              <span className="font-semibold text-slate-800">{ZUSTAND[t].label}</span>
-              <span className="text-slate-500"> &ndash; {ZUSTAND[t].erklaerung}</span>
+              <span className="font-semibold text-slate-800">{ZUSTAND[zustand].label}</span>
+              <span className="text-slate-500"> &ndash; {ZUSTAND[zustand].erklaerung}</span>
             </span>
           </span>
         ))}
