@@ -266,7 +266,7 @@ export default function ConfigurationProduct() {
   // bzw. Fahrtfoto mit Geschwindigkeit).
   const bilder = [
     ...eintragBilder(item),
-    ...(istSpeed ? [speedPaket === 'display' ? '/speedmessung/display.jpg' : '/speedmessung/langzeit.jpg'] : []),
+    ...(istSpeed ? [speedPaket === 'display' ? '/speedmessung/display.jpg?v=2' : '/speedmessung/langzeit.jpg?v=2'] : []),
   ];
   const aktuell = bilder[index] ?? bilder[0];
   const punkte = beschreibungPunkte(equipmentDescription(item.beschreibung, language));

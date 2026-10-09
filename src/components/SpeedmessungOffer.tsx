@@ -41,7 +41,7 @@ const PLANS: {
     name: 'speed.offer.plan_basic',
     monthly: 149,
     months: 12,
-    image: '/speedmessung/langzeit.jpg',
+    image: '/speedmessung/langzeit.jpg?v=2',
     extras: ['speed.offer.term_12'],
   },
   {
@@ -52,7 +52,7 @@ const PLANS: {
     fromYear2: 149,
     highlight: true,
     badge: 'speed.offer.popular',
-    image: '/speedmessung/display.jpg',
+    image: '/speedmessung/display.jpg?v=2',
     extras: [
       'speed.offer.display_large', 'speed.offer.display_free',
       'speed.offer.display_year2', 'speed.offer.term_12',
@@ -64,7 +64,7 @@ const PLANS: {
     monthly: 99,
     months: 48,
     badge: 'speed.offer.value',
-    image: '/speedmessung/langzeit.jpg',
+    image: '/speedmessung/langzeit.jpg?v=2',
     extras: ['speed.offer.long_price', 'speed.offer.long_fixed', 'speed.offer.term_48'],
   },
 ];
