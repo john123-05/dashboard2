@@ -164,6 +164,17 @@ export default function WelcomeTour() {
     markAccountSeenTour(user.id);
   }, [steps.length, user]);
 
+  // „Rundgang starten“ aus dem Hilfe-Center / Profilmenü (TopBar).
+  useEffect(() => {
+    function start() {
+      setVisible(true);
+      setMode('tour');
+      setIndex(0);
+    }
+    window.addEventListener('lp:start-tour', start);
+    return () => window.removeEventListener('lp:start-tour', start);
+  }, []);
+
   useEffect(() => {
     if (!visible || mode !== 'prompt') return;
     if (location.pathname !== '/') {

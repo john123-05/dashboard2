@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Save, Loader2, Building2, MapPin, Mountain, Package, Bell, Smartphone, AlertTriangle, LifeBuoy, CalendarDays, Clock3, Plus, Trash2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { getOptionalSourceWarning, invokeEdgeFunction, isEdgeSourceUnavailable } from '../lib/edgeFunctions';
@@ -101,6 +102,24 @@ function normalizeNotificationErrorMessage(message: string | null): string | nul
 }
 
 export default function Settings() {
+  // Sprungmarke aus der Leiste oben rechts (Benachrichtigungen -> Zahnrad):
+  // die Seite lädt ihre Karten nachträglich, daher kurz warten und scrollen.
+  const { hash } = useLocation();
+  useEffect(() => {
+    if (!hash) return;
+    const id = hash.slice(1);
+    let done = false;
+    const timers = [300, 900, 1800].map((ms) =>
+      window.setTimeout(() => {
+        const el = document.getElementById(id);
+        if (done || !el) return;
+        done = true;
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, ms),
+    );
+    return () => timers.forEach((x) => window.clearTimeout(x));
+  }, [hash]);
+
   const { profile, currentOrg, memberships, refreshProfile } = useAuth();
   const { parkId, parkName, refreshKioskState } = usePark();
   const { language, setLanguage, t } = useI18n();
@@ -902,7 +921,7 @@ export default function Settings() {
         </GlassCard>
 
         <GlassCard className="self-start p-5">
-          <div className="flex items-start justify-between gap-4">
+          <div id="benachrichtigungen" className="flex scroll-mt-24 items-start justify-between gap-4">
             <div>
               <h3 className="text-base font-semibold text-slate-800">{t('settings.notifications.title')}</h3>
             </div>

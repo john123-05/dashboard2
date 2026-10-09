@@ -3,6 +3,7 @@ import { Outlet, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import Sidebar from './Sidebar';
 import WelcomeTour from '../WelcomeTour';
+import TopBar from './TopBar';
 import { Loader2, Mountain, ArrowRight, Menu } from 'lucide-react';
 import { useI18n } from '../../lib/i18n';
 import { usePark } from '../../contexts/ParkContext';
@@ -123,11 +124,12 @@ export default function DashboardLayout() {
         className="operator-main flex-1 min-w-0 transition-all duration-300 overflow-x-clip"
         style={{ paddingLeft: collapsed ? 72 : 256 }}
       >
-        <div className="min-h-screen w-full min-w-0 p-4 sm:p-6 lg:p-8">
+        <div className="min-h-screen w-full min-w-0 p-4 sm:p-6 lg:p-8 min-[901px]:pt-16 lg:pt-16">
           {/* Remount the page on a park switch so nothing from the previous park lingers. */}
           <Outlet key={parkId ?? 'none'} />
         </div>
       </main>
+      <TopBar />
       <WelcomeTour />
     </div>
   );

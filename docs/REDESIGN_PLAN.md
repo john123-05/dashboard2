@@ -192,3 +192,8 @@ Jede Phase: nur Gestaltung, keine Funktionsänderung. Prüfen mit `npm run typec
   gelb), auf der Linie davor läuft ein Lichtstreif (`lp-flow-line` in `index.css`), danach 4 Takte Pause.
   Erste rote Station: Lauf stoppt davor, die Station pulsiert rot (`lp-red-glow`). Bei „weniger Bewegung“
   im System keine Animation.
+- 10.10.2026: Leiste oben rechts (`src/components/layout/TopBar.tsx`, nur ab 901 px): Hilfe-Center
+  (schwebend, verschiebbar, minimierbar, Suche, Artikel je Seite, Rundgang, Support-Kontakt),
+  Einstellungen, Benachrichtigungen (Schublade von rechts: Ungelesen/Alle/Papierkorb; Quellen und
+  Speicherung in `src/lib/notificationFeed.ts`), Profilmenü. Seiten haben oben 64 px Platz dafür.
+  Plan und Ideen für Inhalte: `docs/HILFE_CENTER.md`. Rundgang lässt sich per Event `lp:start-tour` starten.
