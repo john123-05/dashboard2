@@ -1344,7 +1344,6 @@ function LeadsContacts({
                           : 'Freischalt-Modus wird geladen…'}
                   </p>
                 </div>
-                <p className="mt-1 text-sm text-slate-500">So sieht die Freischaltseite gerade für Gäste aus.</p>
               </div>
               {claimSiteBaseFor(parkId) && (
                 <a
