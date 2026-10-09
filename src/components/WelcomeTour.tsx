@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Sparkles, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useI18n } from '../lib/i18n';
 import { hasAccountSeenTour, isTourDisabled, markAccountSeenTour, setTourDisabled } from '../lib/dashboardTourSettings';
 
 type TourStep = {
@@ -21,74 +22,74 @@ const ownerSteps: TourStep[] = [
   {
     id: 'overview',
     route: '/',
-    title: 'Übersicht',
-    benefit: 'Hier bekommst du den schnellsten Gesamtüberblick über deinen Park, ohne dich erst durch einzelne Bereiche zu klicken.',
-    actions: 'Du siehst die wichtigsten Tages- und Monatszahlen, die Umsatzkurve und aktuelle operative Hinweise auf einen Blick.',
-    kpis: 'Wichtig sind hier vor allem Umsatz heute, verkaufte Fotos, Fotopapier, Monatswerte und aktuelle Alerts.',
+    title: 'tour.overview.title',
+    benefit: 'tour.overview.benefit',
+    actions: 'tour.overview.actions',
+    kpis: 'tour.overview.kpis',
   },
   {
     id: 'revenue',
     route: '/revenue',
-    title: 'Umsatz',
-    benefit: 'Diese Seite hilft dir, Einnahmen genauer zu verstehen und Trends schneller zu erkennen.',
-    actions: 'Du kannst Tagesverläufe, Monatsentwicklung und Verkaufsleistung nach Zeitraum oder Datenbasis prüfen.',
-    kpis: 'Hier zählen Umsatzsummen, verkaufte Fotos, Conversion und der Verlauf der Umsatzlinie.',
+    title: 'tour.revenue.title',
+    benefit: 'tour.revenue.benefit',
+    actions: 'tour.revenue.actions',
+    kpis: 'tour.revenue.kpis',
   },
   {
     id: 'purchases',
     route: '/purchases',
-    title: 'Käufe',
-    benefit: 'Hier siehst du jede einzelne Transaktion und kannst schnell nachvollziehen, was am Automaten verkauft wurde.',
-    actions: 'Du kannst Käufe filtern, durchsuchen, exportieren und einzelne Vorgänge nach Datum, Betrag oder Quelle prüfen.',
-    kpis: 'Wichtig sind Kaufzeitpunkt, Zahlungsart, Status, Quelle und der jeweilige Einzelumsatz.',
+    title: 'tour.purchases.title',
+    benefit: 'tour.purchases.benefit',
+    actions: 'tour.purchases.actions',
+    kpis: 'tour.purchases.kpis',
   },
   {
     id: 'photos',
     route: '/photos',
-    title: 'Fotos',
-    benefit: 'Diese Seite ist dein operativer Blick auf die erzeugten Bilder und zeigt dir sofort, ob der Fotozufluss passt.',
-    actions: 'Du kannst nach Bildnummer, Datum oder Quelle suchen, Vorschauen öffnen und Volumen nach Tagen vergleichen.',
-    kpis: 'Wichtig sind hier Fotoanzahl, aktuelle Uploads, Verteilung nach Tagen und die sichtbare Vorschau einzelner Bilder.',
+    title: 'tour.photos.title',
+    benefit: 'tour.photos.benefit',
+    actions: 'tour.photos.actions',
+    kpis: 'tour.photos.kpis',
   },
   {
     id: 'leads',
     route: '/leads',
-    title: 'CRM',
-    benefit: 'Hier erkennst du, welche Gäste ihre Bilder digital freischalten oder nach dem Besuch noch mit dem Bild interagieren.',
-    actions: 'Du kannst Kontakte filtern, nach Land segmentieren, einzelne Einträge löschen und die Weltkarte sowie Einlösezeiten auswerten.',
-    kpis: 'Wichtig sind Gesamt-Leads, Marketing-Opt-ins, Länder, Zeit zwischen Kauf und Einlösung und die detaillierte Standortkarte.',
+    title: 'tour.leads.title',
+    benefit: 'tour.leads.benefit',
+    actions: 'tour.leads.actions',
+    kpis: 'tour.leads.kpis',
   },
   {
     id: 'personalization',
     route: '/personalization',
-    title: 'Personalisierung',
-    benefit: 'Hier gestaltest du Overlays und Kampagnen, damit Fotos markengerecht und passend zum Park ausgespielt werden.',
-    actions: 'Du kannst Overlays hochladen, im Builder anpassen, Kampagnen anlegen und Ebenen mit Vorschau kombinieren.',
-    kpis: 'Wichtig sind hier eher die aktiven Overlays, die Kampagnenlogik und die direkte Vorschau auf dem neuesten Bild.',
+    title: 'tour.personalization.title',
+    benefit: 'tour.personalization.benefit',
+    actions: 'tour.personalization.actions',
+    kpis: 'tour.personalization.kpis',
   },
   {
     id: 'support',
     route: '/tickets',
-    title: 'Support',
-    benefit: 'Hier laufen technische oder organisatorische Rückfragen zusammen, damit du Probleme schneller lösen kannst.',
-    actions: 'Du kannst Tickets lesen, beantworten, archivieren und neue Fälle anlegen, wenn etwas im Betrieb auffällt.',
-    kpis: 'Wichtig sind offene Tickets, Prioritäten, Status und die letzten Antworten unseres Support-Teams.',
+    title: 'tour.support.title',
+    benefit: 'tour.support.benefit',
+    actions: 'tour.support.actions',
+    kpis: 'tour.support.kpis',
   },
   {
     id: 'health',
     route: '/health',
-    title: 'Systemzustand',
-    benefit: 'Diese Seite zeigt dir, ob Kameras, Uploads und Maschinen stabil laufen oder Aufmerksamkeit brauchen.',
-    actions: 'Du kannst Maschinenstatus, letzte Signale, Fehlerbilder und Ausfälle prüfen und direkt Auffälligkeiten erkennen.',
-    kpis: 'Wichtig sind Online-Status, letzte Aktivität, Warnungen, Upload-Signale und technische Störungen.',
+    title: 'tour.health.title',
+    benefit: 'tour.health.benefit',
+    actions: 'tour.health.actions',
+    kpis: 'tour.health.kpis',
   },
   {
     id: 'settings',
     route: '/settings',
-    title: 'Einstellungen',
-    benefit: 'Hier steuerst du die wichtigsten Grundparameter deines Dashboards und deines Parkbetriebs.',
-    actions: 'Du kannst Sprache, Bildpreis, Benachrichtigungen, Öffnungszeiten, Saisonzeiten und Organisationsdaten verwalten.',
-    kpis: 'Besonders wichtig sind hier Bildpreis, Push-Benachrichtigungen sowie Öffnungs- und Saisonzeiten als Basis für Auswertungen.',
+    title: 'tour.settings.title',
+    benefit: 'tour.settings.benefit',
+    actions: 'tour.settings.actions',
+    kpis: 'tour.settings.kpis',
   },
 ];
 
@@ -106,6 +107,7 @@ function PromptCloseButton({
   remainingMs: number;
   onClose: () => void;
 }) {
+  const { t } = useI18n();
   const radius = 18;
   const circumference = 2 * Math.PI * radius;
   const progress = Math.max(0, Math.min(1, remainingMs / PROMPT_DURATION_MS));
@@ -116,7 +118,7 @@ function PromptCloseButton({
       type="button"
       onClick={onClose}
       className="relative flex h-11 w-11 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
-      aria-label="Walkthrough schließen"
+      aria-label={t('tour.close_label')}
     >
       <svg className="absolute inset-0 h-11 w-11 -rotate-90" viewBox="0 0 44 44" aria-hidden="true">
         <circle cx="22" cy="22" r={radius} fill="none" stroke="rgba(148,163,184,0.2)" strokeWidth="2.5" />
@@ -138,6 +140,7 @@ function PromptCloseButton({
 }
 
 export default function WelcomeTour() {
+  const { t } = useI18n();
   const { user, isOwner } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -207,16 +210,15 @@ export default function WelcomeTour() {
                 <Sparkles className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-brand-500">Willkommen</p>
-                <h3 className="mt-1 text-xl font-bold text-slate-800">Kurz durch dein Dashboard?</h3>
+                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-brand-500">{t('tour.welcome')}</p>
+                <h3 className="mt-1 text-xl font-bold text-slate-800">{t('tour.prompt_title')}</h3>
               </div>
             </div>
             <PromptCloseButton remainingMs={remainingMs} onClose={closeTour} />
           </div>
 
           <p className="mt-5 text-sm leading-7 text-slate-600">
-            Wenn du magst, führe ich dich in weniger als einer Minute durch die wichtigsten Seiten und zeige dir
-            kurz, was du dort machen kannst und welche Kennzahlen wichtig sind.
+            {t('tour.prompt_text')}
           </p>
 
           <div className="mt-6 flex items-center justify-between gap-3">
@@ -226,7 +228,7 @@ export default function WelcomeTour() {
               className="inline-flex items-center gap-2 rounded-full px-1 py-2 text-sm font-medium text-slate-500 transition hover:text-slate-700"
             >
               <X className="h-4 w-4" />
-              Schließen
+              {t('tour.close')}
             </button>
 
             <button
@@ -237,7 +239,7 @@ export default function WelcomeTour() {
               }}
               className="glass-button-primary text-sm"
             >
-              Ja, kurz zeigen
+              {t('tour.yes_show')}
             </button>
           </div>
         </div>
@@ -251,15 +253,15 @@ export default function WelcomeTour() {
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-brand-500">
-              Schritt {index + 1} von {steps.length}
+              {t('tour.step_of', { index: index + 1, total: steps.length })}
             </p>
-            <h3 className="mt-2 text-xl font-bold text-slate-800">{step.title}</h3>
+            <h3 className="mt-2 text-xl font-bold text-slate-800">{t(step.title)}</h3>
           </div>
           <button
             type="button"
             onClick={closeTour}
             className="rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
-            aria-label="Walkthrough schließen"
+            aria-label={t('tour.close_label')}
           >
             <X className="h-4 w-4" />
           </button>
@@ -267,16 +269,16 @@ export default function WelcomeTour() {
 
         <div className="space-y-4 text-sm leading-7 text-slate-600">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Nutzen</p>
-            <p className="mt-1">{step.benefit}</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">{t('tour.benefit_label')}</p>
+            <p className="mt-1">{t(step.benefit)}</p>
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Was du hier machst</p>
-            <p className="mt-1">{step.actions}</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">{t('tour.actions_label')}</p>
+            <p className="mt-1">{t(step.actions)}</p>
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Wichtige KPIs</p>
-            <p className="mt-1">{step.kpis}</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">{t('tour.kpis_label')}</p>
+            <p className="mt-1">{t(step.kpis)}</p>
           </div>
         </div>
 
@@ -288,7 +290,7 @@ export default function WelcomeTour() {
               className="glass-button-secondary flex items-center gap-1.5 text-sm"
             >
               <ArrowLeft className="h-4 w-4" />
-              Zurück
+              {t('tour.back')}
             </button>
           ) : (
             <button
@@ -299,13 +301,13 @@ export default function WelcomeTour() {
               }}
               className="text-sm font-medium text-slate-500 transition hover:text-slate-700"
             >
-              Nie mehr automatisch zeigen
+              {t('tour.never_again')}
             </button>
           )}
 
           {isLast ? (
             <button type="button" onClick={closeTour} className="glass-button-primary text-sm">
-              Fertig
+              {t('tour.done')}
             </button>
           ) : (
             <button
@@ -313,7 +315,7 @@ export default function WelcomeTour() {
               onClick={() => setIndex((current) => Math.min(steps.length - 1, current + 1))}
               className="glass-button-primary flex items-center gap-1.5 text-sm"
             >
-              Weiter
+              {t('tour.next')}
               <ArrowRight className="h-4 w-4" />
             </button>
           )}
