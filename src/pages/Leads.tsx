@@ -1189,6 +1189,41 @@ function LeadsContacts({
     resolvedCountryStats.find((country) => country.countryCode === selectedCountry) || topCountries[0] || null;
   const totalMappedLeads = resolvedCountryStats.reduce((sum, country) => sum + country.count, 0);
 
+  const sourceLabel = (source: unknown): string =>
+    source === 'social_media'
+      ? 'Social Media'
+      : source === 'photo_claim'
+        ? 'Foto-Freischaltung'
+        : typeof source === 'string' && source
+          ? source
+          : 'Sonstige';
+  const tally = (items: string[]) =>
+    Array.from(
+      items.reduce((map, item) => map.set(item, (map.get(item) || 0) + 1), new Map<string, number>()).entries(),
+    )
+      .map(([label, count]) => ({ label, count }))
+      .sort((a, b) => b.count - a.count);
+  const leadsOfSelectedCountry = selectedCountryStat
+    ? leads.filter(
+        (lead) =>
+          typeof lead.country_code === 'string' &&
+          lead.country_code.trim().toUpperCase() === selectedCountryStat.countryCode,
+      )
+    : [];
+  const selectedSources = tally(leadsOfSelectedCountry.map((lead) => sourceLabel(lead.source)));
+  const selectedLanguages = tally(
+    leadsOfSelectedCountry.map((lead) =>
+      typeof lead.locale === 'string' && lead.locale.trim() ? lead.locale.trim().toUpperCase() : 'Unbekannt',
+    ),
+  );
+  const allLanguages = tally(
+    leads
+      .filter((lead) => typeof lead.country_code === 'string' && lead.country_code)
+      .map((lead) =>
+        typeof lead.locale === 'string' && lead.locale.trim() ? lead.locale.trim().toUpperCase() : 'Unbekannt',
+      ),
+  );
+
   const columns = [
     ...(selectionMode ? [{
       key: 'select',
@@ -1528,14 +1563,26 @@ function LeadsContacts({
             <div ref={locationDetailsRef}>
             <GlassCard className="overflow-hidden">
               <div className="border-b border-slate-100 px-6 py-5">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-500">Besucher nach Standort</p>
-                <h3 className="mt-2 text-2xl font-semibold text-slate-800">Detaillierte Weltkarte</h3>
-                <p className="mt-1 text-sm text-slate-500">
-                  Klicke auf ein Land oder wähle rechts einen Eintrag aus, um die Leads gezielt anzusehen.
-                </p>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-500">Besucher nach Standort</p>
+                    <h3 className="mt-2 text-2xl font-semibold text-slate-800">Detaillierte Weltkarte</h3>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Klicke auf ein Land oder wähle rechts eins aus der Liste. Dort siehst du, wie viele Gäste aus
+                      welchem Land kommen, wie sie freigeschaltet haben und in welcher Sprache.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowLocationDetails(false)}
+                    className="shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                  >
+                    Zuklappen
+                  </button>
+                </div>
               </div>
 
-              <div className="grid gap-6 p-4 sm:p-6 lg:grid-cols-[1.55fr_0.85fr]">
+              <div className="grid gap-6 p-4 sm:p-6 lg:grid-cols-[1.25fr_1fr]">
                 <div className="space-y-4">
                   <div className="-mx-2 overflow-x-auto pb-2 sm:mx-0 sm:overflow-visible sm:pb-0">
                     <div className="min-w-[320px] w-full sm:min-w-0">
@@ -1575,9 +1622,56 @@ function LeadsContacts({
                       </p>
                     </div>
                   </div>
+                  {allLanguages.length > 0 && (
+                    <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Sprachen aller Gäste</p>
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {allLanguages.map((entry) => (
+                          <span key={entry.label} className="rounded-full bg-white px-2.5 py-0.5 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
+                            {entry.label} · {entry.count}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                <div className="max-h-[420px] space-y-3 overflow-y-auto pr-2">
+                <div className="space-y-4">
+                  {selectedCountryStat && (
+                    <div className="rounded-2xl border border-sky-100 bg-sky-50/60 p-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-600">Ausgewählt</p>
+                      <p className="mt-1 text-lg font-semibold text-slate-800">
+                        {countryCodeToFlag(selectedCountryStat.countryCode)} {selectedCountryStat.countryName}
+                      </p>
+                      <p className="text-sm text-slate-500">
+                        {selectedCountryStat.count} Gäste,{' '}
+                        {totalMappedLeads > 0 ? Math.round((selectedCountryStat.count / totalMappedLeads) * 100) : 0}%
+                        aller Gäste mit Land
+                      </p>
+                      <p className="mt-3 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Freischaltung über</p>
+                      <div className="mt-1 flex flex-wrap gap-1.5">
+                        {selectedSources.map((entry) => (
+                          <span key={entry.label} className="rounded-full bg-white px-2.5 py-0.5 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
+                            {entry.label} · {entry.count}
+                          </span>
+                        ))}
+                      </div>
+                      <p className="mt-3 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Sprache</p>
+                      <div className="mt-1 flex flex-wrap gap-1.5">
+                        {selectedLanguages.map((entry) => (
+                          <span key={entry.label} className="rounded-full bg-white px-2.5 py-0.5 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
+                            {entry.label} · {entry.count}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div>
+                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                      Gäste nach Land ({resolvedCountryStats.length})
+                    </p>
+                <div className="max-h-[320px] space-y-2 overflow-y-auto pr-2">
                   {resolvedCountryStats.map((country) => {
                     const share = totalMappedLeads > 0 ? Math.round((country.count / totalMappedLeads) * 100) : 0;
                     const active = country.countryCode === selectedCountryStat?.countryCode;
@@ -1607,6 +1701,8 @@ function LeadsContacts({
                       </button>
                     );
                   })}
+                </div>
+                  </div>
                 </div>
               </div>
             </GlassCard>
