@@ -1,3 +1,4 @@
+import { useI18n, translate as t, currentLocaleTag } from '../lib/i18n';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Upload, Loader2, CheckCircle2, AlertTriangle, Monitor, Image as ImageIcon, RotateCw, Moon, Trash2 } from 'lucide-react';
 import GlassCard from './ui/GlassCard';
@@ -22,21 +23,21 @@ type CustomerSlot = {
 const CUSTOMER_SLOTS: CustomerSlot[] = [
   {
     id: 'viewer_overlay_png',
-    label: 'Foto-Overlay',
-    description: 'Rahmen oder Wasserzeichen, das auf dem verkauften Foto liegt.',
-    tip: 'Am besten PNG mit transparentem Hintergrund, Seitenverhaeltnis 4:3 (z. B. 2362 x 1772 px).',
+    label: 'branding.slot.overlay',
+    description: 'branding.slot.overlay_desc',
+    tip: 'branding.slot.overlay_tip',
   },
   {
     id: 'viewer_main_logo',
-    label: 'Automat-Logo',
-    description: 'Logo auf dem Verkaufsbildschirm des Automaten.',
-    tip: 'PNG mit transparentem Hintergrund.',
+    label: 'branding.slot.logo',
+    description: 'branding.slot.logo_desc',
+    tip: 'branding.slot.logo_tip',
   },
   {
     id: 'viewer_background',
-    label: 'Hintergrund',
-    description: 'Hintergrundbild des Verkaufsbildschirms.',
-    tip: 'Querformat, etwa 2100 x 1200 px.',
+    label: 'branding.slot.background',
+    description: 'branding.slot.background_desc',
+    tip: 'branding.slot.background_tip',
   },
 ];
 
@@ -92,7 +93,7 @@ function formatBytes(size: number | null) {
 function formatWhen(value: string | null) {
   if (!value) return null;
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? null : date.toLocaleString();
+  return Number.isNaN(date.getTime()) ? null : date.toLocaleString(currentLocaleTag());
 }
 
 function minutesSince(value: string | null) {
@@ -118,6 +119,7 @@ async function operatorHeaders(): Promise<Record<string, string> | null> {
 }
 
 export default function AutomatBranding() {
+  useI18n();
   const { parkId } = usePark();
   const [machines, setMachines] = useState<MachineConfig[]>([]);
   const [assets, setAssets] = useState<AssetDeployment[]>([]);
@@ -193,7 +195,7 @@ export default function AutomatBranding() {
 
     const headers = await operatorHeaders();
     if (!headers) {
-      setError('Deine Sitzung ist abgelaufen. Bitte melde dich neu an.');
+      setError(t('camera.session_expired_relogin'));
       setLoading(false);
       return;
     }
@@ -207,7 +209,7 @@ export default function AutomatBranding() {
           setNotDeployed(true);
         } else {
           const detail = body && typeof body.error === 'string' ? body.error : `HTTP ${res.status}`;
-          setError(`Die Automaten konnten nicht geladen werden (${detail}).`);
+          setError(t('branding.load_failed', { detail }));
         }
         setLoading(false);
         return;
@@ -302,7 +304,7 @@ export default function AutomatBranding() {
 
     if (downloadError || !data) {
       throw new Error(
-        `Das gespeicherte Overlay konnte nicht aus der Ablage geladen werden (${overlay.bucket}/${basename(overlay.path)}: ${downloadError?.message || 'unbekannter Fehler'}).`,
+        t('branding.gallery_load_failed', { detail: `${overlay.bucket}/${basename(overlay.path)}: ${downloadError?.message || t('branding.unknown_error')}` }),
       );
     }
 
@@ -319,7 +321,7 @@ export default function AutomatBranding() {
 
     const headers = await operatorHeaders();
     if (!headers) {
-      setError('Deine Sitzung ist abgelaufen. Bitte melde dich neu an.');
+      setError(t('camera.session_expired_relogin'));
       setSaving(false);
       return;
     }
@@ -327,14 +329,14 @@ export default function AutomatBranding() {
     let outgoing: File;
     try {
       if (sourceMode === 'gallery') {
-        if (!selectedGalleryOverlay) throw new Error('Bitte waehle ein gespeichertes Overlay aus.');
+        if (!selectedGalleryOverlay) throw new Error(t('branding.pick_saved'));
         outgoing = await fileFromGallery(selectedGalleryOverlay);
       } else {
-        if (!file) throw new Error('Bitte waehle eine Datei aus.');
+        if (!file) throw new Error(t('branding.pick_file'));
         outgoing = file;
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Das Bild konnte nicht vorbereitet werden.');
+      setError(err instanceof Error ? err.message : t('branding.prepare_failed'));
       setSaving(false);
       return;
     }
@@ -351,7 +353,7 @@ export default function AutomatBranding() {
 
       if (!res.ok) {
         const detail = body && typeof body.error === 'string' ? body.error : `HTTP ${res.status}`;
-        setError(`Der Server hat die Uebertragung abgelehnt: ${detail}`);
+        setError(t('branding.server_rejected', { detail }));
         setSaving(false);
         return;
       }
@@ -359,11 +361,11 @@ export default function AutomatBranding() {
       setFile(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
       setStatus(
-        `"${selectedSlot.label}" wurde an ${selectedMachine.machine_label || selectedMachine.machine_id} uebergeben. Damit es sichtbar wird, jetzt noch das Verkaufsprogramm neu starten.`,
+        t('branding.handed_over', { slot: t(selectedSlot.label), machine: selectedMachine.machine_label || selectedMachine.machine_id }),
       );
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Das Bild konnte nicht uebertragen werden.');
+      setError(err instanceof Error ? err.message : t('branding.transfer_failed'));
     }
 
     setSaving(false);
@@ -374,11 +376,7 @@ export default function AutomatBranding() {
    *  dort bis zur Ruhezeit, damit kein laufender Verkauf unterbrochen wird. */
   async function requestRestart(mode: 'now' | 'tonight' | 'cancel') {
     if (!selectedMachine || !parkId) return;
-    if (mode === 'now' && !confirm(
-      'Das Verkaufsprogramm am Automaten wird sofort beendet und neu gestartet.\n\n' +
-      'Waehrend des Neustarts (etwa 15 Sekunden) kann kein Foto verkauft werden. ' +
-      'Nur ausfuehren, wenn gerade niemand am Automaten steht.\n\nFortfahren?'
-    )) return;
+    if (mode === 'now' && !confirm(t('branding.confirm_restart'))) return;
 
     setRestarting(true);
     setError(null);
@@ -386,7 +384,7 @@ export default function AutomatBranding() {
 
     const headers = await operatorHeaders();
     if (!headers) {
-      setError('Deine Sitzung ist abgelaufen. Bitte melde dich neu an.');
+      setError(t('camera.session_expired_relogin'));
       setRestarting(false);
       return;
     }
@@ -405,14 +403,14 @@ export default function AutomatBranding() {
 
       if (!res.ok) {
         const detail = body && typeof body.error === 'string' ? body.error : `HTTP ${res.status}`;
-        setError(`Auftrag konnte nicht gespeichert werden: ${detail}`);
+        setError(t('branding.job_not_saved', { detail }));
       } else if (mode === 'cancel') {
-        setStatus('Der geplante Neustart wurde zurueckgenommen.');
+        setStatus(t('health.restart_cancelled'));
       } else {
         setStatus(
           mode === 'now'
-            ? 'Neustart beauftragt. Der Automat fuehrt ihn innerhalb der naechsten Minute aus.'
-            : 'Neustart fuer heute Nacht vorgemerkt. Der Automat fuehrt ihn in der Ruhezeit aus.',
+            ? t('branding.restart_now_done')
+            : t('branding.restart_tonight_done'),
         );
         // Erst jetzt ist der volle Ablauf (Bild senden -> live schalten)
         // abgeschlossen - vorher wuerde die Ansicht das alte Bild zeigen.
@@ -420,7 +418,7 @@ export default function AutomatBranding() {
       }
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Auftrag fehlgeschlagen.');
+      setError(err instanceof Error ? err.message : t('camera.job_failed'));
     }
 
     setRestarting(false);
@@ -440,9 +438,9 @@ export default function AutomatBranding() {
 
   function slotCaption(slotId: string) {
     const asset = currentAssetForSlot(slotId);
-    if (!asset) return 'Noch nichts hochgeladen';
+    if (!asset) return t('branding.nothing_uploaded');
     const when = formatWhen(asset.updated_at || asset.created_at);
-    return when ? `Zuletzt geaendert: ${when}` : 'Aktualisiert';
+    return when ? t('branding.last_changed', { time: when }) : t('branding.updated');
   }
 
   const currentAsset = currentAssetForSlot(selectedSlotId);
@@ -450,7 +448,7 @@ export default function AutomatBranding() {
   return (
     <GlassCard className="p-4 sm:p-6">
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <h3 className="text-base font-semibold text-slate-800">Overlays aendern</h3>
+        <h3 className="text-base font-semibold text-slate-800">{t('branding.title')}</h3>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
           {machines.length > 1 && (
             <select
@@ -474,14 +472,14 @@ export default function AutomatBranding() {
               <Monitor className="h-3.5 w-3.5" />
               {machines.length === 1 && `${selectedMachine.machine_label || selectedMachine.machine_id} · `}
               {isOnline
-                ? 'verbunden'
+                ? t('health.connected')
                 : onlineMinutes === null
-                  ? 'noch nie gesehen'
-                  : `zuletzt vor ${Math.round(onlineMinutes)} Min.`}
+                  ? t('branding.never_seen')
+                  : t('branding.last_seen', { n: Math.round(onlineMinutes) })}
             </span>
           )}
           <button onClick={() => void load()} className="glass-button-secondary shrink-0" disabled={loading}>
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Aktualisieren'}
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : t('health.refresh')}
           </button>
         </div>
       </div>
@@ -490,9 +488,7 @@ export default function AutomatBranding() {
         <div className="mb-4 flex items-start gap-2 rounded-xl bg-amber-50/80 px-3 py-2 text-sm text-amber-800">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
           <span>
-            Diese Funktion ist auf dem Server noch nicht freigeschaltet. Die Edge Function
-            <code className="mx-1 rounded bg-amber-100 px-1">operator-liftpic-assets</code>
-            muss einmalig deployed werden.
+            {t('branding.not_deployed', { fn: 'operator-liftpic-assets' })}
           </span>
         </div>
       )}
@@ -511,10 +507,10 @@ export default function AutomatBranding() {
         </div>
       )}
 
-      {!parkId && <p className="text-sm text-slate-500">Bitte waehle zuerst deinen Park aus.</p>}
+      {!parkId && <p className="text-sm text-slate-500">{t('branding.pick_park')}</p>}
 
       {parkId && !loading && !notDeployed && machines.length === 0 && (
-        <p className="text-sm text-slate-500">Fuer deinen Park ist derzeit kein Automat eingerichtet.</p>
+        <p className="text-sm text-slate-500">{t('branding.no_machine')}</p>
       )}
 
       {machines.length > 0 && (
@@ -534,7 +530,7 @@ export default function AutomatBranding() {
                     active ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
                   }`}
                 >
-                  {slot.label}
+                  {t(slot.label)}
                 </button>
               );
             })}
@@ -546,7 +542,7 @@ export default function AutomatBranding() {
                 {currentAsset?.preview_url ? (
                   <img
                     src={currentAsset.preview_url}
-                    alt={selectedSlot.label}
+                    alt={t(selectedSlot.label)}
                     className="h-full w-full object-contain"
                   />
                 ) : (
@@ -555,7 +551,7 @@ export default function AutomatBranding() {
               </div>
               <p className="mt-2 text-xs text-slate-400">{slotCaption(selectedSlotId)}</p>
               <button type="button" onClick={() => setIsEditing(true)} className="glass-button-primary mt-3">
-                Aendern
+                {t('branding.change')}
               </button>
             </div>
           ) : (
@@ -568,7 +564,7 @@ export default function AutomatBranding() {
                   sourceMode === 'gallery' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
                 }`}
               >
-                Meine Overlays ({gallery.length})
+                {t('branding.my_overlays', { count: gallery.length })}
               </button>
               <button
                 type="button"
@@ -577,7 +573,7 @@ export default function AutomatBranding() {
                   sourceMode === 'upload' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
                 }`}
               >
-                Neue Datei
+                {t('branding.new_file')}
               </button>
             </div>
 
@@ -585,8 +581,7 @@ export default function AutomatBranding() {
               <>
                 {gallery.length === 0 ? (
                   <p className="rounded-xl border border-dashed border-white/50 bg-white/20 px-3 py-3 text-sm text-slate-500">
-                    Du hast noch keine Overlays gespeichert. Baue dir unten im Overlay-Builder eines &ndash; es
-                    erscheint dann direkt hier.
+                    {t('branding.no_saved')}
                   </p>
                 ) : (
                   <div className="flex gap-3 overflow-x-auto pb-2">
@@ -618,7 +613,7 @@ export default function AutomatBranding() {
                               {basename(item.path)}
                             </p>
                             <p className="text-[11px] text-slate-400">
-                              {item.width && item.height ? `${item.width} x ${item.height}` : 'Groesse unbekannt'}
+                              {item.width && item.height ? `${item.width} x ${item.height}` : t('branding.size_unknown')}
                             </p>
                           </button>
                           <button
@@ -632,7 +627,7 @@ export default function AutomatBranding() {
                             ) : (
                               <Trash2 className="h-3 w-3" />
                             )}
-                            Loeschen
+                            {t('branding.delete')}
                           </button>
                         </div>
                       );
@@ -658,7 +653,7 @@ export default function AutomatBranding() {
                     className="glass-button-secondary w-full"
                   >
                     <Upload className="h-4 w-4" />
-                    {file ? 'Anderes Bild waehlen' : 'Bild vom Rechner waehlen'}
+                    {file ? t('branding.other_image') : t('branding.pick_image')}
                   </button>
 
                   {file && (
@@ -674,10 +669,10 @@ export default function AutomatBranding() {
                 </div>
 
                 <div className="rounded-2xl bg-white/30 p-3">
-                  <p className="mb-2 text-xs font-medium text-slate-600">Vorschau</p>
+                  <p className="mb-2 text-xs font-medium text-slate-600">{t('branding.preview')}</p>
                   <div className="flex h-32 items-center justify-center overflow-hidden rounded-xl bg-[conic-gradient(#e5e7eb_90deg,#fff_90deg_180deg,#e5e7eb_180deg_270deg,#fff_270deg)] bg-[length:10px_10px]">
                     {previewUrl ? (
-                      <img src={previewUrl} alt="Vorschau" className="h-full w-full object-contain" />
+                      <img src={previewUrl} alt={t('branding.preview')} className="h-full w-full object-contain" />
                     ) : (
                       <ImageIcon className="h-5 w-5 text-slate-300" />
                     )}
@@ -693,7 +688,7 @@ export default function AutomatBranding() {
                 disabled={saving}
                 className="glass-button-secondary"
               >
-                Abbrechen
+                {t('branding.cancel')}
               </button>
               <button
                 type="button"
@@ -702,13 +697,13 @@ export default function AutomatBranding() {
                 className="glass-button-primary"
               >
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                {saving ? 'Wird uebertragen...' : 'Jetzt aendern'}
+                {saving ? t('branding.transferring') : t('branding.change_now')}
               </button>
             </div>
 
             <div className="mt-3 rounded-xl bg-white/20 p-3">
               <p className="mb-2 text-xs font-medium text-slate-500">
-                Danach live schalten &ndash; noetig, damit z. B. ein neuer Hintergrund erscheint
+                {t('branding.go_live_hint')}
               </p>
 
               {selectedMachine?.pending_restart ? (
@@ -716,8 +711,8 @@ export default function AutomatBranding() {
                   <RotateCw className="h-4 w-4 shrink-0 animate-spin text-amber-600" />
                   <span className="text-sm text-amber-800">
                     {selectedMachine.pending_restart.mode === 'tonight'
-                      ? 'Neustart fuer heute Nacht vorgemerkt.'
-                      : 'Neustart wird gleich ausgefuehrt.'}
+                      ? t('branding.restart_tonight_pending')
+                      : t('branding.restart_soon')}
                   </span>
                   <button
                     type="button"
@@ -725,7 +720,7 @@ export default function AutomatBranding() {
                     disabled={restarting}
                     className="text-sm font-medium text-amber-900 underline underline-offset-2"
                   >
-                    zuruecknehmen
+                    {t('branding.undo')}
                   </button>
                 </div>
               ) : (
@@ -737,7 +732,7 @@ export default function AutomatBranding() {
                     className="glass-button-secondary"
                   >
                     {restarting ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCw className="h-4 w-4" />}
-                    Verkaufsprogramm jetzt neu starten
+                    {t('branding.restart_sales_now')}
                   </button>
                   <button
                     type="button"
@@ -746,14 +741,14 @@ export default function AutomatBranding() {
                     className="glass-button-secondary"
                   >
                     <Moon className="h-4 w-4" />
-                    Heute Nacht
+                    {t('branding.tonight')}
                   </button>
                 </div>
               )}
 
               {selectedMachine?.last_restart_at && (
                 <p className="mt-2 text-xs text-slate-400">
-                  Zuletzt neu gestartet: {formatWhen(selectedMachine.last_restart_at)}.
+                  {t('branding.last_restart', { time: formatWhen(selectedMachine.last_restart_at) ?? '' })}
                 </p>
               )}
             </div>
