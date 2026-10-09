@@ -37,15 +37,6 @@ const SHOP_ANTEIL = 15;
 
 const ZUSAETZE: Zusatz[] = [
   {
-    key: 'onlineshop',
-    titel: 'Online-Shop: digitale Nachkäufe und Merchandising',
-    preis: 0,
-    vorher: SHOP_EINRICHTUNG,
-    monatlich: SHOP_MONATLICH,
-    badge: 'Oft zusammen gekauft',
-    text: 'PrintBox und Cashbox funktionieren im Verbund mit dem Online-Shop. Im Kombi-Paket entfällt die Einrichtung, es bleiben 99 € im Monat.',
-  },
-  {
     key: 'personalisierung',
     titel: 'Personalisierung & Beklebung',
     preis: 390,
@@ -100,6 +91,9 @@ export default function ConfigurationProduct() {
   const [gewaehlt, setGewaehlt] = useState<string[]>([]);
   const [raten, setRaten] = useState(false);
   const [alle, setAlle] = useState<EquipmentItem[]>([]);
+  const [bundleAus, setBundleAus] = useState<string[]>([]);
+  const [bundleSendet, setBundleSendet] = useState(false);
+  const [bundleGesendet, setBundleGesendet] = useState(false);
   const [shopPlan, setShopPlan] = useState<'monatlich' | 'jaehrlich' | 'revshare'>('jaehrlich');
 
   const preisTexte = (item?.mehrwert_text ?? '').split('·').map((t) => t.trim()).filter(Boolean);
@@ -129,6 +123,54 @@ export default function ConfigurationProduct() {
       aktiv = false;
     };
   }, [parkId, id]);
+
+
+  // "Oft zusammen gekauft": dieses Produkt plus die passenden anderen.
+  const partnerTitel =
+    item?.titel === 'PrintBox'
+      ? ['Digitale Nachkäufe und Merchandising', 'Cashbox']
+      : item?.titel === 'Cashbox'
+        ? ['Digitale Nachkäufe und Merchandising', 'PrintBox']
+        : item?.titel === 'Digitale Nachkäufe und Merchandising'
+          ? ['PrintBox', 'Cashbox']
+          : [];
+  const buendel = item
+    ? [item, ...partnerTitel.map((t) => alle.find((a) => a.titel === t)).filter((a): a is EquipmentItem => !!a)]
+    : [];
+  const buendelAktiv = buendel.filter((b, i) => i === 0 || !bundleAus.includes(b.id));
+  const istShopItem = (b: EquipmentItem) => b.titel === 'Digitale Nachkäufe und Merchandising';
+  const hatHardware = buendelAktiv.some((b) => !istShopItem(b));
+  const buendelEinmalig = buendelAktiv.reduce((sum, b) => {
+    if (istShopItem(b) && hatHardware) return sum;
+    return sum + (preisAus((b.mehrwert_text ?? '').split('·')[0]) ?? 0);
+  }, 0);
+  const buendelMonatlich = buendelAktiv.reduce(
+    (sum, b) => sum + (preisAus((b.mehrwert_text ?? '').split('·')[1]) ?? 0),
+    0,
+  );
+  const buendelVorher = buendelAktiv.reduce(
+    (sum, b) => sum + (preisAus((b.mehrwert_text ?? '').split('·')[0]) ?? 0),
+    0,
+  );
+
+  async function buendelAnfragen() {
+    if (!parkId) return;
+    setBundleSendet(true);
+    setFehler(null);
+    try {
+      const namen = buendelAktiv.map((b) => b.titel).join(' + ');
+      await meldeAusstattungsInteresse(parkId, {
+        label: `Kombi-Paket anfragen: ${namen}, Summe ${eur(buendelEinmalig)} einmalig + ${eur(buendelMonatlich)}/Monat${
+          hatHardware && buendelAktiv.some(istShopItem) ? ` (Online-Shop-Einrichtung ${eur(SHOP_EINRICHTUNG)} entfällt im Kombi-Paket)` : ''
+        }`,
+      });
+      setBundleGesendet(true);
+    } catch (e) {
+      setFehler(e instanceof Error ? e.message : 'Anfrage fehlgeschlagen.');
+    } finally {
+      setBundleSendet(false);
+    }
+  }
 
   async function anfragen() {
     if (!parkId || !item) return;
@@ -404,26 +446,6 @@ export default function ConfigurationProduct() {
                   </div>
                 </div>
 
-                {alle.some((a) => a.titel === 'PrintBox' || a.titel === 'Cashbox') && (
-                  <div className="rounded-xl bg-slate-50 p-3">
-                    <p className="text-sm font-bold text-slate-800">Passt dazu</p>
-                    <p className="mt-0.5 text-xs text-slate-500">
-                      PrintBox und Cashbox funktionieren nur im Verbund mit dem Online-Shop. Im Kombi-Paket entfällt die
-                      Einrichtung.
-                    </p>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {alle.filter((a) => a.titel === 'PrintBox' || a.titel === 'Cashbox').map((a) => (
-                        <Link
-                          key={a.id}
-                          to={`/configuration/produkt/${a.id}`}
-                          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100"
-                        >
-                          {a.titel} ansehen
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
             )}
 
@@ -438,6 +460,93 @@ export default function ConfigurationProduct() {
           </div>
         </div>
       </GlassCard>
+
+      {buendel.length > 1 && (
+        <GlassCard className="p-5 sm:p-6">
+          <h3 className="text-xl font-bold text-slate-800">Oft zusammen gekauft</h3>
+          <p className="mt-0.5 text-sm text-slate-500">
+            PrintBox und Cashbox funktionieren nur im Verbund mit dem Online-Shop. Im Kombi-Paket entfällt dessen
+            Einrichtung.
+          </p>
+          <div className="mt-5 flex flex-wrap items-start gap-x-3 gap-y-6">
+            {buendel.map((b, i) => {
+              const aktiv = buendelAktiv.some((a) => a.id === b.id);
+              const bild = b.image_url;
+              const preis = preisAus((b.mehrwert_text ?? '').split('·')[0]);
+              const shopImKombi = istShopItem(b) && hatHardware;
+              return (
+                <div key={b.id} className="flex items-start gap-3">
+                  {i > 0 && <span className="mt-16 text-2xl font-light text-slate-400">+</span>}
+                  <div className="w-44 sm:w-52">
+                    <div className={`relative flex h-36 items-center justify-center rounded-xl bg-slate-50 p-2 sm:h-44 ${aktiv ? '' : 'opacity-50'}`}>
+                      {bild ? (
+                        <img src={bild} alt={b.titel} className="max-h-full max-w-full object-contain" />
+                      ) : (
+                        <span className="text-xs text-slate-400">Kein Bild</span>
+                      )}
+                      <input
+                        type="checkbox"
+                        checked={aktiv}
+                        disabled={i === 0}
+                        onChange={() =>
+                          setBundleAus((alt) => (alt.includes(b.id) ? alt.filter((x) => x !== b.id) : [...alt, b.id]))
+                        }
+                        aria-label={`${b.titel} im Kombi-Paket`}
+                        className="absolute right-2 top-2 h-5 w-5 accent-sky-600"
+                      />
+                    </div>
+                    <div className="mt-2 text-sm">
+                      {i === 0 && <p className="font-bold text-slate-800">Dieser Artikel:</p>}
+                      {i === 0 ? (
+                        <p className="text-slate-700">{b.titel}</p>
+                      ) : (
+                        <Link to={`/configuration/produkt/${b.id}`} className="text-sky-700 hover:underline">
+                          {b.titel}
+                        </Link>
+                      )}
+                      <p className="mt-0.5 font-bold text-slate-900">
+                        {eur(shopImKombi ? 0 : preis ?? 0)}
+                        {shopImKombi && preis != null && (
+                          <span className="ml-1.5 font-normal text-slate-400 line-through">{eur(preis)}</span>
+                        )}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {(b.mehrwert_text ?? '').split('·')[1]?.trim()
+                          ? `+ ${(b.mehrwert_text ?? '').split('·')[1].trim()}`
+                          : ''}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
+            <div className="flex min-w-[220px] flex-1 flex-col justify-center gap-3 self-center lg:pl-6">
+              <p className="text-slate-700">
+                Gesamtpreis: <span className="text-2xl font-bold text-slate-900">{eur(buendelEinmalig)}</span>
+                {buendelVorher > buendelEinmalig && (
+                  <span className="ml-2 text-sm text-slate-400 line-through">{eur(buendelVorher)}</span>
+                )}
+              </p>
+              <p className="-mt-2 text-xs text-slate-500">
+                einmalig, dazu {eur(buendelMonatlich)} pro Monat. Alle Preise zzgl. MwSt.
+              </p>
+              <button
+                type="button"
+                onClick={() => void buendelAnfragen()}
+                disabled={bundleSendet || bundleGesendet}
+                className="inline-flex items-center justify-center rounded-full bg-amber-400 px-5 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-amber-300 disabled:opacity-60"
+              >
+                {bundleGesendet
+                  ? 'Anfrage gesendet, wir melden uns'
+                  : bundleSendet
+                    ? 'Wird gesendet…'
+                    : `Alle ${buendelAktiv.length} anfragen`}
+              </button>
+            </div>
+          </div>
+        </GlassCard>
+      )}
     </div>
   );
 }
