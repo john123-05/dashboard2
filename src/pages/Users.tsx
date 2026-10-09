@@ -230,7 +230,7 @@ export default function Users() {
         </div>
         {parkId && claimSiteBaseFor(parkId) && (
           <a
-            href={`${claimSiteBaseFor(parkId)}/ranking`}
+            href={`${claimSiteBaseFor(parkId)}/ranking${locked ? '?demo=1' : ''}`}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex w-fit items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
@@ -496,7 +496,7 @@ export default function Users() {
             </div>
             {claimSiteBaseFor(parkId) ? (
               <iframe
-                src={`${claimSiteBaseFor(parkId)}/ranking`}
+                src={`${claimSiteBaseFor(parkId)}/ranking${locked ? '?demo=1' : ''}`}
                 title="Live-Vorschau der Tagesbestenliste"
                 scrolling="yes"
                 className="w-full flex-1 border-0"
