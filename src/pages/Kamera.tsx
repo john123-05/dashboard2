@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Camera, Loader2, RotateCcw, AlertTriangle, Info, Send } from 'lucide-react';
 import GlassCard from '../components/ui/GlassCard';
 import { usePark } from '../contexts/ParkContext';
-import { useLocaleTag } from '../lib/i18n';
+import { useI18n, useLocaleTag } from '../lib/i18n';
 import { supabase, EXTERNAL_SUPABASE_URL, EXTERNAL_SUPABASE_ANON_KEY } from '../lib/supabase';
 import { fetchRecentPhotos } from '../lib/photoBrowser';
 
@@ -145,13 +145,17 @@ const EIGENSCHAFTEN: Eigenschaft[] = [
   },
 ];
 
-const NAMEN: Record<string, string> = {
-  Exposure: 'Belichtung', Brightness: 'Helligkeit', Contrast: 'Kontrast',
-  Saturation: 'Sättigung', Hue: 'Farbton', Gamma: 'Gamma', Gain: 'Verstärkung',
-  WhiteBalance: 'Weißabgleich', Sharpness: 'Schärfe', Denoise: 'Rauschminderung',
-  'Tone Mapping': 'Tone Mapping', 'Highlight Reduction': 'Spitzlichter dämpfen',
-  'Color Correction Matrix': 'Farbmatrix',
-};
+/** Schlüssel einer Eigenschaft im Wörterbuch, zum Beispiel `camera.prop.exposure_auto.title`. */
+function propKey(e: Eigenschaft, part: 'title' | 'text'): string {
+  return `camera.prop.${e.schluessel.toLowerCase().replace(/[^a-z]+/g, '_')}.${part}`;
+}
+
+function nameLabel(name: string, t: (key: string) => string): string {
+  const key = `camera.name.${name.toLowerCase().replace(/[^a-z]+/g, '_')}`;
+  const label = t(key);
+  return label === key ? name : label;
+}
+
 
 /** Wert einer Eigenschaft aus dem Herzschlag holen, `null` wenn es sie nicht gibt. */
 function wertAus(werte: Kamerawerte, schluessel: string): number | null {
@@ -161,30 +165,31 @@ function wertAus(werte: Kamerawerte, schluessel: string): number | null {
 }
 
 /** Anzeige eines Werts, in der Einheit die ein Mensch erwartet. */
-function anzeige(e: Eigenschaft, wert: number): string {
-  if (e.art === 'schalter') return wert ? 'an' : 'aus';
+function anzeige(e: Eigenschaft, wert: number, t: (key: string) => string): string {
+  if (e.art === 'schalter') return wert ? t('camera.on') : t('camera.off');
   if (e.schluessel === 'Exposure.Value') return `${(wert * 1000).toFixed(2)} ms`;
   return wert.toFixed(e.nachkommastellen ?? 0) + (e.einheit ?? '');
 }
 
-function istWert(werte: Kamerawerte, name: string): string {
+function istWert(werte: Kamerawerte, name: string, t: (key: string, params?: Record<string, string | number>) => string): string {
   const eintrag = werte[name];
   if (!eintrag) return '—';
   const teile: string[] = [];
   const auto = eintrag['Auto'];
   const wert = eintrag['Value'];
-  if (auto !== undefined) teile.push(auto ? 'automatisch' : 'von Hand');
+  if (auto !== undefined) teile.push(auto ? t('camera.auto') : t('camera.manual'));
   if (typeof wert === 'number') {
     teile.push(name === 'Exposure' ? `${(wert * 1000).toFixed(2)} ms` : String(Math.round(wert * 100) / 100));
   }
   const enable = eintrag['Enable'] ?? eintrag['Enabled'];
-  if (enable !== undefined && wert === undefined) teile.push(enable ? 'an' : 'aus');
-  if (eintrag['Auto Max Value'] !== undefined) teile.push(`höchstens ${eintrag['Auto Max Value']}`);
-  if (eintrag['Auto Reference'] !== undefined) teile.push(`Sollwert ${eintrag['Auto Reference']}`);
+  if (enable !== undefined && wert === undefined) teile.push(enable ? t('camera.on') : t('camera.off'));
+  if (eintrag['Auto Max Value'] !== undefined) teile.push(t('camera.at_most', { value: eintrag['Auto Max Value'] }));
+  if (eintrag['Auto Reference'] !== undefined) teile.push(t('camera.target_value', { value: eintrag['Auto Reference'] }));
   return teile.length ? teile.join(' · ') : '—';
 }
 
 export default function Kamera() {
+  const { t } = useI18n();
   const locale = useLocaleTag();
   const { parkId } = usePark();
   const [automaten, setAutomaten] = useState<Automat[]>([]);
@@ -206,7 +211,7 @@ export default function Kamera() {
   const automatenLaden = useCallback(async () => {
     if (!parkId) { setAutomaten([]); setLaden(false); return; }
     const h = await kopfzeilen();
-    if (!h) { setFehler('Deine Sitzung ist abgelaufen. Bitte melde dich neu an.'); setLaden(false); return; }
+    if (!h) { setFehler(t('camera.session_expired_relogin')); setLaden(false); return; }
     try {
       const res = await fetch(`${HEALTH_URL}?park_id=${encodeURIComponent(parkId)}`, { headers: h });
       const body = await res.json().catch(() => null);
@@ -218,7 +223,7 @@ export default function Kamera() {
         setFehler(null);
       }
     } catch (e) {
-      setFehler(e instanceof Error ? e.message : 'Automatendaten nicht erreichbar.');
+      setFehler(e instanceof Error ? e.message : t('camera.machines_unreachable'));
     }
     setLaden(false);
   }, [parkId, kopfzeilen]);
@@ -237,7 +242,7 @@ export default function Kamera() {
       if (!foto?.imageUrl) { setBild(null); return; }
       setBild({ url: foto.imageUrl, wann: new Date(foto.capturedAt).toLocaleString(locale), test: foto.isTest });
     } catch (e) {
-      setFehler(e instanceof Error ? e.message : 'Letztes Foto nicht erreichbar.');
+      setFehler(e instanceof Error ? e.message : t('camera.last_photo_unreachable'));
       setBild(null);
     }
   }, [parkId, locale]);
@@ -293,10 +298,10 @@ export default function Kamera() {
 
   async function testfoto() {
     if (!automat) return;
-    if (!confirm('Der Automat nimmt jetzt ein Foto auf und schickt es durch die ganze Kette.\n\nFortfahren?')) return;
+    if (!confirm(t('camera.confirm_test_photo'))) return;
     setBeschaeftigt('testfoto'); setHinweis(null); setFehler(null);
     const h = await kopfzeilen();
-    if (!h) { setFehler('Sitzung abgelaufen.'); setBeschaeftigt(null); return; }
+    if (!h) { setFehler(t('camera.session_expired')); setBeschaeftigt(null); return; }
     try {
       const res = await fetch(ASSETS_URL, {
         method: 'PATCH', headers: { ...h, 'Content-Type': 'application/json' },
@@ -304,9 +309,9 @@ export default function Kamera() {
       });
       const body = await res.json().catch(() => null);
       if (!res.ok) setFehler(body?.error || `HTTP ${res.status}`);
-      else setHinweis('Testfoto beauftragt. Es dauert bis zu einer Minute – dann auf „Bild neu laden“ tippen.');
+      else setHinweis(t('camera.test_photo_ordered'));
     } catch (e) {
-      setFehler(e instanceof Error ? e.message : 'Auftrag fehlgeschlagen.');
+      setFehler(e instanceof Error ? e.message : t('camera.job_failed'));
     }
     setBeschaeftigt(null);
   }
@@ -314,18 +319,13 @@ export default function Kamera() {
   async function senden() {
     if (!automat || geaendert.length === 0) return;
     const liste = geaendert
-      .map((e) => `  ${e.titel}: ${anzeige(e, wertAus(kamera!.werte, e.schluessel)!)} → ${anzeige(e, entwurf[e.schluessel])}`)
+      .map((e) => `  ${t(propKey(e, 'title'))}: ${anzeige(e, wertAus(kamera!.werte, e.schluessel)!, t)} → ${anzeige(e, entwurf[e.schluessel], t)}`)
       .join('\n');
-    if (!confirm(
-      `Diese Werte werden an die Kamera geschrieben:\n\n${liste}\n\n`
-      + 'Die Kamerasoftware wird danach neu gestartet – währenddessen entstehen '
-      + 'für einige Sekunden keine Fotos.\n\n'
-      + 'Der Automat legt vorher eine Sicherung der alten Werte an.\n\nFortfahren?'
-    )) return;
+    if (!confirm(t('camera.confirm_send', { list: liste }))) return;
 
     setBeschaeftigt('senden'); setHinweis(null); setFehler(null);
     const h = await kopfzeilen();
-    if (!h) { setFehler('Sitzung abgelaufen.'); setBeschaeftigt(null); return; }
+    if (!h) { setFehler(t('camera.session_expired')); setBeschaeftigt(null); return; }
 
     const werte: Record<string, number> = {};
     for (const e of geaendert) werte[e.schluessel] = entwurf[e.schluessel];
@@ -340,18 +340,14 @@ export default function Kamera() {
         const abgelehnt = body?.data?.abgelehnt;
         setFehler(
           abgelehnt
-            ? `Abgelehnt: ${Object.entries(abgelehnt).map(([k, g]) => `${k} (${g})`).join(', ')}`
+            ? t('camera.rejected', { list: Object.entries(abgelehnt).map(([k, g]) => `${k} (${g})`).join(', ') })
             : body?.error || `HTTP ${res.status}`,
         );
       } else {
-        setHinweis(
-          'Auftrag abgelegt. Der Automat holt ihn sich binnen zwei Minuten, schreibt '
-          + 'die Werte und startet die Kamera neu. Das Ergebnis steht danach im Verlauf '
-          + 'unter Systemzustand – auch wenn etwas abgelehnt wurde.',
-        );
+        setHinweis(t('camera.job_stored'));
       }
     } catch (e) {
-      setFehler(e instanceof Error ? e.message : 'Auftrag fehlgeschlagen.');
+      setFehler(e instanceof Error ? e.message : t('camera.job_failed'));
     }
     setBeschaeftigt(null);
   }
@@ -364,13 +360,12 @@ export default function Kamera() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-800">Kamera</h1>
-          <p className="mt-1 text-sm text-slate-500">Einstellungen und Bildkontrolle</p>
+          <h1 className="text-2xl font-semibold text-slate-800">{t('camera.title')}</h1>
+          <p className="mt-1 text-sm text-slate-500">{t('camera.subtitle')}</p>
         </div>
         <GlassCard className="p-6">
           <p className="text-sm leading-relaxed text-slate-600">
-            Für diesen Park meldet kein Automat eine Kamerasoftware. Die Seite erscheint
-            von selbst, sobald einer es tut.
+            {t('camera.none_reporting')}
           </p>
           {fehler && <p className="mt-3 text-sm text-rose-700">{fehler}</p>}
         </GlassCard>
@@ -392,12 +387,12 @@ export default function Kamera() {
 
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-800">Kamera</h1>
+          <h1 className="text-2xl font-semibold text-slate-800">{t('camera.title')}</h1>
           <p className="mt-1 text-sm text-slate-500">
-            {kamera?.modell ?? 'Kamera'}
-            {kamera?.seriennummer && <> · Nr. {kamera.seriennummer}</>}
+            {kamera?.modell ?? t('camera.title')}
+            {kamera?.seriennummer && <> · {t('camera.serial_no', { no: kamera.seriennummer })}</>}
             {kamera?.videoformat && <> · {kamera.videoformat}</>}
-            {kamera?.fps && <> · {kamera.fps} Bilder/s</>}
+            {kamera?.fps && <> · {t('camera.fps', { fps: kamera.fps })}</>}
           </p>
         </div>
         {mitKamera.length > 1 && (
@@ -416,16 +411,14 @@ export default function Kamera() {
       {kamera?.fehler && (
         <div className="flex gap-3 rounded-2xl border border-amber-200/70 bg-amber-50/70 p-4">
           <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" />
-          <p className="text-sm leading-relaxed text-amber-900">Die Einstellungen konnten nicht gelesen werden: {kamera.fehler}</p>
+          <p className="text-sm leading-relaxed text-amber-900">{t('camera.cannot_read', { error: kamera.fehler })}</p>
         </div>
       )}
 
       <div className="flex gap-3 rounded-2xl border border-sky-200/70 bg-sky-50/70 p-4">
         <Info className="mt-0.5 h-5 w-5 shrink-0 text-sky-700" />
         <p className="text-sm leading-relaxed text-sky-900">
-          Die Regler stehen auf dem, was die Kamera <span className="font-semibold">jetzt</span> eingestellt hat.
-          Verschieben verändert zunächst nur die <span className="font-semibold">Vorschau</span> am Foto darunter.
-          Erst „An Kamera senden“ schreibt sie wirklich – mit Sicherung und anschließendem Neustart der Kamerasoftware.
+          {t('camera.info_banner')}
         </p>
       </div>
 
@@ -434,21 +427,21 @@ export default function Kamera() {
           <GlassCard className="p-5 sm:p-6">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h2 className="text-base font-semibold text-slate-800">Letztes Foto</h2>
+                <h2 className="text-base font-semibold text-slate-800">{t('camera.last_photo')}</h2>
                 <p className="mt-0.5 text-xs text-slate-500">
-                  {bild ? `aufgenommen ${bild.wann}${bild.test ? ' · Testfoto' : ''}` : 'noch keins vorhanden'}
-                  {geaendert.length > 0 && <> · <span className="text-sky-700">Vorschau aktiv</span></>}
+                  {bild ? `${t('camera.taken_at', { time: bild.wann })}${bild.test ? ` · ${t('camera.test_photo_suffix')}` : ''}` : t('camera.none_yet')}
+                  {geaendert.length > 0 && <> · <span className="text-sky-700">{t('camera.preview_active')}</span></>}
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <button type="button" onClick={() => void letztesBildHolen()}
                   className="rounded-xl bg-white/60 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-white/80">
-                  Bild neu laden
+                  {t('camera.reload_image')}
                 </button>
                 {automat?.can_test_photo && (
                   <button type="button" onClick={() => void testfoto()} disabled={beschaeftigt !== null}
                     className="rounded-xl bg-white/60 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-white/80 disabled:opacity-50">
-                    {beschaeftigt === 'testfoto' ? 'wird ausgelöst…' : 'Testfoto auslösen'}
+                    {beschaeftigt === 'testfoto' ? t('camera.triggering') : t('camera.trigger_test')}
                   </button>
                 )}
               </div>
@@ -456,35 +449,32 @@ export default function Kamera() {
 
             {bild ? (
               <div className="overflow-hidden rounded-xl bg-slate-900/5">
-                <img src={bild.url} alt="Letztes Foto der Kamera" style={{ filter: filter || undefined }} className="w-full" />
+                <img src={bild.url} alt={t('camera.last_photo_alt')} style={{ filter: filter || undefined }} className="w-full" />
               </div>
             ) : (
               <div className="flex min-h-[260px] items-center justify-center rounded-xl bg-white/30 p-6 text-center text-sm text-slate-500">
-                Für diesen Park liegt noch kein Foto vor.
+                {t('camera.no_photo_yet')}
               </div>
             )}
 
             <p className="mt-3 text-xs leading-relaxed text-slate-400">
-              Kein Livebild: die Kamera hängt am Automaten, nicht am Internet. Einen Videostrom
-              dauerhaft zu übertragen wäre teuer und träge – das letzte echte Foto beantwortet
-              dieselbe Frage. Die Vorschau ist eine Annäherung am fertigen Bild, keine
-              Aufnahme mit den neuen Werten.
+              {t('camera.no_live_note')}
             </p>
           </GlassCard>
 
           {geaendert.length > 0 && (
             <GlassCard className="p-5 sm:p-6">
               <h2 className="mb-3 text-base font-semibold text-slate-800">
-                {geaendert.length} {geaendert.length === 1 ? 'Änderung' : 'Änderungen'} bereit
+                {t(geaendert.length === 1 ? 'camera.changes_ready_one' : 'camera.changes_ready_many', { count: geaendert.length })}
               </h2>
               <dl className="mb-4 space-y-1.5">
                 {geaendert.map((e) => (
                   <div key={e.schluessel} className="flex items-baseline justify-between gap-3 text-sm">
-                    <dt className="text-slate-600">{e.titel}</dt>
+                    <dt className="text-slate-600">{t(propKey(e, 'title'))}</dt>
                     <dd className="font-mono text-xs tabular-nums text-slate-700">
-                      <span className="text-slate-400">{anzeige(e, wertAus(kamera!.werte, e.schluessel)!)}</span>
+                      <span className="text-slate-400">{anzeige(e, wertAus(kamera!.werte, e.schluessel)!, t)}</span>
                       {' → '}
-                      <span className="font-semibold">{anzeige(e, entwurf[e.schluessel])}</span>
+                      <span className="font-semibold">{anzeige(e, entwurf[e.schluessel], t)}</span>
                     </dd>
                   </div>
                 ))}
@@ -493,7 +483,7 @@ export default function Kamera() {
                 <button type="button" onClick={() => void senden()} disabled={beschaeftigt !== null}
                   className="flex items-center gap-2 rounded-xl bg-slate-800 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50">
                   <Send className="h-4 w-4" />
-                  {beschaeftigt === 'senden' ? 'wird gesendet…' : 'An Kamera senden'}
+                  {beschaeftigt === 'senden' ? t('camera.sending') : t('camera.send_to_camera')}
                 </button>
                 <button type="button" onClick={() => {
                   const start: Record<string, number> = {};
@@ -504,12 +494,11 @@ export default function Kamera() {
                   setEntwurf(start);
                 }}
                   className="flex items-center gap-2 rounded-xl bg-white/60 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-white/80">
-                  <RotateCcw className="h-4 w-4" /> Verwerfen
+                  <RotateCcw className="h-4 w-4" /> {t('camera.discard')}
                 </button>
               </div>
               <p className="mt-3 text-xs leading-relaxed text-slate-500">
-                Der Automat legt vor dem Schreiben eine Sicherung der alten Datei an und nennt
-                ihren Pfad im Verlauf. Geht etwas schief, ist der Weg zurück damit dokumentiert.
+                {t('camera.backup_note')}
               </p>
             </GlassCard>
           )}
@@ -517,13 +506,11 @@ export default function Kamera() {
 
         <div className="space-y-6">
           <GlassCard className="p-5 sm:p-6">
-            <h2 className="mb-4 text-base font-semibold text-slate-800">Einstellungen</h2>
+            <h2 className="mb-4 text-base font-semibold text-slate-800">{t('camera.settings')}</h2>
 
             {belichtungAutomatisch && (
               <p className="mb-4 rounded-xl bg-amber-50/70 px-3 py-2.5 text-xs leading-relaxed text-amber-900">
-                Die Belichtung steht auf <span className="font-medium">automatisch</span>. Die
-                Belichtungszeit von Hand zu setzen bleibt dann wirkungslos – wirksam ist die
-                <span className="font-medium"> Ziel-Helligkeit</span>. Oder die Automatik ausschalten.
+                {t('camera.auto_exposure_warning')}
               </p>
             )}
 
@@ -536,11 +523,11 @@ export default function Kamera() {
                   <div key={e.schluessel}>
                     <div className="flex items-baseline justify-between gap-3">
                       <label htmlFor={`e-${e.schluessel}`} className="text-sm font-medium text-slate-700">
-                        {e.titel}
-                        {!e.vorschau && <span className="ml-1.5 text-xs font-normal text-slate-400">(nicht vorschaubar)</span>}
+                        {t(propKey(e, 'title'))}
+                        {!e.vorschau && <span className="ml-1.5 text-xs font-normal text-slate-400">{t('camera.not_previewable')}</span>}
                       </label>
                       <span className={`font-mono text-xs tabular-nums ${anders ? 'font-semibold text-sky-700' : 'text-slate-500'}`}>
-                        {anzeige(e, jetzt)}
+                        {anzeige(e, jetzt, t)}
                       </span>
                     </div>
 
@@ -552,7 +539,7 @@ export default function Kamera() {
                             className={`rounded-lg px-3 py-1.5 text-xs font-medium ${
                               jetzt === v ? 'bg-slate-800 text-white' : 'bg-white/60 text-slate-600 hover:bg-white/80'
                             }`}>
-                            {v ? 'an' : 'aus'}
+                            {v ? t('camera.on') : t('camera.off')}
                           </button>
                         ))}
                       </div>
@@ -562,7 +549,7 @@ export default function Kamera() {
                         onChange={(ev) => setEntwurf((a) => ({ ...a, [e.schluessel]: Number(ev.target.value) }))}
                         className="mt-2 w-full accent-slate-800" />
                     )}
-                    <p className="mt-1 text-xs leading-relaxed text-slate-400">{e.erklaerung}</p>
+                    <p className="mt-1 text-xs leading-relaxed text-slate-400">{t(propKey(e, 'text'))}</p>
                   </div>
                 );
               })}
@@ -570,16 +557,16 @@ export default function Kamera() {
           </GlassCard>
 
           <GlassCard className="p-5 sm:p-6">
-            <h2 className="mb-1 text-base font-semibold text-slate-800">Ist-Werte der Kamera</h2>
+            <h2 className="mb-1 text-base font-semibold text-slate-800">{t('camera.actual_values')}</h2>
             <p className="mb-4 text-xs leading-relaxed text-slate-500">
-              Gelesen aus <code className="rounded bg-white/60 px-1 text-[11px]">{kamera?.quelle ?? '—'}</code>
-              {kamera?.programm && <>, gesteuert von {kamera.programm}</>}.
+              {t('camera.read_from', { source: kamera?.quelle ?? '—' })}
+              {kamera?.programm && t('camera.controlled_by', { program: kamera.programm })}.
             </p>
             <dl className="space-y-2">
               {Object.keys(kamera?.werte ?? {}).sort().map((name) => (
                 <div key={name} className="flex items-baseline justify-between gap-3 border-b border-white/40 pb-2 last:border-0">
-                  <dt className="text-sm text-slate-600">{NAMEN[name] ?? name}</dt>
-                  <dd className="text-right font-mono text-xs tabular-nums text-slate-700">{istWert(kamera?.werte ?? {}, name)}</dd>
+                  <dt className="text-sm text-slate-600">{nameLabel(name, t)}</dt>
+                  <dd className="text-right font-mono text-xs tabular-nums text-slate-700">{istWert(kamera?.werte ?? {}, name, t)}</dd>
                 </div>
               ))}
             </dl>
@@ -589,9 +576,7 @@ export default function Kamera() {
             <div className="flex gap-3">
               <Camera className="mt-0.5 h-5 w-5 shrink-0 text-slate-400" />
               <p className="text-xs leading-relaxed text-slate-500">
-                Nicht alles, was die Kamera kann, steht hier. Auslöser, Blitzausgang und
-                Netzwerkeinstellungen bleiben bewusst außen vor – sie gehören zur Verkabelung
-                der Anlage, nicht zur Bildgestaltung, und ein Fehlgriff dort legt die Kamera lahm.
+                {t('camera.limits_note')}
               </p>
             </div>
           </GlassCard>
