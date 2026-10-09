@@ -238,7 +238,12 @@ export default function ConfigurationProduct() {
     );
   }
 
-  const bilder = eintragBilder(item);
+  // Speedmessung: je nach gewähltem Paket kommt ein viertes Bild dazu (Display-Tafel
+  // bzw. Fahrtfoto mit Geschwindigkeit).
+  const bilder = [
+    ...eintragBilder(item),
+    ...(istSpeed ? [speedPaket === 'display' ? '/speedmessung/display.jpg' : '/speedmessung/langzeit.jpg'] : []),
+  ];
   const aktuell = bilder[index] ?? bilder[0];
   const punkte = beschreibungPunkte(item.beschreibung);
   const preise = preisTexte;
@@ -477,7 +482,10 @@ export default function ConfigurationProduct() {
                     <button
                       key={paket.key}
                       type="button"
-                      onClick={() => setSpeedPaket(paket.key)}
+                      onClick={() => {
+                        setSpeedPaket(paket.key);
+                        setIndex(3);
+                      }}
                       aria-pressed={speedPaket === paket.key}
                       className={`rounded-xl border-2 p-3 text-left transition ${
                         speedPaket === paket.key ? 'border-sky-500 bg-sky-50/60' : 'border-slate-200 bg-white hover:border-slate-300'
