@@ -44,7 +44,7 @@ const KATEGORIE_GRUPPE: Record<string, Gruppe> = {
   Sonstiges: 'Services',
 };
 
-const GRUPPEN_REIHENFOLGE: Gruppe[] = ['Hardware', 'Materialien', 'Software', 'Wartung', 'Support', 'Services'];
+const GRUPPEN_REIHENFOLGE: Gruppe[] = ['Hardware', 'Software', 'Wartung', 'Support', 'Services', 'Materialien'];
 
 function SectionCard({ title, subtitle, action, children }: { title: string; subtitle?: string; action?: ReactNode; children: ReactNode }) {
   return (
