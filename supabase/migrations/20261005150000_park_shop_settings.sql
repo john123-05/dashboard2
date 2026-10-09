@@ -15,6 +15,9 @@ create table if not exists public.park_shop_settings (
   updated_at timestamptz not null default now()
 );
 
+-- No policies: only the service-role edge functions may read/write.
+alter table public.park_shop_settings enable row level security;
+
 alter table public.photo_claims
   add column if not exists amount_cents integer;
 
