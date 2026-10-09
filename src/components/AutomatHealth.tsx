@@ -677,7 +677,7 @@ export default function AutomatHealth({ onVerlauf }: {
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
-          <h3 className="text-lg font-semibold text-slate-800">{t('health.title')}</h3>
+          <h3 className="text-lg font-semibold text-slate-800">{t('health.status_title')}</h3>
           <ZustandsHilfe />
         </div>
         <div className="flex shrink-0 items-center gap-2">

@@ -148,7 +148,7 @@ export default function SystemHealth({ embedded = false }: { embedded?: boolean 
 
   async function loadHealth(refresh = false) {
     if (!parkId) {
-      setError('No park selected');
+      setError(t('health.no_park'));
       setLoading(false);
       return;
     }
@@ -163,7 +163,7 @@ export default function SystemHealth({ embedded = false }: { embedded?: boolean 
         setData(mapLegacySystemHealth(parkId, legacyResult.data));
         setNotice(
           isEdgeSourceUnavailable(result.error)
-            ? 'The new operations health feed is not deployed yet. Showing the previous live system health view instead.'
+            ? t('health.legacy_notice')
             : null,
         );
         setError(null);
@@ -175,7 +175,7 @@ export default function SystemHealth({ embedded = false }: { embedded?: boolean 
       setNotice(
         getOptionalSourceWarning('System health feed', result.error) ||
           getOptionalSourceWarning('Legacy health feed', legacyResult.error) ||
-          'System health feed is currently unavailable.',
+          t('health.feed_unavailable'),
       );
       setError(null);
       setLoading(false);
@@ -213,7 +213,7 @@ export default function SystemHealth({ embedded = false }: { embedded?: boolean 
         <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('health.title')}</h2>
         <div className="rounded-2xl border border-red-200 bg-red-50 p-6">
           <h3 className="mb-2 text-lg font-semibold text-red-800">{t('overview.error_title')}</h3>
-          <p className="mb-4 text-sm text-red-600">{error || 'Unknown error'}</p>
+          <p className="mb-4 text-sm text-red-600">{error || t('app.unknown_error')}</p>
           <button
             onClick={() => loadHealth(true)}
             className={embedded ? 'glass-button-secondary customer-operator-btn' : 'glass-button-secondary'}
@@ -276,21 +276,21 @@ export default function SystemHealth({ embedded = false }: { embedded?: boolean 
   };
 
   const SCHWERE: Record<string, string> = {
-    critical: 'Kritisch',
-    error: 'Fehler',
-    warning: 'Warnung',
-    info: 'Hinweis',
+    critical: t('health.sev_critical'),
+    error: t('health.sev_error'),
+    warning: t('health.sev_warning'),
+    info: t('health.sev_info'),
   };
 
   const errorColumns: DataTableColumn<ParkDashboardEvent>[] = [
     {
       key: 'occurred_at',
-      label: 'Zeitpunkt',
+      label: t('health.col_time'),
       render: (item) => <span className="text-slate-600">{formatDateTime(item.occurred_at)}</span>,
     },
     {
       key: 'severity',
-      label: 'Schwere',
+      label: t('health.col_severity'),
       render: (item) => (
         <span className={`rounded-lg px-2 py-1 text-xs font-semibold ${severityColor(item.severity)}`}>
           {SCHWERE[item.severity] || item.severity}
@@ -299,7 +299,7 @@ export default function SystemHealth({ embedded = false }: { embedded?: boolean 
     },
     {
       key: 'category',
-      label: 'Art',
+      label: t('health.col_kind'),
       render: (item) => (
         <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
           {item.category}
@@ -308,16 +308,16 @@ export default function SystemHealth({ embedded = false }: { embedded?: boolean 
     },
     {
       key: 'device',
-      label: 'Gerät',
+      label: t('health.col_device'),
       render: (item) => <span>{item.device || '-'}</span>,
     },
     {
       key: 'description',
-      label: 'Meldung',
+      label: t('health.col_message'),
     },
     {
       key: 'source_file',
-      label: 'Herkunft',
+      label: t('health.col_source'),
       render: (item) => (
         <span className="font-mono text-xs text-slate-500">{item.source_file}</span>
       ),
@@ -338,7 +338,7 @@ export default function SystemHealth({ embedded = false }: { embedded?: boolean 
 
       {notice && (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-          <p className="text-sm font-medium text-amber-900">Health data is currently limited.</p>
+          <p className="text-sm font-medium text-amber-900">{t('health.data_limited')}</p>
           <p className="mt-1 text-sm text-amber-700">{notice}</p>
         </div>
       )}
@@ -360,28 +360,27 @@ export default function SystemHealth({ embedded = false }: { embedded?: boolean 
             <div>
               <h3 className="text-base font-semibold text-slate-800">
                 {quelleStatus === 'down'
-                  ? 'Datenquelle veraltet'
+                  ? t('health.source_stale')
                   : quelleStatus === 'degraded'
-                    ? 'Daten etwas älter als üblich'
-                    : 'Datenquelle erreichbar'}
+                    ? t('health.source_older')
+                    : t('health.source_ok')}
               </h3>
               <p className="mt-0.5 text-sm text-slate-500">
-                Zuletzt Daten empfangen:{' '}
-                {data.health.last_data_at ? formatRelative(data.health.last_data_at) : 'noch nie'}
-                {' · '}letzte Aktivität am Automaten:{' '}
-                {data.health.last_activity_at ? formatRelative(data.health.last_activity_at) : 'unbekannt'}
+                {t('health.last_data', { time: data.health.last_data_at ? formatRelative(data.health.last_data_at) : t('health.never') })}
+                {' · '}
+                {t('health.last_activity', { time: data.health.last_activity_at ? formatRelative(data.health.last_activity_at) : t('health.time.unknown') })}
               </p>
             </div>
           </div>
           {/* Papier und Drucke stehen jetzt je Automat auf dessen Karte. */}
           <div className="grid shrink-0 grid-cols-2 gap-2">
             <Kennzahl
-              label="Fahrten gesamt"
+              label={t('health.rides_total')}
               wert={data.summary.rides_total !== null && data.summary.rides_total !== undefined
                 ? formatNumber(data.summary.rides_total) : '-'}
             />
             <Kennzahl
-              label="Verkauft gesamt"
+              label={t('health.sold_total')}
               wert={data.summary.photos_sold_total !== null && data.summary.photos_sold_total !== undefined
                 ? formatNumber(data.summary.photos_sold_total) : '-'}
             />
@@ -407,10 +406,10 @@ export default function SystemHealth({ embedded = false }: { embedded?: boolean 
           stehen sie oben im Anlagenstatus; hier wären sie nur eine schlechtere
           Kopie. */}
       <GlassCard className="p-5 sm:p-6">
-        <h3 className="mb-4 text-base font-semibold text-slate-800">Dienste bei Liftpictures</h3>
+        <h3 className="mb-4 text-base font-semibold text-slate-800">{t('health.services')}</h3>
         <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {serverDienste.length === 0 ? (
-            <p className="text-sm text-slate-500">Keine Meldungen von den Diensten.</p>
+            <p className="text-sm text-slate-500">{t('health.no_service_reports')}</p>
           ) : (
             serverDienste.map(({ service, benennung }) => (
               <div key={service.name} className="rounded-xl bg-white/30 px-3 py-2">
@@ -456,21 +455,21 @@ export default function SystemHealth({ embedded = false }: { embedded?: boolean 
       <GlassCard className="overflow-hidden">
         <div className="flex flex-col gap-3 border-b border-white/40 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
           <div>
-            <h3 className="text-base font-semibold text-slate-800">Was passiert ist</h3>
+            <h3 className="text-base font-semibold text-slate-800">{t('health.what_happened')}</h3>
           </div>
           <div className="inline-flex shrink-0 self-start rounded-xl bg-white/50 p-1 sm:self-auto">
             <button
               onClick={() => setRegister('dateien')}
               className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${register === 'dateien' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
             >
-              Aus den Dateien
+              {t('health.from_files')}
               <span className="ml-1.5 tabular-nums text-slate-400">{formatNumber(errorItems.length)}</span>
             </button>
             <button
               onClick={() => setRegister('verlauf')}
               className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${register === 'verlauf' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
             >
-              Verlauf des Automaten
+              {t('health.kiosk_history')}
               <span className="ml-1.5 tabular-nums text-slate-400">{formatNumber(verlauf.length)}</span>
             </button>
           </div>
@@ -481,11 +480,11 @@ export default function SystemHealth({ embedded = false }: { embedded?: boolean 
             <div className="mb-3 flex flex-wrap items-center gap-2">
               {(
                 [
-                  { wert: 'all', label: 'Alle', anzahl: errorItems.length },
-                  { wert: 'critical', label: 'Kritisch', anzahl: severityCounts.critical },
-                  { wert: 'error', label: 'Fehler', anzahl: severityCounts.error },
-                  { wert: 'warning', label: 'Warnungen', anzahl: severityCounts.warning },
-                  { wert: 'info', label: 'Hinweise', anzahl: severityCounts.info },
+                  { wert: 'all', label: t('health.filter_all'), anzahl: errorItems.length },
+                  { wert: 'critical', label: t('health.filter_critical'), anzahl: severityCounts.critical },
+                  { wert: 'error', label: t('health.filter_error'), anzahl: severityCounts.error },
+                  { wert: 'warning', label: t('health.filter_warning'), anzahl: severityCounts.warning },
+                  { wert: 'info', label: t('health.filter_info'), anzahl: severityCounts.info },
                 ] as const
               ).map((f) => (
                 <button
@@ -515,7 +514,7 @@ export default function SystemHealth({ embedded = false }: { embedded?: boolean 
                   className={embedded ? 'glass-button-secondary customer-operator-btn' : 'glass-button-secondary'}
                 >
                   <Download className="h-4 w-4" />
-                  Als CSV speichern
+                  {t('health.save_csv')}
                 </button>
               }
             />
@@ -524,11 +523,11 @@ export default function SystemHealth({ embedded = false }: { embedded?: boolean 
           <div className="max-h-[28rem] overflow-y-auto p-2 sm:p-3">
             {!verlaufVerfuegbar ? (
               <p className="px-2 py-4 text-sm text-amber-800">
-                Der dauerhafte Verlauf ist auf dem Server noch nicht eingerichtet.
+                {t('health.history_not_set')}
               </p>
             ) : verlauf.length === 0 ? (
               <p className="px-2 py-4 text-sm text-slate-500">
-                Noch keine Ereignisse aufgezeichnet.
+                {t('health.no_events_yet')}
               </p>
             ) : (
               verlauf.map((h) => (
