@@ -1189,41 +1189,6 @@ function LeadsContacts({
     resolvedCountryStats.find((country) => country.countryCode === selectedCountry) || topCountries[0] || null;
   const totalMappedLeads = resolvedCountryStats.reduce((sum, country) => sum + country.count, 0);
 
-  const sourceLabel = (source: unknown): string =>
-    source === 'social_media'
-      ? 'Social Media'
-      : source === 'photo_claim'
-        ? 'Foto-Freischaltung'
-        : typeof source === 'string' && source
-          ? source
-          : 'Sonstige';
-  const tally = (items: string[]) =>
-    Array.from(
-      items.reduce((map, item) => map.set(item, (map.get(item) || 0) + 1), new Map<string, number>()).entries(),
-    )
-      .map(([label, count]) => ({ label, count }))
-      .sort((a, b) => b.count - a.count);
-  const leadsOfSelectedCountry = selectedCountryStat
-    ? leads.filter(
-        (lead) =>
-          typeof lead.country_code === 'string' &&
-          lead.country_code.trim().toUpperCase() === selectedCountryStat.countryCode,
-      )
-    : [];
-  const selectedSources = tally(leadsOfSelectedCountry.map((lead) => sourceLabel(lead.source)));
-  const selectedLanguages = tally(
-    leadsOfSelectedCountry.map((lead) =>
-      typeof lead.locale === 'string' && lead.locale.trim() ? lead.locale.trim().toUpperCase() : 'Unbekannt',
-    ),
-  );
-  const allLanguages = tally(
-    leads
-      .filter((lead) => typeof lead.country_code === 'string' && lead.country_code)
-      .map((lead) =>
-        typeof lead.locale === 'string' && lead.locale.trim() ? lead.locale.trim().toUpperCase() : 'Unbekannt',
-      ),
-  );
-
   const columns = [
     ...(selectionMode ? [{
       key: 'select',
@@ -1569,7 +1534,7 @@ function LeadsContacts({
                     <h3 className="mt-2 text-2xl font-semibold text-slate-800">Detaillierte Weltkarte</h3>
                     <p className="mt-1 text-sm text-slate-500">
                       Klicke auf ein Land oder wähle rechts eins aus der Liste. Dort siehst du, wie viele Gäste aus
-                      welchem Land kommen, wie sie freigeschaltet haben und in welcher Sprache.
+                      welchem Land kommen.
                     </p>
                   </div>
                   <button
@@ -1621,57 +1586,14 @@ function LeadsContacts({
                         {delayInsights.matchedCount > 0 ? delayInsights.avgDelayLabel : '—'}
                       </p>
                     </div>
-                  </div>
-                  {allLanguages.length > 0 && (
-                    <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Sprachen aller Gäste</p>
-                      <div className="mt-2 flex flex-wrap gap-1.5">
-                        {allLanguages.map((entry) => (
-                          <span key={entry.label} className="rounded-full bg-white px-2.5 py-0.5 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
-                            {entry.label} · {entry.count}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
+                  </div>                </div>
 
                 <div className="space-y-4">
-                  {selectedCountryStat && (
-                    <div className="rounded-2xl border border-sky-100 bg-sky-50/60 p-4">
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-600">Ausgewählt</p>
-                      <p className="mt-1 text-lg font-semibold text-slate-800">
-                        {countryCodeToFlag(selectedCountryStat.countryCode)} {selectedCountryStat.countryName}
-                      </p>
-                      <p className="text-sm text-slate-500">
-                        {selectedCountryStat.count} Gäste,{' '}
-                        {totalMappedLeads > 0 ? Math.round((selectedCountryStat.count / totalMappedLeads) * 100) : 0}%
-                        aller Gäste mit Land
-                      </p>
-                      <p className="mt-3 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Freischaltung über</p>
-                      <div className="mt-1 flex flex-wrap gap-1.5">
-                        {selectedSources.map((entry) => (
-                          <span key={entry.label} className="rounded-full bg-white px-2.5 py-0.5 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
-                            {entry.label} · {entry.count}
-                          </span>
-                        ))}
-                      </div>
-                      <p className="mt-3 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Sprache</p>
-                      <div className="mt-1 flex flex-wrap gap-1.5">
-                        {selectedLanguages.map((entry) => (
-                          <span key={entry.label} className="rounded-full bg-white px-2.5 py-0.5 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
-                            {entry.label} · {entry.count}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
                   <div>
                     <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
                       Gäste nach Land ({resolvedCountryStats.length})
                     </p>
-                <div className="max-h-[320px] space-y-2 overflow-y-auto pr-2">
+                <div className="max-h-[560px] space-y-2 overflow-y-auto pr-2">
                   {resolvedCountryStats.map((country) => {
                     const share = totalMappedLeads > 0 ? Math.round((country.count / totalMappedLeads) * 100) : 0;
                     const active = country.countryCode === selectedCountryStat?.countryCode;
@@ -1680,23 +1602,20 @@ function LeadsContacts({
                         key={country.countryCode}
                         type="button"
                         onClick={() => setSelectedCountry(country.countryCode)}
-                        className={`w-full rounded-2xl border px-4 py-3 text-left transition-all ${
+                        className={`w-full rounded-2xl border px-4 py-2.5 text-left transition-all ${
                           active
                             ? 'border-sky-200 bg-sky-50/80 shadow-sm'
                             : 'border-slate-100 bg-white hover:border-slate-200'
                         }`}
                       >
                         <div className="flex items-center justify-between gap-3">
-                          <div>
-                            <p className="font-medium text-slate-700">
-                              {countryCodeToFlag(country.countryCode)} {country.countryName}
-                            </p>
-                            <p className="mt-1 text-xs text-slate-400">{country.countryCode}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-semibold text-slate-800">{country.count}</p>
-                            <p className="text-xs text-slate-400">{share}%</p>
-                          </div>
+                          <p className="min-w-0 truncate font-medium text-slate-700">
+                            {countryCodeToFlag(country.countryCode)} {country.countryName}
+                          </p>
+                          <p className="shrink-0 text-right">
+                            <span className="font-semibold text-slate-800">{country.count}</span>
+                            <span className="ml-2 text-xs text-slate-400">{share}%</span>
+                          </p>
                         </div>
                       </button>
                     );
