@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
+import { useI18n, useLocaleTag } from '../../lib/i18n';
 import GlassCard from '../ui/GlassCard';
 import {
   fetchSurveyResults,
@@ -9,10 +10,10 @@ import {
 } from '../../lib/surveyApi';
 
 const PERIODS = [
-  { days: 7, label: '7 Tage' },
-  { days: 30, label: '30 Tage' },
-  { days: 90, label: '90 Tage' },
-  { days: 365, label: '12 Monate' },
+  { days: 7, label: 'survey.period_7' },
+  { days: 30, label: 'survey.period_30' },
+  { days: 90, label: 'survey.period_90' },
+  { days: 365, label: 'survey.period_365' },
 ] as const;
 
 function scoreColor(score: number): string {
@@ -55,13 +56,15 @@ function Kpi({ label, value, sub }: { label: string; value: string; sub?: string
 }
 
 function QuestionCard({ q }: { q: SurveyQuestionResult }) {
-  const prompt = pickLocalized(q.prompt) || 'Frage';
+  const { t } = useI18n();
+  const localeTag = useLocaleTag();
+  const prompt = pickLocalized(q.prompt) || t('survey.question');
   return (
     <GlassCard className="p-5">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h4 className="text-sm font-semibold text-slate-800">{prompt}</h4>
         <span className="text-xs text-slate-400">
-          {q.answered} Antworten{!q.active && ' · Frage entfernt'}
+          {t('survey.answers_count', { count: q.answered })}{!q.active && ` · ${t('survey.question_removed')}`}
           {typeof q.average === 'number' && ` · Ø ${q.average}`}
         </span>
       </div>
@@ -78,28 +81,28 @@ function QuestionCard({ q }: { q: SurveyQuestionResult }) {
         {q.type === 'yesno' && (
           <Bars
             items={[
-              { label: 'Ja', count: q.yes ?? 0, color: 'bg-emerald-500' },
-              { label: 'Nein', count: q.no ?? 0, color: 'bg-rose-400' },
+              { label: t('survey.yes'), count: q.yes ?? 0, color: 'bg-emerald-500' },
+              { label: t('survey.no'), count: q.no ?? 0, color: 'bg-rose-400' },
             ]}
           />
         )}
         {q.type === 'choice' && q.counts && (
           <Bars
             items={q.counts.map((c) => ({
-              label: pickLocalized(q.options[c.index]) || `Antwort ${c.index + 1}`,
+              label: pickLocalized(q.options[c.index]) || t('survey.answer_n', { n: c.index + 1 }),
               count: c.count,
             }))}
           />
         )}
         {q.type === 'text' && (
           <ul className="max-h-72 space-y-2 overflow-y-auto pr-1">
-            {(q.texts ?? []).length === 0 && <li className="text-sm text-slate-400">Noch keine Antworten.</li>}
-            {(q.texts ?? []).map((t, i) => (
+            {(q.texts ?? []).length === 0 && <li className="text-sm text-slate-400">{t('survey.no_answers_yet')}</li>}
+            {(q.texts ?? []).map((entry, i) => (
               <li key={i} className="rounded-lg bg-white/60 px-3 py-2 text-sm text-slate-700">
-                {t.text}
+                {entry.text}
                 <span className="mt-0.5 block text-[11px] text-slate-400">
-                  {new Date(t.at).toLocaleDateString('de-DE')}
-                  {typeof t.score === 'number' && ` · Score ${t.score}`}
+                  {new Date(entry.at).toLocaleDateString(localeTag)}
+                  {typeof entry.score === 'number' && ` · ${t('survey.score_n', { n: entry.score })}`}
                 </span>
               </li>
             ))}
@@ -111,6 +114,8 @@ function QuestionCard({ q }: { q: SurveyQuestionResult }) {
 }
 
 export default function SurveyResultsView({ parkId }: { parkId: string }) {
+  const { t } = useI18n();
+  const localeTag = useLocaleTag();
   const [days, setDays] = useState<number>(30);
   const [data, setData] = useState<SurveyResults | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -125,7 +130,7 @@ export default function SurveyResultsView({ parkId }: { parkId: string }) {
         setData(r);
         setError(null);
       })
-      .catch((e) => active && setError(e instanceof Error ? e.message : 'Laden fehlgeschlagen.'))
+      .catch((e) => active && setError(e instanceof Error ? e.message : t('survey.load_failed')))
       .finally(() => active && setLoading(false));
     return () => {
       active = false;
@@ -137,51 +142,51 @@ export default function SurveyResultsView({ parkId }: { parkId: string }) {
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-slate-500">Antworten der Gäste vor der Foto-Freischaltung</p>
+        <p className="text-sm text-slate-500">{t('survey.results_intro')}</p>
         <select
           value={days}
           onChange={(e) => setDays(Number(e.target.value))}
           className="rounded-lg border border-slate-200/70 bg-white/70 px-2.5 py-1 text-sm text-slate-700"
         >
           {PERIODS.map((p) => (
-            <option key={p.days} value={p.days}>{p.label}</option>
+            <option key={p.days} value={p.days}>{t(p.label)}</option>
           ))}
         </select>
       </div>
 
       {loading && (
         <p className="flex items-center gap-2 text-sm text-slate-500">
-          <Loader2 className="h-4 w-4 animate-spin" /> wird geladen…
+          <Loader2 className="h-4 w-4 animate-spin" /> {t('survey.loading')}
         </p>
       )}
       {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
 
       {data && data.total === 0 && !loading && (
         <GlassCard className="p-6">
-          <p className="text-sm text-slate-500">Im gewählten Zeitraum gibt es noch keine Antworten.</p>
+          <p className="text-sm text-slate-500">{t('survey.no_answers_period')}</p>
         </GlassCard>
       )}
 
       {data && data.total > 0 && (
         <>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Kpi label="Antworten" value={String(data.total)} />
+            <Kpi label={t('survey.kpi_answers')} value={String(data.total)} />
             <Kpi
               label="NPS"
               value={data.nps === null ? '–' : String(data.nps)}
-              sub={`${data.promoters} Promoter · ${data.passives} neutral · ${data.detractors} Kritiker`}
+              sub={t('survey.promoters_line', { promoters: data.promoters, passives: data.passives, detractors: data.detractors })}
             />
-            <Kpi label="Ø Score (0–10)" value={data.average_score === null ? '–' : String(data.average_score)} />
+            <Kpi label={t('survey.kpi_avg_score')} value={data.average_score === null ? '–' : String(data.average_score)} />
             <Kpi
-              label="Bewertungs-Link gezeigt"
+              label={t('survey.kpi_link_shown')}
               value={String(data.review_link_shown)}
-              sub={`ab Score ${data.review_min_score}`}
+              sub={t('survey.from_score', { n: data.review_min_score })}
             />
           </div>
 
           <div className="grid gap-5 lg:grid-cols-2">
             <GlassCard className="p-5">
-              <h4 className="text-sm font-semibold text-slate-800">Verteilung der Weiterempfehlung</h4>
+              <h4 className="text-sm font-semibold text-slate-800">{t('survey.recommendation_distribution')}</h4>
               <div className="mt-3">
                 <Bars
                   items={data.distribution.map((d) => ({ label: String(d.score), count: d.count }))}
@@ -191,14 +196,14 @@ export default function SurveyResultsView({ parkId }: { parkId: string }) {
             </GlassCard>
 
             <GlassCard className="p-5">
-              <h4 className="text-sm font-semibold text-slate-800">Antworten pro Tag</h4>
+              <h4 className="text-sm font-semibold text-slate-800">{t('survey.answers_per_day')}</h4>
               <div className="mt-3 flex h-32 items-end gap-1">
                 {data.timeline.map((d) => (
                   <div
                     key={d.day}
                     className="group relative flex-1 rounded-t bg-brand-500/80"
                     style={{ height: `${Math.max(4, (d.count / maxDay) * 100)}%` }}
-                    title={`${new Date(d.day).toLocaleDateString('de-DE')}: ${d.count} Antworten${d.avg_score !== null ? ` · Ø ${d.avg_score}` : ''}`}
+                    title={`${new Date(d.day).toLocaleDateString(localeTag)}: ${t('survey.answers_count', { count: d.count })}${d.avg_score !== null ? ` · Ø ${d.avg_score}` : ''}`}
                   />
                 ))}
               </div>
@@ -213,7 +218,7 @@ export default function SurveyResultsView({ parkId }: { parkId: string }) {
               ))}
           </div>
           {data.truncated && (
-            <p className="text-xs text-slate-400">Es werden die neuesten 5.000 Antworten ausgewertet.</p>
+            <p className="text-xs text-slate-400">{t('survey.latest_5000')}</p>
           )}
         </>
       )}
