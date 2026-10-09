@@ -217,6 +217,8 @@ export default function Users() {
     );
   }
 
+  const locked = !hasGuestActivity(parkId);
+
   return (
     <div className="flex min-h-[calc(100vh-4rem)] flex-col gap-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -286,6 +288,10 @@ export default function Users() {
             </GlassCard>
           </div>
 
+          {locked ? (
+            <SpeedmessungOffer />
+          ) : (
+            <>
           <div className="grid gap-4 sm:grid-cols-3">
             <GlassCard className="p-5">
               <div className="flex items-center gap-3">
@@ -475,11 +481,12 @@ export default function Users() {
               )}
             </div>
           </GlassCard>
-          {!hasGuestActivity(parkId) && <SpeedmessungOffer compact />}
+            </>
+          )}
         </div>
 
         {parkId && (
-          <GlassCard className="flex h-full flex-col overflow-hidden p-0">
+          <GlassCard className="flex h-[640px] flex-col overflow-hidden p-0 lg:sticky lg:top-6 lg:h-[calc(100vh-3rem)]">
             <div
               className="flex items-center gap-2 px-4 py-3"
               style={{ backgroundColor: accentColorForPark(parkId), color: accentTextColorForPark(parkId) }}

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, Gauge, Send, Truck, Trophy, TrendingUp } from 'lucide-react';
+import { Check, Send } from 'lucide-react';
 import { usePark } from '../contexts/ParkContext';
 import { meldeAusstattungsInteresse } from '../lib/equipment';
 
@@ -8,61 +8,47 @@ type PlanKey = 'basis' | 'display' | 'long';
 const eur = (value: number) =>
   value.toLocaleString('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
 
-const CORE_FEATURES = [
+const INCLUDED = [
   'Geschwindigkeits-Hardware an der Bahn',
   'Tagesschnellster, Langsamster & Durchschnitt live',
   'Gäste-Rangliste mit Profilbild & Namen',
   'Geschwindigkeit direkt auf dem Foto',
-  'Hardware kostenlos – wir schicken sie dir',
   'Einrichtung & Support durch uns',
+  'Hardware kostenlos – wir schicken sie dir',
 ];
 
 const PLANS: {
   key: PlanKey;
   name: string;
-  tagline: string;
   monthly: number;
   months: number;
   oneTime?: number;
   highlight?: boolean;
   badge?: string;
-  features: string[];
+  points: string[];
 }[] = [
-  {
-    key: 'basis',
-    name: 'Speedmessung',
-    tagline: 'Der Einstieg – flexibel, 12 Monate.',
-    monthly: 250,
-    months: 12,
-    features: CORE_FEATURES,
-  },
+  { key: 'basis', name: 'Speedmessung', monthly: 250, months: 12, points: ['Alles aus „Enthalten“', '12 Monate Laufzeit'] },
   {
     key: 'display',
     name: 'Speedmessung + Display',
-    tagline: 'Mit großem Display direkt an der Bahn.',
     monthly: 250,
     months: 12,
     oneTime: 1000,
     highlight: true,
     badge: 'Beliebt',
-    features: [
-      CORE_FEATURES[0],
-      'Großes Display: Geschwindigkeit & Tagesbestzeit für alle Gäste',
-      ...CORE_FEATURES.slice(1),
-    ],
+    points: ['Alles aus „Enthalten“', 'Großes Display an der Bahn', '12 Monate Laufzeit'],
   },
   {
     key: 'long',
     name: 'Speedmessung 48 Monate',
-    tagline: 'Dauerhaft günstiger bei langer Laufzeit.',
     monthly: 199,
     months: 48,
     badge: 'Sparpreis',
-    features: CORE_FEATURES,
+    points: ['Alles aus „Enthalten“', '51 € weniger pro Monat', '48 Monate Laufzeit'],
   },
 ];
 
-export default function SpeedmessungOffer({ compact = false }: { compact?: boolean }) {
+export default function SpeedmessungOffer() {
   const { parkId } = usePark();
   const [busy, setBusy] = useState<PlanKey | null>(null);
   const [requested, setRequested] = useState<PlanKey[]>([]);
@@ -87,103 +73,80 @@ export default function SpeedmessungOffer({ compact = false }: { compact?: boole
   }
 
   return (
-    <section className={compact ? 'space-y-5' : 'mx-auto mt-14 max-w-5xl space-y-6 border-t border-slate-200/70 pt-10'}>
-      <div className={compact ? 'text-left' : 'text-center'}>
-        <span className="inline-block rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
+    <section className="space-y-5">
+      <div className="rounded-3xl bg-slate-900 p-6 text-white shadow-lg">
+        <span className="inline-block rounded-full bg-amber-400/15 px-3 py-1 text-xs font-semibold text-amber-300">
           Noch nicht freigeschaltet
         </span>
-        <h3 className="mt-3 text-2xl font-bold tracking-tight text-slate-800">Speedmessung nachrüsten</h3>
-        <p
-          className={`mt-2 flex max-w-xl items-start gap-2 text-sm leading-relaxed text-slate-600 ${
-            compact ? '' : 'mx-auto justify-center'
-          }`}
-        >
-          <Truck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-          <span>
-            Alles ist für deinen Park schon vorbereitet – du musst es nur freischalten. Wir schicken dir die Hardware
-            kostenlos zu und richten alles ein.
-          </span>
+        <h3 className="mt-3 text-2xl font-bold tracking-tight">Mach aus jeder Fahrt einen Wettkampf</h3>
+        <p className="mt-2 max-w-xl text-sm leading-relaxed text-slate-300">
+          Gäste sehen ihre Geschwindigkeit auf dem Foto und treten in der Tagesrangliste gegeneinander an. Das bringt
+          sie zurück und lässt sie öfter fahren.
         </p>
-      </div>
-
-      <div className={`grid gap-3 ${compact ? '' : 'sm:grid-cols-3'}`}>
-        {[
-          { icon: Gauge, title: 'Geschwindigkeit sehen', text: 'Jede Fahrt wird gemessen – live im Dashboard und auf dem Foto.' },
-          { icon: Trophy, title: 'Tagesrangliste', text: 'Gäste tragen sich ein, die Schnellsten des Tages werden gefeiert.' },
-          { icon: TrendingUp, title: 'Mehr Fahrten & Verkäufe', text: 'Der Wettkampf bringt Gäste zurück und lässt sie öfter fahren.' },
-        ].map(({ icon: Icon, title, text }) => (
-          <div key={title} className="flex items-start gap-3 rounded-2xl bg-white/60 p-4">
-            <Icon className="mt-0.5 h-5 w-5 shrink-0 text-slate-500" />
-            <div>
-              <p className="text-sm font-semibold text-slate-800">{title}</p>
-              <p className="mt-0.5 text-xs leading-snug text-slate-500">{text}</p>
-            </div>
-          </div>
-        ))}
+        <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-400">Enthalten in jedem Paket</p>
+        <ul className="mt-2 grid gap-x-6 gap-y-1.5 sm:grid-cols-2">
+          {INCLUDED.map((f) => (
+            <li key={f} className="flex items-start gap-2 text-[13px] leading-snug text-slate-100">
+              <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-300" />
+              {f}
+            </li>
+          ))}
+        </ul>
       </div>
 
       {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-center text-sm text-rose-700">{error}</p>}
 
-      <div className={`grid gap-5 pt-3 ${compact ? 'sm:grid-cols-2' : 'md:grid-cols-3'}`}>
+      <div className="grid items-stretch gap-4 pt-2 sm:grid-cols-3">
         {PLANS.map((plan) => {
-          const dark = plan.highlight;
           const done = requested.includes(plan.key);
+          const hl = plan.highlight;
           return (
             <div
               key={plan.key}
-              className={`relative flex flex-col rounded-3xl p-5 ${
-                dark ? 'bg-slate-900 text-white shadow-xl ring-1 ring-slate-800' : 'bg-white/80 text-slate-800 shadow-sm ring-1 ring-slate-200'
+              className={`relative flex flex-col rounded-2xl bg-white p-4 shadow-sm ring-1 ${
+                hl ? 'ring-2 ring-amber-400' : 'ring-slate-200'
               }`}
             >
               {plan.badge && (
                 <span
-                  className={`absolute -top-3 left-5 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wide ${
-                    dark ? 'bg-amber-400 text-slate-900' : 'bg-emerald-100 text-emerald-800'
+                  className={`absolute -top-2.5 left-4 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                    hl ? 'bg-amber-400 text-slate-900' : 'bg-emerald-100 text-emerald-800'
                   }`}
                 >
                   {plan.badge}
                 </span>
               )}
-              <h4 className="text-base font-bold">{plan.name}</h4>
-              <p className={`mt-1 text-xs ${dark ? 'text-slate-300' : 'text-slate-500'}`}>{plan.tagline}</p>
-
-              <div className="mt-4 flex items-end gap-1">
-                <span className="text-4xl font-black leading-none tracking-tight">{eur(plan.monthly)}</span>
-                <span className={`pb-0.5 text-xs ${dark ? 'text-slate-300' : 'text-slate-500'}`}>/ Monat</span>
+              <h4 className="text-sm font-bold text-slate-800">{plan.name}</h4>
+              <div className="mt-3 flex items-end gap-1">
+                <span className="text-3xl font-black leading-none tracking-tight text-slate-900">{eur(plan.monthly)}</span>
+                <span className="pb-0.5 text-xs text-slate-500">/ Monat</span>
               </div>
-              <p className={`mt-2 text-[11px] leading-snug ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
-                {plan.months} Monate Laufzeit · zzgl. MwSt. · Hardware 0 €
-                {plan.oneTime ? ` · einmalig ${eur(plan.oneTime)} für das Display` : ''}
+              <p className="mt-1.5 min-h-[2rem] text-[11px] leading-snug text-slate-500">
+                {plan.oneTime ? `+ ${eur(plan.oneTime)} einmalig für das Display` : 'Hardware 0 €'} · zzgl. MwSt.
               </p>
-
-              <ul className="mt-5 flex-1 space-y-2">
-                {plan.features.map((feature) => (
-                  <li key={feature} className="flex items-start gap-2 text-[13px] leading-snug">
-                    <Check className={`mt-0.5 h-3.5 w-3.5 shrink-0 ${dark ? 'text-amber-300' : 'text-emerald-600'}`} />
-                    <span className={dark ? 'text-slate-100' : 'text-slate-700'}>{feature}</span>
+              <ul className="mt-3 flex-1 space-y-1.5">
+                {plan.points.map((p) => (
+                  <li key={p} className="flex items-start gap-1.5 text-xs leading-snug text-slate-600">
+                    <Check className="mt-0.5 h-3 w-3 shrink-0 text-emerald-600" />
+                    {p}
                   </li>
                 ))}
               </ul>
-
               {done ? (
-                <div
-                  className={`mt-6 flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold ${
-                    dark ? 'bg-emerald-500/20 text-emerald-200' : 'bg-emerald-50 text-emerald-700'
-                  }`}
-                >
-                  <Check className="h-4 w-4" />
-                  Angefragt – wir melden uns
+                <div className="mt-4 flex items-center justify-center gap-1.5 rounded-xl bg-emerald-50 px-2 py-2 text-xs font-semibold text-emerald-700">
+                  <Check className="h-3.5 w-3.5" />
+                  Angefragt
                 </div>
               ) : (
                 <button
                   type="button"
                   disabled={busy !== null}
                   onClick={() => void request(plan.key)}
-                  className={`mt-6 inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold transition disabled:opacity-60 ${
-                    dark ? 'bg-amber-400 text-slate-900 hover:bg-amber-300' : 'bg-slate-900 text-white hover:bg-slate-800'
+                  className={`mt-4 inline-flex items-center justify-center gap-1.5 rounded-xl px-2 py-2 text-xs font-semibold transition disabled:opacity-60 ${
+                    hl ? 'bg-amber-400 text-slate-900 hover:bg-amber-300' : 'bg-slate-900 text-white hover:bg-slate-800'
                   }`}
                 >
-                  <Send className="h-4 w-4" />
+                  <Send className="h-3.5 w-3.5" />
                   {busy === plan.key ? 'Wird gesendet…' : 'Freischalten'}
                 </button>
               )}
@@ -191,9 +154,8 @@ export default function SpeedmessungOffer({ compact = false }: { compact?: boole
           );
         })}
       </div>
-
-      <p className="pb-4 text-center text-xs text-slate-500">
-        Das große Display kannst du auch später dazubestellen. Alle Preise zzgl. MwSt.
+      <p className="text-center text-xs text-slate-500">
+        Das Display kannst du auch später dazubestellen. Wir melden uns nach deiner Anfrage persönlich.
       </p>
     </section>
   );

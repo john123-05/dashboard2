@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import { usePark } from '../contexts/ParkContext';
 
 // The Speedmessung page only has real guest data for the parks that run the
 // speed system (passwordless leaderboard/profile, see operator-guest-activity):
@@ -16,21 +15,6 @@ export function hasGuestActivity(parkId: string | null | undefined): boolean {
 }
 
 export default function GuestActivityAwareOverlay({ children }: { children: ReactNode }) {
-  const { parkId } = usePark();
 
-  if (parkId && GUEST_ACTIVITY_PARK_IDS.has(parkId)) {
-    return <>{children}</>;
-  }
-
-  return (
-    <>
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900 ring-1 ring-amber-200">
-        <span>
-          <strong>Noch nicht freigeschaltet</strong> – so sieht deine Speedmessung aus, sobald sie läuft. Das
-          Angebot zum Freischalten findest du neben der Vorschau.
-        </span>
-      </div>
-      {children}
-    </>
-  );
+  return <>{children}</>;
 }
