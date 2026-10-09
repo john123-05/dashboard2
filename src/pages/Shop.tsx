@@ -249,7 +249,7 @@ export default function Shop() {
           to="/shop/preise"
           className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
         >
-          Preise & Freischalten
+          Preise und Pakete ansehen
         </Link>
         <span
           className={`rounded-full px-3 py-1 text-xs font-semibold ${requestedAt ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'}`}
@@ -311,7 +311,7 @@ export default function Shop() {
                   className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
                 >
                   <Send className="h-4 w-4" />
-                  Shop freischalten
+                  Preise ansehen
                 </Link>
               )}
             </div>
