@@ -503,11 +503,22 @@ export default function Overview() {
   const kioskChartData = useMemo(() => toChartSeries(kioskDays), [kioskDays]);
 
   function formatDurationShort(minutes: number): string {
-    if (minutes < 60) return `${minutes} Min.`;
+    if (minutes < 60) return t('overview.dur_min', { n: minutes });
     const hours = Math.floor(minutes / 60);
     const rest = minutes % 60;
-    return rest === 0 ? `${hours} Std.` : `${hours} Std. ${rest} Min.`;
+    if (hours >= 24) {
+      const days = Math.floor(hours / 24);
+      return t(days === 1 ? 'overview.dur_day' : 'overview.dur_days', { d: days, h: hours % 24 });
+    }
+    return rest === 0 ? t('overview.dur_hours', { h: hours }) : t('overview.dur_hours_min', { h: hours, m: rest });
   }
+
+  // Re-render the open/closed line every minute so the countdown stays current.
+  const [clockTick, setClockTick] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = window.setInterval(() => setClockTick(Date.now()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const parkOpenStatus = useMemo(() => {
     if (!isKioskPark) return null;
@@ -523,22 +534,42 @@ export default function Overview() {
       hour: '2-digit',
       minute: '2-digit',
       hourCycle: 'h23',
-    }).formatToParts(new Date());
+    }).formatToParts(new Date(clockTick));
     const nowHour = Number(nowParts.find((p) => p.type === 'hour')?.value ?? 0);
     const nowMinute = Number(nowParts.find((p) => p.type === 'minute')?.value ?? 0);
     const nowMinutes = nowHour * 60 + nowMinute;
     const openMinutes = openHour * 60 + openMinute;
     const closeMinutes = closeHour * 60 + closeMinute;
 
+    // After closing: minutes until the next opening (skips closed days, looks two weeks ahead).
+    function minutesUntilNextOpening(): number | null {
+      for (let offset = 1; offset <= 14; offset += 1) {
+        const date = new Date(`${today}T12:00:00Z`);
+        date.setUTCDate(date.getUTCDate() + offset);
+        const next = getEffectiveScheduleForDate(kioskOpeningHoursConfig ?? null, date.toISOString().slice(0, 10), kioskOpeningHours);
+        if (!next) continue;
+        const [h, m] = next.open.split(':').map(Number);
+        if (Number.isNaN(h) || Number.isNaN(m)) continue;
+        return 24 * 60 - nowMinutes + (offset - 1) * 24 * 60 + h * 60 + m;
+      }
+      return null;
+    }
+
     const isOpen = nowMinutes >= openMinutes && nowMinutes < closeMinutes;
-    const label = isOpen
-      ? t('overview.park_open', { time: formatDurationShort(closeMinutes - nowMinutes) })
-      : nowMinutes < openMinutes
-        ? t('overview.park_opens_in', { time: formatDurationShort(openMinutes - nowMinutes) })
-        : t('overview.park_closed_today');
+    let label: string;
+    if (isOpen) {
+      label = t('overview.park_open', { time: formatDurationShort(closeMinutes - nowMinutes) });
+    } else if (nowMinutes < openMinutes) {
+      label = t('overview.park_opens_in', { time: formatDurationShort(openMinutes - nowMinutes) });
+    } else {
+      const untilOpen = minutesUntilNextOpening();
+      label = untilOpen === null
+        ? t('overview.park_closed_today')
+        : t('overview.park_closed_opens_in', { time: formatDurationShort(untilOpen) });
+    }
 
     return { isOpen, label };
-  }, [isKioskPark, kioskOpeningHours, kioskOpeningHoursConfig, kioskTimezone, t]);
+  }, [isKioskPark, kioskOpeningHours, kioskOpeningHoursConfig, kioskTimezone, t, clockTick]);
 
   const greeting = useMemo(() => {
     const tz = isKioskPark && kioskTimezone ? kioskTimezone : Intl.DateTimeFormat().resolvedOptions().timeZone;
