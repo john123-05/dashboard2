@@ -113,7 +113,7 @@ export default function ShopPricing() {
               <span className="text-4xl font-black leading-none tracking-tight text-slate-900">{eur(SETUP_PRICE)}</span>
               <p className="mt-1 text-xs text-slate-500">einmalig</p>
             </div>
-            <span className="text-2xl font-bold leading-none text-slate-400">+</span>
+            <span className="flex h-9 items-center text-3xl font-bold leading-none text-slate-900">+</span>
             <div>
               <span className="text-4xl font-black leading-none tracking-tight text-slate-900">{eur(MONTHLY_PRICE)}</span>
               <p className="mt-1 text-xs text-slate-500">pro Monat</p>
@@ -144,7 +144,7 @@ export default function ShopPricing() {
               <span className="text-4xl font-black leading-none tracking-tight text-slate-900">{eur(SETUP_PRICE)}</span>
               <p className="mt-1 text-xs text-slate-500">einmalig</p>
             </div>
-            <span className="text-2xl font-bold leading-none text-slate-400">+</span>
+            <span className="flex h-9 items-center text-3xl font-bold leading-none text-slate-900">+</span>
             <div>
               <span className="text-4xl font-black leading-none tracking-tight text-slate-900">{eur(YEARLY_PRICE)}</span>
               <p className="mt-1 text-xs text-slate-500">
