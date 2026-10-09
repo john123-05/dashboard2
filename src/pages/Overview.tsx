@@ -219,10 +219,16 @@ export default function Overview() {
           await Promise.all([
             fetchKioskSales(parkId),
             fetchKioskPurchases(parkId).catch(() => null),
-            invokeEdgeFunction<{ leads: Record<string, unknown>[] }>('external-leads', { query: { park_id: parkId } }),
+            invokeEdgeFunction<{ leads: Record<string, unknown>[] }>('external-leads', {
+              useSessionAuth: true,
+              query: { park_id: parkId },
+            }),
             fetchRecentPhotos(parkId, 4).catch(() => []),
             loadParkDashboardData(parkId).catch(() => ({ data: null, error: 'Operations feed unavailable' })),
-            invokeEdgeFunction<{ customers: { id: string }[] }>('external-users', { query: { park_id: parkId } }),
+            invokeEdgeFunction<{ customers: { id: string }[] }>('external-users', {
+              useSessionAuth: true,
+              query: { park_id: parkId },
+            }),
             invokeEdgeFunction<{ photos: { id: string }[] }>('external-photos', { query: { park_id: parkId } }),
             invokeEdgeFunction<{ attractions: { is_active?: boolean }[] }>('external-attractions', { query: { park_id: parkId } }),
             invokeEdgeFunction<{ messages: RecentSupportMessage[] }>('support-tickets', {
@@ -293,6 +299,7 @@ export default function Overview() {
         }>('stripe-revenue'),
         invokeEdgeFunction<{ payments: StripePayment[] }>('stripe-payments'),
         invokeEdgeFunction<{ customers: { id: string }[] }>('external-users', {
+          useSessionAuth: true,
           query: { park_id: parkId },
         }),
         invokeEdgeFunction<{ photos: { id: string }[] }>('external-photos', {

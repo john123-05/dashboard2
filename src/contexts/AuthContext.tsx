@@ -11,6 +11,9 @@ interface AuthState {
   currentOrg: Organization | null;
   loading: boolean;
   hasOrg: boolean;
+  // The membership lookup timed out or failed: we do NOT know that there is no
+  // organization - the UI must offer a retry, never the "join demo org" screen.
+  orgUnknown: boolean;
   role: OrganizationMembership['role'] | null;
   isStaff: boolean;
   isOwner: boolean;
@@ -79,6 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     currentOrg: null,
     loading: true,
     hasOrg: false,
+    orgUnknown: false,
     role: null,
     isStaff: false,
     isOwner: false,
@@ -93,6 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       memberships: [],
       currentOrg: null,
       hasOrg: false,
+      orgUnknown: false,
       role: null,
       isStaff: false,
       isOwner: false,
@@ -114,6 +119,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!antwort) return session.user ?? null;
 
     const { data, error } = antwort;
+    // Only a rejected token ends the session. A 5xx from an overloaded auth
+    // server used to log everyone out in the middle of their work.
+    const status = (error as { status?: number } | null)?.status;
+    if (error && status !== undefined && status !== 401 && status !== 403) {
+      console.error('Anmeldung: Server-Fehler bei der Sitzungsprüfung', error);
+      return session.user ?? null;
+    }
     if (error || !data.user) {
       await supabase.auth.signOut().catch(() => undefined);
       clearAuthState();
@@ -136,7 +148,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       );
 
       const profile = profilAntwort?.data ?? null;
-      const memberships = mitgliedschaftAntwort?.data ?? null;
+
+      if (!mitgliedschaftAntwort || mitgliedschaftAntwort.error) {
+        if (mitgliedschaftAntwort?.error) {
+          console.error('Anmeldung: Mitgliedschaften konnten nicht geladen werden', mitgliedschaftAntwort.error);
+        }
+        // Keep an organization we already know (e.g. a hiccup during a token
+        // refresh must not throw a working session onto the "no org" screen).
+        setState((prev) => ({
+          ...prev,
+          profile: (profile as OperatorProfile | null) ?? prev.profile,
+          orgUnknown: !prev.hasOrg,
+          loading: false,
+        }));
+        return;
+      }
+      const memberships = mitgliedschaftAntwort.data;
 
       const mems = (memberships || []).map((m: Record<string, unknown>) => ({
         ...m,
@@ -153,6 +180,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         memberships: mems,
         currentOrg,
         hasOrg: mems.length > 0,
+        orgUnknown: false,
         role,
         isStaff: role === 'staff',
         isOwner: role === 'org_owner' || role === 'platform_admin',
@@ -160,6 +188,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }));
     } catch (fehler) {
       console.error('Anmeldung: Profil konnte nicht geladen werden', fehler);
+      setState((prev) => ({ ...prev, orgUnknown: !prev.hasOrg }));
     } finally {
       // Was auch immer oben passiert ist - der Ladezustand endet hier. Das ist
       // die Zeile, deren Fehlen die Seite haengen liess.
@@ -179,7 +208,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setState((prev) => {
         if (!prev.loading) return prev;
         console.error('Anmeldung: Zeitlimit erreicht, zeige die Seite ohne Profil.');
-        return { ...prev, loading: false };
+        return { ...prev, loading: false, orgUnknown: Boolean(prev.user) && !prev.hasOrg };
       });
     }, NOTBREMSE_MS);
 

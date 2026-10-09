@@ -134,6 +134,7 @@ export default function Users() {
   async function loadData() {
     setLoading(true);
     const { data, error: invokeError } = await invokeEdgeFunction('external-users', {
+      useSessionAuth: true,
       query: { park_id: parkId || undefined },
     });
 

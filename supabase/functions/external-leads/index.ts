@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { requireOperatorForPark } from "../_shared/operatorAuth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -49,18 +50,11 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
-/** Sieht dieser Betreiber den Park? Die Zeilen von `parks` sind per RLS auf seine Parks beschränkt. */
-async function operatorCanSeePark(req: Request, parkId: string): Promise<boolean> {
-  const url = Deno.env.get("SUPABASE_URL");
-  const anon = Deno.env.get("SUPABASE_ANON_KEY");
-  const authorization = req.headers.get("Authorization");
-  if (!url || !anon || !authorization) return false;
-  const res = await fetch(`${url}/rest/v1/parks?select=id&id=eq.${parkId}`, {
-    headers: { apikey: anon, Authorization: authorization },
-  });
-  if (!res.ok) return false;
-  const rows = await res.json().catch(() => []);
-  return Array.isArray(rows) && rows.length > 0;
+/** Eingeloggter Betreiber mit Freigabe für genau diesen Park? Sonst die Fehlerantwort. */
+async function denyUnlessOperator(req: Request, parkId: string | null): Promise<Response | null> {
+  if (!parkId || !UUID.test(parkId)) return jsonResponse({ error: "park_id (UUID) erforderlich" }, 400);
+  const auth = await requireOperatorForPark(req, parkId);
+  return auth.ok ? null : jsonResponse({ error: auth.message }, auth.status);
 }
 
 /**
@@ -74,9 +68,8 @@ async function deleteClaims(req: Request) {
   if (!UUID.test(parkId) || ids.length === 0 || ids.length > 500 || !ids.every((id) => UUID.test(id))) {
     return jsonResponse({ error: "park_id und ids (UUIDs, höchstens 500) erforderlich" }, 400);
   }
-  if (!(await operatorCanSeePark(req, parkId))) {
-    return jsonResponse({ error: "Kein Zugriff auf diesen Park" }, 403);
-  }
+  const denied = await denyUnlessOperator(req, parkId);
+  if (denied) return denied;
 
   const res = await fetch(
     `${APP_SUPABASE_URL}/rest/v1/photo_claims?park_id=eq.${parkId}&id=in.(${ids.join(",")})`,
@@ -109,7 +102,10 @@ Deno.serve(async (req: Request) => {
   try {
     const url = new URL(req.url);
     const parkId = url.searchParams.get("park_id");
-    const parkFilter = parkId ? `&park_id=eq.${parkId}` : "";
+    // Liefert Namen, E-Mails und Telefonnummern - nie ohne Login und nie parkübergreifend.
+    const denied = await denyUnlessOperator(req, parkId);
+    if (denied) return denied;
+    const parkFilter = `&park_id=eq.${parkId}`;
 
     const [usersRes, purchasesRes, parksRes, photoClaimsRes] = await Promise.all([
       fetchExternal(`users?select=id,email,vorname,nachname,created_at,park_id&order=created_at.desc${parkFilter}`),

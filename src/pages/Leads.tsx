@@ -694,6 +694,7 @@ function LeadsContacts({
   async function loadData() {
     setLoading(true);
     const { data, error: invokeError } = await invokeEdgeFunction('external-leads', {
+      useSessionAuth: true,
       query: { park_id: parkId || undefined },
     });
 

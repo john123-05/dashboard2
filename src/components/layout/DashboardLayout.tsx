@@ -8,7 +8,8 @@ import { useI18n } from '../../lib/i18n';
 import { usePark } from '../../contexts/ParkContext';
 
 export default function DashboardLayout() {
-  const { user, loading, hasOrg, joinDemoOrg } = useAuth();
+  const { user, loading, hasOrg, orgUnknown, joinDemoOrg, refreshProfile } = useAuth();
+  const [retrying, setRetrying] = useState(false);
   const { t } = useI18n();
   const { parkId } = usePark();
   const [joining, setJoining] = useState(false);
@@ -33,6 +34,31 @@ export default function DashboardLayout() {
 
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (!hasOrg && orgUnknown) {
+    return (
+      <div className="mesh-gradient flex min-h-screen items-center justify-center p-4">
+        <div className="glass-panel-strong animate-slide-up w-full max-w-md rounded-3xl p-8 text-center">
+          <h2 className="mb-2 text-xl font-bold text-slate-800">Der Server antwortet gerade nicht</h2>
+          <p className="mb-8 text-sm leading-relaxed text-slate-500">
+            Deine Daten konnten nicht geladen werden. Das liegt nicht an deinem Konto – bitte gleich noch einmal
+            versuchen.
+          </p>
+          <button
+            onClick={async () => {
+              setRetrying(true);
+              await refreshProfile();
+              setRetrying(false);
+            }}
+            disabled={retrying}
+            className="glass-button-primary w-full"
+          >
+            {retrying ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Erneut versuchen'}
+          </button>
+        </div>
+      </div>
+    );
   }
 
   if (!hasOrg) {
@@ -99,7 +125,8 @@ export default function DashboardLayout() {
         style={{ paddingLeft: collapsed ? 72 : 256 }}
       >
         <div className="min-h-screen w-full min-w-0 p-4 sm:p-6 lg:p-8">
-          <Outlet />
+          {/* Remount the page on a park switch so nothing from the previous park lingers. */}
+          <Outlet key={parkId ?? 'none'} />
         </div>
       </main>
       <WelcomeTour />
