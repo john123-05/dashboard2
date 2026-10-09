@@ -1281,9 +1281,9 @@ export default function Overview() {
         </GlassCard>
 
         <GlassCard className="flex flex-col p-5 sm:p-6">
-          <h3 className="text-base font-semibold text-slate-800">Letzte Fotos</h3>
+          <h3 className="text-base font-semibold text-slate-800">{t('overview.latest_photos')}</h3>
           {recentPhotos.length === 0 ? (
-            <p className="mt-6 text-sm text-slate-400">Noch keine Fotos.</p>
+            <p className="mt-6 text-sm text-slate-400">{t('overview.no_photos_yet')}</p>
           ) : (
             <div className="mt-3 grid grid-cols-2 gap-2">
               {recentPhotos.map((photo) => (
@@ -1314,14 +1314,14 @@ export default function Overview() {
         <GlassCard className="p-5 sm:p-6">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <h3 className="text-base font-semibold text-slate-800">Revenue Flow</h3>
+              <h3 className="text-base font-semibold text-slate-800">{t('overview.revenue_flow')}</h3>
               <p className="text-sm text-slate-500 break-words">
-                Online and local sales combined over the last 30 days
+                {t('overview.revenue_flow_sub')}
               </p>
             </div>
             {(parkData.summary.success_rate ?? null) !== null && (
               <div className="shrink-0 text-right">
-                <p className="text-xs uppercase tracking-wide text-slate-400">Payment Success</p>
+                <p className="text-xs uppercase tracking-wide text-slate-400">{t('overview.payment_success')}</p>
                 <p className="text-sm font-semibold text-slate-800">
                   {formatPercent(parkData.summary.success_rate ?? 0)}
                 </p>

@@ -1,3 +1,4 @@
+import { useI18n } from '../../lib/i18n';
 import { useEffect, useRef, useState } from 'react';
 import { Check, ChevronsUpDown, Loader2 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
@@ -30,6 +31,7 @@ function initials(name: string): string {
 }
 
 export default function ProfileParkSwitcher({ onSwitched }: { onSwitched?: () => void }) {
+  const { t } = useI18n();
   const { user, profile } = useAuth();
   const { parkId, setPark } = usePark();
   const [open, setOpen] = useState(false);
@@ -88,7 +90,7 @@ export default function ProfileParkSwitcher({ onSwitched }: { onSwitched?: () =>
         onClick={() => setOpen((prev) => !prev)}
         aria-haspopup="listbox"
         aria-expanded={open}
-        title="Park wechseln"
+        title={t('park_switcher.switch')}
         className="flex w-full items-center gap-2 rounded-xl bg-white/[0.06] px-3 py-2.5 text-left transition-colors hover:bg-white/[0.1]"
       >
         {identity}
@@ -98,7 +100,7 @@ export default function ProfileParkSwitcher({ onSwitched }: { onSwitched?: () =>
       {open && (
         <div
           role="listbox"
-          aria-label="Park wechseln"
+          aria-label={t('park_switcher.switch')}
           className="absolute bottom-full left-0 right-0 z-40 mb-2 max-h-80 overflow-y-auto rounded-xl border border-white/[0.08] bg-slate-900 p-1.5 shadow-2xl"
         >
           <p className="px-2.5 pb-1.5 pt-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
@@ -110,7 +112,7 @@ export default function ProfileParkSwitcher({ onSwitched }: { onSwitched?: () =>
               <Loader2 className="h-4 w-4 animate-spin text-slate-500" />
             </div>
           )}
-          {parks?.length === 0 && <p className="px-2.5 py-2 text-xs text-slate-500">Keine Parks freigegeben.</p>}
+          {parks?.length === 0 && <p className="px-2.5 py-2 text-xs text-slate-500">{t('park_switcher.none')}</p>}
           {parks?.map((park) => {
             const current = park.id === parkId;
             return (

@@ -1,3 +1,4 @@
+import { useI18n } from '../lib/i18n';
 import { useEffect, useState } from 'react';
 import { UserPlus, Trash2, ShieldCheck, Loader2 } from 'lucide-react';
 import { invokeEdgeFunction } from '../lib/edgeFunctions';
@@ -10,6 +11,7 @@ type StaffMember = {
 };
 
 export default function Team() {
+  const { t } = useI18n();
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -98,7 +100,7 @@ export default function Team() {
       <div className="rounded-2xl border border-white/40 bg-white/40 p-5 shadow-sm">
         <div className="mb-4 flex items-center gap-2">
           <UserPlus className="h-5 w-5 text-brand-500" />
-          <h3 className="text-base font-semibold text-slate-800">Neuen Mitarbeiter anlegen</h3>
+          <h3 className="text-base font-semibold text-slate-800">{t('team.add_title')}</h3>
         </div>
         <form onSubmit={handleCreate} className="grid gap-4 sm:grid-cols-2">
           <div>
@@ -131,7 +133,7 @@ export default function Team() {
               minLength={8}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Passwort vergeben"
+              placeholder={t('team.password_placeholder')}
               className="w-full rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm text-slate-800 outline-none focus:border-brand-400"
             />
           </div>
@@ -158,10 +160,10 @@ export default function Team() {
         </div>
         {loading ? (
           <div className="flex items-center gap-2 py-6 text-sm text-slate-500">
-            <Loader2 className="h-4 w-4 animate-spin" /> Lädt…
+            <Loader2 className="h-4 w-4 animate-spin" /> {t('team.loading')}
           </div>
         ) : staff.length === 0 ? (
-          <p className="py-6 text-sm text-slate-500">Noch keine Mitarbeiter angelegt.</p>
+          <p className="py-6 text-sm text-slate-500">{t('team.none_yet')}</p>
         ) : (
           <ul className="divide-y divide-slate-200/60">
             {staff.map((member) => (

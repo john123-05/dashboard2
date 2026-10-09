@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Save, Loader2, Building2, MapPin, Mountain, Package, Bell, BellRing, Smartphone, AlertTriangle, LifeBuoy, CalendarDays, Clock3, Plus, Trash2 } from 'lucide-react';
+import { Save, Loader2, Building2, MapPin, Mountain, Package, Bell, Smartphone, AlertTriangle, LifeBuoy, CalendarDays, Clock3, Plus, Trash2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { getOptionalSourceWarning, invokeEdgeFunction, isEdgeSourceUnavailable } from '../lib/edgeFunctions';
 import { useAuth } from '../contexts/AuthContext';

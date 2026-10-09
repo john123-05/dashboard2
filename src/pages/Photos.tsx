@@ -395,7 +395,7 @@ export default function Photos({ embedded = false }: { embedded?: boolean } = {}
                 />
               </div>
               <div className="space-y-1 text-center">
-                <p className="text-sm font-semibold text-slate-800">QR-Code für dieses Foto</p>
+                <p className="text-sm font-semibold text-slate-800">{t('photos.qr_for_photo')}</p>
                 <p className="text-xs leading-relaxed text-slate-500">
                   Der Gast scannt den Code und landet direkt auf der passenden Claim-Seite mit dem korrekten Bildcode.
                 </p>
@@ -551,7 +551,7 @@ export default function Photos({ embedded = false }: { embedded?: boolean } = {}
       <div className={embedded ? 'space-y-4 customer-embedded-root preview-photos' : 'space-y-6'}>
         <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('photos.title')}</h2>
         <div className="rounded-2xl bg-red-50 border border-red-200 p-6">
-          <h3 className="text-lg font-semibold text-red-800 mb-2">Error Loading Photos</h3>
+          <h3 className="text-lg font-semibold text-red-800 mb-2">{t('photos.load_error')}</h3>
           <p className="text-sm text-red-600 mb-4">{error}</p>
           <button onClick={loadData} className="glass-button-secondary">
             {t('app.retry')}
@@ -570,7 +570,7 @@ export default function Photos({ embedded = false }: { embedded?: boolean } = {}
 
       {notice && (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-          <p className="text-sm font-medium text-amber-900">Photo data is currently unavailable.</p>
+          <p className="text-sm font-medium text-amber-900">{t('photos.data_unavailable')}</p>
           <p className="mt-1 text-sm text-amber-700">{notice}</p>
         </div>
       )}
@@ -579,10 +579,10 @@ export default function Photos({ embedded = false }: { embedded?: boolean } = {}
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/40 bg-white/40 px-4 py-3 backdrop-blur-xl">
           <div>
             <p className="text-sm font-semibold text-slate-700">Auswertung für {selectedDateLabel}</p>
-            <p className="text-xs text-slate-400">Kacheln und Kreise beziehen sich auf diesen Tag</p>
+            <p className="text-xs text-slate-400">{t('photos.stats_day_note')}</p>
           </div>
           <div className="flex items-center gap-2">
-            <button type="button" onClick={() => stepDay(-1)} className="glass-button-secondary customer-operator-btn p-2" aria-label="Vorheriger Tag">
+            <button type="button" onClick={() => stepDay(-1)} className="glass-button-secondary customer-operator-btn p-2" aria-label={t('photos.prev_day')}>
               <ChevronLeft className="h-4 w-4" />
             </button>
             <input
@@ -597,7 +597,7 @@ export default function Photos({ embedded = false }: { embedded?: boolean } = {}
               onClick={() => stepDay(1)}
               disabled={selectedDate >= todayStr}
               className="glass-button-secondary customer-operator-btn p-2 disabled:opacity-40"
-              aria-label="Nächster Tag"
+              aria-label={t('photos.next_day')}
             >
               <ChevronRight className="h-4 w-4" />
             </button>
@@ -784,8 +784,8 @@ export default function Photos({ embedded = false }: { embedded?: boolean } = {}
                     <div className="flex items-center gap-3">
                       <div className="h-3 w-3 rounded-full" style={{ backgroundColor: '#f43f5e' }} />
                       <div>
-                        <p className="text-sm font-medium text-slate-700">Fahrten ohne Kauf</p>
-                        <p className="text-xs text-slate-400">{formatNumber(Math.max(0, kioskConv.taken - kioskConv.sold))} Fotos</p>
+                        <p className="text-sm font-medium text-slate-700">{t('photos.rides_without_sale')}</p>
+                        <p className="text-xs text-slate-400">{t('photos.photos_count', { count: formatNumber(Math.max(0, kioskConv.taken - kioskConv.sold)) })}</p>
                       </div>
                     </div>
                     <p className="pt-1 text-xs text-slate-500">von {formatNumber(kioskConv.taken)} Fahrten</p>
@@ -966,7 +966,7 @@ export default function Photos({ embedded = false }: { embedded?: boolean } = {}
               type="text"
               value={codeQuery}
               onChange={(e) => setCodeQuery(e.target.value)}
-              placeholder="Bildnummer eingeben…"
+              placeholder={t('photos.enter_number')}
               className="glass-input customer-operator-input w-full text-sm sm:w-48"
             />
             <button type="submit" className="glass-button-secondary customer-operator-btn flex items-center gap-1.5 text-sm">

@@ -40,10 +40,9 @@ export default function DashboardLayout() {
     return (
       <div className="mesh-gradient flex min-h-screen items-center justify-center p-4">
         <div className="glass-panel-strong animate-slide-up w-full max-w-md rounded-3xl p-8 text-center">
-          <h2 className="mb-2 text-xl font-bold text-slate-800">Der Server antwortet gerade nicht</h2>
+          <h2 className="mb-2 text-xl font-bold text-slate-800">{t('layout.server_down')}</h2>
           <p className="mb-8 text-sm leading-relaxed text-slate-500">
-            Deine Daten konnten nicht geladen werden. Das liegt nicht an deinem Konto – bitte gleich noch einmal
-            versuchen.
+            {t('layout.server_down_text')}
           </p>
           <button
             onClick={async () => {
@@ -114,7 +113,7 @@ export default function DashboardLayout() {
         <button
           type="button"
           className="mobile-nav-toggle"
-          aria-label="Navigation öffnen"
+          aria-label={t('layout.open_nav')}
           onClick={() => setMobileNavOpen(true)}
         >
           <Menu className="h-5 w-5" />

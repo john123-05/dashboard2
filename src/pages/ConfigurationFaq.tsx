@@ -1,3 +1,4 @@
+import { useI18n } from '../lib/i18n';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, ChevronDown } from 'lucide-react';
@@ -21,6 +22,7 @@ const FAQ: { frage: string; antwort: string }[] = [
 
 /** Eigene Seite fuer "Fragen und Antworten", erreichbar ueber das i-Symbol auf "Konfiguration". */
 export default function ConfigurationFaq() {
+  const { t } = useI18n();
   const [offeneFrage, setOffeneFrage] = useState<number | null>(0);
 
   return (
@@ -30,7 +32,7 @@ export default function ConfigurationFaq() {
           <ArrowLeft className="h-3.5 w-3.5" />
           Zurück zur Konfiguration
         </Link>
-        <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-800">Fragen und Antworten</h2>
+        <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-800">{t('faq.title')}</h2>
       </div>
 
       <GlassCard className="p-5 sm:p-6">

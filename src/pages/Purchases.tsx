@@ -365,13 +365,13 @@ export default function Purchases() {
             {item.amount_cents === null ? 'Unknown' : formatCurrency(item.amount_cents, item.currency)}
           </span>
           {item.amount_cents !== null && item.amount_kind === 'detected' && (
-            <p className="mt-0.5 text-xs text-amber-600">Detected, not confirmed</p>
+            <p className="mt-0.5 text-xs text-amber-600">{t('purchases.detected_not_confirmed')}</p>
           )}
           {item.amount_cents !== null && item.amount_kind === 'price' && (
-            <p className="mt-0.5 text-xs text-slate-500">Fotopreis (kein Terminalbetrag)</p>
+            <p className="mt-0.5 text-xs text-slate-500">{t('purchases.price_not_terminal')}</p>
           )}
           {item.amount_cents === null && (
-            <p className="mt-0.5 text-xs text-slate-500">No confirmed amount</p>
+            <p className="mt-0.5 text-xs text-slate-500">{t('purchases.no_confirmed_amount')}</p>
           )}
         </div>
       ),

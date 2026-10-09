@@ -1,3 +1,4 @@
+import { useI18n } from '../lib/i18n';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Camera, Gauge, Printer, Server, ShoppingBag } from 'lucide-react';
@@ -18,6 +19,7 @@ const KATEGORIE_ICON: Record<string, typeof Camera> = {
 
 /** Eigene Seite fuer die Bestellverfolgung, erreichbar ueber den Button auf "Konfiguration". */
 export default function ConfigurationOrders() {
+  const { t } = useI18n();
   const { parkId } = usePark();
   const [items, setItems] = useState<EquipmentItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,7 +31,7 @@ export default function ConfigurationOrders() {
     setLoading(true);
     fetchParkEquipment(parkId)
       .then((rows) => active && setItems(rows))
-      .catch((e) => active && setError(e instanceof Error ? e.message : 'Laden fehlgeschlagen.'))
+      .catch((e) => active && setError(e instanceof Error ? e.message : t('survey.load_failed')))
       .finally(() => active && setLoading(false));
     return () => {
       active = false;
@@ -45,17 +47,17 @@ export default function ConfigurationOrders() {
           <ArrowLeft className="h-3.5 w-3.5" />
           Zurück zur Konfiguration
         </Link>
-        <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-800">Meine Bestellungen</h2>
-        <p className="mt-1 text-sm text-slate-500">Fortschritt deiner laufenden Bestellungen.</p>
+        <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-800">{t('orders.title')}</h2>
+        <p className="mt-1 text-sm text-slate-500">{t('orders.subtitle')}</p>
       </div>
 
       {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
 
       <GlassCard className="p-5 sm:p-6">
         {loading ? (
-          <p className="text-sm text-slate-400">Wird geladen…</p>
+          <p className="text-sm text-slate-400">{t('orders.loading')}</p>
         ) : bestellt.length === 0 ? (
-          <p className="text-sm text-slate-400">Aktuell nichts bestellt.</p>
+          <p className="text-sm text-slate-400">{t('orders.none')}</p>
         ) : (
           <div className="space-y-5">
             {bestellt.map((item) => {
