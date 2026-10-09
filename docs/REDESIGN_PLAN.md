@@ -91,7 +91,7 @@ Jede Phase: nur Gestaltung, keine Funktionsänderung. Prüfen mit `npm run typec
   - Upgrade-Einträge (Online-Shop, Speedmessung) mit kleinem Upgrade-Symbol statt „(Upgrade)“-Text.
   - Offene Frage an John: Der Hell/Dunkel-Schalter setzt nur `data-operator-theme`, es gibt dafür
     keine Styles – Dunkelmodus ist heute ohne Wirkung. Entfernen oder richtig bauen?
-- [ ] **Phase 3 – Upgrade-Seiten-Vorlage:** gemeinsame Komponente (z. B. `src/components/upgrade/UpgradeHero.tsx`)
+- [x] **Phase 3 – Upgrade-Seiten-Vorlage:** gemeinsame Komponente (z. B. `src/components/upgrade/UpgradeHero.tsx`)
       im HubSpot-Aufbau (Überschrift, 3–4 Pfeil-Stichpunkte, Hinweiskasten, Buttons, Bild rechts,
       optional Karten darunter). Einsetzen bei: Speedmessung (nicht freigeschaltet), Online-Shop
       (Kopfbereich, Preisseite verlinken), CRM-Preise, Shop-Preise. Inhalte/Texte bleiben, nur in der
@@ -142,3 +142,14 @@ Jede Phase: nur Gestaltung, keine Funktionsänderung. Prüfen mit `npm run typec
   weggelassen – der Griff erscheint beim Darüberfahren, das reicht.
   Hinweis: Vite musste nach dem neuen `react-dom`-Import einmal mit `--force` neu gestartet werden.
   Offen: Hell/Dunkel-Schalter (ohne Wirkung) – Johns Entscheidung.
+- 09.10.2026: Phase 3 umgesetzt. Neue Vorlage `src/components/upgrade/UpgradeHero.tsx` (`UpgradeHero`,
+  `UpgradeBadge`, `ArrowPoint`, `UpgradePageHeader`) und `src/components/upgrade/PlanCard.tsx`
+  (`PlanCard`, `PlanAction`, `PriceFigure`). Eingesetzt in `SpeedmessungOffer.tsx` (Kopf als Hero mit
+  Pfeil-Stichpunkten und Hinweiskasten, Paketkarten), `ShopPricing.tsx`, `CrmPricing.tsx` (Kopf + Karten)
+  und im Kopf von `Shop.tsx` (Titel, Kennzahlen leicht und groß, Upgrade-Abzeichen, Pill-Buttons).
+  Empfohlene Karte: 2 px dunkles Orange + oranger Button; übrige Buttons bleiben schwarz (Johns Wunsch).
+  Weitere von Codex umformulierte Texte zurückgesetzt (Online-Shop-Kennzahlen „deiner Besucher …“,
+  „Stripe-Modus: Test“, „Full-Service“/„Revenue Share“, „Pixel installieren“, Speedmessungs-Leistungen,
+  Produktseiten-Abo-Texte, Support/Services). Doppelter Punkt nach dem Druckpartner-Satz behoben.
+  Noch nicht in der Vorlage: Produktseiten der Konfiguration (`ConfigurationProduct.tsx`) – gehört zu Phase
+  der Konfiguration.

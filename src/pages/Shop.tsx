@@ -16,6 +16,7 @@ import {
 import { formatEuro } from '../lib/demoShop';
 import { SHOP_FONTS } from '../lib/shopFonts';
 import { useI18n, useLocaleTag } from '../lib/i18n';
+import { UpgradeBadge, UpgradePageHeader } from '../components/upgrade/UpgradeHero';
 
 // The public shop lives on the claim site (imst repo), so phones and customers can open it.
 const PUBLIC_SHOP_URL = 'https://liftpictures-fotos.de';
@@ -59,12 +60,12 @@ function SectionCard({ title, subtitle, children }: { title: string; subtitle?: 
 
 function BigFact({ value, text, note, tone }: { value: string; text: string; note?: string; tone?: 'green' }) {
   return (
-    <div className="flex flex-col gap-1.5 px-1 py-3 sm:px-5 sm:py-0">
-      <p className={`text-4xl font-black leading-none tracking-tight ${tone === 'green' ? 'text-emerald-600' : 'text-slate-800'}`}>
+    <div className="flex flex-col gap-1.5 px-1 py-4 sm:px-6 sm:py-1 sm:first:pl-0">
+      <p className={`text-[40px] font-light leading-none tracking-tight ${tone === 'green' ? 'text-brand-600' : 'text-[color:var(--ink)]'}`}>
         {value}
       </p>
-      <p className="text-sm font-semibold leading-snug text-slate-800">{text}</p>
-      {note && <p className="text-xs text-slate-500">{note}</p>}
+      <p className="mt-1 text-sm font-semibold leading-snug text-[color:var(--ink)]">{text}</p>
+      {note && <p className="text-xs text-[color:var(--ink-3)]">{note}</p>}
     </div>
   );
 }
@@ -248,34 +249,36 @@ export default function Shop() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('nav.shop')}</h2>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-        <Link
-          to="/shop/preise"
-          className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-        >
-          {t('shop.view_plans')}
-        </Link>
-        <span
-          className={`rounded-full px-3 py-1 text-xs font-semibold ${requestedAt ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'}`}
-        >
-          {requestedAt ? t('shop.activation_requested') : t('shop.stripe_test')}
-        </span>
-        </div>
-      </div>
+      <UpgradePageHeader
+        title={t('nav.shop')}
+        actions={
+          <>
+            <Link to="/shop/preise" className="glass-button-secondary">
+              {t('shop.view_plans')}
+            </Link>
+            <span
+              className={`rounded-full px-3 py-1 text-xs font-semibold ${requestedAt ? 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200' : 'bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-200'}`}
+            >
+              {requestedAt ? t('shop.activation_requested') : t('shop.stripe_test')}
+            </span>
+          </>
+        }
+      />
 
       {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
       {status && <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{status}</p>}
 
       {isKioskPark && (
-        <GlassCard className="p-4 sm:p-5">
+        <div className="rounded-xl border border-[color:var(--line)] bg-white p-6 sm:p-8">
+          {!requestedAt && (
+            <div className="mb-5">
+              <UpgradeBadge>{t('nav.upgrade')}</UpgradeBadge>
+            </div>
+          )}
           {!potential ? (
             <p className="text-sm text-slate-400">{t('shop.calculating')}</p>
           ) : potential.reliable ? (
-            <div className="grid grid-cols-1 divide-y divide-slate-200/70 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+            <div className="grid grid-cols-1 divide-y divide-[color:var(--line)] sm:grid-cols-3 sm:divide-x sm:divide-y-0">
               <BigFact
                 value={`${potential.soldPercent} %`}
                 text={t('shop.fact_buy_now')}
@@ -301,21 +304,21 @@ export default function Shop() {
             </p>
           )}
           {potential && (
-            <div className="mt-4 flex flex-col gap-3 border-t border-slate-200/70 pt-4 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-base font-bold leading-snug text-slate-800">
+            <div className="mt-6 flex flex-col gap-4 border-t border-[color:var(--line)] pt-6 sm:flex-row sm:items-center sm:justify-between">
+              <p className="max-w-3xl text-xl font-light leading-snug text-[color:var(--ink)]">
                 {potential.reliable
                   ? t('shop.potential', { count: potential.unsold.toLocaleString(locale) })
                   : t('shop.potential_no_count')}
               </p>
               {requestedAt ? (
-                <div className="flex shrink-0 items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700">
+                <div className="flex shrink-0 items-center gap-2 rounded-full bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700">
                   <CheckCircle2 className="h-4 w-4" />
                   {t('shop.requested_on', { date: requestedAt.toLocaleDateString(locale) })}
                 </div>
               ) : (
                 <Link
                   to="/shop/preise"
-                  className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
+                  className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-[color:var(--ink)] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-black"
                 >
                   <Send className="h-4 w-4" />
                   {t('shop.view_prices')}
@@ -323,7 +326,7 @@ export default function Shop() {
               )}
             </div>
           )}
-        </GlassCard>
+        </div>
       )}
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_440px]">
