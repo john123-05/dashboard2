@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -12,9 +13,8 @@ import {
   Activity,
   Settings,
   LogOut,
-  ChevronLeft,
-  ChevronRight,
   ChevronDown,
+  ChevronRight,
   UserCog,
   Package,
   Store,
@@ -24,6 +24,9 @@ import {
   MoreHorizontal,
   Pin,
   PinOff,
+  GripVertical,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useI18n } from '../../lib/i18n';
@@ -62,6 +65,87 @@ const navItems: NavItem[] = [
   { to: '/settings', icon: Settings, labelKey: 'nav.settings' },
 ];
 
+// Same breakpoint as the mobile drawer in index.css. There the sidebar is a
+// full-width drawer, so "Mehr" opens inline instead of as a flyout.
+const MOBILE_QUERY = '(max-width: 900px)';
+
+function useIsMobile() {
+  const [mobile, setMobile] = useState(() => window.matchMedia(MOBILE_QUERY).matches);
+  useEffect(() => {
+    const mq = window.matchMedia(MOBILE_QUERY);
+    const onChange = () => setMobile(mq.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+  return mobile;
+}
+
+// Dark label bubble to the right of the hovered element. Rendered in a portal
+// so the scrolling nav and the fixed sidebar never clip it.
+type Tip = { label: string; top: number; left: number };
+
+function tipFor(el: HTMLElement, label: string): Tip {
+  const r = el.getBoundingClientRect();
+  return { label, top: r.top + r.height / 2, left: r.right + 10 };
+}
+
+// Panel that opens to the right of an anchor (the "Mehr" flyout and the
+// per-row options menu). Closes on outside click, Escape and scroll of the nav.
+function Flyout({
+  anchor,
+  onClose,
+  children,
+  width = 240,
+}: {
+  anchor: HTMLElement;
+  onClose: () => void;
+  children: ReactNode;
+  width?: number;
+}) {
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+
+  useLayoutEffect(() => {
+    const r = anchor.getBoundingClientRect();
+    const sidebar = anchor.closest('aside')?.getBoundingClientRect();
+    const left = (sidebar?.right ?? r.right) + 8;
+    const height = panelRef.current?.offsetHeight ?? 0;
+    const top = Math.max(8, Math.min(r.top - 6, window.innerHeight - height - 8));
+    setPos({ top, left });
+  }, [anchor]);
+
+  useEffect(() => {
+    function onDown(event: MouseEvent) {
+      const target = event.target as Node;
+      if (panelRef.current?.contains(target) || anchor.contains(target)) return;
+      onClose();
+    }
+    function onKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') onClose();
+    }
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    window.addEventListener('resize', onClose);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+      window.removeEventListener('resize', onClose);
+    };
+  }, [anchor, onClose]);
+
+  return createPortal(
+    <div
+      ref={panelRef}
+      role="menu"
+      style={{ top: pos?.top ?? -9999, left: pos?.left ?? -9999, width }}
+      className="fixed z-[300] rounded-lg border border-black/10 bg-white p-1.5 text-slate-700 shadow-[0_12px_32px_rgba(16,24,40,0.18)] animate-fade-in"
+    >
+      {children}
+    </div>,
+    document.body,
+  );
+}
+
 interface SidebarProps {
   collapsed: boolean;
   onToggleCollapsed: () => void;
@@ -79,6 +163,7 @@ export default function Sidebar({
   const location = useLocation();
   const { t } = useI18n();
   const { parkName, setPark, isKioskPark, parkId, cameraControlAvailable } = usePark();
+  const isMobile = useIsMobile();
   // Scaffolding only for now: persists the choice and tags <html> so the
   // rest of the dashboard's pages can opt into dark styles later without
   // touching this component again. No page actually has dark styles yet,
@@ -104,10 +189,22 @@ export default function Sidebar({
     return true;
   });
 
-  // Custom drag order, per account. Items not in it yet (nothing reordered
-  // so far, or a nav item added after the user last reordered) keep their
-  // default relative position, appended after the known ones.
-  const itemOrder = profile?.nav_item_order ?? [];
+  // Order and "Mehr" split are saved per account (operator_profiles), so they
+  // follow the user to another browser. While a save + refreshProfile is in
+  // flight the local override is shown, so a dropped item doesn't jump back.
+  const savedOrder = profile?.nav_item_order ?? [];
+  const savedUnpinned = profile?.nav_unpinned_items ?? [];
+  const [orderOverride, setOrderOverride] = useState<string[] | null>(null);
+  const [unpinnedOverride, setUnpinnedOverride] = useState<string[] | null>(null);
+  const savedOrderKey = savedOrder.join('|');
+  const savedUnpinnedKey = savedUnpinned.join('|');
+  useEffect(() => setOrderOverride(null), [savedOrderKey]);
+  useEffect(() => setUnpinnedOverride(null), [savedUnpinnedKey]);
+
+  // Items not in the custom order yet (nothing reordered so far, or a nav item
+  // added after the user last reordered) keep their default relative position,
+  // appended after the known ones.
+  const itemOrder = orderOverride ?? savedOrder;
   const visibleItems = [...visibleItemsDefaultOrder].sort((a, b) => {
     const ai = itemOrder.indexOf(a.to);
     const bi = itemOrder.indexOf(b.to);
@@ -117,31 +214,28 @@ export default function Sidebar({
     return ai - bi;
   });
 
-  // Which items the user moved into "Mehr" - per account (operator_profiles),
-  // not per device, so it follows them to another browser/computer.
-  const unpinnedIds = profile?.nav_unpinned_items ?? [];
+  const unpinnedIds = unpinnedOverride ?? savedUnpinned;
   const pinnedItems = visibleItems.filter((item) => !unpinnedIds.includes(item.to));
   const unpinnedItems = visibleItems.filter((item) => unpinnedIds.includes(item.to));
 
-  const [moreOpen, setMoreOpen] = useState(false);
-  const [menuOpenFor, setMenuOpenFor] = useState<string | null>(null);
-  const menuRef = useRef<HTMLDivElement | null>(null);
+  const [moreAnchor, setMoreAnchor] = useState<HTMLElement | null>(null);
+  const [moreInlineOpen, setMoreInlineOpen] = useState(false);
+  const [menu, setMenu] = useState<{ to: string; anchor: HTMLElement } | null>(null);
+  const [tip, setTip] = useState<Tip | null>(null);
 
+  // Route change: close every popup (the user picked something).
   useEffect(() => {
-    if (!menuOpenFor) return;
-    function onClickOutside(event: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setMenuOpenFor(null);
-      }
-    }
-    document.addEventListener('mousedown', onClickOutside);
-    return () => document.removeEventListener('mousedown', onClickOutside);
-  }, [menuOpenFor]);
+    setMoreAnchor(null);
+    setMenu(null);
+    setTip(null);
+  }, [location.pathname]);
 
   async function setUnpinned(next: string[]) {
-    setMenuOpenFor(null);
+    setMenu(null);
     if (!profile) return;
-    await supabase.from('operator_profiles').update({ nav_unpinned_items: next }).eq('id', profile.id);
+    setUnpinnedOverride(next);
+    const { error } = await supabase.from('operator_profiles').update({ nav_unpinned_items: next }).eq('id', profile.id);
+    if (error) setUnpinnedOverride(null);
     await refreshProfile();
   }
 
@@ -153,156 +247,229 @@ export default function Sidebar({
     void setUnpinned(unpinnedIds.filter((id) => id !== to));
   }
 
-  // Drag-to-reorder within the pinned list only (native HTML5 DnD - mouse
-  // only, no touch support, acceptable for an admin dashboard used on desktop).
-  const [draggedTo, setDraggedTo] = useState<string | null>(null);
-
   async function persistOrder(nextPinnedOrder: string[]) {
     if (!profile) return;
     // Keep unpinned items' relative order at the end, untouched.
     const fullOrder = [...nextPinnedOrder, ...unpinnedItems.map((i) => i.to)];
-    await supabase.from('operator_profiles').update({ nav_item_order: fullOrder }).eq('id', profile.id);
+    setOrderOverride(fullOrder);
+    const { error } = await supabase.from('operator_profiles').update({ nav_item_order: fullOrder }).eq('id', profile.id);
+    if (error) setOrderOverride(null);
     await refreshProfile();
   }
 
-  function onDropOnto(targetTo: string) {
-    if (!draggedTo || draggedTo === targetTo) {
-      setDraggedTo(null);
-      return;
-    }
+  // Reorder by dragging the grip (pointer events: mouse, pen and touch alike).
+  // `insertAt` is the gap the item would land in, 0..pinnedItems.length.
+  const rowRefs = useRef(new Map<string, HTMLDivElement>());
+  const [drag, setDrag] = useState<{ to: string; insertAt: number } | null>(null);
+
+  function gapForPointer(clientY: number) {
+    let gap = 0;
+    pinnedItems.forEach((item) => {
+      const el = rowRefs.current.get(item.to);
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      if (clientY > r.top + r.height / 2) gap += 1;
+    });
+    return gap;
+  }
+
+  function finishDrag() {
+    if (!drag) return;
     const order = pinnedItems.map((i) => i.to);
-    const from = order.indexOf(draggedTo);
-    const to = order.indexOf(targetTo);
-    if (from === -1 || to === -1) {
-      setDraggedTo(null);
-      return;
-    }
+    const from = order.indexOf(drag.to);
+    let to = drag.insertAt;
+    setDrag(null);
+    if (from === -1) return;
+    if (to > from) to -= 1;
+    if (to === from) return;
     order.splice(from, 1);
-    order.splice(to, 0, draggedTo);
-    setDraggedTo(null);
+    order.splice(to, 0, drag.to);
     void persistOrder(order);
   }
 
-  function renderNavRow(item: NavItem, pinned: boolean) {
-    const isActive =
-      item.to === '/' ? location.pathname === '/' : location.pathname.startsWith(item.to);
+  function badgeFor(item: NavItem) {
     const showComingSoon =
       item.comingSoon &&
       !(item.kioskUnlocks && isKioskPark) &&
       !(item.guestActivityUnlocks && isTarzansPark);
-    const badge = showComingSoon
+    return showComingSoon
       ? item.guestActivityUnlocks
         ? t('nav.upgrade')
         : t('nav.coming_soon')
       : item.upgrade
         ? t('nav.upgrade')
         : null;
-    const menuOpen = menuOpenFor === item.to;
-    const draggable = showFull && pinned;
+  }
+
+  function isActivePath(to: string) {
+    return to === '/' ? location.pathname === '/' : location.pathname.startsWith(to);
+  }
+
+  function dropLine() {
+    return (
+      <div className="relative h-0" aria-hidden>
+        <div className="absolute inset-x-2 -top-px h-0.5 rounded-full bg-brand-500" />
+      </div>
+    );
+  }
+
+  function renderNavRow(item: NavItem, index: number) {
+    const isActive = isActivePath(item.to);
+    const badge = badgeFor(item);
+    const label = t(item.labelKey);
+    const canDrag = showFull && pinnedItems.length > 1;
+    const menuOpen = menu?.to === item.to;
 
     return (
-      <div
-        key={item.to}
-        className={`group/row relative flex items-center ${draggedTo === item.to ? 'opacity-40' : ''}`}
-        draggable={draggable}
-        onDragStart={(event) => {
-          if (!draggable) return;
-          // Firefox silently refuses the whole drag unless dataTransfer
-          // actually carries something.
-          event.dataTransfer.effectAllowed = 'move';
-          event.dataTransfer.setData('text/plain', item.to);
-          setDraggedTo(item.to);
-        }}
-        onDragOver={(event) => {
-          if (!draggable) return;
-          event.preventDefault();
-          event.dataTransfer.dropEffect = 'move';
-        }}
-        onDrop={(event) => {
-          if (!draggable) return;
-          event.preventDefault();
-          onDropOnto(item.to);
-        }}
-        onDragEnd={() => setDraggedTo(null)}
-      >
-        <NavLink
-          to={item.to}
-          draggable={false}
-          className={`group flex flex-1 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
-            isActive
-              ? 'bg-white/[0.12] text-white shadow-sm shadow-black/10'
-              : 'text-slate-400 hover:bg-white/[0.06] hover:text-slate-200'
-          } ${showFull ? (showFull && pinned ? 'pr-8' : '') : 'justify-center'} ${draggable ? 'cursor-grab active:cursor-grabbing' : ''}`}
-          title={
-            showFull
-              ? undefined
-              : `${t(item.labelKey)}${badge ? ` (${badge})` : ''}`
-          }
+      <div key={item.to}>
+        {drag && drag.insertAt === index && dropLine()}
+        <div
+          ref={(el) => {
+            if (el) rowRefs.current.set(item.to, el);
+            else rowRefs.current.delete(item.to);
+          }}
+          className={`group/row relative flex items-center ${drag?.to === item.to ? 'opacity-40' : ''}`}
         >
-          <item.icon
-            className={`h-[18px] w-[18px] shrink-0 transition-colors ${
-              isActive ? 'text-brand-400' : 'text-slate-500 group-hover:text-slate-300'
-            }`}
-          />
-          {showFull && (
-            <span className="animate-fade-in truncate">
-              {t(item.labelKey)}
-              {badge && <span className="ml-1 text-xs text-slate-500">({badge})</span>}
+          {canDrag && (
+            <span
+              role="button"
+              tabIndex={-1}
+              aria-hidden
+              onPointerDown={(event) => {
+                if (event.button !== 0) return;
+                event.preventDefault();
+                event.currentTarget.setPointerCapture(event.pointerId);
+                setMenu(null);
+                setDrag({ to: item.to, insertAt: index });
+              }}
+              onPointerMove={(event) => {
+                if (!drag) return;
+                const gap = gapForPointer(event.clientY);
+                if (gap !== drag.insertAt) setDrag({ ...drag, insertAt: gap });
+              }}
+              onPointerUp={finishDrag}
+              onPointerCancel={() => setDrag(null)}
+              style={{ touchAction: 'none' }}
+              className={`absolute left-0 top-1/2 z-10 flex h-7 w-4 -translate-y-1/2 cursor-grab items-center justify-center rounded text-slate-500 transition-opacity hover:text-slate-200 active:cursor-grabbing ${
+                drag?.to === item.to ? 'opacity-100' : isMobile ? 'opacity-60' : 'opacity-0 group-hover/row:opacity-100'
+              }`}
+            >
+              <GripVertical className="h-3.5 w-3.5" />
             </span>
           )}
-        </NavLink>
 
-        {showFull && (
-          <div className="absolute right-1">
+          <NavLink
+            to={item.to}
+            draggable={false}
+            onMouseEnter={(event) => !showFull && setTip(tipFor(event.currentTarget, badge ? `${label} (${badge})` : label))}
+            onMouseLeave={() => setTip(null)}
+            onFocus={(event) => !showFull && setTip(tipFor(event.currentTarget, label))}
+            onBlur={() => setTip(null)}
+            aria-label={showFull ? undefined : label}
+            className={`group relative flex flex-1 items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors duration-150 ${
+              isActive
+                ? 'bg-white/[0.1] font-medium text-white'
+                : 'text-slate-300 hover:bg-white/[0.05] hover:text-white'
+            } ${showFull ? 'pr-8' : 'justify-center'}`}
+          >
+            {isActive && (
+              <span className="absolute inset-y-1.5 left-0 w-[3px] rounded-r-full bg-brand-500" aria-hidden />
+            )}
+            <item.icon
+              className={`h-[18px] w-[18px] shrink-0 transition-colors ${
+                isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-200'
+              }`}
+            />
+            {showFull && (
+              <span className="truncate">
+                {label}
+                {badge && <span className="ml-1 text-xs text-slate-500">({badge})</span>}
+              </span>
+            )}
+          </NavLink>
+
+          {showFull && (
             <button
               type="button"
               onClick={(event) => {
                 event.preventDefault();
-                setMenuOpenFor(menuOpen ? null : item.to);
+                setMenu(menuOpen ? null : { to: item.to, anchor: event.currentTarget });
               }}
-              className={`rounded-lg p-1 text-slate-400 transition-opacity hover:bg-white/[0.08] hover:text-white ${
-                menuOpen ? 'opacity-100' : 'opacity-60 group-hover/row:opacity-100'
+              className={`absolute right-1 rounded p-1 text-slate-400 transition-opacity hover:bg-white/[0.08] hover:text-white ${
+                menuOpen ? 'opacity-100' : isMobile ? 'opacity-60' : 'opacity-0 focus:opacity-100 group-hover/row:opacity-100'
               }`}
               title={t('nav.options')}
+              aria-label={t('nav.options')}
             >
               <MoreHorizontal className="h-4 w-4" />
             </button>
-
-            {menuOpen && (
-              <div
-                ref={menuRef}
-                className="absolute right-0 top-full z-40 mt-1 w-56 rounded-xl border border-white/10 bg-[#1b1d24] p-1 shadow-xl"
-              >
-                {pinned ? (
-                  <button
-                    type="button"
-                    onClick={() => unpinItem(item.to)}
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-slate-300 hover:bg-white/[0.08]"
-                  >
-                    <PinOff className="h-4 w-4 text-slate-400" />
-                    {t('nav.unpin')}
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => pinItem(item.to)}
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-slate-300 hover:bg-white/[0.08]"
-                  >
-                    <Pin className="h-4 w-4 text-slate-400" />
-                    {t('nav.pin')}
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        )}
+          )}
+        </div>
+        {drag && index === pinnedItems.length - 1 && drag.insertAt === pinnedItems.length && dropLine()}
       </div>
+    );
+  }
+
+  // Rows inside the "Mehr" flyout (light panel): navigate on click, pin icon
+  // on the right brings the item back into the main list.
+  function renderMoreRow(item: NavItem) {
+    const isActive = isActivePath(item.to);
+    const badge = badgeFor(item);
+    return (
+      <div key={item.to} className="group/more flex items-center rounded-md hover:bg-slate-100">
+        <NavLink
+          to={item.to}
+          onClick={() => {
+            setMoreAnchor(null);
+            onCloseMobile();
+          }}
+          className={`flex min-w-0 flex-1 items-center gap-3 px-3 py-2 text-sm ${
+            isActive ? 'font-medium text-brand-700' : 'text-slate-700'
+          }`}
+        >
+          <item.icon className={`h-4 w-4 shrink-0 ${isActive ? 'text-brand-600' : 'text-slate-500'}`} />
+          <span className="truncate">
+            {t(item.labelKey)}
+            {badge && <span className="ml-1 text-xs text-slate-400">({badge})</span>}
+          </span>
+        </NavLink>
+        <button
+          type="button"
+          onClick={() => pinItem(item.to)}
+          className="mr-1 rounded p-1.5 text-slate-400 opacity-0 transition-opacity hover:bg-white hover:text-slate-700 focus:opacity-100 group-hover/more:opacity-100"
+          title={t('nav.pin')}
+          aria-label={t('nav.pin')}
+        >
+          <Pin className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    );
+  }
+
+  const moreActive = unpinnedItems.some((item) => isActivePath(item.to));
+  const useFlyout = !isMobile;
+
+  // Bottom-row icon button: tooltip to the right, same look everywhere.
+  function iconButton(label: string, onClick: () => void, icon: ReactNode, hoverClass = 'hover:text-white') {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        onMouseEnter={(event) => setTip(tipFor(event.currentTarget, label))}
+        onMouseLeave={() => setTip(null)}
+        onFocus={(event) => setTip(tipFor(event.currentTarget, label))}
+        onBlur={() => setTip(null)}
+        aria-label={label}
+        className={`flex h-9 w-9 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-white/[0.06] ${hoverClass}`}
+      >
+        {icon}
+      </button>
     );
   }
 
   return (
     <aside
-      className={`glass-sidebar fixed inset-y-0 left-0 z-30 flex flex-col transition-all duration-300 ${
+      className={`glass-sidebar fixed inset-y-0 left-0 z-30 flex flex-col transition-[width] duration-200 ${
         collapsed ? 'w-[72px]' : 'w-64'
       } ${mobileOpen ? 'mobile-open' : ''}`}
     >
@@ -311,13 +478,13 @@ export default function Sidebar({
           <img
             src="https://xcrxltiiovpoladpaewd.supabase.co/storage/v1/object/public/test/Liftpicutures%20Logo%20alt.jpg"
             alt="Liftpictures"
-            className="h-9 w-9 rounded-xl object-cover"
+            className="h-9 w-9 rounded-lg object-cover"
             loading="lazy"
           />
         </div>
         {showFull && (
-          <div className="animate-fade-in overflow-hidden">
-            <h1 className="text-sm font-bold tracking-tight text-white">Liftpictures</h1>
+          <div className="overflow-hidden">
+            <h1 className="text-sm font-semibold tracking-tight text-white">Liftpictures</h1>
             <p className="truncate text-[11px] text-slate-400">
               {parkName || currentOrg?.name || t('nav.operator_dashboard')}
             </p>
@@ -333,28 +500,45 @@ export default function Sidebar({
         </button>
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-3 py-4 scrollbar-thin">
-        <div className="space-y-1">
-          {/* Collapsed rail has no room for a "Mehr" flyout, so it ignores the
-              pin split entirely - nothing becomes unreachable just because
-              the sidebar happens to be collapsed. */}
-          {(showFull ? pinnedItems : visibleItems).map((item) => renderNavRow(item, true))}
+      <nav className="flex-1 overflow-y-auto px-3 py-4 scrollbar-thin" onScroll={() => setTip(null)}>
+        <div className={`space-y-0.5 ${drag ? 'select-none' : ''}`}>
+          {pinnedItems.map((item, index) => renderNavRow(item, index))}
         </div>
 
-        {showFull && unpinnedItems.length > 0 && (
-          <div className="mt-1">
+        {unpinnedItems.length > 0 && (
+          <div className="mt-0.5">
             <button
               type="button"
-              onClick={() => setMoreOpen((open) => !open)}
-              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-400 transition-colors hover:bg-white/[0.06] hover:text-slate-200"
+              onClick={(event) => {
+                if (useFlyout) {
+                  const el = event.currentTarget;
+                  setTip(null);
+                  setMoreAnchor((open) => (open ? null : el));
+                } else {
+                  setMoreInlineOpen((open) => !open);
+                }
+              }}
+              onMouseEnter={(event) => !showFull && !moreAnchor && setTip(tipFor(event.currentTarget, t('nav.more')))}
+              onMouseLeave={() => setTip(null)}
+              aria-expanded={useFlyout ? !!moreAnchor : moreInlineOpen}
+              aria-label={t('nav.more')}
+              className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
+                moreAnchor || moreActive ? 'bg-white/[0.08] text-white' : 'text-slate-300 hover:bg-white/[0.05] hover:text-white'
+              } ${showFull ? '' : 'justify-center'}`}
             >
-              <MoreHorizontal className="h-[18px] w-[18px] shrink-0 text-slate-500" />
-              <span className="flex-1 text-left">{t('nav.more')}</span>
-              <ChevronDown className={`h-4 w-4 shrink-0 text-slate-500 transition-transform ${moreOpen ? 'rotate-180' : ''}`} />
+              <MoreHorizontal className="h-[18px] w-[18px] shrink-0 text-slate-400" />
+              {showFull && <span className="flex-1 text-left">{t('nav.more')}</span>}
+              {showFull &&
+                (useFlyout ? (
+                  <ChevronRight className="h-4 w-4 shrink-0 text-slate-500" />
+                ) : (
+                  <ChevronDown className={`h-4 w-4 shrink-0 text-slate-500 transition-transform ${moreInlineOpen ? 'rotate-180' : ''}`} />
+                ))}
             </button>
-            {moreOpen && (
-              <div className="mt-1 space-y-1 border-l border-white/[0.06] pl-2">
-                {unpinnedItems.map((item) => renderNavRow(item, false))}
+
+            {!useFlyout && moreInlineOpen && (
+              <div className="mt-1 space-y-0.5 rounded-md bg-white p-1">
+                {unpinnedItems.map((item) => renderMoreRow(item))}
               </div>
             )}
           </div>
@@ -364,40 +548,93 @@ export default function Sidebar({
       <div className="border-t border-white/[0.06] p-3">
         {showFull && <ProfileParkSwitcher onSwitched={onCloseMobile} />}
 
-        <div className={`flex ${showFull ? '' : 'flex-col'} gap-1`}>
-          <button
-            onClick={async () => {
-              setPark(null, null);
-              await signOut();
-            }}
-            className="flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm text-slate-500 transition-colors hover:bg-white/[0.06] hover:text-rose-400"
-            title={t('nav.sign_out')}
-          >
-            <LogOut className="h-4 w-4 shrink-0" />
-            {showFull && <span>{t('nav.sign_out')}</span>}
-          </button>
+        <div className={`flex ${showFull ? 'items-center' : 'flex-col items-center'} gap-1`}>
+          {showFull ? (
+            <button
+              onClick={async () => {
+                setPark(null, null);
+                await signOut();
+              }}
+              className="flex flex-1 items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-400 transition-colors hover:bg-white/[0.06] hover:text-rose-300"
+            >
+              <LogOut className="h-4 w-4 shrink-0" />
+              <span>{t('nav.sign_out')}</span>
+            </button>
+          ) : (
+            iconButton(
+              t('nav.sign_out'),
+              async () => {
+                setPark(null, null);
+                await signOut();
+              },
+              <LogOut className="h-4 w-4" />,
+              'hover:text-rose-300',
+            )
+          )}
 
-          <button
-            onClick={() => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))}
-            className="flex items-center justify-center rounded-xl px-3 py-2 text-slate-500 transition-colors hover:bg-white/[0.06] hover:text-slate-300"
-            title={theme === 'dark' ? t('nav.light_mode') : t('nav.dark_mode')}
-          >
-            {theme === 'dark' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-          </button>
+          {iconButton(
+            theme === 'dark' ? t('nav.light_mode') : t('nav.dark_mode'),
+            () => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark')),
+            theme === 'dark' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />,
+          )}
 
-          <button
-            onClick={onToggleCollapsed}
-            className="mobile-nav-hide-collapse-btn flex items-center justify-center rounded-xl px-3 py-2 text-slate-500 transition-colors hover:bg-white/[0.06] hover:text-slate-300"
-            title={collapsed ? t('nav.expand_sidebar') : t('nav.collapse_sidebar')}
-          >
-            {collapsed ? (
-              <ChevronRight className="h-4 w-4" />
-            ) : (
-              <ChevronLeft className="h-4 w-4" />
+          <div className="mobile-nav-hide-collapse-btn">
+            {iconButton(
+              collapsed ? t('nav.expand_sidebar') : t('nav.collapse_sidebar'),
+              () => {
+                setTip(null);
+                setMoreAnchor(null);
+                setMenu(null);
+                onToggleCollapsed();
+              },
+              collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />,
             )}
-          </button>
+          </div>
         </div>
       </div>
+
+      {moreAnchor && useFlyout && (
+        <Flyout anchor={moreAnchor} onClose={() => setMoreAnchor(null)}>
+          <p className="px-3 pb-1 pt-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">{t('nav.more')}</p>
+          <div className="space-y-0.5">{unpinnedItems.map((item) => renderMoreRow(item))}</div>
+        </Flyout>
+      )}
+
+      {menu && (
+        <Flyout anchor={menu.anchor} onClose={() => setMenu(null)} width={224}>
+          {unpinnedIds.includes(menu.to) ? (
+            <button
+              type="button"
+              onClick={() => pinItem(menu.to)}
+              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
+            >
+              <Pin className="h-4 w-4 text-slate-500" />
+              {t('nav.pin')}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => unpinItem(menu.to)}
+              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
+            >
+              <PinOff className="h-4 w-4 text-slate-500" />
+              {t('nav.unpin')}
+            </button>
+          )}
+        </Flyout>
+      )}
+
+      {tip &&
+        createPortal(
+          <div
+            role="tooltip"
+            style={{ top: tip.top, left: tip.left }}
+            className="pointer-events-none fixed z-[310] -translate-y-1/2 whitespace-nowrap rounded-md bg-[#1f2933] px-2.5 py-1.5 text-xs font-medium text-white shadow-lg"
+          >
+            {tip.label}
+          </div>,
+          document.body,
+        )}
     </aside>
   );
 }

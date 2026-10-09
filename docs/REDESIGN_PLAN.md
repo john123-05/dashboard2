@@ -79,7 +79,7 @@ Jede Phase: nur Gestaltung, keine Funktionsänderung. Prüfen mit `npm run typec
 
 - [x] **Phase 1 – Grundlagen:** Schrift, Farben, Karten, Buttons, Eingabefelder, Tabs-Stil,
       Seitenhintergrund (Tokens oben). Danach sieht jede Seite schon ruhiger aus.
-- [ ] **Phase 2 – Navigation (`src/components/layout/Sidebar.tsx`, `DashboardLayout.tsx`):**
+- [x] **Phase 2 – Navigation (`src/components/layout/Sidebar.tsx`, `DashboardLayout.tsx`):**
   - Dunkle, ruhige Leiste im HubSpot-Stil, aktiver Eintrag hell hinterlegt.
   - „Mehr“ als Flyout **nach rechts** (Portal, positioniert am Button), mit den ausgelagerten
     Einträgen; Pin-Symbol zum Zurückholen in die Hauptliste (Funktion `setUnpinned` bleibt).
@@ -129,3 +129,16 @@ Jede Phase: nur Gestaltung, keine Funktionsänderung. Prüfen mit `npm run typec
   Karten weiß ohne Blur, Buttons als Pills, Eingabefelder, Seitenhintergrund flach, Sidebar deckend,
   Animationen kürzer). Offen für spätere Phasen: viele Seiten nutzen fest `bg-slate-900`-Buttons und
   `bg-white/40`-Innenflächen statt der Klassen – das wird je Seite angeglichen.
+- 09.10.2026: Johns deutsche Originaltexte wiederhergestellt, die Codex beim Übersetzen umformuliert hatte
+  (u. a. „Upgrade“ statt „Erweiterung“, Hosting/Updates/Branding/Display/Video-Add-on, „Von Navigation lösen“).
+  Regel: beim Übersetzen den deutschen Wortlaut nie verändern.
+- 09.10.2026: Phase 2 umgesetzt (`Sidebar.tsx`). „Mehr“ öffnet als Flyout nach rechts (Portal, `Flyout`),
+  Pin-Symbol holt Einträge zurück; auf dem Handy (≤ 900 px) klappt „Mehr“ weiter nach unten auf.
+  Drag & Drop über Griff links (Pointer-Events statt HTML5-DnD, Drop-Linie, geht auch per Touch);
+  Reihenfolge/„Mehr“ werden sofort lokal angezeigt und weiter in `operator_profiles` gespeichert.
+  Optionsmenü „…“ als Flyout rechts, Tooltips rechts (eingeklappt für alle Icons, unten immer),
+  Einklappen-Symbol `PanelLeftClose/Open`. Eingeklappt gibt es „Mehr“ jetzt auch als Flyout.
+  „(Upgrade)“ bleibt als Text (Johns Wunsch), kein Icon. Bearbeitungsmodus mit Stift wurde
+  weggelassen – der Griff erscheint beim Darüberfahren, das reicht.
+  Hinweis: Vite musste nach dem neuen `react-dom`-Import einmal mit `--force` neu gestartet werden.
+  Offen: Hell/Dunkel-Schalter (ohne Wirkung) – Johns Entscheidung.

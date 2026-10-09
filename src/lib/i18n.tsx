@@ -171,7 +171,7 @@ const translations: Record<Language, Record<string, string>> = {
     "leads.load_error": "Kontakte konnten nicht geladen werden",
     'nav.settings': 'Einstellungen',
     'nav.options': "Optionen",
-    'nav.unpin': "Aus Navigation entfernen",
+    'nav.unpin': "Von Navigation lösen",
     'nav.pin': "Zur Navigation hinzufügen",
     'nav.close': "Navigation schließen",
     'nav.more': "Mehr",
