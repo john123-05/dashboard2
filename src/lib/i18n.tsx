@@ -1563,6 +1563,8 @@ const translations: Record<Language, Record<string, string>> = {
     'builder.type_line': "Linie",
     'builder.type_frame': "Rahmen",
     'builder.type_image': "Bild",
+    'health.components_ok': "{ok} von {total} in Ordnung",
+    'health.checked_at': "Geprüft um {time}",
   },
   en: {
     'app.loading': 'Loading…',
@@ -3109,6 +3111,8 @@ const translations: Record<Language, Record<string, string>> = {
     'builder.type_line': "Line",
     'builder.type_frame': "Frame",
     'builder.type_image': "Image",
+    'health.components_ok': "{ok} of {total} OK",
+    'health.checked_at': "Checked at {time}",
   },
   es: {
     'app.loading': 'Cargando…',
@@ -4655,6 +4659,8 @@ const translations: Record<Language, Record<string, string>> = {
     'builder.type_line': "Línea",
     'builder.type_frame': "Marco",
     'builder.type_image': "Imagen",
+    'health.components_ok': "{ok} de {total} en orden",
+    'health.checked_at': "Comprobado a las {time}",
   },
   fr: {
     'app.loading': 'Chargement…',
@@ -6201,6 +6207,8 @@ const translations: Record<Language, Record<string, string>> = {
     'builder.type_line': "Ligne",
     'builder.type_frame': "Cadre",
     'builder.type_image': "Image",
+    'health.components_ok': "{ok} sur {total} en ordre",
+    'health.checked_at': "Vérifié à {time}",
   },
   it: {
     'app.loading': 'Caricamento…',
@@ -7747,6 +7755,8 @@ const translations: Record<Language, Record<string, string>> = {
     'builder.type_line': "Linea",
     'builder.type_frame': "Cornice",
     'builder.type_image': "Immagine",
+    'health.components_ok': "{ok} di {total} in ordine",
+    'health.checked_at': "Controllato alle {time}",
   },
   nl: {
     'app.loading': 'Laden…',
@@ -9293,6 +9303,8 @@ const translations: Record<Language, Record<string, string>> = {
     'builder.type_line': "Lijn",
     'builder.type_frame': "Kader",
     'builder.type_image': "Afbeelding",
+    'health.components_ok': "{ok} van {total} in orde",
+    'health.checked_at': "Gecontroleerd om {time}",
   },
   lv: {
     'app.loading': 'Ielādē…',
@@ -10839,6 +10851,8 @@ const translations: Record<Language, Record<string, string>> = {
     'builder.type_line': "Līnija",
     'builder.type_frame': "Rāmis",
     'builder.type_image': "Attēls",
+    'health.components_ok': "{ok} no {total} kārtībā",
+    'health.checked_at': "Pārbaudīts {time}",
   },
 };
 

@@ -179,3 +179,12 @@ Jede Phase: nur Gestaltung, keine Funktionsänderung. Prüfen mit `npm run typec
      „Fertige Datei hochladen“ und „Beim Speichern sofort verwenden“ dort.
   Keine DB-Änderung; Speicherregeln des Buckets `overlays` erlauben Unterordner unter `<park_id>/`
   (Auflisten geprüft, Hochladen in Unterordner bei John im Browser prüfen).
+- 10.10.2026: Systemzustand neu gestaltet (`SystemHealth.tsx`, `AutomatHealth.tsx`). Ein Aktualisieren-Knopf
+  für alles (`refreshKey` an AutomatHealth) plus „Geprüft um …“. Oben EIN Gesamtstatus (Urteil kommt per
+  `onUrteil` aus AutomatHealth, ohne Automat die Datenfrische), darunter Datenquelle/letzte Daten/letzte
+  Aktivität, rechts Fahrten/Verkauft gesamt. Automatenkarte: Kopf mit Verbindung, „x von y in Ordnung“,
+  Papier mit Füllbalken, Fotos/Verkauft; neu ein Ablauf-Streifen (Stationen mit Symbol und Status, Klick
+  klappt die Zeile auf); Zeilen in zwei unabhängigen Spalten (keine Lücken beim Aufklappen). Dienste als
+  Liste, „Sonstige Protokolle“ (unbekannte Logs am Automaten) dort ausgefiltert. Ereignisse mit
+  Unterstrich-Reitern, Filter als Pills; ohne Datei-Meldungen öffnet automatisch der Verlauf. Zeiten und
+  Zahlen jetzt nach Sprache formatiert (vorher „this minute“, „17,722“). Funktionen unverändert.

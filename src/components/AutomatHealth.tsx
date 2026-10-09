@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Loader2, AlertTriangle, CheckCircle2, MinusCircle, RotateCw, Moon,
-  ChevronDown, ChevronRight, HelpCircle, Camera, Square,
+  ChevronDown, ChevronRight, HelpCircle, Camera, Square, Monitor, Coins, CreditCard,
+  Printer, UploadCloud, Wifi, Settings2, Mail, HardDrive, Cpu, Radar, type LucideIcon,
 } from 'lucide-react';
 import GlassCard from './ui/GlassCard';
 import { usePark } from '../contexts/ParkContext';
@@ -132,32 +133,32 @@ const ZUSTAND_DATEN: Record<Ton, {
   bad: {
     label: 'health.state.bad', rang: 5,
     erklaerung: 'health.state.bad_text',
-    punkt: 'bg-rose-500', chip: 'bg-rose-100 text-rose-700',
+    punkt: 'bg-rose-500', chip: 'bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200',
   },
   warn: {
     label: 'health.state.warn', rang: 4,
     erklaerung: 'health.state.warn_text',
-    punkt: 'bg-amber-500', chip: 'bg-amber-100 text-amber-800',
+    punkt: 'bg-amber-500', chip: 'bg-amber-50 text-amber-800 ring-1 ring-inset ring-amber-200',
   },
   ok: {
     label: 'health.state.ok', rang: 3,
     erklaerung: 'health.state.ok_text',
-    punkt: 'bg-emerald-500', chip: 'bg-emerald-100 text-emerald-700',
+    punkt: 'bg-emerald-500', chip: 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200',
   },
   ruhig: {
     label: 'health.state.quiet', rang: 2,
     erklaerung: 'health.state.quiet_text',
-    punkt: 'bg-sky-400', chip: 'bg-sky-100 text-sky-700',
+    punkt: 'bg-sky-400', chip: 'bg-sky-50 text-sky-700 ring-1 ring-inset ring-sky-200',
   },
   aus: {
     label: 'health.state.off', rang: 1,
     erklaerung: 'health.state.off_text',
-    punkt: 'bg-slate-300', chip: 'bg-slate-100 text-slate-500',
+    punkt: 'bg-slate-300', chip: 'bg-slate-100 text-slate-500 ring-1 ring-inset ring-slate-200',
   },
   unklar: {
     label: 'health.state.unknown', rang: 0,
     erklaerung: 'health.state.unknown_text',
-    punkt: 'bg-slate-300', chip: 'bg-slate-100 text-slate-500',
+    punkt: 'bg-slate-300', chip: 'bg-slate-100 text-slate-500 ring-1 ring-inset ring-slate-200',
   },
 };
 
@@ -181,6 +182,23 @@ function ton(s: Status): Ton {
 /** Reihenfolge nach dem Weg, den ein Foto durchs Haus nimmt - nicht nach Technik. */
 const ORDER = ['camera', 'process', 'viewer', 'cash', 'terminal', 'printer',
   'uploader', 'network', 'config', 'mail', 'system'];
+
+/** Symbol je Station im Ablauf-Streifen der Automatenkarte. */
+const KIND_ICON: Record<string, LucideIcon> = {
+  camera: Camera,
+  sensor: Radar,
+  viewer: Monitor,
+  cash: Coins,
+  terminal: CreditCard,
+  printer: Printer,
+  uploader: UploadCloud,
+  network: Wifi,
+  config: Settings2,
+  mail: Mail,
+  system: HardDrive,
+};
+
+export type Urteil = { ton: 'ok' | 'warn' | 'bad' | 'ruhig' | 'aus' | 'unklar'; titel: string; text: string };
 
 function seit(min: number | null | undefined): string {
   if (min === null || min === undefined) return t('health.time.unknown');
@@ -438,8 +456,12 @@ function phasen(m: Machine, n: LaufenderNeustart, jetzt: number): Phase[] {
  * beides sind Ereignislisten, und zwei getrennte Listen an zwei Stellen zu
  * suchen ist genau das, was die Seite unübersichtlich gemacht hat.
  */
-export default function AutomatHealth({ onVerlauf }: {
+export default function AutomatHealth({ onVerlauf, onUrteil, refreshKey }: {
   onVerlauf?: (eintraege: HistoryEntry[], verfuegbar: boolean) => void;
+  /** Gesamturteil über die Anlage - die Seite zeigt es oben als Status. */
+  onUrteil?: (urteil: Urteil | null) => void;
+  /** Ändert sich der Wert, wird neu geladen (gemeinsamer Aktualisieren-Knopf der Seite). */
+  refreshKey?: number;
 } = {}) {
   useI18n();
   const { parkId } = usePark();
@@ -459,6 +481,11 @@ export default function AutomatHealth({ onVerlauf }: {
     const t = setInterval(() => void load(), 60_000);
     return () => clearInterval(t);
   }, [parkId]);
+
+  useEffect(() => {
+    if (refreshKey) void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshKey]);
 
   // Solange ein Neustart läuft, häufiger nachfragen: eine Minute Wartezeit
   // zwischen zwei Abfragen würde jede Phase verschlucken. Danach wieder Ruhe.
@@ -671,33 +698,34 @@ export default function AutomatHealth({ onVerlauf }: {
     };
   }, [machines]);
 
+  useEffect(() => {
+    if (!loading) onUrteil?.(urteil);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urteil, loading]);
+
   if (!parkId) return null;
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <section className="space-y-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="flex items-center gap-2">
-          <h3 className="text-lg font-semibold text-slate-800">{t('health.status_title')}</h3>
+          <h3 className="text-base font-semibold text-[color:var(--ink)]">{t('health.status_title')}</h3>
           <ZustandsHilfe />
+          {loading && <Loader2 className="h-4 w-4 animate-spin text-[color:var(--ink-3)]" />}
         </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <div className="inline-flex rounded-xl bg-white/50 p-1">
+        <div className="inline-flex shrink-0 self-start rounded-md border border-[color:var(--line-strong)] p-0.5 sm:self-auto">
+          {[false, true].map((wert) => (
             <button
-              onClick={() => setDetailed(false)}
-              className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${!detailed ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              key={String(wert)}
+              type="button"
+              onClick={() => setDetailed(wert)}
+              className={`rounded px-3 py-1 text-sm transition ${
+                detailed === wert ? 'bg-[color:var(--ink)] text-white' : 'text-[color:var(--ink-2)] hover:bg-slate-100'
+              }`}
             >
-              {t('health.simple')}
+              {wert ? t('health.detailed') : t('health.simple')}
             </button>
-            <button
-              onClick={() => setDetailed(true)}
-              className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${detailed ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-            >
-              {t('health.detailed')}
-            </button>
-          </div>
-          <button onClick={() => void load()} className="glass-button-secondary" disabled={loading}>
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : t('health.refresh')}
-          </button>
+          ))}
         </div>
       </div>
 
@@ -714,26 +742,8 @@ export default function AutomatHealth({ onVerlauf }: {
         <p className="text-sm text-slate-500">{t('health.no_machine')}</p>
       )}
 
-      {urteil && (
-        <div className={`flex flex-wrap items-baseline gap-x-2 gap-y-0.5 rounded-xl px-3 py-2.5 ${
-          urteil.ton === 'bad' ? 'bg-rose-50/80'
-            : urteil.ton === 'warn' ? 'bg-amber-50/80'
-              : urteil.ton === 'unklar' ? 'bg-white/50' : 'bg-emerald-50/80'
-        }`}>
-          <span className={`self-center h-2.5 w-2.5 shrink-0 rounded-full ${ZUSTAND[urteil.ton].punkt}`} />
-          <span className={`text-sm font-semibold ${
-            urteil.ton === 'bad' ? 'text-rose-800'
-              : urteil.ton === 'warn' ? 'text-amber-900'
-                : urteil.ton === 'unklar' ? 'text-slate-700' : 'text-emerald-800'
-          }`}>
-            {urteil.titel}
-          </span>
-          <span className="text-sm text-slate-600">{urteil.text}</span>
-        </div>
-      )}
-
       {machines.length > 0 && (
-        <div className="grid items-start gap-4 xl:grid-cols-2">
+        <div className={`grid items-start gap-5 ${machines.length > 1 ? '2xl:grid-cols-2' : ''}`}>
           {machines.map((m, index) => (
             <Automat
               key={m.id}
@@ -750,7 +760,7 @@ export default function AutomatHealth({ onVerlauf }: {
           ))}
         </div>
       )}
-    </div>
+    </section>
   );
 }
 
@@ -805,62 +815,108 @@ function Automat({ m, farbe, mehrere, detailed, busyKey, laufend, jetzt, onResta
     return (m.pending_restart.target || 'viewer') === e.neustart.key;
   }
 
+  // Ablauf-Streifen: die Stationen, die ein Foto durchläuft, in derselben
+  // Reihenfolge wie die Liste darunter. Systemwerte (Speicher usw.) bleiben
+  // draussen, ausser sie melden ein Problem.
+  const stationen = eintraege.filter((e) => e.kind !== 'system' || e.ton === 'bad' || e.ton === 'warn');
+  const inOrdnung = sichtbar.filter((e) => e.ton === 'ok' || e.ton === 'ruhig').length;
+  const papierWarn = m.paper_warn_remaining ?? 30;
+
   return (
     <GlassCard className="overflow-hidden p-0">
-      <div className="h-1.5" style={{ backgroundColor: farbe }} />
-      <div className="p-4 sm:p-5">
-      <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2">
-        <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: farbe }} />
-        <h4 className="text-lg font-semibold text-slate-800">{m.machine_label || m.machine_id}</h4>
-        <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-          m.reachable ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
-        }`}>
-          {m.reachable ? t('health.connected') : t('health.no_data_since', { time: seit(m.offline_minutes) })}
-        </span>
+      <div className="flex flex-col gap-4 border-b border-[color:var(--line)] px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+            <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: farbe }} />
+            <h4 className="text-lg font-semibold text-[color:var(--ink)]">{m.machine_label || m.machine_id}</h4>
+            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${
+              m.reachable ? 'bg-emerald-50 text-emerald-700 ring-emerald-200' : 'bg-rose-50 text-rose-700 ring-rose-200'
+            }`}>
+              <span className={`h-1.5 w-1.5 rounded-full ${m.reachable ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+              {m.reachable ? t('health.connected') : t('health.no_data_since', { time: seit(m.offline_minutes) })}
+            </span>
+          </div>
+          {eintraege.length > 0 && (
+            <p className="mt-1 text-xs text-[color:var(--ink-3)]">
+              {t('health.components_ok', { ok: inOrdnung, total: sichtbar.length })}
+            </p>
+          )}
+        </div>
+
         {(m.photos_taken_today !== null || typeof m.paper_remaining === 'number') && (
-          <div className="ml-auto flex gap-2">
-            {typeof m.paper_remaining === 'number' && (() => {
-              // Papierrolle: Farbe nach Warnschwelle der Konfiguration (Standard 30).
-              const warn = m.paper_warn_remaining ?? 30;
-              const knapp = m.paper_remaining <= warn;
-              return (
-                <div className={`rounded-lg px-3 py-1.5 text-right ${knapp ? 'bg-amber-100/80' : 'bg-white/60'}`}>
-                  <p className="text-[11px] text-slate-400">{t('health.paper_left')}</p>
-                  <p className={`text-sm font-semibold tabular-nums ${knapp ? 'text-amber-800' : 'text-slate-800'}`}>
-                    {m.paper_remaining}
-                    {m.paper_capacity ? (
-                      <span className="text-[11px] font-normal text-slate-400"> / {m.paper_capacity}</span>
-                    ) : null}
-                  </p>
-                </div>
-              );
-            })()}
+          <div className="flex flex-wrap gap-6 lg:justify-end">
+            {typeof m.paper_remaining === 'number' && (
+              <div className="min-w-[8rem]">
+                <p className="text-xs text-[color:var(--ink-3)]">{t('health.paper_left')}</p>
+                <p className={`mt-0.5 text-2xl font-light tabular-nums leading-none ${m.paper_remaining <= papierWarn ? 'text-amber-700' : 'text-[color:var(--ink)]'}`}>
+                  {m.paper_remaining}
+                  {m.paper_capacity ? <span className="text-sm text-[color:var(--ink-3)]"> / {m.paper_capacity}</span> : null}
+                </p>
+                {m.paper_capacity ? (
+                  <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-200">
+                    <div
+                      className={`h-full rounded-full ${m.paper_remaining <= papierWarn ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                      style={{ width: `${Math.min(100, Math.max(2, (m.paper_remaining / m.paper_capacity) * 100))}%` }}
+                    />
+                  </div>
+                ) : null}
+              </div>
+            )}
             {m.photos_taken_today !== null && (
-              <div className="rounded-lg bg-white/60 px-3 py-1.5 text-right">
-                <p className="text-[11px] text-slate-400">{t('health.photos_today')}</p>
-                <p className="text-sm font-semibold tabular-nums text-slate-800">{m.photos_taken_today}</p>
+              <div>
+                <p className="text-xs text-[color:var(--ink-3)]">{t('health.photos_today')}</p>
+                <p className="mt-0.5 text-2xl font-light tabular-nums leading-none text-[color:var(--ink)]">{m.photos_taken_today}</p>
               </div>
             )}
             {/* „0 verkauft" wäre eine Aussage über etwas, das niemand gezählt
-                hat — die Bedingung oben prüft nur die aufgenommenen Fotos.
-                Meldet der Automat die Verkäufe nicht, bleibt die Angabe weg. */}
+                hat. Meldet der Automat die Verkäufe nicht, bleibt die Angabe weg. */}
             {m.photos_sold_today !== null && m.photos_sold_today !== undefined && (
-              <div className="rounded-lg bg-white/60 px-3 py-1.5 text-right">
-                <p className="text-[11px] text-slate-400">{t('health.sold')}</p>
-                <p className="text-sm font-semibold tabular-nums text-slate-800">{m.photos_sold_today}</p>
+              <div>
+                <p className="text-xs text-[color:var(--ink-3)]">{t('health.sold')}</p>
+                <p className="mt-0.5 text-2xl font-light tabular-nums leading-none text-[color:var(--ink)]">{m.photos_sold_today}</p>
               </div>
             )}
           </div>
         )}
       </div>
 
+      {stationen.length > 0 && (
+        <div className="overflow-x-auto border-b border-[color:var(--line)] bg-slate-50 px-5 py-4">
+          <ol className="flex min-w-max items-start sm:min-w-0">
+            {stationen.map((e, i) => {
+              const Icon = KIND_ICON[e.kind] ?? Cpu;
+              const z = ZUSTAND[e.ton];
+              return [
+                i > 0 ? <li key={`${e.name}-linie`} className="mt-[18px] h-px min-w-6 flex-1 bg-[color:var(--line-strong)]" aria-hidden /> : null,
+                <li key={e.name} className="shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => umschalten(e.name)}
+                    title={`${e.name} · ${z.label}`}
+                    className="group flex w-24 flex-col items-center gap-1.5 text-center"
+                  >
+                    <span className="relative flex h-9 w-9 items-center justify-center rounded-full border border-[color:var(--line-strong)] bg-white text-[color:var(--ink-2)] transition group-hover:border-brand-400">
+                      <Icon className="h-4 w-4" />
+                      <span className={`absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full ring-2 ring-white ${z.punkt}`} />
+                    </span>
+                    <span className="line-clamp-2 text-[11px] leading-tight text-[color:var(--ink-2)] group-hover:text-[color:var(--ink)]">{e.name}</span>
+                    <span className="text-[10px] text-[color:var(--ink-3)]">{z.label}</span>
+                  </button>
+                </li>,
+              ];
+            })}
+          </ol>
+        </div>
+      )}
+
+      <div className="p-4 sm:p-5">
       {/* Der Abholcode entscheidet, in welchem Park ein Foto landet. Ist die
           Nummer des Automaten hier nicht hinterlegt, ordnet der Server die
           Fotos einem FREMDEN Park zu - samt Umsatz. Das ist am 15.08.2026
           passiert und war vorher nirgends sichtbar. Deshalb ganz oben und
           nicht in einer Kachel versteckt. */}
       {m.customer_code_registered === false && (
-        <div className="mb-3 rounded-xl border border-rose-300 bg-rose-50/90 p-3">
+        <div className="mb-3 rounded-lg border border-rose-300 bg-rose-50 p-3">
           <p className="text-sm font-semibold text-rose-800">
             {t('health.code_missing_title', { code: m.customer_code ?? '' })}
           </p>
@@ -881,13 +937,13 @@ function Automat({ m, farbe, mehrere, detailed, busyKey, laufend, jetzt, onResta
       {/* Ein Automat mit älterem Stand meldet weder Messungen noch Geräte.
           Dann bleibt hier bewusst eine Erklärung statt einer leeren Fläche. */}
       {eintraege.length === 0 && (
-        <p className="rounded-xl bg-white/40 px-3 py-3 text-sm text-slate-500">
+        <p className="rounded-lg border border-dashed border-[color:var(--line-strong)] px-3 py-3 text-sm text-[color:var(--ink-3)]">
           {t('health.old_agent', { version: m.agent_version ? t('health.version_suffix', { version: m.agent_version }) : '' })}
         </p>
       )}
 
       {testfotoOhneKachel && (
-        <div className="mb-2 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white/40 px-3 py-3">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[color:var(--line)] px-3.5 py-3">
           <div className="min-w-0">
             <p className="text-sm font-medium text-slate-700">{t('health.trigger_test')}</p>
             <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
@@ -898,7 +954,7 @@ function Automat({ m, farbe, mehrere, detailed, busyKey, laufend, jetzt, onResta
             type="button"
             onClick={() => onTestfoto()}
             disabled={busyKey === `${m.id}:testphoto`}
-            className="shrink-0 rounded-xl bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50"
+            className="glass-button-secondary shrink-0 py-1.5 text-sm disabled:opacity-50"
           >
             {busyKey === `${m.id}:testphoto`
               ? t('health.triggering')
@@ -909,8 +965,11 @@ function Automat({ m, farbe, mehrere, detailed, busyKey, laufend, jetzt, onResta
         </div>
       )}
 
-      <div className={`grid items-start gap-2 lg:grid-cols-2 ${mehrere ? 'xl:grid-cols-1' : ''}`}>
+      {/* Zwei unabhängige Spalten statt Raster: eine aufgeklappte Zeile soll
+          in der Nachbarspalte keine Lücke reissen. */}
+      <div className={mehrere ? '' : 'lg:columns-2 lg:gap-2'}>
         {sichtbar.map((e) => (
+          <div key={e.name} className="mb-2 break-inside-avoid">
           <Zeile
             key={e.name}
             e={e}
@@ -955,6 +1014,7 @@ function Automat({ m, farbe, mehrere, detailed, busyKey, laufend, jetzt, onResta
             }
             onRestart={(mode) => onRestart(mode, e.neustart)}
           />
+          </div>
         ))}
       </div>
 
@@ -1000,22 +1060,22 @@ function Zeile({
   const Pfeil = offen ? ChevronDown : ChevronRight;
 
   return (
-    <div className="overflow-hidden rounded-xl border border-white/50 bg-white/40">
+    <div className="overflow-hidden rounded-lg border border-[color:var(--line)] bg-white">
       <button
         type="button"
         onClick={aufklappbar ? onToggle : undefined}
         aria-expanded={offen}
-        className={`flex w-full items-center gap-2.5 px-3 py-2 text-left transition ${
-          aufklappbar ? 'hover:bg-white/60' : 'cursor-default'
+        className={`flex w-full items-center gap-3 px-3.5 py-2.5 text-left transition ${
+          aufklappbar ? 'hover:bg-slate-50' : 'cursor-default'
         }`}
       >
         <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${z.punkt}`} />
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-baseline gap-x-1.5">
-            <span className="text-sm font-semibold text-slate-800">{e.name}</span>
-            {e.tech && <span className="text-[11px] text-slate-400">({e.tech})</span>}
+            <span className="text-sm font-semibold text-[color:var(--ink)]">{e.name}</span>
+            {e.tech && <span className="text-[11px] text-[color:var(--ink-3)]">{e.tech}</span>}
           </span>
-          <span className="mt-px block truncate text-xs text-slate-600">
+          <span className="mt-0.5 block truncate text-xs text-[color:var(--ink-3)]">
             {kurzText(e)}
             {warnung && (
               <span className={
@@ -1030,7 +1090,7 @@ function Zeile({
         {/* Ein laufender Auftrag muss auch eingeklappt sichtbar sein - sonst
             klickt jemand weiter, weil nichts zu passieren scheint. */}
         {wartend && (
-          <span className="flex shrink-0 items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">
+          <span className="flex shrink-0 items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-800 ring-1 ring-inset ring-amber-200">
             <RotateCw className="h-3 w-3 animate-spin" />
             {pendingMode === 'tonight' ? t('health.tonight') : t('health.restarting_chip')}
           </span>
@@ -1042,8 +1102,8 @@ function Zeile({
       </button>
 
       {offen && (
-        <div className="space-y-1.5 border-t border-white/50 bg-white/30 px-3 py-2.5 text-xs">
-          {e.purpose && <p className="text-slate-500">{e.purpose}</p>}
+        <div className="space-y-2 border-t border-[color:var(--line)] bg-slate-50 px-3.5 py-3 text-xs">
+          {e.purpose && <p className="text-[color:var(--ink-2)]">{e.purpose}</p>}
           {/* Beim Bargeld interessiert nicht die letzte Protokollzeile, sondern
               wie viel Wechselgeld noch da ist und wie bezahlt wurde. */}
           {geld?.bestand && (
@@ -1067,7 +1127,7 @@ function Zeile({
               Steht an der Kamera-Kachel, weil man dort nachsieht, wenn kein
               Bild mehr kommt. */}
           {testfoto && (
-            <div className="border-t border-white/60 pt-2">
+            <div className="border-t border-[color:var(--line)] pt-2.5">
               <button
                 onClick={testfoto.ausloesen}
                 disabled={testfoto.busy || testfoto.wartend}
@@ -1087,7 +1147,7 @@ function Zeile({
           )}
 
           {e.neustart && (
-            <div className="border-t border-white/60 pt-2">
+            <div className="border-t border-[color:var(--line)] pt-2.5">
               {gesperrt && !wartend ? (
                 <p className="text-slate-400">
                   {t('health.other_restart_pending')}
@@ -1200,9 +1260,9 @@ function Muenzbestand({ bestand, warnungen }: {
   const nachCent = new Map(warnungen.map((w) => [w.cent, w]));
 
   return (
-    <div className="rounded-lg bg-white/60 px-2.5 py-2">
+    <div className="rounded-md border border-[color:var(--line)] bg-white px-3 py-2.5">
       <div className="mb-1.5 flex items-baseline justify-between gap-2">
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+        <span className="text-[11px] font-semibold text-[color:var(--ink-2)]">
           {t('health.change_in_machine')}
         </span>
         <span className={`text-sm font-semibold tabular-nums ${
@@ -1281,8 +1341,8 @@ function Zahlungen({ uebersicht, tage }: {
   const anteileBekannt = typeof barAnteil === 'number' && typeof karteAnteil === 'number';
 
   return (
-    <div className="rounded-lg bg-white/60 px-2.5 py-2">
-      <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+    <div className="rounded-md border border-[color:var(--line)] bg-white px-3 py-2.5">
+      <p className="mb-1.5 text-[11px] font-semibold text-[color:var(--ink-2)]">
         {t('health.payments')}{tage ? t('health.last_days', { days: tage }) : ''}
       </p>
 
@@ -1342,11 +1402,11 @@ function Befund({ titel, text, datei }: {
   titel: string; text: string; datei?: string;
 }) {
   return (
-    <div className="rounded-lg bg-white/60 px-2.5 py-1.5">
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+    <div className="rounded-md border border-[color:var(--line)] bg-white px-3 py-2">
+      <p className="text-[11px] font-semibold text-[color:var(--ink-2)]">
         {titel}{datei && <span className="font-normal normal-case"> · {datei}</span>}
       </p>
-      <p className="mt-0.5 break-words text-slate-700">{text}</p>
+      <p className="mt-0.5 break-words font-mono text-[11px] text-[color:var(--ink-2)]">{text}</p>
     </div>
   );
 }
@@ -1366,13 +1426,13 @@ function ZustandsHilfe() {
       <button
         type="button"
         aria-label={t('health.states_help')}
-        className="flex h-5 w-5 items-center justify-center rounded-full bg-white/60 text-slate-500 transition hover:bg-white hover:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+        className="flex h-5 w-5 items-center justify-center rounded-full text-[color:var(--ink-3)] transition hover:text-[color:var(--ink)] focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
       >
         <HelpCircle className="h-3.5 w-3.5" />
       </button>
       <span
         role="tooltip"
-        className="pointer-events-none absolute left-0 top-7 z-20 w-72 origin-top-left scale-95 rounded-xl border border-white/60 bg-white/95 p-3 opacity-0 shadow-lg backdrop-blur transition group-focus-within:scale-100 group-focus-within:opacity-100 group-hover:scale-100 group-hover:opacity-100"
+        className="pointer-events-none absolute left-0 top-7 z-20 w-72 origin-top-left scale-95 rounded-lg border border-[color:var(--line)] bg-white p-3 opacity-0 shadow-[0_12px_32px_rgba(16,24,40,0.14)] transition group-focus-within:scale-100 group-focus-within:opacity-100 group-hover:scale-100 group-hover:opacity-100"
       >
         <span className="mb-1.5 block text-xs font-semibold text-slate-700">
           {t('health.states_title')}
@@ -1393,13 +1453,13 @@ function ZustandsHilfe() {
 
 function Hinweis({ ton, children }: { ton: 'ok' | 'warn' | 'bad'; children: React.ReactNode }) {
   const map = {
-    ok: { cls: 'bg-emerald-50/80 text-emerald-700', Icon: CheckCircle2 },
-    warn: { cls: 'bg-amber-50/80 text-amber-800', Icon: AlertTriangle },
-    bad: { cls: 'bg-rose-50/80 text-rose-700', Icon: MinusCircle },
+    ok: { cls: 'bg-emerald-50 text-emerald-700', Icon: CheckCircle2 },
+    warn: { cls: 'bg-amber-50 text-amber-800', Icon: AlertTriangle },
+    bad: { cls: 'bg-rose-50 text-rose-700', Icon: MinusCircle },
   }[ton];
   const Icon = map.Icon;
   return (
-    <div className={`mb-4 flex items-start gap-2 rounded-xl px-3 py-2 text-sm ${map.cls}`}>
+    <div className={`flex items-start gap-2 rounded-lg px-3 py-2 text-sm ${map.cls}`}>
       <Icon className="mt-0.5 h-4 w-4 shrink-0" />
       <span>{children}</span>
     </div>
