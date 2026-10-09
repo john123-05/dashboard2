@@ -159,7 +159,7 @@ export default function App() {
                   path="/users"
                   element={
                     <OwnerOnly>
-                      <GuestActivityAwareOverlay description="Hier findest du alle registrierten Nutzer-Accounts deines Parks — also Gäste, die sich für den Foto-Shop angemeldet haben.">
+                      <GuestActivityAwareOverlay>
                         <Users />
                       </GuestActivityAwareOverlay>
                     </OwnerOnly>

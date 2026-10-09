@@ -227,7 +227,7 @@ export default function Sidebar({
           title={
             showFull
               ? undefined
-              : `${item.label ?? t(item.labelKey)}${showComingSoon ? ` (${t('nav.coming_soon')})` : ''}`
+              : `${item.label ?? t(item.labelKey)}${showComingSoon ? ` (${item.guestActivityUnlocks ? 'nachrüsten' : t('nav.coming_soon')})` : ''}`
           }
         >
           <item.icon
@@ -239,7 +239,7 @@ export default function Sidebar({
             <span className="animate-fade-in truncate">
               {item.label ?? t(item.labelKey)}
               {showComingSoon && (
-                <span className="ml-1 text-xs text-slate-500">({t('nav.coming_soon')})</span>
+                <span className="ml-1 text-xs text-slate-500">({item.guestActivityUnlocks ? 'nachrüsten' : t('nav.coming_soon')})</span>
               )}
             </span>
           )}
