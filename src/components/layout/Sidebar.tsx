@@ -39,6 +39,8 @@ type NavItem = {
   comingSoon?: boolean;
   kioskUnlocks?: boolean;
   guestActivityUnlocks?: boolean;
+  // Shows a permanent "(Upgrade)" hint: the page is a demo until the park books it.
+  upgrade?: boolean;
   // Visible to the restricted "staff" role. Everything else is owner-only.
   staffAllowed?: boolean;
   ownerOnly?: boolean;
@@ -56,7 +58,7 @@ const navItems: NavItem[] = [
   { to: '/health', icon: Activity, labelKey: 'nav.system_health', staffAllowed: true },
   { to: '/kamera', icon: Camera, labelKey: 'nav.camera', staffAllowed: true },
   { to: '/configuration', icon: Package, labelKey: 'nav.configuration', label: 'Konfiguration' },
-  { to: '/shop', icon: Store, labelKey: 'nav.shop', label: 'Shop' },
+  { to: '/shop', icon: Store, labelKey: 'nav.shop', label: 'Shop', upgrade: true },
   { to: '/team', icon: UserCog, labelKey: 'nav.team', label: 'Mitarbeiter', ownerOnly: true },
   { to: '/settings', icon: Settings, labelKey: 'nav.settings' },
 ];
@@ -188,6 +190,13 @@ export default function Sidebar({
       item.comingSoon &&
       !(item.kioskUnlocks && isKioskPark) &&
       !(item.guestActivityUnlocks && isTarzansPark);
+    const badge = showComingSoon
+      ? item.guestActivityUnlocks
+        ? 'Upgrade'
+        : t('nav.coming_soon')
+      : item.upgrade
+        ? 'Upgrade'
+        : null;
     const menuOpen = menuOpenFor === item.to;
     const draggable = showFull && pinned;
 
@@ -227,7 +236,7 @@ export default function Sidebar({
           title={
             showFull
               ? undefined
-              : `${item.label ?? t(item.labelKey)}${showComingSoon ? ` (${item.guestActivityUnlocks ? 'nachrüsten' : t('nav.coming_soon')})` : ''}`
+              : `${item.label ?? t(item.labelKey)}${badge ? ` (${badge})` : ''}`
           }
         >
           <item.icon
@@ -238,9 +247,7 @@ export default function Sidebar({
           {showFull && (
             <span className="animate-fade-in truncate">
               {item.label ?? t(item.labelKey)}
-              {showComingSoon && (
-                <span className="ml-1 text-xs text-slate-500">({item.guestActivityUnlocks ? 'nachrüsten' : t('nav.coming_soon')})</span>
-              )}
+              {badge && <span className="ml-1 text-xs text-slate-500">({badge})</span>}
             </span>
           )}
         </NavLink>
