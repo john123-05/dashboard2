@@ -25,9 +25,8 @@ offenen Phase weiter. Nach jeder Phase: Häkchen setzen, Commit, kurze Notiz unt
    (300) und groß (32–36 px), Titel und Buttons halbfett (600), Fließtext 14 px regular.
    Wenig Großbuchstaben-Labels, kaum gesperrte Schrift.
 2. **Flächen:** Seiteninhalt auf weißer Fläche mit großzügigem Rand; Karten weiß, 1 px Rand
-   (sehr helles Grau-Blau), kleiner Radius (8–12 px), fast kein Schatten.
-   **Abweichung auf Johns Wunsch:** Der Glas-Effekt (Blur, leicht durchscheinend, Farbverlauf im
-   Hintergrund) bleibt, aber mit klarem, durchgehendem Rand (`--glass-border`).
+   (sehr helles Grau-Blau), kleiner Radius (8–12 px), fast kein Schatten. Keine Glas-/Blur-Effekte,
+   keine Farbverläufe im Hintergrund.
 3. **Navigation:** dunkle, ruhige Seitenleiste (fast schwarz), Einträge mit Icon + Text, aktiver
    Eintrag als helle abgerundete Fläche. Unten: Stift (Navigation bearbeiten), Einklappen-Symbol
    mit Tooltip („Navigation einklappen“), darunter eine Upgrade-Box. „Mehr“ öffnet ein Flyout nach
@@ -55,7 +54,7 @@ offenen Phase weiter. Nach jeder Phase: Häkchen setzen, Commit, kurze Notiz unt
 | Akzent hell | `#FFF4ED` / `#FFEDD5` | ausgewählte Zeilen, Badges, aktive Navigationspunkte (hell) |
 | Text | `#1F2933` (Überschriften), `#33475B` (Text), `#5C6F82` (sekundär) | |
 | Rand | `#DFE3EB` | Karten, Eingabefelder, Tabellen |
-| Seitenfläche | Mesh-Verlauf bleibt, Karten Glas `rgba(255,255,255,.62)` + Blur, Rand `rgba(203,214,226,.95)` | Johns Wunsch: Glas behalten, klarer Rand |
+| Seitenfläche | `#F5F7FA` (Hintergrund), Karten `#FFFFFF` | ersetzt Mesh-Verlauf und Glas |
 | Navigation | `#2B2B2B` / aktiv `#3D3D3D`, Text `#E6E8EB` | Seitenleiste |
 | Radius | Karten 12 px, Eingaben 8 px, Buttons Pill | |
 | Schatten | höchstens `0 1px 2px rgba(16,24,40,.04)` | Karten |
@@ -130,4 +129,3 @@ Jede Phase: nur Gestaltung, keine Funktionsänderung. Prüfen mit `npm run typec
   Karten weiß ohne Blur, Buttons als Pills, Eingabefelder, Seitenhintergrund flach, Sidebar deckend,
   Animationen kürzer). Offen für spätere Phasen: viele Seiten nutzen fest `bg-slate-900`-Buttons und
   `bg-white/40`-Innenflächen statt der Klassen – das wird je Seite angeglichen.
-- 09.10.2026: Auf Johns Wunsch Glas-Effekt wiederhergestellt (Blur, durchscheinende Karten, Mesh-Hintergrund), aber mit klarem grau-blauem Rand statt weißem Schimmer.
