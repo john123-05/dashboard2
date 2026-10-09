@@ -1361,8 +1361,8 @@ function LeadsContacts({
       )}
 
       {view === 'overview' && (
-      <div className="grid gap-4 xl:grid-cols-[1fr_380px]">
-        <div className="space-y-4">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
+        <div className="min-w-0 space-y-4">
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <CompactMetricCard
               title="Fotos verkauft"
@@ -1533,7 +1533,7 @@ function LeadsContacts({
                     <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-500">Besucher nach Standort</p>
                     <h3 className="mt-2 text-2xl font-semibold text-slate-800">Detaillierte Weltkarte</h3>
                     <p className="mt-1 text-sm text-slate-500">
-                      Klicke auf ein Land oder wähle rechts eins aus der Liste. Dort siehst du, wie viele Gäste aus
+                      Klicke auf ein Land oder wähle unten eins aus der Liste. Dort siehst du, wie viele Gäste aus
                       welchem Land kommen.
                     </p>
                   </div>
@@ -1547,7 +1547,7 @@ function LeadsContacts({
                 </div>
               </div>
 
-              <div className="grid gap-6 p-4 sm:p-6 lg:grid-cols-[1.25fr_1fr]">
+              <div className="space-y-5 p-4 sm:p-6">
                 <div className="space-y-4">
                   <div className="-mx-2 overflow-x-auto pb-2 sm:mx-0 sm:overflow-visible sm:pb-0">
                     <div className="min-w-[320px] w-full sm:min-w-0">
@@ -1593,7 +1593,7 @@ function LeadsContacts({
                     <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
                       Gäste nach Land ({resolvedCountryStats.length})
                     </p>
-                <div className="max-h-[560px] space-y-2 overflow-y-auto pr-2">
+                <div className="flex gap-2 overflow-x-auto pb-3">
                   {resolvedCountryStats.map((country) => {
                     const share = totalMappedLeads > 0 ? Math.round((country.count / totalMappedLeads) * 100) : 0;
                     const active = country.countryCode === selectedCountryStat?.countryCode;
@@ -1602,7 +1602,7 @@ function LeadsContacts({
                         key={country.countryCode}
                         type="button"
                         onClick={() => setSelectedCountry(country.countryCode)}
-                        className={`w-full rounded-2xl border px-4 py-2.5 text-left transition-all ${
+                        className={`w-64 shrink-0 rounded-2xl border px-4 py-2.5 text-left transition-all ${
                           active
                             ? 'border-sky-200 bg-sky-50/80 shadow-sm'
                             : 'border-slate-100 bg-white hover:border-slate-200'
