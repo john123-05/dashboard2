@@ -81,6 +81,12 @@ function preisSplit(item: EquipmentItem): { einmalig: number; monatlich: number 
   return { einmalig: erster, monatlich: preisAus(teile[1]) ?? 0 };
 }
 
+const CRM_PAKETE = [
+  { key: 'monatlich', titel: 'Monatlich', zeile: '49 € / Monat', text: 'Flexibel, ohne Vorauszahlung.', preis: 49 },
+  { key: 'jaehrlich', titel: '12 Monate im Voraus', zeile: '441 € für 12 Monate', vorher: '588 €', text: '3 Monate geschenkt: du sparst 147 €.', badge: 'Beliebt', preis: 441 },
+  { key: 'langzeit', titel: '48 Monate im Voraus', zeile: '2.058 € für 48 Monate', vorher: '2.352 €', text: '6 Monate geschenkt: du sparst 294 €.', preis: 2058 },
+] as const;
+
 const SPEED_PAKETE = [
   { key: 'basis', titel: 'Speedmessung', zeile: '149 € / Monat', text: '12 Monate Laufzeit. Hardware an der Bahn kostenlos.' },
   { key: 'display', titel: 'Speedmessung + Display', zeile: '249 € / Monat im 1. Jahr, ab Jahr 2 149 €', text: 'Mit großem Display direkt an der Bahn, ohne Einmalkosten. 12 Monate Laufzeit.', badge: 'Beliebt' },
@@ -108,6 +114,7 @@ export default function ConfigurationProduct() {
   const [bundleAus, setBundleAus] = useState<string[]>([]);
   const [bundleSendet, setBundleSendet] = useState(false);
   const [bundleGesendet, setBundleGesendet] = useState(false);
+  const [crmPaket, setCrmPaket] = useState<'monatlich' | 'jaehrlich' | 'langzeit'>('jaehrlich');
   const [speedPaket, setSpeedPaket] = useState<'basis' | 'display' | 'langzeit'>('display');
   const [shopPlan, setShopPlan] = useState<'monatlich' | 'jaehrlich' | 'revshare'>('jaehrlich');
 
@@ -120,6 +127,7 @@ export default function ConfigurationProduct() {
   const monatlichGesamt = (monatlich ?? 0) + verfuegbar.filter((z) => gewaehlt.includes(z.key)).reduce((sum, z) => sum + (z.monatlich ?? 0), 0);
   const istShop = item?.kategorie === 'Webshop';
   const istSpeed = item?.titel === 'Speedmessung';
+  const istCrm = item?.titel === 'CRM';
   const istVerkauf = (item?.kategorie === 'Verkauf' || item?.kategorie === 'Zubehoer') && basis != null;
 
   useEffect(() => {
@@ -153,7 +161,9 @@ export default function ConfigurationProduct() {
             ? ['Speedmessung Display', 'Digitale Nachkäufe und Merchandising']
             : item?.titel === 'Speedmessung Display'
               ? ['Speedmessung', 'Digitale Nachkäufe und Merchandising']
-              : [];
+              : item?.titel === 'CRM'
+                ? ['Digitale Nachkäufe und Merchandising', 'Speedmessung']
+                : [];
   const buendel = item
     ? [item, ...partnerTitel.map((t) => alle.find((a) => a.titel === t)).filter((a): a is EquipmentItem => !!a)]
     : [];
@@ -197,6 +207,9 @@ export default function ConfigurationProduct() {
           monatlichGesamt > 0 ? ` + ${eur(monatlichGesamt)}/Monat` : ''
         }${raten ? `, in ${RATEN} Raten à ${eurGenau(einmalig / RATEN)}` : ''}`;
         await meldeAusstattungsInteresse(parkId, { label });
+      } else if (istCrm) {
+        const paket = CRM_PAKETE.find((pk) => pk.key === crmPaket);
+        await meldeAusstattungsInteresse(parkId, { label: `CRM freischalten: ${paket?.titel}, ${paket?.zeile}` });
       } else if (istSpeed) {
         const paket = SPEED_PAKETE.find((p) => p.key === speedPaket);
         await meldeAusstattungsInteresse(parkId, {
@@ -500,6 +513,40 @@ export default function ConfigurationProduct() {
                         )}
                       </span>
                       <span className="mt-0.5 block text-sm font-semibold text-slate-700">{paket.zeile}</span>
+                      <span className="mt-1 block text-xs text-slate-500">{paket.text}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+
+            {istCrm && (
+              <div>
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Paket wählen</p>
+                <div className="grid gap-2.5">
+                  {CRM_PAKETE.map((paket) => (
+                    <button
+                      key={paket.key}
+                      type="button"
+                      onClick={() => setCrmPaket(paket.key)}
+                      aria-pressed={crmPaket === paket.key}
+                      className={`rounded-xl border-2 p-3 text-left transition ${
+                        crmPaket === paket.key ? 'border-sky-500 bg-sky-50/60' : 'border-slate-200 bg-white hover:border-slate-300'
+                      }`}
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-slate-800">{paket.titel}</span>
+                        {'badge' in paket && (
+                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800">
+                            {paket.badge}
+                          </span>
+                        )}
+                      </span>
+                      <span className="mt-0.5 block text-sm font-semibold text-slate-700">
+                        {paket.zeile}
+                        {'vorher' in paket && <span className="ml-1.5 font-normal text-slate-400 line-through">{paket.vorher}</span>}
+                      </span>
                       <span className="mt-1 block text-xs text-slate-500">{paket.text}</span>
                     </button>
                   ))}
