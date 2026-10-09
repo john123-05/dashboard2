@@ -15,6 +15,7 @@ import {
 } from '../lib/shop';
 import { formatEuro } from '../lib/demoShop';
 import { SHOP_FONTS } from '../lib/shopFonts';
+import { useI18n, useLocaleTag } from '../lib/i18n';
 
 // The public shop lives on the claim site (imst repo), so phones and customers can open it.
 const PUBLIC_SHOP_URL = 'https://liftpictures-fotos.de';
@@ -28,18 +29,22 @@ type EditableProduct = {
   price: string;
 };
 
-function toEditable(settings: ShopSettings): EditableProduct[] {
+function toEditable(settings: ShopSettings, locale: string): EditableProduct[] {
   return settings.products.map((p) => ({
     key: p.key,
     label: p.label,
     description: p.description,
     enabled: p.enabled,
-    price: (p.price_cents / 100).toFixed(2).replace('.', ','),
+    price: (p.price_cents / 100).toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
   }));
 }
 
-function priceToCents(value: string): number {
-  return Math.round(Number(value.replace(',', '.')) * 100);
+function priceToCents(value: string, locale: string): number {
+  const parts = new Intl.NumberFormat(locale).formatToParts(1234.5);
+  const group = parts.find((part) => part.type === 'group')?.value;
+  const decimal = parts.find((part) => part.type === 'decimal')?.value ?? '.';
+  const normalized = value.replace(/\s/g, '').split(group ?? '\u0000').join('').replace(decimal, '.');
+  return Math.round(Number(normalized) * 100);
 }
 
 function SectionCard({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
@@ -66,6 +71,7 @@ function BigFact({ value, text, note, tone }: { value: string; text: string; not
 
 // Renders the shop at its real size (phone 390px / desktop 1280px) and scales it down to fit.
 function PreviewFrame({ src, mode }: { src: string; mode: 'phone' | 'desktop' }) {
+  const { t } = useI18n();
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
   const frameWidth = mode === 'phone' ? 390 : 1280;
@@ -87,7 +93,7 @@ function PreviewFrame({ src, mode }: { src: string; mode: 'phone' | 'desktop' })
         style={{ width: frameWidth * scale, height: frameHeight * scale }}
       >
         <iframe
-          title="Shop-Vorschau"
+          title={t('shop.preview_title')}
           src={src}
           style={{ width: frameWidth, height: frameHeight, transform: `scale(${scale})`, transformOrigin: '0 0', border: 0 }}
         />
@@ -97,6 +103,8 @@ function PreviewFrame({ src, mode }: { src: string; mode: 'phone' | 'desktop' })
 }
 
 export default function Shop() {
+  const { t } = useI18n();
+  const locale = useLocaleTag();
   const { parkId, parkName, isKioskPark, kioskPriceCents } = usePark();
   const [settings, setSettings] = useState<ShopSettings | null>(null);
   const [days, setDays] = useState<AggregatedDay[] | null>(null);
@@ -122,7 +130,7 @@ export default function Shop() {
     setWelcomeText(next.welcome_text ?? '');
     setColor(next.accent_color);
     setFontFamily(next.font_family ?? 'system');
-    setProducts(toEditable(next));
+    setProducts(toEditable(next, locale));
   }
 
   useEffect(() => {
@@ -135,7 +143,7 @@ export default function Shop() {
         applySettings(s);
         setRedemptions(r);
       })
-      .catch((e) => active && setError(e instanceof Error ? e.message : 'Laden fehlgeschlagen.'))
+      .catch((e) => active && setError(e instanceof Error ? e.message : t('shop.load_failed')))
       .finally(() => active && setLoading(false));
     if (isKioskPark) {
       fetchKioskSales(parkId)
@@ -208,13 +216,13 @@ export default function Shop() {
         welcome_text: welcomeText,
         accent_color: color,
         font_family: fontFamily,
-        products: products.map((p) => ({ key: p.key, enabled: p.enabled, price_cents: priceToCents(p.price) })),
+        products: products.map((p) => ({ key: p.key, enabled: p.enabled, price_cents: priceToCents(p.price, locale) })),
       });
       applySettings(updated);
       setPreviewVersion((v) => v + 1);
-      setStatus('Gespeichert – die Vorschau ist aktualisiert.');
+      setStatus(t('shop.saved'));
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Speichern fehlgeschlagen.');
+      setError(e instanceof Error ? e.message : t('shop.save_failed'));
     } finally {
       setSaving(false);
     }
@@ -227,9 +235,9 @@ export default function Shop() {
     try {
       applySettings(await uploadShopLogo(parkId, file));
       setPreviewVersion((v) => v + 1);
-      setStatus('Logo gespeichert.');
+      setStatus(t('shop.logo_saved'));
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Logo-Upload fehlgeschlagen.');
+      setError(e instanceof Error ? e.message : t('shop.logo_failed'));
     } finally {
       setUploadingLogo(false);
       if (logoInputRef.current) logoInputRef.current.value = '';
@@ -242,19 +250,19 @@ export default function Shop() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-800">Online-Shop</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('nav.shop')}</h2>
         </div>
         <div className="flex flex-wrap items-center gap-2">
         <Link
           to="/shop/preise"
           className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
         >
-          Preise und Pakete ansehen
+          {t('shop.view_plans')}
         </Link>
         <span
           className={`rounded-full px-3 py-1 text-xs font-semibold ${requestedAt ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'}`}
         >
-          {requestedAt ? 'Aktivierung angefragt' : 'Stripe-Modus: Test'}
+          {requestedAt ? t('shop.activation_requested') : t('shop.stripe_test')}
         </span>
         </div>
       </div>
@@ -265,45 +273,44 @@ export default function Shop() {
       {isKioskPark && (
         <GlassCard className="p-4 sm:p-5">
           {!potential ? (
-            <p className="text-sm text-slate-400">Wird berechnet…</p>
+            <p className="text-sm text-slate-400">{t('shop.calculating')}</p>
           ) : potential.reliable ? (
             <div className="grid grid-cols-1 divide-y divide-slate-200/70 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
               <BigFact
                 value={`${potential.soldPercent} %`}
-                text="deiner Besucher kaufen ihr Bild sofort am Automaten."
-                note={`${potential.sold.toLocaleString('de-DE')} Bilder in den letzten ${POTENTIAL_DAYS} Tagen`}
+                text={t('shop.fact_buy_now')}
+                note={t('shop.fact_sold_note', { count: potential.sold.toLocaleString(locale), days: POTENTIAL_DAYS })}
               />
               <BigFact
                 value={`${potential.unsoldPercent} %`}
-                text="deiner Bilder sind vorhanden – wurden aber nie wieder zum Kauf angeboten."
-                note={`${potential.unsold.toLocaleString('de-DE')} unverkaufte Bilder`}
+                text={t('shop.fact_unsold')}
+                note={t('shop.fact_unsold_note', { count: potential.unsold.toLocaleString(locale) })}
                 tone="green"
               />
               {redemptions && redemptions.total >= 10 && (
                 <BigFact
                   value={`${Math.round((redemptions.delayed / redemptions.total) * 100)} %`}
-                  text="deiner Besucher lösen ihr Bild erst am nächsten Tag oder nach Parkschluss digital ein."
-                  note={`${redemptions.delayed.toLocaleString('de-DE')} von ${redemptions.total.toLocaleString('de-DE')} Einlösungen`}
+                  text={t('shop.fact_delayed')}
+                  note={t('shop.fact_delayed_note', { delayed: redemptions.delayed.toLocaleString(locale), total: redemptions.total.toLocaleString(locale) })}
                 />
               )}
             </div>
           ) : (
             <p className="text-sm font-semibold text-slate-600">
-              Sobald die Fahrtenzählung deines Parks läuft, siehst du hier live, wie viele deiner Bilder nie verkauft
-              wurden.
+              {t('shop.no_ride_count')}
             </p>
           )}
           {potential && (
             <div className="mt-4 flex flex-col gap-3 border-t border-slate-200/70 pt-4 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-base font-bold leading-snug text-slate-800">
                 {potential.reliable
-                  ? `Biete ${potential.unsold.toLocaleString('de-DE')} unverkaufte Bilder deinen Kunden erneut zum Kauf an – als Download oder personalisiert auf Tasse, T-Shirt & Co.`
-                  : 'Biete deine unverkauften Bilder deinen Kunden erneut zum Kauf an – als Download oder auf Tasse, T-Shirt & Co.'}
+                  ? t('shop.potential', { count: potential.unsold.toLocaleString(locale) })
+                  : t('shop.potential_no_count')}
               </p>
               {requestedAt ? (
                 <div className="flex shrink-0 items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700">
                   <CheckCircle2 className="h-4 w-4" />
-                  Angefragt am {requestedAt.toLocaleDateString('de-DE')}
+                  {t('shop.requested_on', { date: requestedAt.toLocaleDateString(locale) })}
                 </div>
               ) : (
                 <Link
@@ -311,7 +318,7 @@ export default function Shop() {
                   className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
                 >
                   <Send className="h-4 w-4" />
-                  Preise ansehen
+                  {t('shop.view_prices')}
                 </Link>
               )}
             </div>
@@ -321,34 +328,35 @@ export default function Shop() {
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_440px]">
         <div className="space-y-6">
-          <SectionCard title="Aussehen" subtitle="Name, Begrüßung, Farbe und Logo deines Shops">
+          <SectionCard title={t('shop.appearance')} subtitle={t('shop.appearance_desc')}>
             {loading ? (
-              <p className="mt-4 text-sm text-slate-400">Wird geladen…</p>
+              <p className="mt-4 text-sm text-slate-400">{t('app.loading')}</p>
             ) : (
               <div className="mt-4 space-y-4">
                 <label className="block">
-                  <span className="text-xs font-medium text-slate-600">Shop-Name</span>
+                  <span className="text-xs font-medium text-slate-600">{t('shop.name')}</span>
                   <input
                     value={shopName}
                     maxLength={60}
-                    placeholder={parkName ?? 'Foto-Shop'}
+                    placeholder={parkName ?? t('shop.photo_shop')}
                     onChange={(e) => setShopName(e.target.value)}
                     className="mt-1 w-full rounded-lg border border-slate-200 bg-white/70 px-3 py-2 text-sm text-slate-700 focus:border-sky-400 focus:outline-none"
                   />
                 </label>
                 <label className="block">
-                  <span className="text-xs font-medium text-slate-600">Begrüßungstext</span>
+                  <span className="text-xs font-medium text-slate-600">{t('shop.welcome_text')}</span>
                   <textarea
                     value={welcomeText}
                     maxLength={240}
                     rows={2}
-                    placeholder="Hol dir dein Foto von heute – als Download, Abzug oder auf Tasse, T-Shirt und mehr."
+                    placeholder={t('shop.welcome_placeholder')}
                     onChange={(e) => setWelcomeText(e.target.value)}
                     className="mt-1 w-full rounded-lg border border-slate-200 bg-white/70 px-3 py-2 text-sm text-slate-700 focus:border-sky-400 focus:outline-none"
                   />
                 </label>
                 <label className="block">
-                  <span className="text-xs font-medium text-slate-600">Schriftart</span>
+                  <span className="text-xs font-medium text-slate-600">{t('shop.font')}
+                  </span>
                   <select
                     value={fontFamily}
                     onChange={(e) => setFontFamily(e.target.value)}
@@ -395,7 +403,7 @@ export default function Shop() {
                       onClick={() => logoInputRef.current?.click()}
                       className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-60"
                     >
-                      {uploadingLogo ? 'Wird hochgeladen…' : 'Logo hochladen'}
+                      {uploadingLogo ? t('shop.uploading') : t('shop.upload_logo')}
                     </button>
                   </div>
                 </div>
@@ -403,17 +411,17 @@ export default function Shop() {
             )}
           </SectionCard>
 
-          <SectionCard title="Produkte & Preise" subtitle="Was deine Gäste im Shop kaufen können">
+          <SectionCard title={t('shop.products_prices')} subtitle={t('shop.products_desc')}>
             {loading ? (
-              <p className="mt-4 text-sm text-slate-400">Wird geladen…</p>
+              <p className="mt-4 text-sm text-slate-400">{t('app.loading')}</p>
             ) : (
               <div className="mt-4 divide-y divide-slate-100">
                 {products.map((product, index) => (
                   <div key={product.key} className="flex items-center gap-3 py-2.5">
                     <ProductMockup productKey={product.key} photo={null} accent={color} parkName={parkName ?? ''} className="h-12 w-14 shrink-0" />
                     <div className="min-w-0 flex-1">
-                      <p className={`text-sm font-medium ${product.enabled ? 'text-slate-800' : 'text-slate-400'}`}>{product.label}</p>
-                      <p className="truncate text-xs text-slate-500">{product.description}</p>
+                      <p className={`text-sm font-medium ${product.enabled ? 'text-slate-800' : 'text-slate-400'}`}>{t(`shop.catalog.${product.key}.label`) === `shop.catalog.${product.key}.label` ? product.label : t(`shop.catalog.${product.key}.label`)}</p>
+                      <p className="truncate text-xs text-slate-500">{t(`shop.catalog.${product.key}.description`) === `shop.catalog.${product.key}.description` ? product.description : t(`shop.catalog.${product.key}.description`)}</p>
                     </div>
                     <div className="flex items-center gap-1">
                       <input
@@ -431,7 +439,7 @@ export default function Shop() {
                       type="button"
                       role="switch"
                       aria-checked={product.enabled}
-                      aria-label={`${product.label} anbieten`}
+                      aria-label={t('shop.offer_product', { product: t(`shop.catalog.${product.key}.label`) === `shop.catalog.${product.key}.label` ? product.label : t(`shop.catalog.${product.key}.label`) })}
                       onClick={() =>
                         setProducts((prev) => prev.map((p, i) => (i === index ? { ...p, enabled: !p.enabled } : p)))
                       }
@@ -444,8 +452,7 @@ export default function Shop() {
                   </div>
                 ))}
                 <p className="pt-3 text-xs text-slate-500">
-                  Merchandise wird nach der Aktivierung über einen Druckpartner produziert und direkt an deine Gäste
-                  verschickt{kioskPriceCents ? ` – zum Vergleich: am Automaten kostet ein Foto ${formatEuro(kioskPriceCents)}` : ''}.
+                  {t('shop.merch_note')}{kioskPriceCents ? t('shop.kiosk_comparison', { amount: formatEuro(kioskPriceCents, locale) }) : ''}.
                 </p>
               </div>
             )}
@@ -458,13 +465,13 @@ export default function Shop() {
               disabled={saving || loading}
               className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-500 disabled:opacity-60"
             >
-              {saving ? 'Speichert…' : 'Speichern & Vorschau aktualisieren'}
+              {saving ? t('shop.saving') : t('shop.save_preview')}
             </button>
           </div>
         </div>
 
         <div className="xl:sticky xl:top-6 xl:self-start">
-          <SectionCard title="Live-Vorschau" subtitle="So sehen deine Gäste den Shop">
+          <SectionCard title={t('shop.live_preview')} subtitle={t('shop.preview_desc')}>
             {demoUrl ? (
               <div className="mt-4 space-y-4">
                 <div className="flex flex-wrap items-center gap-2">
@@ -474,7 +481,7 @@ export default function Shop() {
                     className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white/70 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-white"
                   >
                     <Monitor className="h-3.5 w-3.5" />
-                    Desktop-Version
+                    {t('shop.desktop_version')}
                   </button>
                   <a
                     href={qrUrl ?? demoUrl}
@@ -483,22 +490,21 @@ export default function Shop() {
                     className="inline-flex items-center gap-1.5 rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700"
                   >
                     <ExternalLink className="h-3.5 w-3.5" />
-                    Demo im Browser öffnen
+                    {t('shop.open_demo')}
                   </a>
                 </div>
                 <PreviewFrame key={previewVersion} src={`${demoUrl}?embed=1`} mode="phone" />
                 {qr && (
                   <div className="flex items-center gap-4 rounded-xl bg-white/60 p-3">
-                    <img src={qr} alt="QR-Code zur Shop-Vorschau" className="h-24 w-24 shrink-0 rounded" />
+                    <img src={qr} alt={t('shop.preview_qr')} className="h-24 w-24 shrink-0 rounded" />
                     <p className="text-xs text-slate-600">
-                      Mit dem Handy scannen und den Shop selbst ausprobieren – inklusive Test-Checkout mit der Karte
-                      4242 4242 4242 4242.
+                      {t('shop.scan_qr')}
                     </p>
                   </div>
                 )}
               </div>
             ) : (
-              <p className="mt-4 text-sm text-slate-400">{loading ? 'Wird geladen…' : 'Vorschau nicht verfügbar.'}</p>
+              <p className="mt-4 text-sm text-slate-400">{loading ? t('app.loading') : t('shop.preview_unavailable')}</p>
             )}
           </SectionCard>
         </div>
@@ -511,7 +517,7 @@ export default function Shop() {
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-2.5">
-              <p className="text-sm font-semibold text-slate-700">Desktop-Version deines Shops</p>
+              <p className="text-sm font-semibold text-slate-700">{t('shop.desktop_title')}</p>
               <div className="flex items-center gap-2">
                 <a
                   href={qrUrl ?? demoUrl}
@@ -520,14 +526,14 @@ export default function Shop() {
                   className="inline-flex items-center gap-1.5 rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700"
                 >
                   <ExternalLink className="h-3.5 w-3.5" />
-                  Demo im Browser öffnen
+                  {t('shop.open_demo')}
                 </a>
-                <button type="button" onClick={() => setDesktopOpen(false)} aria-label="Schließen" className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100">
+                <button type="button" onClick={() => setDesktopOpen(false)} aria-label={t('app.dismiss')} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100">
                   <X className="h-5 w-5" />
                 </button>
               </div>
             </div>
-            <iframe title="Shop Desktop-Version" src={`${demoUrl}?embed=1`} className="w-full flex-1 border-0" />
+            <iframe title={t('shop.desktop_title')} src={`${demoUrl}?embed=1`} className="w-full flex-1 border-0" />
           </div>
         </div>
       )}

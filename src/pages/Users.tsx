@@ -14,11 +14,11 @@ import {
 import { accentColorForPark, accentTextColorForPark } from '../lib/parkBrand';
 import { claimSiteBaseFor, fetchTodaysSpeeds } from '../lib/photoBrowser';
 import GlassCard from '../components/ui/GlassCard';
-import { useI18n } from '../lib/i18n';
+import { useI18n, useLocaleTag } from '../lib/i18n';
 import { usePark } from '../contexts/ParkContext';
 
-function formatSpeed(value: number | null): string {
-  return value != null ? `${value.toLocaleString('de-DE', { maximumFractionDigits: 1 })} km/h` : '—';
+function formatSpeed(value: number | null, locale: string): string {
+  return value != null ? `${value.toLocaleString(locale, { maximumFractionDigits: 1 })} km/h` : '—';
 }
 
 interface CustomerRow {
@@ -43,6 +43,7 @@ function rankingBase(parkId: string | null): string {
 
 export default function Users() {
   const { t } = useI18n();
+  const locale = useLocaleTag();
   const { parkId, kioskTimezone } = usePark();
   const [customers, setCustomers] = useState<CustomerRow[]>([]);
   const [speeds, setSpeeds] = useState<number[]>([]);
@@ -87,7 +88,7 @@ export default function Users() {
           setOverviewError(null);
         })
         .catch((err) => {
-          if (!cancelled) setOverviewError(err instanceof Error ? err.message : 'Fehler beim Laden');
+          if (!cancelled) setOverviewError(err instanceof Error ? err.message : t('app.loading_error'));
         });
     load();
     const timer = window.setInterval(() => {
@@ -108,7 +109,7 @@ export default function Users() {
       setOverview(await fetchGuestOverview(parkId));
       setOverviewError(null);
     } catch (err) {
-      setOverviewError(err instanceof Error ? err.message : 'Löschen fehlgeschlagen');
+      setOverviewError(err instanceof Error ? err.message : t('users.delete_error'));
     } finally {
       setDeleting(false);
     }
@@ -122,7 +123,7 @@ export default function Users() {
       setOverview(await fetchGuestOverview(parkId));
       setOverviewError(null);
     } catch (err) {
-      setOverviewError(err instanceof Error ? err.message : 'Hochladen fehlgeschlagen');
+      setOverviewError(err instanceof Error ? err.message : t('users.upload_error'));
     } finally {
       setAvatarBusyEmail(null);
     }
@@ -136,7 +137,7 @@ export default function Users() {
       setOverview(await fetchGuestOverview(parkId));
       setOverviewError(null);
     } catch (err) {
-      setOverviewError(err instanceof Error ? err.message : 'Löschen fehlgeschlagen');
+      setOverviewError(err instanceof Error ? err.message : t('users.delete_error'));
     } finally {
       setAvatarBusyEmail(null);
     }
@@ -216,7 +217,7 @@ export default function Users() {
       <div className="space-y-6">
         <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('users.title')}</h2>
         <div className="rounded-2xl bg-red-50 border border-red-200 p-6">
-          <h3 className="text-lg font-semibold text-red-800 mb-2">Error Loading Users</h3>
+          <h3 className="text-lg font-semibold text-red-800 mb-2">{t('users.load_error')}</h3>
           <p className="text-sm text-red-600 mb-4">{error}</p>
           <button onClick={loadData} className="glass-button-secondary">
             {t('app.retry')}
@@ -245,14 +246,14 @@ export default function Users() {
             className="inline-flex w-fit items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
           >
             <ExternalLink className="h-4 w-4" />
-            Im Browser öffnen
+            {t('users.open_browser')}
           </a>
         )}
       </div>
 
       {notice && (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-          <p className="text-sm font-medium text-amber-900">User data is currently unavailable.</p>
+          <p className="text-sm font-medium text-amber-900">{t('users.unavailable')}</p>
           <p className="mt-1 text-sm text-amber-700">{notice}</p>
         </div>
       )}
@@ -266,8 +267,8 @@ export default function Users() {
                   <TrendingUp className="h-5 w-5 text-emerald-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-slate-800">{speedsLoading ? '…' : formatSpeed(schnellster)}</p>
-                  <p className="text-xs text-slate-500">Schnellster heute</p>
+                  <p className="text-2xl font-bold text-slate-800">{speedsLoading ? '…' : formatSpeed(schnellster, locale)}</p>
+                  <p className="text-xs text-slate-500">{t('users.fastest_today')}</p>
                 </div>
               </div>
             </GlassCard>
@@ -277,8 +278,8 @@ export default function Users() {
                   <TrendingDown className="h-5 w-5 text-rose-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-slate-800">{speedsLoading ? '…' : formatSpeed(langsamster)}</p>
-                  <p className="text-xs text-slate-500">Langsamster heute</p>
+                  <p className="text-2xl font-bold text-slate-800">{speedsLoading ? '…' : formatSpeed(langsamster, locale)}</p>
+                  <p className="text-xs text-slate-500">{t('users.slowest_today')}</p>
                 </div>
               </div>
             </GlassCard>
@@ -288,9 +289,9 @@ export default function Users() {
                   <Gauge className="h-5 w-5 text-sky-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-slate-800">{speedsLoading ? '…' : formatSpeed(durchschnitt)}</p>
+                  <p className="text-2xl font-bold text-slate-800">{speedsLoading ? '…' : formatSpeed(durchschnitt, locale)}</p>
                   <p className="text-xs text-slate-500">
-                    Durchschnitt heute{!speedsLoading && speeds.length > 0 ? ` · ${speeds.length} Messungen` : ''}
+                    {t('users.average_today')}{!speedsLoading && speeds.length > 0 ? ` · ${t('users.measurements', { count: speeds.length })}` : ''}
                   </p>
                 </div>
               </div>
@@ -344,17 +345,17 @@ export default function Users() {
           <GlassCard className="overflow-hidden">
             <div className="border-b border-slate-100/80 px-6 py-4">
               <div className="flex items-baseline justify-between gap-3">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Eingetragene Gäste</h3>
-                {overview && <span className="text-xs text-slate-400">{overview.users.length} registriert</span>}
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{t('users.registered_guests')}</h3>
+                {overview && <span className="text-xs text-slate-400">{t('users.registered_count', { count: overview.users.length })}</span>}
               </div>
               <p className="mt-1 text-xs text-slate-400">
-                Nur Gäste, die sich für die Tagesbestenliste eingetragen haben.
+                {t('users.registered_hint')}
               </p>
               <div className="relative mt-3 max-w-sm">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <input
                   type="text"
-                  placeholder="Name oder E-Mail suchen…"
+                  placeholder={t('users.search_guest')}
                   value={guestSearch}
                   onChange={(e) => setGuestSearch(e.target.value)}
                   className="glass-input py-2 pl-9 pr-4 text-sm"
@@ -371,7 +372,7 @@ export default function Users() {
                 <div className="h-24 animate-pulse rounded-xl bg-white/40" />
               ) : filteredGuests.length === 0 ? (
                 <p className="text-sm text-slate-500">
-                  {guestSearch ? 'Keine Treffer.' : 'Noch kein Gast hat sich eingetragen.'}
+                  {guestSearch ? t('users.no_results') : t('users.no_guests')}
                 </p>
               ) : (
                 <ul className="divide-y divide-slate-100">
@@ -394,14 +395,14 @@ export default function Users() {
                               {u.displayName}
                               {u.leaderboardOptOut && (
                                 <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">
-                                  nicht gelistet
+                                  {t('users.not_listed')}
                                 </span>
                               )}
                             </p>
                             <p className="truncate text-xs text-slate-500">
                               {u.email}
-                              {u.bestSpeedKmh !== null ? ` · Bestwert ${u.bestSpeedKmh.toFixed(1)} km/h` : ''}
-                              {u.claimCount > 0 ? ` · ${u.claimCount} Foto${u.claimCount === 1 ? '' : 's'}` : ''}
+                              {u.bestSpeedKmh !== null ? ` · ${t('users.best_speed', { speed: u.bestSpeedKmh.toLocaleString(locale, { maximumFractionDigits: 1 }) })}` : ''}
+                              {u.claimCount > 0 ? ` · ${t('users.photos', { count: u.claimCount })}` : ''}
                             </p>
                           </div>
                         </div>
@@ -426,7 +427,7 @@ export default function Users() {
                               className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
                             >
                               <Upload className="h-3.5 w-3.5" />
-                              {avatarBusy ? '…' : u.avatarUrl ? 'Bild ersetzen' : 'Bild hochladen'}
+                              {avatarBusy ? '…' : u.avatarUrl ? t('users.replace_image') : t('users.upload_image')}
                             </button>
                             {u.avatarUrl && (
                               <button
@@ -435,7 +436,7 @@ export default function Users() {
                                 onClick={() => void handleAvatarDelete(u.email)}
                                 className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
                               >
-                                Bild löschen
+                                {t('users.delete_image')}
                               </button>
                             )}
                             <button
@@ -443,7 +444,7 @@ export default function Users() {
                               onClick={() => setPendingDelete({ email: u.email, action: 'delete_profile' })}
                               className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50"
                             >
-                              Profil löschen
+                              {t('users.delete_profile')}
                             </button>
                             <button
                               type="button"
@@ -451,7 +452,7 @@ export default function Users() {
                               className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-2.5 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-50"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
-                              Benutzer löschen
+                              {t('users.delete_user')}
                             </button>
                           </div>
                         )}
@@ -460,8 +461,8 @@ export default function Users() {
                           <div className="mt-2 rounded-xl border border-red-100 bg-red-50/70 p-3">
                             <p className="text-xs text-red-800">
                               {confirming.action === 'delete_profile'
-                                ? `Profil von „${u.displayName}" löschen? Name, Profilbild und Bestenlisten-Eintrag werden entfernt. Freischaltungen und Fotos bleiben.`
-                                : `Benutzer „${u.displayName}" löschen? Zusätzlich werden Name, E-Mail, Telefon und Adresse in den Freischaltungen geleert und das Marketing-Opt-in entzogen. Das lässt sich nicht rückgängig machen.`}
+                                ? t('users.confirm_profile', { name: u.displayName })
+                                : t('users.confirm_user', { name: u.displayName })}
                             </p>
                             <div className="mt-2 flex gap-2">
                               <button
@@ -470,7 +471,7 @@ export default function Users() {
                                 onClick={confirmDelete}
                                 className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700 disabled:opacity-50"
                               >
-                                {deleting ? 'Lösche…' : 'Ja, löschen'}
+                                {deleting ? t('users.deleting') : t('users.yes_delete')}
                               </button>
                               <button
                                 type="button"
@@ -478,7 +479,7 @@ export default function Users() {
                                 onClick={() => setPendingDelete(null)}
                                 className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50"
                               >
-                                Abbrechen
+                                {t('settings.product_modal.cancel')}
                               </button>
                             </div>
                           </div>
@@ -501,17 +502,17 @@ export default function Users() {
               style={{ backgroundColor: accentColorForPark(parkId), color: accentTextColorForPark(parkId) }}
             >
               <Trophy className="h-4 w-4" />
-              <span className="text-sm font-semibold">Live-Vorschau · Tagesbestenliste</span>
+              <span className="text-sm font-semibold">{t('users.preview_ranking')}</span>
             </div>
             {claimSiteBaseFor(parkId) ? (
               <iframe
                 src={`${rankingBase(parkId)}/ranking${locked ? '?demo=1' : ''}`}
-                title="Live-Vorschau der Tagesbestenliste"
+                title={t('users.preview_ranking')}
                 scrolling="yes"
                 className="w-full flex-1 border-0"
               />
             ) : (
-              <p className="p-6 text-center text-sm text-slate-500">Für diesen Park gibt es noch keine Bestenlisten-Seite.</p>
+              <p className="p-6 text-center text-sm text-slate-500">{t('users.no_ranking_page')}</p>
             )}
           </GlassCard>
         )}

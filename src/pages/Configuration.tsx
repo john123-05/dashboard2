@@ -14,11 +14,13 @@ import {
 import GlassCard from '../components/ui/GlassCard';
 import BeforeAfterSlider from '../components/ui/BeforeAfterSlider';
 import { usePark } from '../contexts/ParkContext';
+import { useI18n, useLocaleTag } from '../lib/i18n';
 import { hasGuestActivity } from '../components/GuestActivityAwareOverlay';
 import { ladeZahlungen, type ZahlungsAutomat } from '../lib/zahlungen';
 import { loadParkDashboardData } from '../lib/parkDashboard';
 import { fetchParkEquipment, meldeAusstattungsInteresse, type EquipmentItem } from '../lib/equipment';
-import { formatNumber } from '../lib/utils';
+import { equipmentPrice, equipmentTitle } from '../lib/equipmentI18n';
+import { equipmentDescription } from '../lib/equipmentDescriptions';
 
 type Gruppe = 'Hardware' | 'Materialien' | 'Software' | 'Wartung' | 'Support' | 'Services';
 
@@ -85,6 +87,8 @@ function beschreibungPunkte(text: string | null): string[] {
 }
 
 export default function Configuration() {
+  const { t, language } = useI18n();
+  const locale = useLocaleTag();
   const { parkId, isKioskPark } = usePark();
   const [machines, setMachines] = useState<ZahlungsAutomat[]>([]);
   const [paperRemaining, setPaperRemaining] = useState<number | null>(null);
@@ -127,15 +131,15 @@ export default function Configuration() {
       await meldeAusstattungsInteresse(parkId, target);
       setRequestedKeys((prev) => new Set(prev).add(key));
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Anfrage fehlgeschlagen.');
+      setError(e instanceof Error ? e.message : t('crm_pricing.request_failed'));
     } finally {
       setRequestKey(null);
     }
   }
 
-  function anfrageLabel(key: string, idle = 'Jetzt anfragen') {
-    if (requestedKeys.has(key)) return 'Anfrage gesendet';
-    if (requestKey === key) return 'Wird gesendet…';
+  function anfrageLabel(key: string, idle = t('config.request_now')) {
+    if (requestedKeys.has(key)) return t('config.request_sent');
+    if (requestKey === key) return t('crm_pricing.sending');
     return idle;
   }
 
@@ -171,33 +175,33 @@ export default function Configuration() {
     gruppen.Hardware.push({
       key: 'automat',
       sub: '',
-      label: 'Automat',
-      value: machines.length > 1 ? `${machines.length}× Selbstbedienung` : 'Selbstbedienung',
+      label: t('config.kiosk'),
+      value: machines.length > 1 ? t('config.self_service_count', { count: machines.length }) : t('config.self_service'),
     });
     gruppen.Hardware.push({
       key: 'zahlung',
       sub: '',
-      label: 'Zahlung',
-      value: istNurKarte ? 'Nur Karte' : 'Bar & Karte',
+      label: t('config.payment'),
+      value: istNurKarte ? t('config.card_only') : t('config.cash_card'),
     });
     if (version) {
-      gruppen.Hardware.push({ key: 'version', sub: '', label: 'Version', value: version === 'neu' ? 'Neu' : 'Alt' });
+      gruppen.Hardware.push({ key: 'version', sub: '', label: t('config.version'), value: version === 'neu' ? t('config.new') : t('config.old') });
     }
     if (hatSpeedmessung) {
-      gruppen.Hardware.push({ key: 'speed', sub: '', label: 'Speedmessung', value: 'Lichtschranke aktiv' });
+      gruppen.Hardware.push({ key: 'speed', sub: '', label: t('nav.speed'), value: t('config.light_barrier_active') });
     }
     if (hatVideo) {
-      gruppen.Hardware.push({ key: 'video', sub: '', label: 'Video', value: 'Video-Add-on' });
+      gruppen.Hardware.push({ key: 'video', sub: '', label: 'Video', value: t('config.video_extension') });
     }
     for (const item of vorhandenGefiltert) {
       const gruppe = KATEGORIE_GRUPPE[item.kategorie] ?? 'Services';
-      gruppen[gruppe].push({ key: item.id, sub: '', label: item.kategorie, value: item.titel });
+      gruppen[gruppe].push({ key: item.id, sub: '', label: t(`config.category.${item.kategorie}`), value: equipmentTitle(item.titel, t) });
     }
     gruppen.Materialien.push({
       key: FOTOPAPIER_KEY,
       sub: '',
-      label: 'Fotopapier',
-      value: paperRemaining != null ? `${formatNumber(paperRemaining)} Blatt übrig` : '—',
+      label: t('config.photo_paper'),
+      value: paperRemaining != null ? t('config.sheets_left', { count: paperRemaining.toLocaleString(locale) }) : '—',
       action: (
         <button
           type="button"
@@ -205,14 +209,14 @@ export default function Configuration() {
           disabled={requestKey === FOTOPAPIER_KEY || requestedKeys.has(FOTOPAPIER_KEY)}
           className="rounded-lg bg-slate-800 px-2.5 py-1 text-[11px] font-medium text-white hover:bg-slate-700 disabled:opacity-60"
         >
-          {anfrageLabel(FOTOPAPIER_KEY, 'Nachbestellen')}
+          {anfrageLabel(FOTOPAPIER_KEY, t('config.reorder'))}
         </button>
       ),
     });
 
     return gruppen;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [machines, version, istNurKarte, hatSpeedmessung, hatVideo, vorhandenGefiltert, paperRemaining, requestKey, requestedKeys]);
+  }, [machines, version, istNurKarte, hatSpeedmessung, hatVideo, vorhandenGefiltert, paperRemaining, requestKey, requestedKeys, t, locale]);
 
   const empfohlenKategorien = useMemo(
     () => Array.from(new Set(empfohlen.map((i) => i.kategorie))),
@@ -231,9 +235,9 @@ export default function Configuration() {
   if (!isKioskPark) {
     return (
       <div className="space-y-6">
-        <h2 className="text-2xl font-bold tracking-tight text-slate-800">Konfiguration</h2>
+        <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('nav.configuration')}</h2>
         <GlassCard className="p-6">
-          <p className="text-sm text-slate-500">Diese Seite gilt aktuell nur für Selbstbedienungs-Automaten.</p>
+          <p className="text-sm text-slate-500">{t('config.kiosk_only')}</p>
         </GlassCard>
       </div>
     );
@@ -243,16 +247,16 @@ export default function Configuration() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-800">Konfiguration</h2>
-          <p className="mt-1 text-sm text-slate-500">Deine aktuelle Ausstattung und was du dazu haben könntest.</p>
+          <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('nav.configuration')}</h2>
+          <p className="mt-1 text-sm text-slate-500">{t('config.subtitle')}</p>
         </div>
         <div className="flex items-center gap-2">
-          <HeaderIconLink to="/configuration/faq" label="Fragen und Antworten" icon={Info} />
+          <HeaderIconLink to="/configuration/faq" label={t('config.faq')} icon={Info} />
           <Link
             to="/configuration/bestellungen"
             className="inline-flex items-center gap-1.5 rounded-lg bg-slate-800 px-3.5 py-2 text-sm font-medium text-white hover:bg-slate-700"
           >
-            Meine Bestellungen
+            {t('config.orders')}
             <ChevronRight className="h-4 w-4" />
           </Link>
         </div>
@@ -260,14 +264,14 @@ export default function Configuration() {
 
       {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
 
-      <SectionCard title="Deine aktuelle Ausstattung">
+      <SectionCard title={t('config.current_equipment')}>
         {loading ? (
-          <p className="mt-4 text-sm text-slate-400">Wird geladen…</p>
+          <p className="mt-4 text-sm text-slate-400">{t('app.loading')}</p>
         ) : (
           <div className="mt-4 grid gap-x-8 gap-y-5 md:grid-cols-2 xl:grid-cols-3">
             {GRUPPEN_REIHENFOLGE.filter((g) => ausstattungsGruppen[g].length > 0).map((gruppe) => (
               <div key={gruppe}>
-                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">{gruppe}</p>
+                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">{t(`config.group.${gruppe}`)}</p>
                 <dl className="divide-y divide-slate-100">
                   {ausstattungsGruppen[gruppe].map((zeile) => (
                     <div key={zeile.key} className="flex items-center justify-between gap-3 py-2">
@@ -286,14 +290,14 @@ export default function Configuration() {
       </SectionCard>
 
       {!loading && empfohlen.length > 0 && (
-        <SectionCard title="Mehr aus deinem Automaten holen">
+        <SectionCard title={t('config.more_from_kiosk')}>
           <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="relative flex-1">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
                 value={suche}
                 onChange={(e) => setSuche(e.target.value)}
-                placeholder="Produkte durchsuchen…"
+                placeholder={t('config.search_products')}
                 className="w-full rounded-lg border border-slate-200 bg-white/70 py-2 pl-9 pr-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-sky-400 focus:outline-none"
               />
             </div>
@@ -305,7 +309,7 @@ export default function Configuration() {
                   filterKategorie === null ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
-                Alle
+                {t('config.all')}
               </button>
               {empfohlenKategorien.map((k) => (
                 <button
@@ -316,7 +320,7 @@ export default function Configuration() {
                     filterKategorie === k ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
-                  {k}
+                  {t(`config.category.${k}`)}
                 </button>
               ))}
             </div>
@@ -341,12 +345,12 @@ export default function Configuration() {
                       to={`/configuration/produkt/${item.id}`}
                       onClick={(e) => e.stopPropagation()}
                       className="group relative h-44 w-full shrink-0 overflow-hidden bg-white"
-                      aria-label={`${item.titel}: Details ansehen`}
+                      aria-label={t('config.details_for', { product: equipmentTitle(item.titel, t) })}
                     >
-                      <img src={item.image_url ?? ''} alt={item.titel} className="h-full w-full object-contain p-2" />
+                      <img src={item.image_url ?? ''} alt={equipmentTitle(item.titel, t)} className="h-full w-full object-contain p-2" />
                       {eintragBilder(item).length > 1 && (
                         <span className="absolute bottom-2 right-2 rounded-full bg-slate-900/80 px-2.5 py-1 text-[11px] font-semibold text-white group-hover:bg-slate-900">
-                          {eintragBilder(item).length} Bilder
+                          {t('config.image_count', { count: eintragBilder(item).length })}
                         </span>
                       )}
                     </Link>
@@ -356,7 +360,7 @@ export default function Configuration() {
                     </div>
                   ) : item.image_url ? (
                     <div className="h-44 w-full shrink-0 overflow-hidden bg-slate-100">
-                      <img src={item.image_url} alt={item.titel} className="h-full w-full object-cover" />
+                      <img src={item.image_url} alt={equipmentTitle(item.titel, t)} className="h-full w-full object-cover" />
                     </div>
                   ) : (
                     <div className="flex h-44 w-full shrink-0 items-center justify-center bg-slate-50">
@@ -366,23 +370,23 @@ export default function Configuration() {
                   <div className="flex flex-1 flex-col gap-2 p-4">
                     <span className="inline-flex w-fit items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide text-slate-500">
                       <Icon className="h-3 w-3" />
-                      {item.kategorie}
+                      {t(`config.category.${item.kategorie}`)}
                     </span>
-                    <p className="text-sm font-semibold text-slate-800">{item.titel}</p>
+                    <p className="text-sm font-semibold text-slate-800">{equipmentTitle(item.titel, t)}</p>
                     {item.beschreibung && (
                       <p className="line-clamp-2 text-sm text-slate-500">
-                        {beschreibungPunkte(item.beschreibung).slice(0, 2).join(' · ')}
+                        {beschreibungPunkte(equipmentDescription(item.beschreibung, language)).slice(0, 2).join(' · ')}
                       </p>
                     )}
                     <div className="flex flex-wrap gap-1.5">
                       {item.mehrwert_text && (
                         <span className="inline-flex items-center rounded-full bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-700">
-                          {item.mehrwert_text}
+                          {equipmentPrice(item, t, locale)}
                         </span>
                       )}
                       {item.geschaetzter_mehrumsatz_cents != null && (
                         <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
-                          +{(item.geschaetzter_mehrumsatz_cents / 100).toLocaleString('de-DE')} €/Monat
+                          {t('config.extra_revenue', { amount: (item.geschaetzter_mehrumsatz_cents / 100).toLocaleString(locale) })}
                         </span>
                       )}
                     </div>
@@ -392,7 +396,7 @@ export default function Configuration() {
                         onClick={(e) => e.stopPropagation()}
                         className="inline-flex w-full items-center justify-center rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
                       >
-                        Details ansehen
+                        {t('config.view_details')}
                       </Link>
                       {item.preview_url && (
                         <a
@@ -403,7 +407,7 @@ export default function Configuration() {
                           className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
                         >
                           <ExternalLink className="h-3.5 w-3.5" />
-                          Vorschau ansehen
+                          {t('config.view_preview')}
                         </a>
                       )}
                       <button
@@ -423,7 +427,7 @@ export default function Configuration() {
               );
             })}
             {empfohlenGefiltert.length === 0 && (
-              <p className="col-span-full text-sm text-slate-400">Keine Treffer für diese Suche/Filter.</p>
+              <p className="col-span-full text-sm text-slate-400">{t('config.no_results')}</p>
             )}
           </div>
         </SectionCard>

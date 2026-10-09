@@ -3,6 +3,9 @@ import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Check } from 'lucide-react';
 import GlassCard from '../components/ui/GlassCard';
 import { usePark } from '../contexts/ParkContext';
+import { useI18n, useLocaleTag } from '../lib/i18n';
+import { equipmentPrice, equipmentTitle } from '../lib/equipmentI18n';
+import { equipmentDescription } from '../lib/equipmentDescriptions';
 import { fetchParkEquipment, meldeAusstattungsInteresse, type EquipmentItem } from '../lib/equipment';
 
 /** Alle Bilder eines Eintrags in Reihenfolge: Startbild, Bild 2, Bild 3. */
@@ -97,13 +100,17 @@ const SPEED_PAKETE = [
   { key: 'langzeit', titel: 'Speedmessung 48 Monate', zeile: '99 € / Monat', text: 'Günstigster Monatspreis bei langer Laufzeit, 48 Monate festgeschrieben.', badge: 'Sparpreis' },
 ] as const;
 
-const eur = (wert: number) =>
-  wert.toLocaleString('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
-const eurGenau = (wert: number) =>
-  wert.toLocaleString('de-DE', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const eur = (wert: number, locale: string) =>
+  wert.toLocaleString(locale, { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+const eurGenau = (wert: number, locale: string) =>
+  wert.toLocaleString(locale, { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 /** Produktseite eines Upgrades: Bilder links, Beschreibung und Preis rechts. */
 export default function ConfigurationProduct() {
+  const { t, language } = useI18n();
+  const locale = useLocaleTag();
+  const money = (value: number) => eur(value, locale);
+  const moneyExact = (value: number) => eurGenau(value, locale);
   const { id } = useParams();
   const { parkId } = usePark();
   const [item, setItem] = useState<EquipmentItem | null>(null);
@@ -188,13 +195,13 @@ export default function ConfigurationProduct() {
     try {
       const namen = buendelAktiv.map((b) => b.titel).join(' + ');
       await meldeAusstattungsInteresse(parkId, {
-        label: `Kombi-Paket anfragen: ${namen}, Summe ${eur(buendelEinmalig)} einmalig + ${eur(buendelMonatlich)}/Monat${
-          hatHardware && buendelAktiv.some(istShopItem) ? ` (Online-Shop-Einrichtung ${eur(SHOP_EINRICHTUNG)} entfällt im Kombi-Paket)` : ''
+        label: `Kombi-Paket anfragen: ${namen}, Summe ${money(buendelEinmalig)} einmalig + ${money(buendelMonatlich)}/Monat${
+          hatHardware && buendelAktiv.some(istShopItem) ? ` (Online-Shop-Einrichtung ${money(SHOP_EINRICHTUNG)} entfällt im Kombi-Paket)` : ''
         }`,
       });
       setBundleGesendet(true);
     } catch (e) {
-      setFehler(e instanceof Error ? e.message : 'Anfrage fehlgeschlagen.');
+      setFehler(e instanceof Error ? e.message : t('crm_pricing.request_failed'));
     } finally {
       setBundleSendet(false);
     }
@@ -207,9 +214,9 @@ export default function ConfigurationProduct() {
     try {
       if (istVerkauf) {
         const namen = verfuegbar.filter((z) => gewaehlt.includes(z.key)).map((z) => z.titel);
-        const label = `${item.titel} anfragen${namen.length ? ` mit ${namen.join(', ')}` : ''}, Summe ${eur(einmalig)} einmalig${
-          monatlichGesamt > 0 ? ` + ${eur(monatlichGesamt)}/Monat` : ''
-        }${raten ? `, in ${RATEN} Raten à ${eurGenau(einmalig / RATEN)}` : ''}`;
+        const label = `${item.titel} anfragen${namen.length ? ` mit ${namen.join(', ')}` : ''}, Summe ${money(einmalig)} einmalig${
+          monatlichGesamt > 0 ? ` + ${money(monatlichGesamt)}/Monat` : ''
+        }${raten ? `, in ${RATEN} Raten à ${moneyExact(einmalig / RATEN)}` : ''}`;
         await meldeAusstattungsInteresse(parkId, { label });
       } else if (istCrm) {
         const paket = CRM_PAKETE.find((pk) => pk.key === crmPaket);
@@ -222,9 +229,9 @@ export default function ConfigurationProduct() {
       } else if (istShop) {
         const planText =
           shopPlan === 'monatlich'
-            ? `Einrichtung ${eur(SHOP_EINRICHTUNG)} einmalig + ${eur(SHOP_MONATLICH)}/Monat`
+            ? `Einrichtung ${money(SHOP_EINRICHTUNG)} einmalig + ${money(SHOP_MONATLICH)}/Monat`
             : shopPlan === 'jaehrlich'
-              ? `Einrichtung ${eur(SHOP_EINRICHTUNG)} einmalig + 12 Monate im Voraus ${eur(SHOP_JAHR)} (3 Monate geschenkt)`
+              ? `Einrichtung ${money(SHOP_EINRICHTUNG)} einmalig + 12 Monate im Voraus ${money(SHOP_JAHR)} (3 Monate geschenkt)`
               : `Revenue Share ${SHOP_ANTEIL} % der Shop-Einnahmen, Einrichtung und Monatskosten 0 €`;
         await meldeAusstattungsInteresse(parkId, { label: `${item.titel}: ${planText}` });
       } else {
@@ -241,16 +248,16 @@ export default function ConfigurationProduct() {
   const zurueck = (
     <Link to="/configuration" className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-800">
       <ArrowLeft className="h-4 w-4" />
-      Zurück zur Konfiguration
+      {t('product.back')}
     </Link>
   );
 
-  if (laden) return <div className="space-y-4">{zurueck}<p className="text-sm text-slate-400">Wird geladen…</p></div>;
+  if (laden) return <div className="space-y-4">{zurueck}<p className="text-sm text-slate-400">{t('app.loading')}</p></div>;
   if (!item) {
     return (
       <div className="space-y-4">
         {zurueck}
-        <p className="text-sm text-slate-500">{fehler ?? 'Dieses Produkt gibt es nicht (mehr).'}</p>
+        <p className="text-sm text-slate-500">{fehler ?? t('product.not_found')}</p>
       </div>
     );
   }
@@ -262,8 +269,8 @@ export default function ConfigurationProduct() {
     ...(istSpeed ? [speedPaket === 'display' ? '/speedmessung/display.jpg' : '/speedmessung/langzeit.jpg'] : []),
   ];
   const aktuell = bilder[index] ?? bilder[0];
-  const punkte = beschreibungPunkte(item.beschreibung);
-  const preise = preisTexte;
+  const punkte = beschreibungPunkte(equipmentDescription(item.beschreibung, language));
+  const preise = [equipmentPrice(item, t, locale)].filter(Boolean);
 
   return (
     <div className="space-y-5">
@@ -284,7 +291,7 @@ export default function ConfigurationProduct() {
                     className={`h-20 w-20 shrink-0 overflow-hidden rounded-lg border-2 bg-white ${
                       i === index ? 'border-sky-500' : 'border-slate-200 opacity-80 hover:opacity-100'
                     }`}
-                    aria-label={`Bild ${i + 1}`}
+                    aria-label={t('product.image_number', { count: i + 1 })}
                   >
                     <img src={url} alt="" className="h-full w-full object-contain" />
                   </button>
@@ -293,9 +300,9 @@ export default function ConfigurationProduct() {
             )}
             <div className="flex min-h-[320px] flex-1 items-center justify-center rounded-xl bg-white p-3 lg:min-h-[520px]">
               {aktuell ? (
-                <img src={aktuell} alt={item.titel} className="max-h-[560px] max-w-full object-contain" />
+                <img src={aktuell} alt={equipmentTitle(item.titel, t)} className="max-h-[560px] max-w-full object-contain" />
               ) : (
-                <p className="text-sm text-slate-400">Noch kein Bild hinterlegt.</p>
+                <p className="text-sm text-slate-400">{t('product.no_image')}</p>
               )}
             </div>
           </div>
@@ -303,9 +310,9 @@ export default function ConfigurationProduct() {
           <div className="flex flex-col gap-5 p-6 lg:p-8">
             <div>
               <span className="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide text-slate-500">
-                {item.kategorie}
+                {t(`config.category.${item.kategorie}`)}
               </span>
-              <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-800">{item.titel}</h2>
+              <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-800">{equipmentTitle(item.titel, t)}</h2>
             </div>
 
             {preise.length > 0 && (
@@ -314,13 +321,13 @@ export default function ConfigurationProduct() {
                 {preise.slice(1).map((t) => (
                   <p key={t} className="mt-0.5 text-sm text-slate-500">{t}</p>
                 ))}
-                <p className="mt-1 text-xs text-slate-400">Alle Preise zzgl. MwSt.</p>
+                <p className="mt-1 text-xs text-slate-400">{t('product.excl_vat')}</p>
               </div>
             )}
 
             {punkte.length > 1 ? (
               <div>
-                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Das ist dabei</p>
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">{t('crm_pricing.included')}</p>
                 <ul className="space-y-2">
                   {punkte.map((punkt) => (
                     <li key={punkt} className="flex items-start gap-2 text-sm leading-snug text-slate-600">
@@ -339,7 +346,7 @@ export default function ConfigurationProduct() {
               <div className="space-y-4">
                 <div>
                   <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                    Dazu buchen
+                    {t('product.add_ons')}
                   </p>
                   <div className="grid gap-2.5 sm:grid-cols-2">
                     {verfuegbar.map((zusatz) => {
@@ -357,7 +364,7 @@ export default function ConfigurationProduct() {
                           }`}
                         >
                           <span className="flex items-start justify-between gap-2">
-                            <span className="text-sm font-bold text-slate-800">{zusatz.titel}</span>
+                            <span className="text-sm font-bold text-slate-800">{t(`product.addon.${zusatz.key}.title`)}</span>
                             <span
                               className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
                                 an ? 'border-sky-500 bg-sky-500 text-white' : 'border-slate-300 bg-white'
@@ -368,19 +375,19 @@ export default function ConfigurationProduct() {
                           </span>
                           {zusatz.badge && (
                             <span className="mt-1 w-fit rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800">
-                              {zusatz.badge}
+                              {t('speed.offer.popular')}
                             </span>
                           )}
                           <span className="mt-0.5 text-sm font-semibold text-slate-700">
-                            + {eur(zusatz.preis)}
+                            + {money(zusatz.preis)}
                             {zusatz.vorher != null && (
-                              <span className="ml-1.5 font-normal text-slate-400 line-through">{eur(zusatz.vorher)}</span>
+                              <span className="ml-1.5 font-normal text-slate-400 line-through">{money(zusatz.vorher)}</span>
                             )}
                             {zusatz.monatlich != null && (
-                              <span className="font-normal text-slate-500"> und {eur(zusatz.monatlich)} / Monat</span>
+                              <span className="font-normal text-slate-500">{t('product.and_monthly', { amount: money(zusatz.monatlich) })}</span>
                             )}
                           </span>
-                          <span className="mt-1 text-xs leading-snug text-slate-500">{zusatz.text}</span>
+                          <span className="mt-1 text-xs leading-snug text-slate-500">{t(`product.addon.${zusatz.key}.text`)}</span>
                         </button>
                       );
                     })}
@@ -389,7 +396,7 @@ export default function ConfigurationProduct() {
 
                 <div>
                   <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                    Möchtest du in Raten zahlen?
+                    {t('product.installment_question')}
                   </p>
                   <div className="grid gap-2.5 sm:grid-cols-2">
                     {[false, true].map((ratenwahl) => (
@@ -403,15 +410,15 @@ export default function ConfigurationProduct() {
                         }`}
                       >
                         <span className="block text-sm font-bold text-slate-800">
-                          {ratenwahl ? `In ${RATEN} Monatsraten` : 'Einmal zahlen'}
+                          {ratenwahl ? t('product.installments', { count: RATEN }) : t('product.pay_once')}
                         </span>
                         <span className="mt-0.5 block text-sm font-semibold text-slate-700">
-                          {ratenwahl ? `${eurGenau(einmalig / RATEN)} / Monat` : eur(einmalig)}
+                          {ratenwahl ? t('equipment.per_month', { amount: moneyExact(einmalig / RATEN) }) : money(einmalig)}
                         </span>
                         <span className="mt-1 block text-xs text-slate-500">
                           {ratenwahl
-                            ? 'Die Summe verteilt sich auf 12 Monate. Die genauen Konditionen klären wir persönlich.'
-                            : 'Eine Rechnung, alles auf einmal.'}
+                            ? t('product.installment_desc')
+                            : t('product.pay_once_desc')}
                         </span>
                       </button>
                     ))}
@@ -420,29 +427,29 @@ export default function ConfigurationProduct() {
 
                 <div className="rounded-xl bg-slate-50 p-3 text-sm">
                   <div className="flex justify-between text-slate-600">
-                    <span>{item.titel}</span>
-                    <span>{eur(basis ?? 0)}</span>
+                    <span>{equipmentTitle(item.titel, t)}</span>
+                    <span>{money(basis ?? 0)}</span>
                   </div>
                   {verfuegbar.filter((z) => gewaehlt.includes(z.key)).map((z) => (
                     <div key={z.key} className="flex justify-between text-slate-600">
-                      <span>{z.titel}</span>
-                      <span>{eur(z.preis)}</span>
+                      <span>{t(`product.addon.${z.key}.title`)}</span>
+                      <span>{money(z.preis)}</span>
                     </div>
                   ))}
                   <div className="mt-1.5 flex justify-between border-t border-slate-200 pt-1.5 font-bold text-slate-900">
-                    <span>Einmalig</span>
-                    <span>{eur(einmalig)}</span>
+                    <span>{t('shop_pricing.one_time')}</span>
+                    <span>{money(einmalig)}</span>
                   </div>
                   {monatlich != null && (
                     <div className="flex justify-between text-slate-600">
-                      <span>Service/Hosting</span>
-                      <span>{eur(monatlich)} / Monat</span>
+                      <span>{t('product.service_hosting')}</span>
+                      <span>{t('equipment.per_month', { amount: money(monatlich) })}</span>
                     </div>
                   )}
                   {verfuegbar.filter((z) => gewaehlt.includes(z.key) && z.monatlich).map((z) => (
                     <div key={z.key} className="flex justify-between text-slate-600">
-                      <span>Online-Shop</span>
-                      <span>{eur(z.monatlich ?? 0)} / Monat</span>
+                      <span>{t('nav.shop')}</span>
+                      <span>{t('equipment.per_month', { amount: money(z.monatlich ?? 0) })}</span>
                     </div>
                   ))}
                 </div>
@@ -453,11 +460,11 @@ export default function ConfigurationProduct() {
             {istShop && (
               <div className="space-y-4">
                 <div>
-                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Abo wählen</p>
+                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">{t('product.choose_subscription')}</p>
                   <div className="grid gap-2.5">
                     {([
-                      { key: 'monatlich', titel: 'Monatlich', zeile: `${eur(SHOP_EINRICHTUNG)} einmalig + ${eur(SHOP_MONATLICH)} / Monat`, text: 'Einrichtung einmalig, dann monatlich für Hosting, Service und Wartung.' },
-                      { key: 'jaehrlich', titel: '12 Monate im Voraus', zeile: `${eur(SHOP_EINRICHTUNG)} einmalig + ${eur(SHOP_JAHR)} für 12 Monate`, vorher: eur(SHOP_MONATLICH * 12), text: '3 Monate geschenkt: du zahlst nur 9 × 99 €.', badge: 'Beliebt' },
+                      { key: 'monatlich', titel: 'Monatlich', zeile: `${money(SHOP_EINRICHTUNG)} einmalig + ${money(SHOP_MONATLICH)} / Monat`, text: 'Einrichtung einmalig, dann monatlich für Hosting, Service und Wartung.' },
+                      { key: 'jaehrlich', titel: '12 Monate im Voraus', zeile: `${money(SHOP_EINRICHTUNG)} einmalig + ${money(SHOP_JAHR)} für 12 Monate`, vorher: money(SHOP_MONATLICH * 12), text: '3 Monate geschenkt: du zahlst nur 9 × 99 €.', badge: 'Beliebt' },
                       { key: 'revshare', titel: 'Full-Service mit Revenue Share', zeile: `0 € Einrichtung, 0 € monatlich, ${SHOP_ANTEIL} % der Shop-Einnahmen`, text: 'Wir kümmern uns auch um Druck und Versand der Artikel. Der Rest der Einnahmen ist dein Gewinn.' },
                     ] as { key: 'monatlich' | 'jaehrlich' | 'revshare'; titel: string; zeile: string; vorher?: string; text: string; badge?: string }[]).map((plan) => (
                       <button
@@ -470,18 +477,18 @@ export default function ConfigurationProduct() {
                         }`}
                       >
                         <span className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-slate-800">{plan.titel}</span>
+                          <span className="text-sm font-bold text-slate-800">{t(`product.shop_plan.${plan.key}.name`)}</span>
                           {plan.badge && (
                             <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800">
-                              {plan.badge}
+                              {t('speed.offer.popular')}
                             </span>
                           )}
                         </span>
                         <span className="mt-0.5 block text-sm font-semibold text-slate-700">
-                          {plan.zeile}
+                          {t(`product.shop_plan.${plan.key}.price`, { setup: money(SHOP_EINRICHTUNG), monthly: money(SHOP_MONATLICH), yearly: money(SHOP_JAHR), share: SHOP_ANTEIL })}
                           {plan.vorher && <span className="ml-1.5 font-normal text-slate-400 line-through">{plan.vorher}</span>}
                         </span>
-                        <span className="mt-1 block text-xs text-slate-500">{plan.text}</span>
+                        <span className="mt-1 block text-xs text-slate-500">{t(`product.shop_plan.${plan.key}.text`)}</span>
                       </button>
                     ))}
                   </div>
@@ -493,7 +500,7 @@ export default function ConfigurationProduct() {
 
             {istSpeed && (
               <div>
-                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Paket wählen</p>
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">{t('product.choose_plan')}</p>
                 <div className="grid gap-2.5">
                   {SPEED_PAKETE.map((paket) => (
                     <button
@@ -509,15 +516,15 @@ export default function ConfigurationProduct() {
                       }`}
                     >
                       <span className="flex items-center gap-2">
-                        <span className="text-sm font-bold text-slate-800">{paket.titel}</span>
+                        <span className="text-sm font-bold text-slate-800">{t(paket.key === 'basis' ? 'speed.offer.plan_basic' : paket.key === 'display' ? 'speed.offer.plan_display' : 'speed.offer.plan_long')}</span>
                         {'badge' in paket && (
                           <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800">
-                            {paket.badge}
+                            {t(paket.key === 'display' ? 'speed.offer.popular' : 'speed.offer.value')}
                           </span>
                         )}
                       </span>
-                      <span className="mt-0.5 block text-sm font-semibold text-slate-700">{paket.zeile}</span>
-                      <span className="mt-1 block text-xs text-slate-500">{paket.text}</span>
+                      <span className="mt-0.5 block text-sm font-semibold text-slate-700">{t(`product.speed_plan.${paket.key}.price`)}</span>
+                      <span className="mt-1 block text-xs text-slate-500">{t(`product.speed_plan.${paket.key}.text`)}</span>
                     </button>
                   ))}
                 </div>
@@ -527,7 +534,7 @@ export default function ConfigurationProduct() {
 
             {istCrm && (
               <div>
-                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Paket wählen</p>
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">{t('product.choose_plan')}</p>
                 <div className="grid gap-2.5">
                   {CRM_PAKETE.map((paket) => (
                     <button
@@ -540,18 +547,18 @@ export default function ConfigurationProduct() {
                       }`}
                     >
                       <span className="flex items-center gap-2">
-                        <span className="text-sm font-bold text-slate-800">{paket.titel}</span>
+                        <span className="text-sm font-bold text-slate-800">{t(paket.key === 'monatlich' ? 'crm_pricing.monthly' : paket.key === 'jaehrlich' ? 'crm_pricing.yearly_name' : 'crm_pricing.long_name')}</span>
                         {'badge' in paket && (
                           <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800">
-                            {paket.badge}
+                            {t('speed.offer.popular')}
                           </span>
                         )}
                       </span>
                       <span className="mt-0.5 block text-sm font-semibold text-slate-700">
-                        {paket.zeile}
-                        {'vorher' in paket && <span className="ml-1.5 font-normal text-slate-400 line-through">{paket.vorher}</span>}
+                        {t(`product.crm_plan.${paket.key}.price`)}
+                        {'vorher' in paket && <span className="ml-1.5 font-normal text-slate-400 line-through">{money(preisAus(paket.vorher) ?? 0)}</span>}
                       </span>
-                      <span className="mt-1 block text-xs text-slate-500">{paket.text}</span>
+                      <span className="mt-1 block text-xs text-slate-500">{t(`product.crm_plan.${paket.key}.text`)}</span>
                     </button>
                   ))}
                 </div>
@@ -564,7 +571,7 @@ export default function ConfigurationProduct() {
               disabled={sende || angefragt}
               className="mt-auto inline-flex w-full items-center justify-center rounded-lg bg-sky-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-sky-500 disabled:opacity-60"
             >
-              {angefragt ? 'Anfrage gesendet, wir melden uns' : sende ? 'Wird gesendet…' : 'Jetzt anfragen'}
+              {angefragt ? t('product.request_sent') : sende ? t('crm_pricing.sending') : t('config.request_now')}
             </button>
           </div>
         </div>
@@ -572,10 +579,9 @@ export default function ConfigurationProduct() {
 
       {buendel.length > 1 && (
         <GlassCard className="p-5 sm:p-6">
-          <h3 className="text-xl font-bold text-slate-800">Oft zusammen gekauft</h3>
+          <h3 className="text-xl font-bold text-slate-800">{t('product.often_bought_together')}</h3>
           <p className="mt-0.5 text-sm text-slate-500">
-            PrintBox und Cashbox funktionieren nur im Verbund mit dem Online-Shop. Im Kombi-Paket entfällt dessen
-            Einrichtung.
+            {t('product.bundle_desc')}
           </p>
           <div className="mt-5 flex flex-wrap items-start gap-x-3 gap-y-6">
             {buendel.map((b, i) => {
@@ -589,9 +595,9 @@ export default function ConfigurationProduct() {
                   <div className="w-44 sm:w-52">
                     <div className={`relative flex h-36 items-center justify-center rounded-xl bg-slate-50 p-2 sm:h-44 ${aktiv ? '' : 'opacity-50'}`}>
                       {bild ? (
-                        <img src={bild} alt={b.titel} className="max-h-full max-w-full object-contain" />
+                        <img src={bild} alt={equipmentTitle(b.titel, t)} className="max-h-full max-w-full object-contain" />
                       ) : (
-                        <span className="text-xs text-slate-400">Kein Bild</span>
+                        <span className="text-xs text-slate-400">{t('product.no_image_short')}</span>
                       )}
                       <input
                         type="checkbox"
@@ -600,30 +606,30 @@ export default function ConfigurationProduct() {
                         onChange={() =>
                           setBundleAus((alt) => (alt.includes(b.id) ? alt.filter((x) => x !== b.id) : [...alt, b.id]))
                         }
-                        aria-label={`${b.titel} im Kombi-Paket`}
+                        aria-label={t('product.in_bundle', { product: equipmentTitle(b.titel, t) })}
                         className="absolute right-2 top-2 h-5 w-5 accent-sky-600"
                       />
                     </div>
                     <div className="mt-2 text-sm">
-                      {i === 0 && <p className="font-bold text-slate-800">Dieser Artikel:</p>}
+                      {i === 0 && <p className="font-bold text-slate-800">{t('product.this_item')}</p>}
                       {i === 0 ? (
-                        <p className="text-slate-700">{b.titel}</p>
+                        <p className="text-slate-700">{equipmentTitle(b.titel, t)}</p>
                       ) : (
                         <Link to={`/configuration/produkt/${b.id}`} className="text-sky-700 hover:underline">
-                          {b.titel}
+                          {equipmentTitle(b.titel, t)}
                         </Link>
                       )}
                       <p className="mt-0.5 font-bold text-slate-900">
                         {preisSplit(b).einmalig > 0 || preisSplit(b).monatlich === 0
-                          ? eur(shopImKombi ? 0 : preis ?? 0)
-                          : `${eur(preisSplit(b).monatlich)} / Monat`}
+                          ? money(shopImKombi ? 0 : preis ?? 0)
+                          : t('equipment.per_month', { amount: money(preisSplit(b).monatlich) })}
                         {shopImKombi && preis != null && (
-                          <span className="ml-1.5 font-normal text-slate-400 line-through">{eur(preis)}</span>
+                          <span className="ml-1.5 font-normal text-slate-400 line-through">{money(preis)}</span>
                         )}
                       </p>
                       <p className="text-xs text-slate-500">
                         {preisSplit(b).einmalig > 0 && preisSplit(b).monatlich > 0
-                          ? `+ ${eur(preisSplit(b).monatlich)} pro Monat`
+                          ? t('product.plus_monthly', { amount: money(preisSplit(b).monatlich) })
                           : ''}
                       </p>
                     </div>
@@ -634,13 +640,13 @@ export default function ConfigurationProduct() {
 
             <div className="flex min-w-[220px] flex-1 flex-col justify-center gap-3 self-center lg:pl-6">
               <p className="text-slate-700">
-                Gesamtpreis: <span className="text-2xl font-bold text-slate-900">{eur(buendelEinmalig)}</span>
+                {t('product.total_price')}: <span className="text-2xl font-bold text-slate-900">{money(buendelEinmalig)}</span>
                 {buendelVorher > buendelEinmalig && (
-                  <span className="ml-2 text-sm text-slate-400 line-through">{eur(buendelVorher)}</span>
+                  <span className="ml-2 text-sm text-slate-400 line-through">{money(buendelVorher)}</span>
                 )}
               </p>
               <p className="-mt-2 text-xs text-slate-500">
-                einmalig, dazu {eur(buendelMonatlich)} pro Monat. Alle Preise zzgl. MwSt.
+                {t('product.bundle_monthly', { amount: money(buendelMonatlich) })}
               </p>
               <button
                 type="button"
@@ -649,10 +655,10 @@ export default function ConfigurationProduct() {
                 className="inline-flex items-center justify-center rounded-full bg-amber-400 px-5 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-amber-300 disabled:opacity-60"
               >
                 {bundleGesendet
-                  ? 'Anfrage gesendet, wir melden uns'
+                  ? t('product.request_sent')
                   : bundleSendet
-                    ? 'Wird gesendet…'
-                    : `Alle ${buendelAktiv.length} anfragen`}
+                    ? t('crm_pricing.sending')
+                    : t('product.request_all', { count: buendelAktiv.length })}
               </button>
             </div>
           </div>

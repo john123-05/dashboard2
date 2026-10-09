@@ -61,8 +61,8 @@ export async function startDemoCheckout(token: string, items: DemoCartItem[]): P
   return body.url as string;
 }
 
-export function formatEuro(cents: number): string {
-  return (cents / 100).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+export function formatEuro(cents: number, locale = 'de-DE'): string {
+  return (cents / 100).toLocaleString(locale, { style: 'currency', currency: 'EUR' });
 }
 
 // Some cameras are mounted rotated and write no orientation tag (Tarzans: 270°).

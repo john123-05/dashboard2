@@ -1,32 +1,32 @@
-export function formatCurrency(cents: number, currency = 'usd'): string {
-  return new Intl.NumberFormat('en-US', {
+export function formatCurrency(cents: number, currency = 'usd', locale = 'en-US'): string {
+  return new Intl.NumberFormat(locale, {
     style: 'currency',
     currency: currency.toUpperCase(),
   }).format(cents / 100);
 }
 
-export function formatNumber(n: number): string {
-  return new Intl.NumberFormat('en-US').format(n);
+export function formatNumber(n: number, locale = 'en-US'): string {
+  return new Intl.NumberFormat(locale).format(n);
 }
 
-export function formatPercent(n: number): string {
-  return `${n.toFixed(1)}%`;
+export function formatPercent(n: number, locale = 'en-US'): string {
+  return new Intl.NumberFormat(locale, { maximumFractionDigits: 1, minimumFractionDigits: 1, style: 'percent' }).format(n / 100);
 }
 
-export function formatDate(date: string): string {
+export function formatDate(date: string, locale = 'en-US'): string {
   const parsed = new Date(date);
   if (Number.isNaN(parsed.getTime())) return '-';
-  return new Intl.DateTimeFormat('en-US', {
+  return new Intl.DateTimeFormat(locale, {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
   }).format(parsed);
 }
 
-export function formatDateTime(date: string): string {
+export function formatDateTime(date: string, locale = 'en-US'): string {
   const parsed = new Date(date);
   if (Number.isNaN(parsed.getTime())) return '-';
-  return new Intl.DateTimeFormat('en-US', {
+  return new Intl.DateTimeFormat(locale, {
     month: 'short',
     day: 'numeric',
     hour: 'numeric',
@@ -34,7 +34,7 @@ export function formatDateTime(date: string): string {
   }).format(parsed);
 }
 
-export function formatRelative(date: string): string {
+export function formatRelative(date: string, locale = 'en-US'): string {
   const parsed = new Date(date);
   if (Number.isNaN(parsed.getTime())) return '-';
   const now = Date.now();
@@ -43,11 +43,12 @@ export function formatRelative(date: string): string {
   const hours = Math.floor(diff / 3600000);
   const days = Math.floor(diff / 86400000);
 
-  if (minutes < 1) return 'Just now';
-  if (minutes < 60) return `${minutes}m ago`;
-  if (hours < 24) return `${hours}h ago`;
-  if (days < 7) return `${days}d ago`;
-  return formatDate(date);
+  const formatter = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
+  if (minutes < 1) return formatter.format(0, 'minute');
+  if (minutes < 60) return formatter.format(-minutes, 'minute');
+  if (hours < 24) return formatter.format(-hours, 'hour');
+  if (days < 7) return formatter.format(-days, 'day');
+  return new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', year: 'numeric' }).format(parsed);
 }
 
 export function exportToCSV<T extends Record<string, unknown>>(

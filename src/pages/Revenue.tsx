@@ -26,25 +26,25 @@ import {
   type MachineRevenue,
   type RideSnapshot,
 } from '../lib/kioskSales';
-import { formatCurrency, formatNumber, formatPercent, exportToCSV } from '../lib/utils';
+import { formatCurrency as baseFormatCurrency, formatNumber as baseFormatNumber, formatPercent as baseFormatPercent, exportToCSV } from '../lib/utils';
 import GlassCard from '../components/ui/GlassCard';
 import ZahlungsUebersicht from '../components/ZahlungsUebersicht';
 import AutomatenUebersicht, { AUTOMATEN_ZEITRAEUME, type Zeitraum as AutomatenZeitraum } from '../components/AutomatenUebersicht';
 import KPICard from '../components/ui/KPICard';
-import { useI18n } from '../lib/i18n';
+import { useI18n, useLocaleTag } from '../lib/i18n';
 import { usePark } from '../contexts/ParkContext';
 
-function formatDateLabel(iso: string): string {
+function formatDateLabel(iso: string, locale: string): string {
   const date = new Date(`${iso}T00:00:00`);
   if (Number.isNaN(date.getTime())) return iso;
-  return new Intl.DateTimeFormat('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' }).format(date);
+  return new Intl.DateTimeFormat(locale, { weekday: 'short', day: '2-digit', month: '2-digit' }).format(date);
 }
 
-function formatSoldRideSubtitle(sold: number, expected: number | null): string {
+function formatSoldRideSubtitle(sold: number, expected: number | null, locale: string, t: (key: string, params?: Record<string, string | number>) => string): string {
   if (expected !== null) {
-    return `${formatNumber(sold)} verkauft / ${formatNumber(expected)} Fahrten`;
+    return t('revenue.sold_rides', { sold: baseFormatNumber(sold, locale), rides: baseFormatNumber(expected, locale) });
   }
-  return `${formatNumber(sold)} Foto${sold === 1 ? '' : 's'} verkauft`;
+  return t(sold === 1 ? 'revenue.photo_sold' : 'revenue.photos_sold', { count: baseFormatNumber(sold, locale) });
 }
 
 interface StripeRevenuePoint {
@@ -69,6 +69,10 @@ interface RevenueSeriesRow {
 
 export default function Revenue({ embedded = false }: { embedded?: boolean } = {}) {
   const { t } = useI18n();
+  const locale = useLocaleTag();
+  const formatCurrency = (cents: number, currency = 'usd') => baseFormatCurrency(cents, currency, locale);
+  const formatNumber = (value: number) => baseFormatNumber(value, locale);
+  const formatPercent = (value: number) => baseFormatPercent(value, locale);
   const navigate = useNavigate();
   const {
     parkId,
@@ -377,7 +381,7 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
     [kioskChartData],
   );
   const dayTotalRevenueCents = dayPurchases.length * (kioskPriceCents ?? 0);
-  const selectedDateLabel = selectedDate ? formatDateLabel(selectedDate) : '';
+  const selectedDateLabel = selectedDate ? formatDateLabel(selectedDate, locale) : '';
 
   const todayStr = useMemo(() => (isKioskPark ? todayInTimezone(kioskTimezone) : ''), [isKioskPark, kioskTimezone]);
   const yesterdayStr = useMemo(
@@ -427,9 +431,9 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
     confirmedLocalRevenueCents > 0
       ? formatCurrency(confirmedLocalRevenueCents)
       : detectedLocalRevenueCents > 0
-        ? `${formatCurrency(detectedLocalRevenueCents)} detected`
+        ? t('revenue.detected', { amount: formatCurrency(detectedLocalRevenueCents) })
         : unknownLocalAmountCount > 0
-          ? 'Unknown'
+          ? t('app.unknown')
           : formatCurrency(0);
 
   function handleExport() {
@@ -480,14 +484,14 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('revenue.title')}</h2>
           <p className="mt-1 text-sm text-slate-500">
-            Umsatz und Verkäufe im Überblick
+            {t('revenue.overview_desc')}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           {isKioskPark && (
             <div className="flex items-center gap-2 rounded-xl border border-slate-200/70 bg-white/60 px-3 py-1.5 text-xs">
               <div>
-                <p className="text-slate-400">Aktueller Preis</p>
+                <p className="text-slate-400">{t('revenue.current_price')}</p>
                 <p className="font-semibold text-slate-800">{formatCurrency(kioskPriceCents ?? 0, 'eur')}</p>
               </div>
               <button
@@ -495,7 +499,7 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
                 onClick={() => navigate('/settings')}
                 className="rounded-lg px-2 py-1 font-medium text-sky-600 hover:bg-sky-50"
               >
-                Bearbeiten
+                {t('revenue.edit')}
               </button>
             </div>
           )}
@@ -508,16 +512,16 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
 
       {issues.length > 0 && (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-          <p className="text-sm font-medium text-amber-900">Revenue is partially available.</p>
+          <p className="text-sm font-medium text-amber-900">{t('revenue.partial')}</p>
           <p className="mt-1 text-sm text-amber-700">{issues.join(' ')}</p>
         </div>
       )}
 
       {!parkData.features.stripe && !parkData.features.local_sales && !isKioskPark && (
         <GlassCard className="p-6">
-          <h3 className="text-base font-semibold text-slate-800">No active revenue feed</h3>
+          <h3 className="text-base font-semibold text-slate-800">{t('revenue.no_feed')}</h3>
           <p className="mt-2 text-sm text-slate-500">
-            This park currently has no reachable Stripe or local sales source. The page will populate automatically as soon as one of the feeds is available.
+            {t('revenue.no_feed_desc')}
           </p>
         </GlassCard>
       )}
@@ -526,33 +530,33 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
         <>
           <div className="grid grid-cols-2 gap-4 sm:gap-6 xl:grid-cols-4">
             <KPICard
-              title="Heute"
+              title={t('overview.today')}
               value={formatCurrency(kioskKpis.today.revenueCents, 'eur')}
-              subtitle={formatSoldRideSubtitle(kioskKpis.today.sold, kioskKpis.today.expected)}
+              subtitle={formatSoldRideSubtitle(kioskKpis.today.sold, kioskKpis.today.expected, locale, t)}
               icon={Ticket}
               iconColor="text-brand-600"
               iconBg="bg-brand-50"
             />
             <KPICard
-              title="Letzte 7 Tage"
+              title={t('revenue.last_7_days')}
               value={formatCurrency(kioskKpis.week.revenueCents, 'eur')}
-              subtitle={formatSoldRideSubtitle(kioskKpis.week.sold, kioskKpis.week.expected)}
+              subtitle={formatSoldRideSubtitle(kioskKpis.week.sold, kioskKpis.week.expected, locale, t)}
               icon={Camera}
               iconColor="text-sky-600"
               iconBg="bg-sky-50"
             />
             <KPICard
-              title="Dieser Monat"
+              title={t('revenue.this_month')}
               value={formatCurrency(kioskKpis.month.revenueCents, 'eur')}
-              subtitle={formatSoldRideSubtitle(kioskKpis.month.sold, kioskKpis.month.expected)}
+              subtitle={formatSoldRideSubtitle(kioskKpis.month.sold, kioskKpis.month.expected, locale, t)}
               icon={Receipt}
               iconColor="text-emerald-600"
               iconBg="bg-emerald-50"
             />
             <KPICard
-              title="Gesamt (seit Aufzeichnung)"
+              title={t('revenue.all_time')}
               value={formatCurrency(kioskKpis.total.revenueCents, 'eur')}
-              subtitle={formatSoldRideSubtitle(kioskKpis.total.sold, kioskKpis.total.expected)}
+              subtitle={formatSoldRideSubtitle(kioskKpis.total.sold, kioskKpis.total.expected, locale, t)}
               icon={Wallet}
               iconColor="text-slate-700"
               iconBg="bg-slate-100"
@@ -561,21 +565,21 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
 
           <div className="grid grid-cols-2 gap-4 sm:gap-6 xl:grid-cols-4">
             <KPICard
-              title="Fahrten heute"
+              title={t('overview.rides_today')}
               value={kioskKpis.today.expected !== null ? formatNumber(kioskKpis.today.expected) : '-'}
-              subtitle="Kamera-Aufnahmen heute"
+              subtitle={t('revenue.camera_shots_today')}
               icon={Gauge}
               iconColor="text-indigo-600"
               iconBg="bg-indigo-50"
             />
             <KPICard
-              title="Conversion heute"
+              title={t('overview.conversion_today')}
               value={
                 kioskKpis.today.expected && kioskKpis.today.expected > 0
                   ? formatPercent((kioskKpis.today.sold / kioskKpis.today.expected) * 100)
                   : '-'
               }
-              subtitle="Verkauft je Fahrt"
+              subtitle={t('overview.sold_per_ride')}
               icon={Percent}
               iconColor="text-fuchsia-600"
               iconBg="bg-fuchsia-50"
@@ -592,7 +596,7 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
                         automatZeitraum === z.key ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
                       }`}
                     >
-                      {z.label}
+                      {t(`revenue.period.${z.key}`)}
                     </button>
                   ))}
                 </div>
@@ -607,9 +611,9 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
           <GlassCard className="p-5 sm:p-6">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h3 className="text-base font-semibold text-slate-800">Umsatz</h3>
+                <h3 className="text-base font-semibold text-slate-800">{t('nav.revenue')}</h3>
                 <p className="text-sm text-slate-500">
-                  {chartMode === 'trend' ? 'Tägliche Einnahmen am Automaten' : 'Einnahmen nach Uhrzeit'}
+                  {chartMode === 'trend' ? t('overview.kiosk_daily_revenue') : t('revenue.hourly_revenue')}
                 </p>
               </div>
               <div className="customer-operator-segment flex flex-wrap rounded-xl bg-white/40 p-1">
@@ -620,7 +624,7 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
                     chartMode === 'trend' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
                   }`}
                 >
-                  Gesamt
+                  {t('revenue.total_tab')}
                 </button>
                 <button
                   type="button"
@@ -634,7 +638,7 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
                       : 'text-slate-500 hover:text-slate-700'
                   }`}
                 >
-                  Heute
+                  {t('overview.today')}
                 </button>
                 <button
                   type="button"
@@ -648,7 +652,7 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
                       : 'text-slate-500 hover:text-slate-700'
                   }`}
                 >
-                  Gestern
+                  {t('overview.yesterday')}
                 </button>
                 <button
                   type="button"
@@ -662,7 +666,7 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
                       : 'text-slate-500 hover:text-slate-700'
                   }`}
                 >
-                  Anderer Tag
+                  {t('overview.other_day')}
                 </button>
               </div>
             </div>
@@ -692,7 +696,7 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
                         axisLine={false}
                         tickLine={false}
                         tick={chartYAxisTick}
-                        tickFormatter={(value) => `€${value}`}
+                        tickFormatter={(value) => formatCurrency(Math.round(Number(value) * 100), 'eur')}
                       />
                       <YAxis yAxisId="rides" orientation="right" hide domain={[0, 'auto']} />
                       <Tooltip
@@ -704,9 +708,9 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
                           boxShadow: '0 8px 32px rgba(15,23,42,0.08)',
                         }}
                         formatter={(value, name) =>
-                          name === 'Fahrten'
-                            ? [formatNumber(Number(value ?? 0)), 'Fahrten']
-                            : [`€${Number(value ?? 0).toFixed(2)}`, 'Umsatz']
+                          name === t('overview.rides')
+                            ? [formatNumber(Number(value ?? 0)), t('overview.rides')]
+                            : [formatCurrency(Math.round(Number(value ?? 0) * 100), 'eur'), t('nav.revenue')]
                         }
                       />
                       {hasTrendRideData && <Legend wrapperStyle={{ fontSize: 12 }} />}
@@ -714,7 +718,7 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
                         yAxisId="rev"
                         type="monotone"
                         dataKey="revenueEur"
-                        name="Umsatz"
+                        name={t('nav.revenue')}
                         stroke="#0ea5e9"
                         strokeWidth={2}
                         fill="url(#kioskRevenue)"
@@ -724,7 +728,7 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
                           yAxisId="rides"
                           type="monotone"
                           dataKey="expectedCount"
-                          name="Fahrten"
+                          name={t('overview.rides')}
                           stroke="#10b981"
                           strokeWidth={2}
                           dot={false}
@@ -748,13 +752,13 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
                         onClick={() => stepDay(-1)}
                         disabled={selectedDate <= minSelectableDate}
                         className="customer-operator-icon-btn rounded-lg p-2 text-slate-500 transition-colors hover:bg-white/60 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
-                        aria-label="Vorheriger Tag"
+                        aria-label={t('revenue.previous_day')}
                       >
                         <ChevronLeft className="h-4 w-4" />
                       </button>
                       <div>
                         <label className="mb-1 block text-xs uppercase tracking-wide text-slate-400">
-                          Tag auswählen
+                          {t('revenue.select_day')}
                         </label>
                         <input
                           ref={dateInputRef}
@@ -771,7 +775,7 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
                         onClick={() => stepDay(1)}
                         disabled={selectedDate >= maxSelectableDate}
                         className="customer-operator-icon-btn rounded-lg p-2 text-slate-500 transition-colors hover:bg-white/60 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
-                        aria-label="Nächster Tag"
+                        aria-label={t('revenue.next_day')}
                       >
                         <ChevronRight className="h-4 w-4" />
                       </button>
@@ -779,12 +783,12 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
                   )}
                   <div className="text-right">
                     <p className="text-xs uppercase tracking-wide text-slate-400">
-                      Am {selectedDateLabel} eingenommen
+                      {t('revenue.earned_on', { date: selectedDateLabel })}
                     </p>
                     <p className="text-2xl font-bold text-slate-800">
                       {formatCurrency(dayTotalRevenueCents, 'eur')}
                     </p>
-                    <p className="text-xs text-slate-500">{dayPurchases.length} Fotos verkauft</p>
+                    <p className="text-xs text-slate-500">{t('revenue.photos_sold', { count: dayPurchases.length })}</p>
                   </div>
                 </div>
 
@@ -793,11 +797,11 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
                 <div className="-mx-2 overflow-x-auto pb-2 sm:mx-0 sm:overflow-visible sm:pb-0">
                   {dayLoading ? (
                     <div className="flex h-[18rem] items-center justify-center text-sm text-slate-500 sm:h-80">
-                      Lädt...
+                      {t('app.loading')}
                     </div>
                   ) : dayPurchases.length === 0 && !dayError ? (
                     <div className="flex h-[18rem] items-center justify-center text-sm text-slate-500 sm:h-80">
-                      Keine Verkäufe an diesem Tag.
+                      {t('revenue.no_sales_day')}
                     </div>
                   ) : (
                     <div className="h-[18rem] min-w-[320px] w-full sm:h-80">
@@ -823,7 +827,7 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
                             axisLine={false}
                             tickLine={false}
                             tick={chartYAxisTick}
-                            tickFormatter={(value) => `€${value}`}
+                            tickFormatter={(value) => formatCurrency(Math.round(Number(value) * 100), 'eur')}
                           />
                           <YAxis yAxisId="rides" orientation="right" hide domain={[0, 'auto']} />
                           <Tooltip
@@ -835,9 +839,9 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
                               boxShadow: '0 8px 32px rgba(15,23,42,0.08)',
                             }}
                             formatter={(value, name) =>
-                              name === 'Fahrten'
-                                ? [formatNumber(Number(value ?? 0)), 'Fahrten']
-                                : [`€${Number(value ?? 0).toFixed(2)}`, 'Umsatz']
+                              name === t('overview.rides')
+                                ? [formatNumber(Number(value ?? 0)), t('overview.rides')]
+                                : [formatCurrency(Math.round(Number(value ?? 0) * 100), 'eur'), t('nav.revenue')]
                             }
                           />
                           {hasRideData && <Legend wrapperStyle={{ fontSize: 12 }} />}
@@ -845,7 +849,7 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
                             yAxisId="rev"
                             type="monotone"
                             dataKey="revenueEur"
-                            name="Umsatz"
+                            name={t('nav.revenue')}
                             stroke="#0ea5e9"
                             strokeWidth={2}
                             fill="url(#kioskRevenueHourly)"
@@ -855,7 +859,7 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
                               yAxisId="rides"
                               type="monotone"
                               dataKey="rides"
-                              name="Fahrten"
+                              name={t('overview.rides')}
                               stroke="#10b981"
                               strokeWidth={2}
                               dot={false}
@@ -871,19 +875,19 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
           </GlassCard>
 
           <GlassCard className="p-5 sm:p-6">
-            <h3 className="mb-4 text-base font-semibold text-slate-800">Tagesübersicht</h3>
+            <h3 className="mb-4 text-base font-semibold text-slate-800">{t('revenue.daily_overview')}</h3>
             {kioskDays.length === 0 ? (
-              <p className="text-sm text-slate-500">Noch keine Verkaufsdaten erfasst.</p>
+              <p className="text-sm text-slate-500">{t('revenue.no_sales_data')}</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
                   <thead>
                     <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-400">
-                      <th className="py-2 pr-4">Tag</th>
-                      <th className="py-2 pr-4">Verkauft</th>
-                      <th className="py-2 pr-4">Fahrten</th>
-                      <th className="py-2 pr-4">Quote</th>
-                      <th className="py-2">Umsatz</th>
+                      <th className="py-2 pr-4">{t('revenue.day')}</th>
+                      <th className="py-2 pr-4">{t('revenue.sold')}</th>
+                      <th className="py-2 pr-4">{t('overview.rides')}</th>
+                      <th className="py-2 pr-4">{t('revenue.rate')}</th>
+                      <th className="py-2">{t('nav.revenue')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -896,7 +900,7 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
                         }}
                         className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-white/40"
                       >
-                        <td className="py-2 pr-4 text-slate-700">{formatDateLabel(day.businessDate)}</td>
+                        <td className="py-2 pr-4 text-slate-700">{formatDateLabel(day.businessDate, locale)}</td>
                         <td className="py-2 pr-4 text-slate-700">{formatNumber(day.soldCount)}</td>
                         <td className="py-2 pr-4 text-slate-700">
                           {day.expectedCount !== null ? formatNumber(day.expectedCount) : '-'}
@@ -918,9 +922,9 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
           <details className="group rounded-2xl">
             <summary className="glass-panel flex cursor-pointer list-none items-center justify-between rounded-2xl px-5 py-4 [&::-webkit-details-marker]:hidden sm:px-6">
               <span>
-                <span className="block text-base font-semibold text-slate-800">Zahlungen im Detail</span>
+                <span className="block text-base font-semibold text-slate-800">{t('revenue.payment_details')}</span>
                 <span className="block text-sm text-slate-500">
-                  Bar oder Karte, Kartenmarken, Wechselgeld und die letzten Käufe
+                  {t('revenue.payment_details_desc')}
                 </span>
               </span>
               <ChevronDown className="h-5 w-5 shrink-0 text-slate-400 transition group-open:rotate-180" />
@@ -937,7 +941,7 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
       <div className="grid grid-cols-2 gap-4 sm:gap-6 xl:grid-cols-4">
         {parkData.features.stripe && (
           <KPICard
-            title="Online Revenue"
+            title={t('overview.online_revenue')}
             value={formatCurrency(Math.round(totals.online * 100))}
             icon={CreditCard}
             iconColor="text-sky-600"
@@ -946,7 +950,7 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
         )}
         {parkData.features.local_sales && (
           <KPICard
-            title="Local Revenue"
+            title={t('overview.local_revenue')}
             value={localRevenueDisplay}
             icon={Wallet}
             iconColor="text-emerald-600"
@@ -954,14 +958,14 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
           />
         )}
         <KPICard
-          title="Total Revenue"
+          title={t('revenue.total_revenue')}
           value={formatCurrency(totalConfirmedRevenueCents)}
           icon={Receipt}
           iconColor="text-slate-700"
           iconBg="bg-slate-100"
         />
         <KPICard
-          title="Total Transactions"
+          title={t('revenue.total_transactions')}
           value={formatNumber(parkData.summary.local_transaction_count + onlinePaymentCount)}
           icon={Receipt}
           iconColor="text-cyan-600"
@@ -972,30 +976,30 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
       <GlassCard className="p-5 sm:p-6">
         <div className="grid gap-4 xl:grid-cols-2">
           <div>
-            <h3 className="text-base font-semibold text-slate-800">Online Commerce Domain</h3>
+            <h3 className="text-base font-semibold text-slate-800">{t('revenue.online_sales')}</h3>
             <p className="mt-2 text-sm text-slate-500">
-              Stripe revenue and online purchase counts stay separate from machine-side telemetry.
+              {t('revenue.online_sales_desc')}
             </p>
             <div className="mt-4 space-y-2 rounded-2xl bg-white/30 p-4 text-sm text-slate-600">
-              <p>Confirmed online revenue: {formatCurrency(Math.round(totals.online * 100))}</p>
-              <p>Online successful payments: {formatNumber(onlinePaymentCount)}</p>
+              <p>{t('revenue.online_confirmed', { amount: formatCurrency(Math.round(totals.online * 100)) })}</p>
+              <p>{t('revenue.online_payments', { count: formatNumber(onlinePaymentCount) })}</p>
             </div>
           </div>
           <div>
-            <h3 className="text-base font-semibold text-slate-800">Local Operations Domain</h3>
+            <h3 className="text-base font-semibold text-slate-800">{t('revenue.local_sales')}</h3>
             <p className="mt-2 text-sm text-slate-500">
-              Only confirmed local amounts count as revenue. Detected or unknown amounts stay outside totals.
+              {t('revenue.local_sales_desc')}
             </p>
             <div className="mt-4 space-y-2 rounded-2xl bg-white/30 p-4 text-sm text-slate-600">
-              <p>Confirmed local revenue: {formatCurrency(parkData.summary.local_sales_cents)}</p>
+              <p>{t('revenue.local_confirmed', { amount: formatCurrency(parkData.summary.local_sales_cents) })}</p>
               <p>
-                Detected but unconfirmed local amount:{' '}
+                {t('revenue.local_detected')}{' '}
                 {(parkData.summary.local_unconfirmed_amount_cents ?? 0) > 0
                   ? formatCurrency(parkData.summary.local_unconfirmed_amount_cents)
                   : '-'}
               </p>
               <p>
-                Unknown local amount signals:{' '}
+                {t('revenue.local_unknown')}{' '}
                 {formatNumber(parkData.summary.local_unknown_amount_transaction_count)}
               </p>
             </div>
@@ -1006,16 +1010,16 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
       <GlassCard className="p-5 sm:p-6">
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <h3 className="text-base font-semibold text-slate-800">Revenue Trend</h3>
+            <h3 className="text-base font-semibold text-slate-800">{t('overview.revenue_trend')}</h3>
             <p className="text-sm text-slate-500">
-              Last 30 days, confirmed online and confirmed local revenue only
+              {t('revenue.trend_desc')}
             </p>
           </div>
           <div className="text-right text-xs text-slate-500">
-            <p>Cash: {formatCurrency(Math.round(totals.cash * 100))}</p>
-            <p>Terminal: {formatCurrency(Math.round(totals.terminal * 100))}</p>
+            <p>{t('revenue.cash_amount', { amount: formatCurrency(Math.round(totals.cash * 100)) })}</p>
+            <p>{t('revenue.terminal_amount', { amount: formatCurrency(Math.round(totals.terminal * 100)) })}</p>
             {(parkData.summary.local_unconfirmed_amount_cents ?? 0) > 0 && (
-              <p>Detected, unconfirmed: {formatCurrency(parkData.summary.local_unconfirmed_amount_cents)}</p>
+              <p>{t('revenue.detected_amount', { amount: formatCurrency(parkData.summary.local_unconfirmed_amount_cents) })}</p>
             )}
           </div>
         </div>
@@ -1042,7 +1046,7 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
                   minTickGap={isMobileChart ? 22 : 8}
                   interval={isMobileChart ? 'preserveStartEnd' : 0}
                 />
-                <YAxis axisLine={false} tickLine={false} tick={chartYAxisTick} tickFormatter={(value) => `$${value}`} />
+                <YAxis axisLine={false} tickLine={false} tick={chartYAxisTick} tickFormatter={(value) => formatCurrency(Math.round(Number(value) * 100))} />
                 <Tooltip
                   contentStyle={{
                     background: 'rgba(255,255,255,0.94)',
@@ -1051,7 +1055,7 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
                     borderRadius: '12px',
                     boxShadow: '0 8px 32px rgba(15,23,42,0.08)',
                   }}
-                  formatter={(value, name) => [`$${Number(value ?? 0).toFixed(2)}`, name === 'online' ? 'Online' : 'Local']}
+                    formatter={(value, name) => [formatCurrency(Math.round(Number(value ?? 0) * 100)), name === 'online' ? t('overview.online') : t('overview.local')]}
                 />
                 {parkData.features.stripe && (
                   <Area type="monotone" dataKey="online" stroke="#0ea5e9" strokeWidth={2} fill="url(#revOnline)" />
@@ -1067,9 +1071,9 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
 
       <div className="grid gap-6 xl:grid-cols-[1.3fr_1fr]">
         <GlassCard className="p-5 sm:p-6">
-          <h3 className="mb-4 text-base font-semibold text-slate-800">Local Sales Breakdown</h3>
+          <h3 className="mb-4 text-base font-semibold text-slate-800">{t('revenue.local_breakdown')}</h3>
           <p className="mb-4 text-sm text-slate-500">
-            Only confirmed local cash and terminal amounts are charted here.
+            {t('revenue.local_breakdown_desc')}
           </p>
           <div className="-mx-2 overflow-x-auto pb-2 sm:mx-0 sm:overflow-visible sm:pb-0">
             <div className="h-[16rem] min-w-[320px] w-full sm:h-72">
@@ -1077,7 +1081,7 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
                 <BarChart data={dailyRevenue}>
                   <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#e2e8f0" />
                   <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} tickFormatter={(value) => `$${value}`} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} tickFormatter={(value) => formatCurrency(Math.round(Number(value) * 100))} />
                   <Tooltip
                     contentStyle={{
                       background: 'rgba(255,255,255,0.94)',
@@ -1086,7 +1090,7 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
                       borderRadius: '12px',
                       boxShadow: '0 8px 32px rgba(15,23,42,0.08)',
                     }}
-                    formatter={(value, name) => [`$${Number(value ?? 0).toFixed(2)}`, name === 'cash' ? 'Cash / Coin' : 'Terminal']}
+                    formatter={(value, name) => [formatCurrency(Math.round(Number(value ?? 0) * 100)), name === 'cash' ? t('revenue.cash_coin') : t('revenue.terminal')]}
                   />
                   <Bar dataKey="cash" stackId="local" fill="#14b8a6" radius={[6, 6, 0, 0]} />
                   <Bar dataKey="terminal" stackId="local" fill="#22c55e" radius={[6, 6, 0, 0]} />
@@ -1097,16 +1101,16 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
         </GlassCard>
 
         <GlassCard className="p-5 sm:p-6">
-          <h3 className="mb-4 text-base font-semibold text-slate-800">Sales Signals</h3>
+          <h3 className="mb-4 text-base font-semibold text-slate-800">{t('revenue.sales_signals')}</h3>
           <div className="space-y-3">
             <div className="rounded-xl bg-white/30 p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-400">Payment attempts</p>
+              <p className="text-xs uppercase tracking-wide text-slate-400">{t('revenue.payment_attempts')}</p>
               <p className="mt-1 text-sm font-semibold text-slate-800">
                 {formatNumber(parkData.summary.payment_attempt_count)}
               </p>
             </div>
             <div className="rounded-xl bg-white/30 p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-400">Success rate</p>
+              <p className="text-xs uppercase tracking-wide text-slate-400">{t('revenue.success_rate')}</p>
               <p className="mt-1 text-sm font-semibold text-slate-800">
                 {parkData.summary.success_rate !== null
                   ? formatPercent(parkData.summary.success_rate)
@@ -1114,7 +1118,7 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
               </p>
             </div>
             <div className="rounded-xl bg-white/30 p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-400">Cancel rate</p>
+              <p className="text-xs uppercase tracking-wide text-slate-400">{t('revenue.cancel_rate')}</p>
               <p className="mt-1 text-sm font-semibold text-slate-800">
                 {parkData.summary.cancel_rate !== null
                   ? formatPercent(parkData.summary.cancel_rate)
@@ -1122,25 +1126,25 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
               </p>
             </div>
             <div className="rounded-xl bg-white/30 p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-400">Cash / Coin transactions</p>
+              <p className="text-xs uppercase tracking-wide text-slate-400">{t('revenue.cash_transactions')}</p>
               <p className="mt-1 text-sm font-semibold text-slate-800">
                 {formatNumber(parkData.summary.cash_transaction_count)}
               </p>
             </div>
             <div className="rounded-xl bg-white/30 p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-400">Terminal transactions</p>
+              <p className="text-xs uppercase tracking-wide text-slate-400">{t('revenue.terminal_transactions')}</p>
               <p className="mt-1 text-sm font-semibold text-slate-800">
                 {formatNumber(parkData.summary.terminal_transaction_count)}
               </p>
             </div>
             <div className="rounded-xl bg-white/30 p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-400">Unconfirmed local sales</p>
+              <p className="text-xs uppercase tracking-wide text-slate-400">{t('revenue.unconfirmed_sales')}</p>
               <p className="mt-1 text-sm font-semibold text-slate-800">
                 {formatNumber(parkData.summary.local_unconfirmed_transaction_count)}
               </p>
             </div>
             <div className="rounded-xl bg-white/30 p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-400">Unknown local amounts</p>
+              <p className="text-xs uppercase tracking-wide text-slate-400">{t('revenue.unknown_amounts')}</p>
               <p className="mt-1 text-sm font-semibold text-slate-800">
                 {formatNumber(parkData.summary.local_unknown_amount_transaction_count)}
               </p>

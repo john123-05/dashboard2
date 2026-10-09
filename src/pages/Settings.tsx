@@ -74,16 +74,6 @@ const DEFAULT_OPERATOR_NOTIFICATION_SETTINGS: OperatorNotificationSettings = {
 };
 
 const WEEKDAY_ORDER: WeekdayKey[] = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
-const WEEKDAY_LABELS: Record<WeekdayKey, string> = {
-  mon: 'Montag',
-  tue: 'Dienstag',
-  wed: 'Mittwoch',
-  thu: 'Donnerstag',
-  fri: 'Freitag',
-  sat: 'Samstag',
-  sun: 'Sonntag',
-};
-
 function createEmptyPause(): SchedulePause {
   return { start: '12:00', end: '13:00' };
 }
@@ -479,7 +469,7 @@ export default function Settings() {
 
     const nextPriceCents = parseEuroInputToCents(photoPriceInput);
     if (nextPriceCents === null) {
-      setPriceMessage('Bitte einen gültigen Bildpreis eingeben, z. B. 4,50');
+    setPriceMessage(t('settings.kiosk_price.invalid'));
       return;
     }
 
@@ -676,7 +666,7 @@ export default function Settings() {
     await loadData();
     refreshKioskState();
     setScheduleSaving(false);
-    setScheduleMessage('Öffnungszeiten gespeichert. Umsatzansicht und Benachrichtigungen nutzen jetzt diese Zeiten.');
+    setScheduleMessage(t('settings.schedule.saved'));
   }
 
   const currentRole = memberships.find((m) => m.organization_id === currentOrg?.id)?.role || 'unknown';
@@ -816,7 +806,7 @@ export default function Settings() {
                                   : 'bg-slate-50 text-slate-500'
                             }`}
                           >
-                            {attr.status}
+                            {t(`settings.attraction_status.${attr.status}`)}
                           </span>
                         </div>
                       ))}
@@ -941,7 +931,7 @@ export default function Settings() {
                 <div className="grid gap-3 md:grid-cols-2">
                   <label className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-4 py-3">
                     <div>
-                      <p className="text-sm font-semibold text-slate-800">Dieses Gerat</p>
+                      <p className="text-sm font-semibold text-slate-800">{t('settings.notifications.active_device')}</p>
                       <p className="mt-1 text-xs text-slate-500">
                         {pushSubscribed
                           ? t('settings.notifications.device_on')
@@ -960,7 +950,7 @@ export default function Settings() {
                   <label className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-4 py-3">
                     <div>
                       <p className="text-sm font-semibold text-slate-800">{t('settings.notifications.master')}</p>
-                      <p className="mt-1 text-xs text-slate-500">Parkweite Alerts aktivieren</p>
+                      <p className="mt-1 text-xs text-slate-500">{t('settings.notifications.master_desc')}</p>
                     </div>
                     <input
                       type="checkbox"
@@ -1101,14 +1091,14 @@ export default function Settings() {
         <GlassCard className="p-6 xl:col-span-2">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <h3 className="text-base font-semibold text-slate-800">Öffnungszeiten & Saison</h3>
+              <h3 className="text-base font-semibold text-slate-800">{t('settings.schedule.title')}</h3>
               <p className="mt-1 text-sm text-slate-500">
-                Kompakt wie im Business-Profil: Wochenzeiten oben, Sonderzeiten nur bei Bedarf darunter.
+                {t('settings.schedule.description')}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <div className="rounded-xl bg-white/30 px-4 py-3 text-right">
-                <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Zeitzone</p>
+                <p className="text-xs uppercase tracking-[0.24em] text-slate-400">{t('settings.schedule.timezone')}</p>
                 <p className="mt-1 text-sm font-semibold text-slate-800">{selectedPark?.timezone || 'Europe/Vienna'}</p>
               </div>
               <button
@@ -1118,7 +1108,7 @@ export default function Settings() {
                 className="glass-button-primary"
               >
                 {scheduleSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Clock3 className="h-4 w-4" />}
-                Öffnungszeiten speichern
+                {t('settings.schedule.save')}
               </button>
             </div>
           </div>
@@ -1127,7 +1117,7 @@ export default function Settings() {
             <div className="rounded-2xl bg-white/30 p-4">
               <div className="mb-4 flex items-center gap-2">
                 <Clock3 className="h-4 w-4 text-brand-600" />
-                <p className="text-sm font-semibold text-slate-800">Wochenzeiten</p>
+                <p className="text-sm font-semibold text-slate-800">{t('settings.schedule.weekly')}</p>
               </div>
               <div className="space-y-2">
                 {WEEKDAY_ORDER.map((dayKey) => {
@@ -1135,7 +1125,7 @@ export default function Settings() {
                   return (
                     <div key={dayKey} className="rounded-xl bg-slate-50 p-3">
                       <div className="grid gap-3 xl:grid-cols-[120px_136px_132px_132px_auto] xl:items-center">
-                        <p className="text-sm font-semibold text-slate-800">{WEEKDAY_LABELS[dayKey]}</p>
+                        <p className="text-sm font-semibold text-slate-800">{t(`settings.weekday.${dayKey}`)}</p>
                         <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
                           <input
                             type="checkbox"
@@ -1143,7 +1133,7 @@ export default function Settings() {
                             onChange={(e) => updateWeekday(dayKey, 'enabled', !e.target.checked)}
                             className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
                           />
-                          Geschlossen
+                          {t('settings.schedule.closed')}
                         </label>
                         <input
                           type="time"
@@ -1166,7 +1156,7 @@ export default function Settings() {
                           className="glass-button-secondary justify-self-start px-3 py-2 text-xs"
                         >
                           <Plus className="h-3.5 w-3.5" />
-                          Pause
+                          {t('settings.schedule.pause')}
                         </button>
                       </div>
 
@@ -1192,7 +1182,7 @@ export default function Settings() {
                                 className="glass-button-secondary justify-self-start px-3 py-2 text-xs"
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
-                                Entfernen
+                                {t('settings.schedule.remove')}
                               </button>
                             </div>
                           ))}
@@ -1209,11 +1199,11 @@ export default function Settings() {
                 <div className="rounded-2xl bg-white/30 p-4">
                   <div className="mb-3 flex items-center gap-2">
                     <CalendarDays className="h-4 w-4 text-brand-600" />
-                    <p className="text-sm font-semibold text-slate-800">Saison</p>
+                    <p className="text-sm font-semibold text-slate-800">{t('settings.schedule.season')}</p>
                   </div>
                   <div className="space-y-3">
                     <div>
-                      <label className="mb-1.5 block text-xs font-medium uppercase tracking-[0.18em] text-slate-400">Saisonstart</label>
+                      <label className="mb-1.5 block text-xs font-medium uppercase tracking-[0.18em] text-slate-400">{t('settings.schedule.season_start')}</label>
                       <input
                         type="date"
                         value={scheduleConfig.season_start ?? ''}
@@ -1222,7 +1212,7 @@ export default function Settings() {
                       />
                     </div>
                     <div>
-                      <label className="mb-1.5 block text-xs font-medium uppercase tracking-[0.18em] text-slate-400">Saisonende</label>
+                      <label className="mb-1.5 block text-xs font-medium uppercase tracking-[0.18em] text-slate-400">{t('settings.schedule.season_end')}</label>
                       <input
                         type="date"
                         value={scheduleConfig.season_end ?? ''}
@@ -1236,16 +1226,16 @@ export default function Settings() {
                 {(['holiday', 'vacation', 'special_hours'] as const).map((type) => {
               const title =
                 type === 'holiday'
-                  ? 'Feiertage'
+                  ? t('settings.schedule.holidays')
                   : type === 'vacation'
-                    ? 'Urlaubszeiten / Schließtage'
-                    : 'Sonderöffnungen';
+                    ? t('settings.schedule.vacations')
+                    : t('settings.schedule.special_hours');
               const buttonLabel =
                 type === 'holiday'
-                  ? 'Feiertag hinzufügen'
+                  ? t('settings.schedule.add_holiday')
                   : type === 'vacation'
-                    ? 'Zeit hinzufügen'
-                    : 'Sonderöffnung hinzufügen';
+                    ? t('settings.schedule.add_vacation')
+                    : t('settings.schedule.add_special_hours');
               const items = scheduleConfig.exceptions.filter((entry) => entry.type === type);
 
               return (
@@ -1254,10 +1244,10 @@ export default function Settings() {
                     <div>
                       <p className="text-sm font-semibold text-slate-800">{title}</p>
                       <p className="text-xs text-slate-500">
-                        {items.length > 0 ? `${items.length} Einträge` : 'Noch nichts eingetragen'}
+                        {items.length > 0 ? t('settings.schedule.entries', { count: items.length }) : t('settings.schedule.no_entries')}
                       </p>
                     </div>
-                    <span className="text-xs font-medium uppercase tracking-[0.2em] text-slate-400">Bearbeiten</span>
+                    <span className="text-xs font-medium uppercase tracking-[0.2em] text-slate-400">{t('settings.schedule.edit')}</span>
                   </summary>
 
                   <div className="mt-4 space-y-3">
@@ -1277,7 +1267,7 @@ export default function Settings() {
                             type="text"
                             value={entry.label}
                             onChange={(e) => updateScheduleException(entry.id, { label: e.target.value })}
-                            placeholder="Bezeichnung"
+                            placeholder={t('settings.schedule.label')}
                             className="glass-input"
                           />
                           <label className="flex items-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-medium text-slate-700">
@@ -1293,7 +1283,7 @@ export default function Settings() {
                               }
                               className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
                             />
-                            Geschlossen
+                            {t('settings.schedule.closed')}
                           </label>
                         </div>
 
@@ -1333,7 +1323,7 @@ export default function Settings() {
                                 className="glass-button-secondary justify-self-start px-3 py-2 text-xs"
                               >
                                 <Plus className="h-4 w-4" />
-                                Pause
+                                {t('settings.schedule.pause')}
                               </button>
                             </div>
 
@@ -1359,7 +1349,7 @@ export default function Settings() {
                                       className="glass-button-secondary justify-self-start px-3 py-2 text-xs"
                                     >
                                       <Trash2 className="h-4 w-4" />
-                                      Entfernen
+                                      {t('settings.schedule.remove')}
                                     </button>
                                   </div>
                                 ))}
@@ -1375,7 +1365,7 @@ export default function Settings() {
                             className="glass-button-secondary px-3 py-2 text-xs"
                           >
                             <Trash2 className="h-4 w-4" />
-                            Eintrag löschen
+                            {t('settings.schedule.delete_entry')}
                           </button>
                         </div>
                       </div>
@@ -1389,7 +1379,7 @@ export default function Settings() {
           </div>
 
           <div className="mt-4 text-sm text-slate-500">
-            Die Wochenzeiten werden automatisch als Basis für Umsatzdiagramme und Push-Alerts übernommen.
+            {t('settings.schedule.revenue_hint')}
           </div>
 
           {scheduleMessage && <p className="mt-3 text-sm text-slate-600">{scheduleMessage}</p>}

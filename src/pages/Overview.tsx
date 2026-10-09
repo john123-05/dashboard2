@@ -65,12 +65,12 @@ import {
 import { fetchRecentPhotos, type BrowsablePhoto } from '../lib/photoBrowser';
 import { useAuth } from '../contexts/AuthContext';
 import { usePark } from '../contexts/ParkContext';
-import { useI18n } from '../lib/i18n';
+import { useI18n, useLocaleTag } from '../lib/i18n';
 import {
-  formatCurrency,
-  formatNumber,
-  formatPercent,
-  formatRelative,
+  formatCurrency as baseFormatCurrency,
+  formatNumber as baseFormatNumber,
+  formatPercent as baseFormatPercent,
+  formatRelative as baseFormatRelative,
   severityColor,
   statusColor,
 } from '../lib/utils';
@@ -134,6 +134,11 @@ export default function Overview() {
     kioskCheckLoading,
   } = usePark();
   const { t } = useI18n();
+  const locale = useLocaleTag();
+  const formatCurrency = (cents: number, currency = 'usd') => baseFormatCurrency(cents, currency, locale);
+  const formatNumber = (value: number) => baseFormatNumber(value, locale);
+  const formatPercent = (value: number) => baseFormatPercent(value, locale);
+  const formatRelative = (date: string) => baseFormatRelative(date, locale);
   const [kioskDays, setKioskDays] = useState<AggregatedDay[]>([]);
   const [leads, setLeads] = useState<Record<string, unknown>[]>([]);
   const [recentPhotos, setRecentPhotos] = useState<BrowsablePhoto[]>([]);
@@ -739,11 +744,11 @@ export default function Overview() {
       : [
           {
             id: 'last-activity',
-            label: 'Last activity',
+            label: t('overview.last_activity'),
             value: parkData.summary.last_activity_at
               ? formatRelative(parkData.summary.last_activity_at)
               : '-',
-            helper: 'Open system health',
+            helper: t('overview.open_health'),
             route: '/health',
             icon: Activity,
             iconColor: 'text-emerald-600',
@@ -751,9 +756,9 @@ export default function Overview() {
           },
           {
             id: 'data-files',
-            label: 'Data files scanned',
+            label: t('overview.files_scanned'),
             value: formatNumber(parkData.sources.files_scanned || 0),
-            helper: 'Open operations',
+            helper: t('overview.open_operations'),
             route: '/operations',
             icon: Receipt,
             iconColor: 'text-sky-600',
@@ -761,9 +766,9 @@ export default function Overview() {
           },
           {
             id: 'recognized-ops',
-            label: 'Recognized ops files',
+            label: t('overview.recognized_files'),
             value: formatNumber(parkData.sources.recognized_files || 0),
-            helper: 'Open operations',
+            helper: t('overview.open_operations'),
             route: '/operations',
             icon: FileWarning,
             iconColor: 'text-amber-600',
@@ -774,9 +779,9 @@ export default function Overview() {
       ? [
           {
             id: 'users',
-            label: 'Users',
+            label: t('overview.users'),
             value: formatNumber(totalUsers),
-            helper: 'Open users',
+            helper: t('overview.open_users'),
             route: '/users',
             icon: Users,
             iconColor: 'text-cyan-600',
@@ -788,9 +793,9 @@ export default function Overview() {
       ? [
           {
             id: 'photos',
-            label: 'Photos',
+            label: t('nav.photos'),
             value: formatNumber(totalPhotos),
-            helper: 'Open photos',
+            helper: t('overview.open_photos'),
             route: '/photos',
             icon: Camera,
             iconColor: 'text-violet-600',
@@ -802,9 +807,9 @@ export default function Overview() {
       ? [
           {
             id: 'attractions',
-            label: 'Active attractions',
+            label: t('overview.active_attractions'),
             value: formatNumber(activeAttractions),
-            helper: 'Open photos',
+            helper: t('overview.open_photos'),
             route: '/photos',
             icon: Activity,
             iconColor: 'text-rose-600',
@@ -816,12 +821,12 @@ export default function Overview() {
       ? [
           {
             id: 'conversion-today',
-            label: 'Conversion heute',
+            label: t('overview.conversion_today'),
             value:
               kioskKpis.today.expected && kioskKpis.today.expected > 0
                 ? formatPercent((kioskKpis.today.sold / kioskKpis.today.expected) * 100)
                 : '-',
-            helper: 'Verkauft je Fahrt',
+            helper: t('overview.sold_per_ride'),
             route: '/revenue',
             icon: Percent,
             iconColor: 'text-fuchsia-600',
@@ -829,7 +834,7 @@ export default function Overview() {
           },
           {
             id: 'rides-today',
-            label: 'Fahrten heute',
+            label: t('overview.rides_today'),
             value: kioskKpis.today.expected !== null ? formatNumber(kioskKpis.today.expected) : '-',
             helper: '',
             route: '/revenue',
@@ -877,24 +882,24 @@ export default function Overview() {
             )}
           </div>
           {!isKioskPark && parkData.summary.last_data_at && (
-            <p className="mt-1 text-sm text-slate-500">Last data {formatRelative(parkData.summary.last_data_at)}</p>
+            <p className="mt-1 text-sm text-slate-500">{t('overview.last_data', { time: formatRelative(parkData.summary.last_data_at) })}</p>
           )}
         </div>
         {!isKioskPark && (
         <div className="flex flex-wrap gap-2">
           {parkData.features.stripe && (
             <span className="rounded-full bg-sky-50 px-3 py-1 text-xs font-medium text-sky-700">
-              Stripe enabled
+              {t('overview.stripe_enabled')}
             </span>
           )}
           {parkData.features.local_sales && (
             <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
-              Local sales active
+              {t('overview.local_active')}
             </span>
           )}
           {parkData.features.printer && (
             <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
-              Printer telemetry
+              {t('overview.printer_telemetry')}
             </span>
           )}
         </div>
@@ -903,7 +908,7 @@ export default function Overview() {
 
       {issues.length > 0 && (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-          <p className="text-sm font-medium text-amber-900">Some data sources are currently unavailable.</p>
+          <p className="text-sm font-medium text-amber-900">{t('overview.sources_unavailable')}</p>
           <p className="mt-1 text-sm text-amber-700">{issues.join(' ')}</p>
         </div>
       )}
@@ -911,21 +916,21 @@ export default function Overview() {
       {isKioskPark && kioskKpis && (
         <div className="grid grid-cols-2 gap-4 sm:gap-6 xl:grid-cols-6">
           <KPICard
-            title="Umsatz heute"
+            title={t('overview.revenue_today')}
             value={formatCurrency(kioskKpis.today.revenueCents, 'eur')}
             icon={CreditCard}
             iconColor="text-sky-600"
             iconBg="bg-sky-50"
           />
           <KPICard
-            title="Fotos verkauft heute"
+            title={t('overview.photos_sold_today')}
             value={formatNumber(kioskKpis.today.sold)}
             icon={Ticket}
             iconColor="text-amber-600"
             iconBg="bg-amber-50"
           />
           <KPICard
-            title="Fotopapier"
+            title={t('config.photo_paper')}
             value={
               parkData.summary.printer_paper_remaining !== null
                 ? formatNumber(parkData.summary.printer_paper_remaining)
@@ -936,21 +941,21 @@ export default function Overview() {
             iconBg="bg-cyan-50"
           />
           <KPICard
-            title="Fotos verkauft (Monat)"
+            title={t('overview.photos_sold_month')}
             value={formatNumber(kioskKpis.month.sold)}
             icon={Receipt}
             iconColor="text-slate-700"
             iconBg="bg-slate-100"
           />
           <KPICard
-            title="Umsatz (Monat)"
+            title={t('overview.revenue_month')}
             value={formatCurrency(kioskKpis.month.revenueCents, 'eur')}
             icon={Wallet}
             iconColor="text-emerald-600"
             iconBg="bg-emerald-50"
           />
           <KPICard
-            title="Fotos verkauft (gesamt)"
+            title={t('overview.photos_sold_total')}
             value={formatNumber(kioskDays.reduce((sum, day) => sum + day.soldCount, 0))}
             icon={Camera}
             iconColor="text-violet-600"
@@ -963,12 +968,12 @@ export default function Overview() {
         <div className="grid gap-4 lg:grid-cols-3">
           <GlassCard className="p-5 sm:p-6">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3 className="text-base font-semibold text-slate-800">Stoßzeiten</h3>
+              <h3 className="text-base font-semibold text-slate-800">{t('overview.peak_hours')}</h3>
               <div className="inline-flex rounded-xl bg-white/50 p-1">
                 {([
-                  { key: 'today', label: 'Heute' },
-                  { key: 'yesterday', label: 'Gestern' },
-                  { key: 'custom', label: 'Anderer Tag' },
+                  { key: 'today', label: t('overview.today') },
+                  { key: 'yesterday', label: t('overview.yesterday') },
+                  { key: 'custom', label: t('overview.other_day') },
                 ] as const).map((opt) => (
                   <button
                     key={opt.key}
@@ -994,7 +999,7 @@ export default function Overview() {
             )}
             {peakHour && peakHour.sold > 0 && (
               <p className="mt-2 text-xs text-slate-500">
-                Am meisten verkauft: <span className="font-medium text-slate-700">{peakHour.label}</span> ({formatNumber(peakHour.sold)} Fotos)
+                {t('overview.peak_sales', { hour: peakHour.label, count: formatNumber(peakHour.sold) })}
               </p>
             )}
             <div className="mt-3 h-48">
@@ -1004,25 +1009,25 @@ export default function Overview() {
                   <YAxis tick={{ fontSize: 10 }} allowDecimals={false} width={28} />
                   <Tooltip />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
-                  <Bar dataKey="rides" name="Fahrten" fill="#3b82f6" radius={[3, 3, 0, 0]} />
-                  <Bar dataKey="sold" name="Bildverkäufe" fill="#f97316" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="rides" name={t('overview.rides')} fill="#3b82f6" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="sold" name={t('overview.photo_sales')} fill="#f97316" radius={[3, 3, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </GlassCard>
 
           <GlassCard className="p-5 sm:p-6">
-            <h3 className="text-base font-semibold text-slate-800">Erfassung von Nutzerdaten</h3>
+            <h3 className="text-base font-semibold text-slate-800">{t('overview.visitor_data')}</h3>
             {unlockMode && (
               <div className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
                 <span className="h-2 w-2 rounded-full bg-emerald-500" aria-hidden="true" />
-                Aktiv: {unlockMode === 'email' ? 'E-Mail / Telefon' : unlockMode === 'survey' ? 'Umfrage' : 'Social Media'}
+                {t('overview.active_mode', { mode: unlockMode === 'email' ? t('overview.email_phone') : unlockMode === 'survey' ? t('crm.tab_survey') : t('crm.tab_social') })}
               </div>
             )}
 
             {unlockMode === 'email' && (
               <>
-                <p className="mt-4 text-sm text-slate-500">Kontakte heute</p>
+                <p className="mt-4 text-sm text-slate-500">{t('overview.contacts_today')}</p>
                 <p className="text-2xl font-bold text-slate-800">{formatNumber(emailLeadsToday)}</p>
                 {userDataStats.total > 0 && (
                   <div className="relative mx-auto mt-3 h-32 w-32">
@@ -1030,8 +1035,8 @@ export default function Overview() {
                       <PieChart>
                         <Pie
                           data={[
-                            { name: 'Einwilligung erteilt', value: userDataStats.optedIn },
-                            { name: 'Keine Einwilligung', value: userDataStats.notOptedIn },
+                            { name: t('overview.consent_given'), value: userDataStats.optedIn },
+                            { name: t('overview.no_consent'), value: userDataStats.notOptedIn },
                           ]}
                           dataKey="value"
                           innerRadius={38}
@@ -1048,7 +1053,7 @@ export default function Overview() {
                       <span className="text-sm font-bold text-slate-800">
                         {Math.round((userDataStats.optedIn / userDataStats.total) * 100)}%
                       </span>
-                      <span className="text-[10px] text-slate-400">Einwilligung</span>
+                      <span className="text-[10px] text-slate-400">{t('overview.consent')}</span>
                     </div>
                   </div>
                 )}
@@ -1058,11 +1063,11 @@ export default function Overview() {
             {unlockMode === 'survey' && (
               <dl className="mt-4 space-y-3 text-sm">
                 <div className="flex items-center justify-between">
-                  <dt className="text-slate-500">Antworten heute</dt>
+                  <dt className="text-slate-500">{t('overview.answers_today')}</dt>
                   <dd className="text-lg font-bold text-slate-800">{formatNumber(surveyToday?.total ?? 0)}</dd>
                 </div>
                 <div className="flex items-center justify-between">
-                  <dt className="text-slate-500">Ø Bewertung</dt>
+                  <dt className="text-slate-500">{t('overview.avg_rating')}</dt>
                   <dd className="font-semibold text-slate-700">
                     {surveyToday?.average_score != null ? surveyToday.average_score.toFixed(1) : '–'}
                   </dd>
@@ -1077,15 +1082,15 @@ export default function Overview() {
             {unlockMode === 'social' && (
               <dl className="mt-4 space-y-3 text-sm">
                 <div className="flex items-center justify-between">
-                  <dt className="text-slate-500">Freischaltungen heute</dt>
+                  <dt className="text-slate-500">{t('overview.unlocks_today')}</dt>
                   <dd className="text-lg font-bold text-slate-800">{formatNumber(socialToday?.unlocked ?? 0)}</dd>
                 </div>
                 <div className="flex items-center justify-between">
-                  <dt className="text-slate-500">Geteilt</dt>
+                  <dt className="text-slate-500">{t('overview.shared')}</dt>
                   <dd className="font-semibold text-slate-700">{formatNumber(socialToday?.posted ?? 0)}</dd>
                 </div>
                 <div className="flex items-center justify-between">
-                  <dt className="text-slate-500">Gewinnspiel-Teilnahmen</dt>
+                  <dt className="text-slate-500">{t('overview.giveaway_entries')}</dt>
                   <dd className="font-semibold text-slate-700">{formatNumber(socialToday?.giveaway ?? 0)}</dd>
                 </div>
               </dl>
@@ -1093,11 +1098,11 @@ export default function Overview() {
           </GlassCard>
 
           <GlassCard className="overflow-hidden p-5 sm:p-6">
-            <h3 className="text-base font-semibold text-slate-800">Benachrichtigungen und Aktivitäten</h3>
+            <h3 className="text-base font-semibold text-slate-800">{t('overview.notifications_activity')}</h3>
             <div className="mt-3 max-h-[360px] space-y-3 overflow-y-auto pr-1">
               {visibleActivityItems.length === 0 ? (
                 <p className="text-sm text-slate-500">
-                  {activityItems.length === 0 ? 'Keine Benachrichtigungen oder Aktivitäten gefunden.' : 'Alle Benachrichtigungen wurden gelöscht.'}
+                  {activityItems.length === 0 ? t('overview.no_activity_items') : t('overview.all_dismissed')}
                 </p>
               ) : (
                 visibleActivityItems.map((item) => (
@@ -1111,7 +1116,7 @@ export default function Overview() {
                             </span>
                           ) : (
                             <span className="status-badge bg-slate-50 text-slate-600 ring-slate-200">
-                              {item.source === 'support' ? 'Support' : item.source === 'stripe' ? 'Stripe' : item.source === 'insight' ? 'Einblick' : 'System'}
+                              {item.source === 'support' ? t('nav.support') : item.source === 'stripe' ? 'Stripe' : item.source === 'insight' ? t('overview.insight') : t('overview.system')}
                             </span>
                           )}
                           {item.status && (
@@ -1127,8 +1132,8 @@ export default function Overview() {
                           type="button"
                           onClick={() => dismissActivityItem(item.id)}
                           className="rounded-lg p-1 text-slate-300 transition-colors hover:bg-white/60 hover:text-slate-500"
-                          aria-label={`Entfernen ${item.title}`}
-                          title="Entfernen"
+                          aria-label={t('overview.dismiss_item', { title: item.title })}
+                          title={t('overview.dismiss')}
                         >
                           <X className="h-4 w-4" />
                         </button>
@@ -1146,7 +1151,7 @@ export default function Overview() {
       <div className="grid grid-cols-2 gap-4 sm:gap-6 xl:grid-cols-6">
         {parkData.features.stripe && (
           <KPICard
-            title="Online Revenue"
+            title={t('overview.online_revenue')}
             value={formatCurrency(onlineRevenueCents)}
             icon={CreditCard}
             iconColor="text-sky-600"
@@ -1155,7 +1160,7 @@ export default function Overview() {
         )}
         {parkData.features.local_sales && (
           <KPICard
-            title="Local Revenue"
+            title={t('overview.local_revenue')}
             value={localRevenueDisplay}
             subtitle={localRevenueFootnote}
             icon={Wallet}
@@ -1164,21 +1169,21 @@ export default function Overview() {
           />
         )}
         <KPICard
-          title="Transactions"
+          title={t('overview.transactions')}
           value={formatNumber(totalTransactions)}
           icon={Receipt}
           iconColor="text-slate-700"
           iconBg="bg-slate-100"
         />
         <KPICard
-          title="Errors"
+          title={t('health.errors')}
           value={formatNumber(parkData.summary.error_count)}
           icon={FileWarning}
           iconColor="text-rose-600"
           iconBg="bg-rose-50"
         />
         <KPICard
-          title="Warnings"
+          title={t('health.warnings')}
           value={formatNumber(parkData.summary.warning_count)}
           icon={AlertTriangle}
           iconColor="text-amber-600"
@@ -1187,8 +1192,8 @@ export default function Overview() {
         <KPICard
           title={
             parkData.features.printer && parkData.summary.printer_paper_remaining !== null
-              ? 'Paper Remaining'
-              : 'Print Count'
+              ? t('overview.paper_remaining')
+              : t('overview.print_count')
           }
           value={
             parkData.features.printer && parkData.summary.printer_paper_remaining !== null
@@ -1230,8 +1235,8 @@ export default function Overview() {
         <GlassCard className="p-5 sm:p-6">
           <div className="mb-4 flex items-center justify-between">
             <div className="min-w-0">
-              <h3 className="text-base font-semibold text-slate-800">Umsatz</h3>
-              <p className="text-sm text-slate-500">Tägliche Einnahmen am Automaten</p>
+              <h3 className="text-base font-semibold text-slate-800">{t('nav.revenue')}</h3>
+              <p className="text-sm text-slate-500">{t('overview.kiosk_daily_revenue')}</p>
             </div>
           </div>
           <div className="-mx-2 overflow-x-auto pb-2 sm:mx-0 sm:overflow-visible sm:pb-0">
@@ -1377,16 +1382,16 @@ export default function Overview() {
         <GlassCard className="overflow-hidden p-5 sm:p-6">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <h3 className="text-base font-semibold text-slate-800">Benachrichtigungen und Aktivitäten</h3>
+              <h3 className="text-base font-semibold text-slate-800">{t('overview.notifications_activity')}</h3>
               <p className="mt-1 text-sm text-slate-500">
-                Live warnings, support updates and recent operational signals
+                {t('overview.activity_desc')}
               </p>
             </div>
           </div>
           <div className="max-h-[360px] space-y-3 overflow-y-auto pr-1">
             {visibleActivityItems.length === 0 ? (
               <p className="text-sm text-slate-500">
-                {activityItems.length === 0 ? 'Keine Benachrichtigungen oder Aktivitäten gefunden.' : 'Alle Benachrichtigungen wurden gelöscht.'}
+                {activityItems.length === 0 ? t('overview.no_activity_items') : t('overview.all_dismissed')}
               </p>
             ) : (
               visibleActivityItems.map((item) => (
@@ -1400,7 +1405,7 @@ export default function Overview() {
                           </span>
                         ) : (
                           <span className="status-badge bg-slate-50 text-slate-600 ring-slate-200">
-                            {item.source === 'support' ? 'Support' : item.source === 'stripe' ? 'Stripe' : item.source === 'insight' ? 'Einblick' : 'System'}
+                            {item.source === 'support' ? t('nav.support') : item.source === 'stripe' ? 'Stripe' : item.source === 'insight' ? t('overview.insight') : t('overview.system')}
                           </span>
                         )}
                         {item.status && (
@@ -1416,8 +1421,8 @@ export default function Overview() {
                         type="button"
                         onClick={() => dismissActivityItem(item.id)}
                         className="rounded-lg p-1 text-slate-300 transition-colors hover:bg-white/60 hover:text-slate-500"
-                        aria-label={`Entfernen ${item.title}`}
-                        title="Entfernen"
+                        aria-label={t('overview.dismiss_item', { title: item.title })}
+                        title={t('overview.dismiss')}
                       >
                         <X className="h-4 w-4" />
                       </button>
@@ -1432,10 +1437,10 @@ export default function Overview() {
       )}
 
       <GlassCard className="p-6">
-        <h3 className="mb-4 text-base font-semibold text-slate-800">Recent Transactions</h3>
+        <h3 className="mb-4 text-base font-semibold text-slate-800">{t('overview.recent_transactions')}</h3>
         <div className="space-y-3">
           {recentTransactions.length === 0 ? (
-            <p className="text-sm text-slate-500">No recent transactions available.</p>
+            <p className="text-sm text-slate-500">{t('overview.no_transactions')}</p>
           ) : (
             (showAllTransactions ? recentTransactions : recentTransactions.slice(0, 3)).map((item) => (
               <div key={item.id} className="rounded-xl bg-white/30 p-4">
@@ -1451,7 +1456,7 @@ export default function Overview() {
                               : 'bg-emerald-50 text-emerald-700 ring-emerald-200'
                         }`}
                       >
-                        {item.source === 'stripe' ? 'Online' : item.source === 'kiosk' ? 'Automat' : 'Local'}
+                        {item.source === 'stripe' ? t('overview.online') : item.source === 'kiosk' ? t('config.kiosk') : t('overview.local')}
                       </span>
                       {item.status && (
                         <span className={`status-badge ${statusColor(item.status)}`}>{item.status}</span>
@@ -1476,11 +1481,11 @@ export default function Overview() {
           >
             {showAllTransactions ? (
               <>
-                Show less <ChevronUp className="h-4 w-4" />
+                {t('overview.show_less')} <ChevronUp className="h-4 w-4" />
               </>
             ) : (
               <>
-                Show all {recentTransactions.length} <ChevronDown className="h-4 w-4" />
+                {t('overview.show_all', { count: recentTransactions.length })} <ChevronDown className="h-4 w-4" />
               </>
             )}
           </button>

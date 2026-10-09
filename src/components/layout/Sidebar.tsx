@@ -35,7 +35,6 @@ type NavItem = {
   to: string;
   icon: typeof LayoutDashboard;
   labelKey: string;
-  label?: string;
   comingSoon?: boolean;
   kioskUnlocks?: boolean;
   guestActivityUnlocks?: boolean;
@@ -50,16 +49,16 @@ const navItems: NavItem[] = [
   { to: '/', icon: LayoutDashboard, labelKey: 'nav.overview', comingSoon: true, kioskUnlocks: true },
   { to: '/revenue', icon: DollarSign, labelKey: 'nav.revenue', comingSoon: true, kioskUnlocks: true },
   { to: '/purchases', icon: ShoppingCart, labelKey: 'nav.purchases', comingSoon: true, kioskUnlocks: true },
-  { to: '/users', icon: Users, labelKey: 'nav.users', label: 'Speedmessung', comingSoon: true, guestActivityUnlocks: true },
+  { to: '/users', icon: Users, labelKey: 'nav.speed', comingSoon: true, guestActivityUnlocks: true },
   { to: '/photos', icon: Camera, labelKey: 'nav.photos', staffAllowed: true },
   { to: '/leads', icon: Mail, labelKey: 'nav.leads' },
   { to: '/personalization', icon: Wand2, labelKey: 'nav.personalization', staffAllowed: true },
   { to: '/tickets', icon: LifeBuoy, labelKey: 'nav.support', staffAllowed: true },
   { to: '/health', icon: Activity, labelKey: 'nav.system_health', staffAllowed: true },
   { to: '/kamera', icon: Camera, labelKey: 'nav.camera', staffAllowed: true },
-  { to: '/configuration', icon: Package, labelKey: 'nav.configuration', label: 'Konfiguration' },
-  { to: '/shop', icon: Store, labelKey: 'nav.shop', label: 'Online-Shop', upgrade: true },
-  { to: '/team', icon: UserCog, labelKey: 'nav.team', label: 'Mitarbeiter', ownerOnly: true },
+  { to: '/configuration', icon: Package, labelKey: 'nav.configuration' },
+  { to: '/shop', icon: Store, labelKey: 'nav.shop', upgrade: true },
+  { to: '/team', icon: UserCog, labelKey: 'nav.team', ownerOnly: true },
   { to: '/settings', icon: Settings, labelKey: 'nav.settings' },
 ];
 
@@ -193,10 +192,10 @@ export default function Sidebar({
       !(item.guestActivityUnlocks && isTarzansPark);
     const badge = showComingSoon
       ? item.guestActivityUnlocks
-        ? 'Upgrade'
+        ? t('nav.upgrade')
         : t('nav.coming_soon')
       : item.upgrade
-        ? 'Upgrade'
+        ? t('nav.upgrade')
         : null;
     const menuOpen = menuOpenFor === item.to;
     const draggable = showFull && pinned;
@@ -237,7 +236,7 @@ export default function Sidebar({
           title={
             showFull
               ? undefined
-              : `${item.label ?? t(item.labelKey)}${badge ? ` (${badge})` : ''}`
+              : `${t(item.labelKey)}${badge ? ` (${badge})` : ''}`
           }
         >
           <item.icon
@@ -247,7 +246,7 @@ export default function Sidebar({
           />
           {showFull && (
             <span className="animate-fade-in truncate">
-              {item.label ?? t(item.labelKey)}
+              {t(item.labelKey)}
               {badge && <span className="ml-1 text-xs text-slate-500">({badge})</span>}
             </span>
           )}
@@ -264,7 +263,7 @@ export default function Sidebar({
               className={`rounded-lg p-1 text-slate-400 transition-opacity hover:bg-white/[0.08] hover:text-white ${
                 menuOpen ? 'opacity-100' : 'opacity-60 group-hover/row:opacity-100'
               }`}
-              title="Optionen"
+              title={t('nav.options')}
             >
               <MoreHorizontal className="h-4 w-4" />
             </button>
@@ -281,7 +280,7 @@ export default function Sidebar({
                     className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-slate-300 hover:bg-white/[0.08]"
                   >
                     <PinOff className="h-4 w-4 text-slate-400" />
-                    Von Navigation lösen
+                    {t('nav.unpin')}
                   </button>
                 ) : (
                   <button
@@ -290,7 +289,7 @@ export default function Sidebar({
                     className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-slate-300 hover:bg-white/[0.08]"
                   >
                     <Pin className="h-4 w-4 text-slate-400" />
-                    Zur Navigation hinzufügen
+                    {t('nav.pin')}
                   </button>
                 )}
               </div>
@@ -327,7 +326,7 @@ export default function Sidebar({
         <button
           type="button"
           className="mobile-nav-close"
-          aria-label="Navigation schließen"
+          aria-label={t('nav.close')}
           onClick={onCloseMobile}
         >
           <X className="h-4 w-4" />
@@ -350,7 +349,7 @@ export default function Sidebar({
               className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-400 transition-colors hover:bg-white/[0.06] hover:text-slate-200"
             >
               <MoreHorizontal className="h-[18px] w-[18px] shrink-0 text-slate-500" />
-              <span className="flex-1 text-left">Mehr</span>
+              <span className="flex-1 text-left">{t('nav.more')}</span>
               <ChevronDown className={`h-4 w-4 shrink-0 text-slate-500 transition-transform ${moreOpen ? 'rotate-180' : ''}`} />
             </button>
             {moreOpen && (
@@ -381,7 +380,7 @@ export default function Sidebar({
           <button
             onClick={() => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))}
             className="flex items-center justify-center rounded-xl px-3 py-2 text-slate-500 transition-colors hover:bg-white/[0.06] hover:text-slate-300"
-            title={theme === 'dark' ? 'Hellmodus' : 'Dunkelmodus'}
+            title={theme === 'dark' ? t('nav.light_mode') : t('nav.dark_mode')}
           >
             {theme === 'dark' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
           </button>
@@ -389,7 +388,7 @@ export default function Sidebar({
           <button
             onClick={onToggleCollapsed}
             className="mobile-nav-hide-collapse-btn flex items-center justify-center rounded-xl px-3 py-2 text-slate-500 transition-colors hover:bg-white/[0.06] hover:text-slate-300"
-            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            title={collapsed ? t('nav.expand_sidebar') : t('nav.collapse_sidebar')}
           >
             {collapsed ? (
               <ChevronRight className="h-4 w-4" />

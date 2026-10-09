@@ -5,15 +5,16 @@ import SurveyManager from './SurveyManager';
 import SocialManager from './SocialManager';
 import TrackingManager from './TrackingManager';
 import { fetchSurveyConfig, setUnlockMode, type SurveyConfig, type UnlockMode } from '../../lib/surveyApi';
+import { useI18n } from '../../lib/i18n';
 
 export type TabKey = 'overview' | 'allContacts' | 'survey' | 'social' | 'tracking';
 
-const TABS: { key: TabKey; mode?: UnlockMode; label: string }[] = [
-  { key: 'overview', label: 'Übersicht' },
-  { key: 'allContacts', mode: 'email', label: 'Kontakte' },
-  { key: 'survey', mode: 'survey', label: 'Umfrage' },
-  { key: 'social', mode: 'social', label: 'Social Media' },
-  { key: 'tracking', label: 'Pixel installieren' },
+const TABS: { key: TabKey; mode?: UnlockMode; labelKey: string }[] = [
+  { key: 'overview', labelKey: 'nav.overview' },
+  { key: 'allContacts', mode: 'email', labelKey: 'leads.title' },
+  { key: 'survey', mode: 'survey', labelKey: 'crm.tab_survey' },
+  { key: 'social', mode: 'social', labelKey: 'crm.tab_social' },
+  { key: 'tracking', labelKey: 'crm.tab_tracking' },
 ];
 
 /**
@@ -31,6 +32,7 @@ export default function UnlockCenter({
   parkId: string;
   children: (view: 'overview' | 'list') => ReactNode;
 }) {
+  const { t } = useI18n();
   const [config, setConfig] = useState<SurveyConfig | null>(null);
   const [tab, setTab] = useState<TabKey>('overview');
   const [busy, setBusy] = useState<UnlockMode | null>(null);
@@ -43,10 +45,10 @@ export default function UnlockCenter({
       setError(null);
       return c;
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Einstellungen konnten nicht geladen werden.');
+      setError(e instanceof Error ? e.message : t('crm.load_failed'));
       return null;
     }
-  }, [parkId]);
+  }, [parkId, t]);
 
   useEffect(() => {
     // Übersicht is the landing tab regardless of which mode happens to be
@@ -62,7 +64,7 @@ export default function UnlockCenter({
       setConfig(await setUnlockMode(parkId, mode));
     } catch (e) {
       // z. B. Umfrage ohne Fragen: die Meldung sagt, was fehlt.
-      setError(e instanceof Error ? e.message : 'Umschalten fehlgeschlagen.');
+      setError(e instanceof Error ? e.message : t('crm.switch_failed'));
     }
     setBusy(null);
   }
@@ -74,21 +76,21 @@ export default function UnlockCenter({
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-          <h2 className="text-2xl font-bold tracking-tight text-slate-800">{tab === 'overview' ? 'Übersicht: Deine Besucher kennenlernen' : shown?.label}</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-slate-800">{tab === 'overview' ? t('crm.overview_title') : shown ? t(shown.labelKey) : ''}</h2>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <div className="inline-flex rounded-xl bg-white/50 p-1">
-            {TABS.map((t) => (
+            {TABS.map((tabItem) => (
               <button
-                key={t.key}
+                key={tabItem.key}
                 type="button"
-                onClick={() => setTab(t.key)}
+                onClick={() => setTab(tabItem.key)}
                 className={`inline-flex items-center gap-2 rounded-lg px-4 py-1.5 text-sm font-medium transition ${
-                  tab === t.key ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                  tab === tabItem.key ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
                 }`}
               >
-                {active === t.mode && <span className="h-2 w-2 rounded-full bg-emerald-500" title="Für Gäste aktiv" />}
-                {t.label}
+                {active === tabItem.mode && <span className="h-2 w-2 rounded-full bg-emerald-500" title={t('crm.active_for_guests')} />}
+                {t(tabItem.labelKey)}
               </button>
             ))}
           </div>
@@ -97,7 +99,7 @@ export default function UnlockCenter({
               to="/leads/preise"
               className="inline-flex items-center justify-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
             >
-              Preise und Pakete ansehen
+              {t('shop.view_plans')}
             </Link>
           )}
           {shown?.mode && active !== shown.mode && (
@@ -108,7 +110,7 @@ export default function UnlockCenter({
               className="glass-button-secondary"
             >
               {busy === shown.mode ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              Für Gäste aktivieren
+              {t('crm.activate_for_guests')}
             </button>
           )}
         </div>

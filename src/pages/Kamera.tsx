@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Camera, Loader2, RotateCcw, AlertTriangle, Info, Send } from 'lucide-react';
 import GlassCard from '../components/ui/GlassCard';
 import { usePark } from '../contexts/ParkContext';
+import { useLocaleTag } from '../lib/i18n';
 import { supabase, EXTERNAL_SUPABASE_URL, EXTERNAL_SUPABASE_ANON_KEY } from '../lib/supabase';
 import { fetchRecentPhotos } from '../lib/photoBrowser';
 
@@ -184,6 +185,7 @@ function istWert(werte: Kamerawerte, name: string): string {
 }
 
 export default function Kamera() {
+  const locale = useLocaleTag();
   const { parkId } = usePark();
   const [automaten, setAutomaten] = useState<Automat[]>([]);
   const [gewaehlt, setGewaehlt] = useState<string | null>(null);
@@ -233,12 +235,12 @@ export default function Kamera() {
       const fotos = await fetchRecentPhotos(parkId, 1);
       const foto = fotos[0];
       if (!foto?.imageUrl) { setBild(null); return; }
-      setBild({ url: foto.imageUrl, wann: new Date(foto.capturedAt).toLocaleString('de-AT'), test: foto.isTest });
+      setBild({ url: foto.imageUrl, wann: new Date(foto.capturedAt).toLocaleString(locale), test: foto.isTest });
     } catch (e) {
       setFehler(e instanceof Error ? e.message : 'Letztes Foto nicht erreichbar.');
       setBild(null);
     }
-  }, [parkId]);
+  }, [parkId, locale]);
 
   useEffect(() => { void letztesBildHolen(); }, [letztesBildHolen]);
 

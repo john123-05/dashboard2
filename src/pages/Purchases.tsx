@@ -8,9 +8,9 @@ import {
   type ParkDashboardEvent,
 } from '../lib/parkDashboard';
 import { fetchKioskPurchasesLedger } from '../lib/kioskSales';
-import { formatCurrency, formatDateTime, statusColor, exportToCSV } from '../lib/utils';
+import { formatCurrency as baseFormatCurrency, formatDateTime as baseFormatDateTime, statusColor, exportToCSV } from '../lib/utils';
 import DataTable, { type DataTableColumn } from '../components/ui/DataTable';
-import { useI18n } from '../lib/i18n';
+import { useI18n, useLocaleTag } from '../lib/i18n';
 import { usePark } from '../contexts/ParkContext';
 
 interface PurchaseRow {
@@ -62,15 +62,18 @@ function monatsListe(zurueck = 15): string[] {
   return liste;
 }
 
-function monatLabel(schluessel: string): string {
+function monatLabel(schluessel: string, locale: string): string {
   const [jahr, monat] = schluessel.split('-').map(Number);
-  return new Intl.DateTimeFormat('de-DE', { month: 'long', year: 'numeric' }).format(
+  return new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' }).format(
     new Date(jahr, monat - 1, 1),
   );
 }
 
 export default function Purchases() {
   const { t } = useI18n();
+  const locale = useLocaleTag();
+  const formatCurrency = (cents: number, currency = 'usd') => baseFormatCurrency(cents, currency, locale);
+  const formatDateTime = (date: string) => baseFormatDateTime(date, locale);
   const { parkId, isKioskPark, kioskCheckLoading } = usePark();
   const [parkData, setParkData] = useState<ParkDashboardData | null>(null);
   const [purchases, setPurchases] = useState<PurchaseRow[]>([]);
@@ -444,7 +447,7 @@ export default function Purchases() {
               >
                 {monatsListe().map((m) => (
                   <option key={m} value={m}>
-                    {monatLabel(m)}
+                    {monatLabel(m, locale)}
                   </option>
                 ))}
               </select>

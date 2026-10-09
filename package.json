@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
+    "check:i18n": "node scripts/check-i18n.mjs",
     "backfill:support-sync": "node scripts/backfill-support-sync.mjs"
   },
   "dependencies": {

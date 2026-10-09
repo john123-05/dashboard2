@@ -6,7 +6,7 @@ import { claimLinkFor, claimSiteBaseFor, fetchRecentPhotos } from '../lib/photoB
 import { formatDate, formatNumber, exportToCSV } from '../lib/utils';
 import GlassCard from '../components/ui/GlassCard';
 import DataTable from '../components/ui/DataTable';
-import { useI18n } from '../lib/i18n';
+import { useI18n, useLocaleTag } from '../lib/i18n';
 import { usePark } from '../contexts/ParkContext';
 import UnlockCenter from '../components/survey/UnlockCenter';
 import ContactSettings from '../components/survey/ContactSettings';
@@ -41,9 +41,9 @@ type ClaimDelayMatch = {
 
 type SvgViewBox = { minX: number; minY: number; width: number; height: number };
 
-function getCountryName(countryCode: string): string {
+function getCountryName(countryCode: string, locale: string): string {
   try {
-    const displayNames = new Intl.DisplayNames(['de'], { type: 'region' });
+    const displayNames = new Intl.DisplayNames([locale], { type: 'region' });
     return displayNames.of(countryCode) || countryCode;
   } catch {
     return countryCode;
@@ -543,6 +543,7 @@ function LeadsContacts({
   view: 'overview' | 'list';
 }) {
   const { t } = useI18n();
+  const locale = useLocaleTag();
   const {
     parkId,
     isKioskPark,
@@ -855,13 +856,13 @@ function LeadsContacts({
     return Array.from(counts.entries())
       .map(([countryCode, count]) => ({
         countryCode,
-        countryName: getCountryName(countryCode),
+        countryName: getCountryName(countryCode, locale),
         count,
         x: null,
         y: null,
       }))
       .sort((a, b) => b.count - a.count || a.countryName.localeCompare(b.countryName));
-  }, [leads]);
+  }, [leads, locale]);
 
   const optInRate = stats.total > 0 ? Math.round((stats.optedIn / stats.total) * 100) : 0;
   const worldMapMarkup = useMemo(
@@ -1175,7 +1176,7 @@ function LeadsContacts({
       <div className="space-y-6">
         <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('leads.title')}</h2>
         <div className="rounded-2xl bg-red-50 border border-red-200 p-6">
-          <h3 className="text-lg font-semibold text-red-800 mb-2">Error Loading Leads</h3>
+          <h3 className="text-lg font-semibold text-red-800 mb-2">{t('leads.load_error')}</h3>
           <p className="text-sm text-red-600 mb-4">{error}</p>
           <button onClick={loadData} className="glass-button-secondary">
             {t('app.retry')}
@@ -1211,7 +1212,7 @@ function LeadsContacts({
             checked={selectedLeadIds.includes(leadId)}
             onChange={() => toggleLeadSelection(leadId)}
             className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
-            aria-label={`Lead ${item.email as string} auswählen`}
+            aria-label={t('leads.select_contact', { email: item.email as string })}
           />
         );
       },
@@ -1231,16 +1232,16 @@ function LeadsContacts({
               duplicateInfo.keep.get(emailKey(item))?.id === item.id ? (
                 <span
                   className="inline-flex w-fit rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-800 ring-1 ring-emerald-200"
-                  title="Diese Zeile bleibt beim Bereinigen erhalten"
+                  title={t('leads.keep_tooltip')}
                 >
-                  Behalten · {duplicateInfo.counts.get(emailKey(item))}× abgegeben
+                  {t('leads.kept_multiple', { count: duplicateInfo.counts.get(emailKey(item)) ?? 0 })}
                 </span>
               ) : (
                 <span
                   className="inline-flex w-fit rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-800 ring-1 ring-amber-200"
-                  title="Diese Adresse wurde schon einmal abgegeben"
+                  title={t('leads.duplicate_tooltip')}
                 >
-                  Doppelt · {duplicateInfo.counts.get(emailKey(item))}× abgegeben
+                  {t('leads.duplicate_multiple', { count: duplicateInfo.counts.get(emailKey(item)) ?? 0 })}
                 </span>
               )
             )}
@@ -1269,7 +1270,7 @@ function LeadsContacts({
       label: t('leads.table.source'),
       render: (item: Record<string, unknown>) => (
         <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
-          {item.source === 'social_media' ? 'Social Media' : item.source === 'photo_claim' ? 'Foto-Freischaltung' : (item.source as string)}
+          {item.source === 'social_media' ? t('leads.source_social') : item.source === 'photo_claim' ? t('leads.source_claim') : (item.source as string)}
         </span>
       ),
     },
@@ -1292,7 +1293,7 @@ function LeadsContacts({
       key: 'created_at',
       label: t('leads.table.date'),
       render: (item: Record<string, unknown>) => (
-        <span className="text-slate-500">{formatDate(item.created_at as string)}</span>
+        <span className="text-slate-500">{formatDate(item.created_at as string, locale)}</span>
       ),
     },
     {
@@ -1308,7 +1309,7 @@ function LeadsContacts({
             disabled={deleting}
             className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-40"
             title="Lead löschen"
-            aria-label={`Lead ${item.email as string} löschen`}
+            aria-label={t('leads.delete_contact', { email: item.email as string })}
           >
             <Trash2 className="h-4 w-4" />
           </button>
@@ -1333,15 +1334,15 @@ function LeadsContacts({
           <GlassCard className="shrink-0 p-5 sm:p-6">
             <div className="flex items-end gap-6">
               <div>
-                <p className="mb-1.5 text-xs font-medium text-slate-600">Kontakte insgesamt</p>
+                <p className="mb-1.5 text-xs font-medium text-slate-600">{t('leads.contacts_total')}</p>
                 <div className="rounded-xl bg-white/60 px-4 py-1.5 text-sm font-semibold text-slate-800">
-                  {formatNumber(stats.total)}
+                  {formatNumber(stats.total, locale)}
                 </div>
               </div>
               <div>
-                <p className="mb-1.5 text-xs font-medium text-slate-600">Kontakte Opt-in</p>
+                <p className="mb-1.5 text-xs font-medium text-slate-600">{t('leads.contacts_optin')}</p>
                 <div className="rounded-xl bg-white/60 px-4 py-1.5 text-sm font-semibold text-slate-800">
-                  {formatNumber(stats.optedIn)}
+                  {formatNumber(stats.optedIn, locale)}
                 </div>
               </div>
             </div>
@@ -1355,7 +1356,7 @@ function LeadsContacts({
 
       {notice && (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-          <p className="text-sm font-medium text-amber-900">Lead data is currently unavailable.</p>
+          <p className="text-sm font-medium text-amber-900">{t('leads.unavailable')}</p>
           <p className="mt-1 text-sm text-amber-700">{notice}</p>
         </div>
       )}
@@ -1365,58 +1366,58 @@ function LeadsContacts({
         <div className="min-w-0 space-y-4">
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <CompactMetricCard
-              title="Fotos verkauft"
-              value={lifetimeSold !== null ? formatNumber(lifetimeSold) : '–'}
-              subtitle="Insgesamt am Automaten"
+              title={t('leads.photos_sold')}
+              value={lifetimeSold !== null ? formatNumber(lifetimeSold, locale) : '–'}
+              subtitle={t('leads.photos_sold_sub')}
               icon={Camera}
               iconClassName="text-violet-600"
               iconWrapClassName="bg-violet-50"
             />
             <CompactMetricCard
               title={t('leads.total')}
-              value={formatNumber(stats.total)}
-              subtitle="Gesammelte Kontakte"
+              value={formatNumber(stats.total, locale)}
+              subtitle={t('leads.collected_contacts')}
               icon={UserPlus}
               iconClassName="text-sky-600"
               iconWrapClassName="bg-sky-50"
             />
             <CompactMetricCard
               title={t('leads.optins')}
-              value={formatNumber(stats.optedIn)}
-              subtitle={`${optInRate}% Opt-in-Quote`}
+              value={formatNumber(stats.optedIn, locale)}
+              subtitle={`${optInRate}% ${t('leads.optin_rate')}`}
               icon={Mail}
               iconClassName="text-emerald-600"
               iconWrapClassName="bg-emerald-50"
             />
             <CompactMetricCard
-              title="Gerade aktiv"
+              title={t('leads.current_mode')}
               value={
                 unlockMode === 'survey'
-                  ? 'Umfrage'
+                  ? t('crm.survey')
                   : unlockMode === 'social'
-                    ? 'Social Media'
+                    ? t('leads.source_social')
                     : unlockMode === 'email'
                       ? 'E-Mail'
                       : '–'
               }
-              subtitle="So schalten Gäste ihr Foto frei"
+              subtitle={t('leads.current_mode_sub')}
               icon={ClipboardList}
               iconClassName="text-amber-600"
               iconWrapClassName="bg-amber-50"
               active={unlockMode !== null}
             />
             <CompactMetricCard
-              title="Antworten"
-              value={overviewSurvey ? formatNumber(overviewSurvey.total) : '–'}
-              subtitle="Umfrage, letzte 30 Tage"
+              title={t('leads.responses')}
+              value={overviewSurvey ? formatNumber(overviewSurvey.total, locale) : '–'}
+              subtitle={t('leads.responses_sub')}
               icon={MessageSquare}
               iconClassName="text-sky-600"
               iconWrapClassName="bg-sky-50"
             />
             <CompactMetricCard
-              title="Zufriedenheit"
+              title={t('leads.satisfaction')}
               value={overviewSurvey?.average_score != null ? overviewSurvey.average_score.toFixed(1) : '–'}
-              subtitle="Ø Bewertung von 1 bis 10"
+              subtitle={t('leads.satisfaction_sub')}
               icon={Star}
               iconClassName="text-amber-600"
               iconWrapClassName="bg-amber-50"
@@ -1424,19 +1425,19 @@ function LeadsContacts({
             <CompactMetricCard
               title="NPS"
               value={overviewSurvey?.nps != null ? String(overviewSurvey.nps) : '–'}
-              subtitle="Weiterempfehlung"
+              subtitle={t('leads.recommendation')}
               icon={ThumbsUp}
               iconClassName="text-emerald-600"
               iconWrapClassName="bg-emerald-50"
-              info="Der Net Promoter Score zeigt, wie gern Gäste dich weiterempfehlen. Gäste bewerten von 0 bis 10. Wer 9 oder 10 gibt, ist Promoter, wer 0 bis 6 gibt, ist Kritiker. Der NPS ist der Anteil der Promoter minus der Anteil der Kritiker und liegt zwischen −100 und +100. Über 0 ist gut, über 50 sehr gut."
+              info={t('leads.nps_info')}
             />
             <CompactMetricCard
               title="Social Media"
-              value={unlockMode === 'social' ? 'Aktiv' : 'Nicht aktiv'}
+              value={unlockMode === 'social' ? t('leads.active') : t('leads.inactive')}
               subtitle={
                 unlockMode === 'social' && overviewSocial
-                  ? `${formatNumber(overviewSocial.unlocked)} Freischaltungen, 30 Tage`
-                  : 'Gerade nicht aktiv'
+                  ? t('leads.unlocks_30', { count: formatNumber(overviewSocial.unlocked, locale) })
+                  : t('leads.currently_inactive')
               }
               icon={Share2}
               iconClassName="text-pink-600"
@@ -1449,8 +1450,8 @@ function LeadsContacts({
             <div className="grid gap-0 lg:grid-cols-[1.15fr_0.85fr]">
               <div className="px-6 py-5 lg:border-r lg:border-slate-100/90">
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                  <h3 className="text-base font-semibold text-slate-800">Besucher nach Standort</h3>
-                  <span className="text-xs text-slate-400 sm:text-sm">{resolvedCountryStats.length} Länder</span>
+                  <h3 className="text-base font-semibold text-slate-800">{t('leads.location')}</h3>
+                  <span className="text-xs text-slate-400 sm:text-sm">{t('leads.country_count', { count: resolvedCountryStats.length })}</span>
                 </div>
                 <div className="pb-2">
                   <div className="w-full">
@@ -1477,47 +1478,47 @@ function LeadsContacts({
                   }
                   className="mt-3 text-sm font-medium text-sky-600 transition-colors hover:text-sky-700"
                 >
-                  {showLocationDetails ? 'Detaillierte Karte ausblenden' : 'Detaillierte Karte anzeigen'}
+                  {showLocationDetails ? t('leads.hide_map') : t('leads.show_map')}
                 </button>
               </div>
 
               <div className="px-6 py-5">
                 <div className="mb-3">
-                  <h3 className="text-base font-semibold text-slate-800">Zeit zwischen Kauf und Einlösung</h3>
+                  <h3 className="text-base font-semibold text-slate-800">{t('leads.claim_delay')}</h3>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2.5">
                   <div className="rounded-2xl border border-slate-100 bg-white/70 p-3">
                     <p className="text-[11px] font-bold tracking-[0.08em] text-slate-500">Durchschnittlich später</p>
                     <p className="mt-1.5 text-base font-bold text-slate-800">{delayInsights.avgDelayLabel}</p>
-                    <p className="mt-1 text-xs leading-5 text-slate-500">zwischen Kauf und Einlösung</p>
+                    <p className="mt-1 text-xs leading-5 text-slate-500">{t('leads.between_purchase_claim')}</p>
                   </div>
                   <div className="rounded-2xl border border-slate-100 bg-white/70 p-3">
-                    <p className="text-[11px] font-bold tracking-[0.08em] text-slate-500">Nach Parkschluss</p>
+                    <p className="text-[11px] font-bold tracking-[0.08em] text-slate-500">{t('leads.after_close')}</p>
                     <p className="mt-1.5 text-base font-bold text-slate-800">{delayInsights.afterCloseAvgLabel}</p>
-                    <p className="mt-1 text-xs leading-5 text-slate-500">{delayInsights.afterCloseRate}% der Einlösungen</p>
+                    <p className="mt-1 text-xs leading-5 text-slate-500">{t('leads.claim_rate', { percent: delayInsights.afterCloseRate })}</p>
                   </div>
                   <div className="rounded-2xl border border-slate-100 bg-white/70 p-3">
-                    <p className="text-[11px] font-bold tracking-[0.08em] text-slate-500">Schnellste Einlösung</p>
+                    <p className="text-[11px] font-bold tracking-[0.08em] text-slate-500">{t('leads.fastest_claim')}</p>
                     <p className="mt-1.5 text-base font-bold text-slate-800">{delayInsights.minDelayLabel}</p>
                     <p className="mt-1 text-xs leading-5 text-slate-500">frühester gemessener Abstand</p>
                   </div>
                   <div className="rounded-2xl border border-slate-100 bg-white/70 p-3">
-                    <p className="text-[11px] font-bold tracking-[0.08em] text-slate-500">Nächster Tag oder später</p>
+                    <p className="text-[11px] font-bold tracking-[0.08em] text-slate-500">{t('leads.next_day')}</p>
                     <p className="mt-1.5 text-base font-bold text-slate-800">{delayInsights.laterDayRate}%</p>
-                    <p className="mt-1 text-xs leading-5 text-slate-500">{delayInsights.laterDayCount} von {delayInsights.matchedCount}</p>
+                    <p className="mt-1 text-xs leading-5 text-slate-500">{t('leads.out_of', { count: delayInsights.laterDayCount, total: delayInsights.matchedCount })}</p>
                   </div>
                 </div>
 
                 {claimDelayLoading && (
                   <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/70 px-5 py-4 text-sm text-slate-500">
-                    Kauf und Einlösung werden gerade verknüpft…
+                    {t('leads.matching')}
                   </div>
                 )}
 
                 {!claimDelayLoading && delayInsights.matchedCount === 0 && (
                   <div className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 px-5 py-4 text-sm text-slate-500">
-                    Für die aktuelle Auswahl konnten Kauf und Einlösung noch nicht eindeutig verknüpft werden.
+                    {t('leads.no_matching')}
                   </div>
                 )}
               </div>
@@ -1530,11 +1531,10 @@ function LeadsContacts({
               <div className="border-b border-slate-100 px-6 py-5">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-500">Besucher nach Standort</p>
-                    <h3 className="mt-2 text-2xl font-semibold text-slate-800">Detaillierte Weltkarte</h3>
+                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-500">{t('leads.location')}</p>
+                    <h3 className="mt-2 text-2xl font-semibold text-slate-800">{t('leads.world_map')}</h3>
                     <p className="mt-1 text-sm text-slate-500">
-                      Klicke auf ein Land oder wähle unten eins aus der Liste. Dort siehst du, wie viele Gäste aus
-                      welchem Land kommen.
+                      {t('leads.world_map_desc')}
                     </p>
                   </div>
                   <button
@@ -1542,7 +1542,7 @@ function LeadsContacts({
                     onClick={() => setShowLocationDetails(false)}
                     className="shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
                   >
-                    Zuklappen
+                    {t('leads.collapse')}
                   </button>
                 </div>
               </div>
@@ -1571,16 +1571,16 @@ function LeadsContacts({
                   </div>
                   <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
                     <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Länder</p>
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{t('leads.countries')}</p>
                       <p className="mt-2 text-2xl font-bold text-slate-800">{resolvedCountryStats.length}</p>
                     </div>
                     <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
                       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Leads mit Land</p>
-                      <p className="mt-2 text-2xl font-bold text-slate-800">{formatNumber(totalMappedLeads)}</p>
+                      <p className="mt-2 text-2xl font-bold text-slate-800">{formatNumber(totalMappedLeads, locale)}</p>
                     </div>
                     <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
                       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                        {delayInsights.matchedCount > 0 ? 'Ø Kauf bis digital' : 'Digitale Zuordnungen'}
+                        {delayInsights.matchedCount > 0 ? t('leads.purchase_to_digital') : t('leads.digital_matches')}
                       </p>
                       <p className="mt-2 text-lg font-bold text-slate-800">
                         {delayInsights.matchedCount > 0 ? delayInsights.avgDelayLabel : '—'}
@@ -1591,7 +1591,7 @@ function LeadsContacts({
                 <div className="space-y-4">
                   <div>
                     <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                      Gäste nach Land ({resolvedCountryStats.length})
+                      {t('leads.guests_by_country')} ({formatNumber(resolvedCountryStats.length, locale)})
                     </p>
                 <div className="flex gap-2 overflow-x-auto pb-3">
                   {resolvedCountryStats.map((country) => {
@@ -1634,7 +1634,7 @@ function LeadsContacts({
             <div className="shrink-0 border-b border-slate-100/90 px-4 py-3">
               <p className="text-sm font-semibold text-slate-800">Live-Vorschau</p>
               <p className="text-xs text-slate-500">
-                Die echte Freischaltseite mit dem letzten Foto, noch nicht freigeschaltet.
+                {t('leads.claim_preview_desc')}
               </p>
             </div>
             <iframe
@@ -1672,7 +1672,7 @@ function LeadsContacts({
                     }`
               }
             >
-              {selectionMode ? 'Fertig' : 'Auswählen'}
+              {selectionMode ? t('leads.select_done') : t('leads.select')}
             </button>
             {duplicateFilter === 'only' && extraDuplicateIds.length > 0 && (
               <button
@@ -1684,7 +1684,7 @@ function LeadsContacts({
                 className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-800 transition-colors hover:bg-amber-100"
                 title="Wählt alle Zeilen mit „Doppelt“ vor. Danach kannst du einzelne abwählen und „löschen“ drücken."
               >
-                Doppelte vorwählen ({extraDuplicateIds.length})
+                {t('leads.preselect_duplicates', { count: extraDuplicateIds.length })}
               </button>
             )}
             <select
@@ -1704,18 +1704,18 @@ function LeadsContacts({
               onChange={(e) => setDuplicateFilter(e.target.value as 'all' | 'only' | 'unique')}
               className="rounded-lg border border-slate-200/60 bg-white/60 px-3 py-1.5 text-sm text-slate-700"
             >
-              <option value="all">Doppelte: alle zeigen</option>
+              <option value="all">{t('leads.duplicate_all')}</option>
               <option value="only">
-                Nur mehrfach abgegebene ({duplicateInfo.duplicateAddresses})
+                {t('leads.only_duplicates', { count: duplicateInfo.duplicateAddresses })}
               </option>
-              <option value="unique">Ohne Doppelte</option>
+              <option value="unique">{t('leads.unique_only')}</option>
             </select>
             <select
               value={sourceFilter}
               onChange={(e) => setSourceFilter(e.target.value)}
               className="rounded-lg border border-slate-200/60 bg-white/60 px-3 py-1.5 text-sm text-slate-700"
             >
-              <option value="all">Alle Quellen</option>
+              <option value="all">{t('leads.all_sources')}</option>
               {sourceOptions.map((source) => (
                 <option key={source} value={source}>{source}</option>
               ))}
@@ -1725,8 +1725,8 @@ function LeadsContacts({
               onChange={(e) => setPeriodFilter(e.target.value as 'all' | '1' | '7' | '30' | '90')}
               className="rounded-lg border border-slate-200/60 bg-white/60 px-3 py-1.5 text-sm text-slate-700"
             >
-              <option value="all">Alle Zeiträume</option>
-              <option value="1">Heute</option>
+              <option value="all">{t('leads.all_periods')}</option>
+              <option value="1">{t('leads.today')}</option>
               <option value="7">7 Tage</option>
               <option value="30">30 Tage</option>
               <option value="90">90 Tage</option>
@@ -1736,7 +1736,7 @@ function LeadsContacts({
               onChange={(e) => setCountryFilter(e.target.value)}
               className="rounded-lg border border-slate-200/60 bg-white/60 px-3 py-1.5 text-sm text-slate-700"
             >
-              <option value="all">Alle Länder</option>
+              <option value="all">{t('leads.all_countries')}</option>
               {countryOptions.map((countryCode) => (
                 <option key={countryCode} value={countryCode}>
                   {countryCodeToFlag(countryCode)} {countryCode}
@@ -1751,7 +1751,7 @@ function LeadsContacts({
                 className="inline-flex items-center gap-2 rounded-lg border border-rose-200 bg-white/80 px-3 py-1.5 text-sm font-medium text-rose-600 transition-colors hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Trash2 className="h-4 w-4" />
-                {selectedLeadIds.length} löschen
+                {t('leads.delete_count', { count: selectedLeadIds.length })}
               </button>
             )}
           </div>
