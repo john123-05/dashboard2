@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Camera,
   ChevronRight,
@@ -108,6 +108,7 @@ export default function Configuration() {
   const [requestKey, setRequestKey] = useState<string | null>(null);
   const [requestedKeys, setRequestedKeys] = useState<Set<string>>(new Set());
   const [suche, setSuche] = useState('');
+  const navigate = useNavigate();
   const [filterKategorie, setFilterKategorie] = useState<string | null>(null);
 
   useEffect(() => {
@@ -329,11 +330,18 @@ export default function Configuration() {
               return (
                 <div
                   key={item.id}
-                  className="flex flex-col overflow-hidden rounded-xl border border-slate-200/60 bg-white/70"
+                  role="link"
+                  tabIndex={0}
+                  onClick={() => navigate(`/configuration/produkt/${item.id}`)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') navigate(`/configuration/produkt/${item.id}`);
+                  }}
+                  className="flex cursor-pointer flex-col overflow-hidden rounded-xl border border-slate-200/60 bg-white/70 transition hover:border-slate-300 hover:shadow-md"
                 >
                   {eintragBilder(item).length >= 3 || (!(item.before_image_url && item.after_image_url) && item.image_url) ? (
                     <Link
                       to={`/configuration/produkt/${item.id}`}
+                      onClick={(e) => e.stopPropagation()}
                       className="group relative h-44 w-full shrink-0 overflow-hidden bg-white"
                       aria-label={`${item.titel}: Details ansehen`}
                     >
@@ -345,7 +353,7 @@ export default function Configuration() {
                       )}
                     </Link>
                   ) : item.before_image_url && item.after_image_url ? (
-                    <div className="h-44 w-full shrink-0">
+                    <div className="h-44 w-full shrink-0" onClick={(e) => e.stopPropagation()}>
                       <BeforeAfterSlider beforeUrl={item.before_image_url} afterUrl={item.after_image_url} />
                     </div>
                   ) : item.image_url ? (
@@ -383,6 +391,7 @@ export default function Configuration() {
                     <div className="mt-auto flex flex-col gap-2 pt-2">
                       <Link
                         to={`/configuration/produkt/${item.id}`}
+                        onClick={(e) => e.stopPropagation()}
                         className="inline-flex w-full items-center justify-center rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
                       >
                         Details ansehen
@@ -390,6 +399,7 @@ export default function Configuration() {
                       {item.preview_url && (
                         <a
                           href={item.preview_url}
+                          onClick={(e) => e.stopPropagation()}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
@@ -400,7 +410,10 @@ export default function Configuration() {
                       )}
                       <button
                         type="button"
-                        onClick={() => void handleAnfrage(item.id, { itemId: item.id })}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void handleAnfrage(item.id, { itemId: item.id });
+                        }}
                         disabled={requestKey === item.id || requestedKeys.has(item.id)}
                         className="inline-flex w-full items-center justify-center rounded-lg bg-sky-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-sky-500 disabled:opacity-60"
                       >
