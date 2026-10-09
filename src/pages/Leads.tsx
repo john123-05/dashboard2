@@ -1389,13 +1389,21 @@ function LeadsContacts({
               iconWrapClassName="bg-emerald-50"
             />
             <CompactMetricCard
-              title="Umfrage"
-              value={unlockMode === 'survey' ? 'Aktiv' : 'Nicht aktiv'}
-              subtitle={unlockMode === 'survey' ? 'Gäste schalten per Umfrage frei' : 'Gerade nicht aktiv'}
+              title="Gerade aktiv"
+              value={
+                unlockMode === 'survey'
+                  ? 'Umfrage frei'
+                  : unlockMode === 'social'
+                    ? 'Social Media frei'
+                    : unlockMode === 'email'
+                      ? 'E-Mail frei'
+                      : '–'
+              }
+              subtitle="So schalten Gäste ihr Foto frei"
               icon={ClipboardList}
               iconClassName="text-amber-600"
               iconWrapClassName="bg-amber-50"
-              active={unlockMode === 'survey'}
+              active={unlockMode !== null}
             />
             <CompactMetricCard
               title="Antworten"
@@ -1438,10 +1446,6 @@ function LeadsContacts({
           </div>
 
           <GlassCard className="overflow-hidden">
-            <div className="border-b border-slate-100/90 px-6 py-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-500">Deine Besucher kennenlernen</p>
-            </div>
-
             <div className="grid gap-0 lg:grid-cols-[1.15fr_0.85fr]">
               <div className="px-6 py-5 lg:border-r lg:border-slate-100/90">
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
