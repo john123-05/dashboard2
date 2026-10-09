@@ -138,7 +138,7 @@ function Flyout({
       ref={panelRef}
       role="menu"
       style={{ top: pos?.top ?? -9999, left: pos?.left ?? -9999, width }}
-      className="fixed z-[300] rounded-lg border border-black/10 bg-white p-1.5 text-slate-700 shadow-[0_12px_32px_rgba(16,24,40,0.18)] animate-fade-in"
+      className="operator-portal fixed z-[300] rounded-lg border border-black/10 bg-white p-1.5 text-slate-700 shadow-[0_12px_32px_rgba(16,24,40,0.18)] animate-fade-in"
     >
       {children}
     </div>,
@@ -164,10 +164,9 @@ export default function Sidebar({
   const { t } = useI18n();
   const { parkName, setPark, isKioskPark, parkId, cameraControlAvailable } = usePark();
   const isMobile = useIsMobile();
-  // Scaffolding only for now: persists the choice and tags <html> so the
-  // rest of the dashboard's pages can opt into dark styles later without
-  // touching this component again. No page actually has dark styles yet,
-  // so toggling this doesn't visibly change anything beyond its own icon.
+  // Light/dark switch: tags <html data-operator-theme>, the dark styles live in
+  // src/styles/operator-dark.css. index.html sets the attribute before the first
+  // paint so a reload in dark mode doesn't flash white.
   const [theme, setTheme] = useState<'light' | 'dark'>(
     () => (localStorage.getItem('lp-operator-theme') === 'dark' ? 'dark' : 'light'),
   );

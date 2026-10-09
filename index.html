@@ -17,6 +17,12 @@
     <meta property="og:image" content="https://bolt.new/static/og_default.png" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:image" content="https://bolt.new/static/og_default.png" />
+    <script>
+      // Dunkelmodus vor dem ersten Zeichnen setzen (Schalter in Sidebar.tsx, Stile in src/styles/operator-dark.css).
+      try {
+        if (localStorage.getItem('lp-operator-theme') === 'dark') document.documentElement.setAttribute('data-operator-theme', 'dark');
+      } catch (e) {}
+    </script>
     <script type="text/javascript">
       (function(c,l,a,r,i,t,y){
           c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};

@@ -89,8 +89,7 @@ Jede Phase: nur Gestaltung, keine Funktionsänderung. Prüfen mit `npm run typec
     und `nav_unpinned_items`.
   - Eingeklappt: nur Icons, Tooltip mit Namen nach rechts; „Mehr“ auch eingeklappt als Flyout.
   - Upgrade-Einträge (Online-Shop, Speedmessung) mit kleinem Upgrade-Symbol statt „(Upgrade)“-Text.
-  - Offene Frage an John: Der Hell/Dunkel-Schalter setzt nur `data-operator-theme`, es gibt dafür
-    keine Styles – Dunkelmodus ist heute ohne Wirkung. Entfernen oder richtig bauen?
+  - Hell/Dunkel-Schalter: John hat entschieden „bauen“ (siehe Protokoll).
 - [x] **Phase 3 – Upgrade-Seiten-Vorlage:** gemeinsame Komponente (z. B. `src/components/upgrade/UpgradeHero.tsx`)
       im HubSpot-Aufbau (Überschrift, 3–4 Pfeil-Stichpunkte, Hinweiskasten, Buttons, Bild rechts,
       optional Karten darunter). Einsetzen bei: Speedmessung (nicht freigeschaltet), Online-Shop
@@ -153,3 +152,11 @@ Jede Phase: nur Gestaltung, keine Funktionsänderung. Prüfen mit `npm run typec
   Produktseiten-Abo-Texte, Support/Services). Doppelter Punkt nach dem Druckpartner-Satz behoben.
   Noch nicht in der Vorlage: Produktseiten der Konfiguration (`ConfigurationProduct.tsx`) – gehört zu Phase
   der Konfiguration.
+- 09.10.2026: Dunkelmodus gebaut (Johns Entscheidung). `src/styles/operator-dark.css` (in `main.tsx`
+  importiert) greift nur bei `html[data-operator-theme='dark']` innerhalb `.operator-app` /
+  `.operator-portal` – Staff-Dashboard und eingebettete Kundenansicht bleiben hell. Tokens (`--ink`,
+  `--line`, `--canvas` …) werden dunkel, die häufigen Tailwind-Farbklassen (Grautöne, weiße Flächen,
+  Status-Farbtöne, Rahmen) werden umgelenkt, „schwarze“ Buttons werden hell, recharts-Raster/Tooltips
+  angepasst. Die Navigation ist ausgenommen (ist schon dunkel). `index.html` setzt das Attribut vor dem
+  ersten Zeichnen. Vorschauen (Shop, Rangliste, Freischaltseite) bleiben bewusst hell – so sehen Gäste
+  sie. Neue Farbklassen, die im Dunkeln falsch aussehen: in `operator-dark.css` ergänzen.

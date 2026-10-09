@@ -1,0 +1,331 @@
+/*
+ * Dunkelmodus des Betreiber-Dashboards (Redesign, docs/REDESIGN_PLAN.md).
+ * Greift nur, wenn <html data-operator-theme="dark"> gesetzt ist (Schalter unten in der
+ * Navigation, Sidebar.tsx), und nur innerhalb von .operator-app bzw. .operator-portal
+ * (Flyouts der Navigation). Das Staff-Dashboard, auch die eingebettete Kundenansicht
+ * (.customer-embedded-page), bleibt unberuehrt.
+ *
+ * Statt jede Seite umzubauen, lenkt diese Datei die haeufigen Tailwind-Farbklassen auf dunkle
+ * Werte um. Neue Seiten: Tokens (--ink, --line, --canvas ...) oder die hier abgedeckten
+ * Klassen benutzen. Fehlt eine Klasse, hier ergaenzen.
+ */
+
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) {
+  --ink: #eceef1;
+  --ink-2: #c3cad3;
+  --ink-3: #8f99a6;
+  --line: #2c3138;
+  --line-strong: #3a414a;
+  --canvas: #121417;
+  --glass-bg: #1b1e23;
+  --glass-border: #2c3138;
+  --glass-shadow: none;
+  --glass-shadow-hover: none;
+  --sidebar-bg: #0d0f12;
+  --brand-orange-light: rgba(234, 122, 63, 0.14);
+  color-scheme: dark;
+  color: var(--ink);
+}
+
+html[data-operator-theme='dark'] .operator-app.mesh-gradient:not(.customer-embedded-page) {
+  background: var(--canvas);
+}
+
+/* Eingabefelder und Buttons */
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .glass-input,
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) input:not([type='checkbox']):not([type='radio']):not([type='color']):not([type='range']),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) select,
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) textarea {
+  background-color: #22262c;
+  border-color: #3a414a;
+  color: var(--ink);
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) input::placeholder,
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) textarea::placeholder {
+  color: #6b7480;
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .glass-button-secondary {
+  background: transparent;
+  color: var(--ink);
+  border-color: #59626e;
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .glass-button-secondary:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .glass-panel-strong {
+  background: #1b1e23;
+  border-color: #2c3138;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+}
+
+/* Diagramme (recharts) */
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .recharts-cartesian-grid line {
+  stroke: #2c3138;
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .recharts-cartesian-axis-tick-value,
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .recharts-legend-item-text {
+  fill: #8f99a6;
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .recharts-default-tooltip {
+  background: #22262c !important;
+  border-color: #3a414a !important;
+  color: var(--ink);
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .recharts-tooltip-cursor {
+  fill: rgba(255, 255, 255, 0.04);
+}
+
+/* Farbklassen */
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-white:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-white\/96:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-white\/95:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-white\/92:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-white\/90:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-white\/80:not(.glass-sidebar *) {
+  background-color: #1b1e23;
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-white\/70:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-white\/60:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-white\/50:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-white\/40:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-white\/30:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-white\/25:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-white\/20:not(.glass-sidebar *) {
+  background-color: rgba(255, 255, 255, 0.04);
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-slate-50:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-slate-50\/80:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-slate-50\/70:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-slate-50\/60:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-slate-100:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-slate-100\/80:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .from-slate-50:not(.glass-sidebar *) {
+  background-color: #22262c;
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-slate-200:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-slate-300:not(.glass-sidebar *) {
+  background-color: #2b3037;
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .hover\:bg-white:not(.glass-sidebar *):hover,
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .hover\:bg-white\/90:not(.glass-sidebar *):hover,
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .hover\:bg-white\/80:not(.glass-sidebar *):hover,
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .hover\:bg-white\/70:not(.glass-sidebar *):hover,
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .hover\:bg-white\/60:not(.glass-sidebar *):hover,
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .hover\:bg-white\/50:not(.glass-sidebar *):hover,
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .hover\:bg-white\/40:not(.glass-sidebar *):hover,
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .hover\:bg-slate-50:not(.glass-sidebar *):hover,
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .hover\:bg-slate-100:not(.glass-sidebar *):hover,
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .hover\:bg-slate-200:not(.glass-sidebar *):hover,
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .hover\:bg-slate-200\/50:not(.glass-sidebar *):hover {
+  background-color: #2b3037;
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-slate-900.text-white:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-slate-800.text-white:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-\[color\:var\(--ink\)\].text-white:not(.glass-sidebar *) {
+  background-color: #eceef1;
+  color: #15181d;
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-slate-900.text-white:not(.glass-sidebar *):hover,
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-slate-800.text-white:not(.glass-sidebar *):hover,
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-\[color\:var\(--ink\)\].text-white:not(.glass-sidebar *):hover {
+  background-color: #d5d9df;
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .text-slate-900:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .text-slate-800:not(.glass-sidebar *) {
+  color: #eceef1;
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .hover\:text-slate-900:not(.glass-sidebar *):hover,
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .hover\:text-slate-800:not(.glass-sidebar *):hover,
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .hover\:text-slate-700:not(.glass-sidebar *):hover {
+  color: #ffffff;
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .text-slate-700:not(.glass-sidebar *) {
+  color: #d3d8de;
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .text-slate-600:not(.glass-sidebar *) {
+  color: #b4bcc6;
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .text-slate-500:not(.glass-sidebar *) {
+  color: #959fab;
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .text-slate-400:not(.glass-sidebar *) {
+  color: #7c8693;
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .text-slate-300:not(.glass-sidebar *) {
+  color: #5f6873;
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .border-slate-100:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .border-slate-100\/80:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .border-slate-100\/90:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .border-slate-200:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .border-slate-200\/70:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .border-slate-200\/60:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .border-slate-200\/50:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .border-white\/60:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .border-white\/50:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .border-white\/40:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .border-white\/30:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .border-black\/10:not(.glass-sidebar *) {
+  border-color: #2c3138;
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .border-slate-300:not(.glass-sidebar *) {
+  border-color: #3a414a;
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .hover\:border-slate-300:not(.glass-sidebar *):hover,
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .hover\:border-slate-200:not(.glass-sidebar *):hover {
+  border-color: #4a525d;
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .divide-slate-50:not(.glass-sidebar *) > :not([hidden]) ~ :not([hidden]),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .divide-slate-100:not(.glass-sidebar *) > :not([hidden]) ~ :not([hidden]),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .divide-slate-200\/70:not(.glass-sidebar *) > :not([hidden]) ~ :not([hidden]),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .divide-slate-200\/60:not(.glass-sidebar *) > :not([hidden]) ~ :not([hidden]) {
+  border-color: #2c3138;
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .ring-slate-200:not(.glass-sidebar *) {
+  --tw-ring-color: #2c3138;
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-emerald-50:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-emerald-50\/80:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-emerald-50\/70:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-emerald-100:not(.glass-sidebar *) {
+  background-color: rgba(16, 185, 129, 0.14);
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .text-emerald-600:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .text-emerald-700:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .text-emerald-800:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .text-emerald-900:not(.glass-sidebar *) {
+  color: #34d399;
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .border-emerald-200:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .border-emerald-200\/70:not(.glass-sidebar *) {
+  border-color: rgba(16, 185, 129, 0.35);
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .ring-emerald-200:not(.glass-sidebar *) {
+  --tw-ring-color: rgba(16, 185, 129, 0.35);
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-amber-50:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-amber-50\/80:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-amber-50\/70:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-amber-100:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-amber-100\/80:not(.glass-sidebar *) {
+  background-color: rgba(245, 158, 11, 0.14);
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .hover\:bg-amber-100:not(.glass-sidebar *):hover {
+  background-color: rgba(245, 158, 11, 0.22);
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .text-amber-600:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .text-amber-700:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .text-amber-800:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .text-amber-900:not(.glass-sidebar *) {
+  color: #fbbf24;
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .border-amber-200:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .border-amber-200\/70:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .border-amber-200\/60:not(.glass-sidebar *) {
+  border-color: rgba(245, 158, 11, 0.35);
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .ring-amber-200:not(.glass-sidebar *) {
+  --tw-ring-color: rgba(245, 158, 11, 0.35);
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-rose-50:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-rose-50\/90:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-rose-50\/80:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-rose-50\/70:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-rose-100:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-red-50:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-red-50\/70:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-pink-50:not(.glass-sidebar *) {
+  background-color: rgba(244, 63, 94, 0.14);
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .hover\:bg-rose-50:not(.glass-sidebar *):hover,
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .hover\:bg-red-50:not(.glass-sidebar *):hover {
+  background-color: rgba(244, 63, 94, 0.22);
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .text-rose-600:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .text-rose-700:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .text-rose-800:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .text-rose-900:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .text-red-600:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .text-red-700:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .text-red-800:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .text-pink-600:not(.glass-sidebar *) {
+  color: #fb7185;
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .border-rose-200:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .border-rose-200\/70:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .border-rose-200\/60:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .border-rose-300:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .border-red-100:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .border-red-200:not(.glass-sidebar *) {
+  border-color: rgba(244, 63, 94, 0.35);
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .ring-rose-200:not(.glass-sidebar *) {
+  --tw-ring-color: rgba(244, 63, 94, 0.35);
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-sky-50:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-sky-50\/80:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-sky-50\/70:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-sky-50\/60:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-sky-100:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-cyan-50:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-cyan-100:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-blue-50:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-indigo-50:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-violet-50:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-fuchsia-50:not(.glass-sidebar *) {
+  background-color: rgba(14, 165, 233, 0.14);
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .hover\:bg-sky-50:not(.glass-sidebar *):hover {
+  background-color: rgba(14, 165, 233, 0.22);
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .text-sky-600:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .text-sky-700:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .text-sky-800:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .text-sky-900:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .text-cyan-600:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .text-blue-600:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .text-indigo-600:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .text-violet-600:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .text-fuchsia-600:not(.glass-sidebar *) {
+  color: #38bdf8;
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .border-sky-200:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .border-sky-200\/70:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .border-blue-200:not(.glass-sidebar *) {
+  border-color: rgba(14, 165, 233, 0.35);
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .ring-sky-200:not(.glass-sidebar *) {
+  --tw-ring-color: rgba(14, 165, 233, 0.35);
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-orange-50:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-orange-100:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-brand-50:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-brand-50\/60:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .bg-brand-100:not(.glass-sidebar *) {
+  background-color: rgba(234, 122, 63, 0.14);
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .hover\:bg-orange-100:not(.glass-sidebar *):hover {
+  background-color: rgba(234, 122, 63, 0.22);
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .text-orange-600:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .text-orange-700:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .text-brand-600:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .text-brand-700:not(.glass-sidebar *) {
+  color: #f0915e;
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .border-orange-200:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .border-brand-200:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .border-brand-300:not(.glass-sidebar *) {
+  border-color: rgba(234, 122, 63, 0.35);
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .ring-orange-200:not(.glass-sidebar *),
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .ring-brand-200:not(.glass-sidebar *) {
+  --tw-ring-color: rgba(234, 122, 63, 0.35);
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .hover\:text-orange-700:not(.glass-sidebar *):hover,
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .hover\:text-brand-700:not(.glass-sidebar *):hover {
+  color: #f6ad83;
+}
+html[data-operator-theme='dark'] :is(.operator-app:not(.customer-embedded-page), .operator-portal) .hover\:text-rose-600:not(.glass-sidebar *):hover {
+  color: #fda4af;
+}
