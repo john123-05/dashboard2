@@ -23,7 +23,7 @@ const INCLUDED = [
 ];
 
 const BENEFITS = [
-  { title: 'Profil wie im Videospiel', text: 'Profilbild und Nutzername anlegen, mit anderen messen. Gerade beliebt bei jungen Gästen. Geht nur mit gekauftem Foto.' },
+  { title: 'Profil wie im Videospiel', text: 'Profilbild und Nutzername anlegen, mit anderen messen. Gerade beliebt bei jungen Gästen.' },
   { title: 'Bestzeit toppen', text: 'Stammgäste und Einheimische jagen Rekorde. Wer überholt wurde, fährt nochmal und kauft ein neues Foto. Du gewinnst doppelt.' },
   { title: 'Tag, Monat, Allzeit', text: 'Wer war heute, diesen Monat und insgesamt am schnellsten?' },
   { title: 'Social Media', text: 'Gäste lieben es, ihre Platzierung zu teilen. Motiviere sie, die Bestzeit zu schlagen und ihr Foto zu kaufen.' },
