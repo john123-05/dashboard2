@@ -91,7 +91,10 @@ export default function UnlockCenter({
             ))}
           </div>
           {tab === 'overview' && (
-            <Link to="/leads/preise" className="glass-button-secondary">
+            <Link
+              to="/leads/preise"
+              className="inline-flex items-center justify-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+            >
               Preise und Pakete ansehen
             </Link>
           )}
