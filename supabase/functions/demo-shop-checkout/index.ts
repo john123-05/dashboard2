@@ -16,6 +16,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const PHYSICAL = new Set(['print', 'postcard', 'magnet', 'mug', 'tshirt']);
 const ALLOWED_ORIGINS = [
   /^https:\/\/(www\.)?dashboard-liftpictures\.com$/,
+  /^https:\/\/(www\.)?liftpictures-fotos\.de$/,
   /^https:\/\/[a-z0-9-]+\.netlify\.app$/,
   /^http:\/\/(localhost|127\.0\.0\.1|192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3})(:\d+)?$/,
 ];

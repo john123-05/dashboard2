@@ -16,6 +16,8 @@ import {
 import { formatEuro } from '../lib/demoShop';
 import { SHOP_FONTS } from '../lib/shopFonts';
 
+// The public shop lives on the claim site (imst repo), so phones and customers can open it.
+const PUBLIC_SHOP_URL = 'https://liftpictures-fotos.de';
 const POTENTIAL_DAYS = 30;
 
 type EditableProduct = {
@@ -168,14 +170,14 @@ export default function Shop() {
   }, [parkId, isKioskPark]);
 
   const demoUrl = settings ? `${window.location.origin}/demo-shop/${settings.demo_token}` : null;
-  const isLocalhost = /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname);
+  const qrUrl = settings ? `${PUBLIC_SHOP_URL}/demo-shop/${settings.demo_token}` : null;
 
   useEffect(() => {
-    if (!demoUrl) return;
-    QRCode.toDataURL(demoUrl, { margin: 1, width: 220 })
+    if (!qrUrl) return;
+    QRCode.toDataURL(qrUrl, { margin: 1, width: 220 })
       .then(setQr)
       .catch(() => setQr(null));
-  }, [demoUrl]);
+  }, [qrUrl]);
 
   const potential = useMemo(() => {
     if (!days) return null;
@@ -483,7 +485,7 @@ export default function Shop() {
                     Desktop-Version
                   </button>
                   <a
-                    href={demoUrl}
+                    href={qrUrl ?? demoUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1.5 rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700"
@@ -499,8 +501,6 @@ export default function Shop() {
                     <p className="text-xs text-slate-600">
                       Mit dem Handy scannen und den Shop selbst ausprobieren – inklusive Test-Checkout mit der Karte
                       4242 4242 4242 4242.
-                      {isLocalhost &&
-                        ' Hinweis: Auf „localhost“ kann das Handy den Code nicht öffnen – Dashboard dafür über die Netzwerk-Adresse des Rechners (z. B. http://192.168.…:5180) aufrufen, gleiches WLAN.'}
                     </p>
                   </div>
                 )}
@@ -522,7 +522,7 @@ export default function Shop() {
               <p className="text-sm font-semibold text-slate-700">Desktop-Version deines Shops</p>
               <div className="flex items-center gap-2">
                 <a
-                  href={demoUrl}
+                  href={qrUrl ?? demoUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700"
