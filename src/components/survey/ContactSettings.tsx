@@ -2,14 +2,16 @@ import { useEffect, useState } from 'react';
 import { Check, Loader2 } from 'lucide-react';
 import GlassCard from '../ui/GlassCard';
 import { saveContactSettings, type FieldLevel } from '../../lib/surveyApi';
+import { useI18n } from '../../lib/i18n';
 
 const LEVELS: { value: FieldLevel; label: string }[] = [
-  { value: 'required', label: 'Pflicht' },
-  { value: 'optional', label: 'Freiwillig' },
-  { value: 'off', label: 'Aus' },
+  { value: 'required', label: 'social.level_required' },
+  { value: 'optional', label: 'social.level_optional' },
+  { value: 'off', label: 'social.level_off' },
 ];
 
 function Choice({ label, value, onChange }: { label: string; value: FieldLevel; onChange: (v: FieldLevel) => void }) {
+  const { t } = useI18n();
   return (
     <div>
       <p className="mb-1.5 text-xs font-medium text-slate-600">{label}</p>
@@ -23,7 +25,7 @@ function Choice({ label, value, onChange }: { label: string; value: FieldLevel; 
               value === l.value ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
             }`}
           >
-            {l.label}
+            {t(l.label)}
           </button>
         ))}
       </div>
@@ -39,6 +41,7 @@ export default function ContactSettings({ parkId, email, phone, address, onSaved
   address: FieldLevel;
   onSaved: () => void;
 }) {
+  const { t } = useI18n();
   const [emailMode, setEmailMode] = useState<FieldLevel>(email);
   const [phoneMode, setPhoneMode] = useState<FieldLevel>(phone);
   const [addressMode, setAddressMode] = useState<FieldLevel>(address);
@@ -58,7 +61,7 @@ export default function ContactSettings({ parkId, email, phone, address, onSaved
       setSaved(true);
       onSaved();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Speichern fehlgeschlagen.');
+      setError(e instanceof Error ? e.message : t('survey.save_failed'));
     }
     setSaving(false);
   }
@@ -66,16 +69,16 @@ export default function ContactSettings({ parkId, email, phone, address, onSaved
   return (
     <GlassCard className="p-5 sm:p-6">
       <div className="flex flex-wrap items-end gap-6">
-        <Choice label="E-Mail-Adresse" value={emailMode} onChange={(v) => { setEmailMode(v); setSaved(false); }} />
-        <Choice label="Telefonnummer" value={phoneMode} onChange={(v) => { setPhoneMode(v); setSaved(false); }} />
-        <Choice label="Hausadresse" value={addressMode} onChange={(v) => { setAddressMode(v); setSaved(false); }} />
+        <Choice label={t('contact.email')} value={emailMode} onChange={(v) => { setEmailMode(v); setSaved(false); }} />
+        <Choice label={t('contact.phone')} value={phoneMode} onChange={(v) => { setPhoneMode(v); setSaved(false); }} />
+        <Choice label={t('contact.address')} value={addressMode} onChange={(v) => { setAddressMode(v); setSaved(false); }} />
         <button type="button" onClick={save} disabled={saving || !dirty} className="glass-button-primary disabled:opacity-50">
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-          Speichern
+          {t('survey.save')}
         </button>
         {saved && !dirty && (
           <span className="flex items-center gap-1 text-sm text-emerald-700">
-            <Check className="h-4 w-4" /> Gilt sofort
+            <Check className="h-4 w-4" /> {t('contact.applies_now')}
           </span>
         )}
       </div>
