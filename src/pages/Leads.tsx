@@ -1392,11 +1392,11 @@ function LeadsContacts({
               title="Gerade aktiv"
               value={
                 unlockMode === 'survey'
-                  ? 'Umfrage frei'
+                  ? 'Umfrage'
                   : unlockMode === 'social'
-                    ? 'Social Media frei'
+                    ? 'Social Media'
                     : unlockMode === 'email'
-                      ? 'E-Mail frei'
+                      ? 'E-Mail'
                       : '–'
               }
               subtitle="So schalten Gäste ihr Foto frei"

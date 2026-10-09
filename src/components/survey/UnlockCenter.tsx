@@ -74,10 +74,7 @@ export default function UnlockCenter({
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-          <h2 className="text-2xl font-bold tracking-tight text-slate-800">{shown?.label}</h2>
-          {tab === 'overview' && (
-            <p className="text-sm font-medium text-slate-400">Deine Besucher kennenlernen</p>
-          )}
+          <h2 className="text-2xl font-bold tracking-tight text-slate-800">{tab === 'overview' ? 'Übersicht: Deine Besucher kennenlernen' : shown?.label}</h2>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <div className="inline-flex rounded-xl bg-white/50 p-1">
