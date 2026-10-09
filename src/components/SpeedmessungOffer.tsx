@@ -39,7 +39,7 @@ const PLANS: {
   {
     key: 'basis',
     name: 'Speedmessung',
-    monthly: 150,
+    monthly: 149,
     months: 12,
     image: '/speedmessung/langzeit.jpg',
     extras: ['12 Monate Laufzeit'],
@@ -47,16 +47,16 @@ const PLANS: {
   {
     key: 'display',
     name: 'Speedmessung + Display',
-    monthly: 250,
+    monthly: 249,
     months: 12,
-    fromYear2: 150,
+    fromYear2: 149,
     highlight: true,
     badge: 'Beliebt',
     image: '/speedmessung/display.jpg',
     extras: [
       'Großes Display an der Bahn: Zeit & km/h für alle Gäste sichtbar',
       'Display ohne Einmalkosten',
-      'Ab dem 2. Jahr nur 150 € pro Monat',
+      'Ab dem 2. Jahr nur 149 € pro Monat',
       '12 Monate Laufzeit',
     ],
   },
