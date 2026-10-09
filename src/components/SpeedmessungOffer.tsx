@@ -42,7 +42,7 @@ const PLANS: {
   {
     key: 'long',
     name: 'Speedmessung 48 Monate',
-    monthly: 199,
+    monthly: 99,
     months: 48,
     badge: 'Sparpreis',
     points: ['Alles aus „Enthalten“', 'Günstiger bei langer Laufzeit', '48 Monate Laufzeit'],
