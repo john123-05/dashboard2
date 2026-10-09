@@ -128,7 +128,7 @@ export default function SpeedmessungOffer() {
 
       {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-center text-sm text-rose-700">{error}</p>}
 
-      <div className="grid items-stretch gap-4 pt-2 sm:grid-cols-3">
+      <div className="grid items-stretch gap-4 pt-5 sm:grid-cols-3">
         {PLANS.map((plan) => {
           const done = requested.includes(plan.key);
           const hl = plan.highlight;
@@ -136,7 +136,7 @@ export default function SpeedmessungOffer() {
             <div
               key={plan.key}
               className={`relative flex flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ${
-                hl ? 'ring-2 ring-amber-400' : 'ring-slate-200'
+                hl ? 'shadow-xl ring-2 ring-amber-400 sm:-translate-y-4' : 'ring-slate-200'
               }`}
             >
               {plan.image && (
