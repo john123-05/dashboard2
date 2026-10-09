@@ -32,6 +32,15 @@ interface CustomerRow {
   total_spent: number;
 }
 
+// Lokal (npm run dev) zeigt die Vorschau den lokalen imst-Server (Port 5181),
+// damit neue Ranglisten schon vor dem Veroeffentlichen sichtbar sind.
+function rankingBase(parkId: string | null): string {
+  const base = claimSiteBaseFor(parkId) ?? '';
+  return import.meta.env.DEV && base.startsWith('https://liftpictures-fotos.de')
+    ? base.replace('https://liftpictures-fotos.de', 'http://localhost:5181')
+    : base;
+}
+
 export default function Users() {
   const { t } = useI18n();
   const { parkId, kioskTimezone } = usePark();
@@ -230,7 +239,7 @@ export default function Users() {
         </div>
         {parkId && claimSiteBaseFor(parkId) && (
           <a
-            href={`${claimSiteBaseFor(parkId)}/ranking${locked ? '?demo=1' : ''}`}
+            href={`${rankingBase(parkId)}/ranking${locked ? '?demo=1' : ''}`}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex w-fit items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
@@ -496,7 +505,7 @@ export default function Users() {
             </div>
             {claimSiteBaseFor(parkId) ? (
               <iframe
-                src={`${claimSiteBaseFor(parkId)}/ranking${locked ? '?demo=1' : ''}`}
+                src={`${rankingBase(parkId)}/ranking${locked ? '?demo=1' : ''}`}
                 title="Live-Vorschau der Tagesbestenliste"
                 scrolling="yes"
                 className="w-full flex-1 border-0"
