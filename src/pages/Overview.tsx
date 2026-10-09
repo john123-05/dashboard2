@@ -195,7 +195,7 @@ export default function Overview() {
 
   async function loadData() {
     if (!parkId) {
-      setError('No park selected');
+      setError(t('app.no_park_selected'));
       setLoading(false);
       return;
     }
@@ -246,10 +246,10 @@ export default function Overview() {
         setLeads(leadsResult.error ? [] : leadsResult.data?.leads ?? []);
         setRecentPhotos(recentPhotosResult);
         const kioskParkData =
-          parkDashboardResult.data ?? createEmptyParkDashboardData(parkId, parkName || 'Selected park');
+          parkDashboardResult.data ?? createEmptyParkDashboardData(parkId, parkName || t('app.selected_park'));
         setParkData({
           ...kioskParkData,
-          park_name: kioskParkData.park_name || parkName || 'Selected park',
+          park_name: kioskParkData.park_name || parkName || t('app.selected_park'),
         });
         setTotalUsers(externalUsersResult.error ? null : externalUsersResult.data?.customers?.length ?? null);
         setTotalPhotos(externalPhotosResult.error ? null : externalPhotosResult.data?.photos?.length ?? null);
@@ -265,8 +265,8 @@ export default function Overview() {
           .map((purchase) => ({
             id: `kiosk-${purchase.id}`,
             source: 'kiosk' as const,
-            title: 'Foto am Automaten verkauft',
-            description: purchase.email ? `Später abgeholt: ${purchase.email}` : 'Kein Abholstatus bekannt',
+            title: t('overview.kiosk_sold'),
+            description: purchase.email ? t('overview.picked_up_later', { email: purchase.email }) : t('overview.no_pickup_status'),
             created_at: purchase.capturedAt,
           }));
         setRecentTransactions(kioskActivity);
@@ -328,7 +328,7 @@ export default function Overview() {
 
       const dashboardBase =
         parkDashboardResult.data ??
-        createEmptyParkDashboardData(parkId, parkName || 'Selected park');
+        createEmptyParkDashboardData(parkId, parkName || t('app.selected_park'));
       const stripeRevenue = revenueResult.error ? { revenue_by_day: [], total_revenue: 0 } : revenueResult.data;
       const stripePayments = paymentsResult.error ? [] : paymentsResult.data?.payments || [];
       const succeededStripePayments = stripePayments.filter((payment) => payment.status === 'succeeded');
@@ -343,7 +343,7 @@ export default function Overview() {
 
       const dashboard: ParkDashboardData = {
         ...dashboardBase,
-        park_name: dashboardBase.park_name || parkName || 'Selected park',
+        park_name: dashboardBase.park_name || parkName || t('app.selected_park'),
         features: {
           ...dashboardBase.features,
           stripe:
@@ -434,8 +434,8 @@ export default function Overview() {
           id: `local-${event.id}`,
           source: 'ops' as const,
           title: event.payment_method
-            ? `${event.payment_method.toUpperCase()} sale`
-            : 'Local transaction',
+            ? t('overview.sale_method', { method: event.payment_method.toUpperCase() })
+            : t('overview.local_sale'),
           description: event.description,
           created_at: event.occurred_at,
           severity: event.severity,
@@ -444,11 +444,11 @@ export default function Overview() {
         ...succeededStripePayments.slice(0, 12).map((payment) => ({
           id: `stripe-${payment.id}`,
           source: 'stripe' as const,
-          title: 'Online payment',
+          title: t('overview.online_payment'),
           description:
             payment.description ||
             payment.customer_email ||
-            `Stripe payment ${payment.id.slice(0, 10)}`,
+            t('overview.stripe_payment', { id: payment.id.slice(0, 10) }),
           created_at: payment.created_at,
           status: 'completed',
         })),
@@ -482,7 +482,7 @@ export default function Overview() {
       setError(null);
       setLoading(false);
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : 'Unknown error');
+      setError(loadError instanceof Error ? loadError.message : t('app.unknown_error'));
       setLoading(false);
     }
   }
@@ -532,23 +532,23 @@ export default function Overview() {
 
     const isOpen = nowMinutes >= openMinutes && nowMinutes < closeMinutes;
     const label = isOpen
-      ? `Park geöffnet · schließt in ${formatDurationShort(closeMinutes - nowMinutes)}`
+      ? t('overview.park_open', { time: formatDurationShort(closeMinutes - nowMinutes) })
       : nowMinutes < openMinutes
-        ? `Park öffnet in ${formatDurationShort(openMinutes - nowMinutes)}`
-        : 'Park heute bereits geschlossen';
+        ? t('overview.park_opens_in', { time: formatDurationShort(openMinutes - nowMinutes) })
+        : t('overview.park_closed_today');
 
     return { isOpen, label };
-  }, [isKioskPark, kioskOpeningHours, kioskOpeningHoursConfig, kioskTimezone]);
+  }, [isKioskPark, kioskOpeningHours, kioskOpeningHoursConfig, kioskTimezone, t]);
 
   const greeting = useMemo(() => {
     const tz = isKioskPark && kioskTimezone ? kioskTimezone : Intl.DateTimeFormat().resolvedOptions().timeZone;
     const hour = Number(new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour: '2-digit', hourCycle: 'h23' }).format(new Date()));
-    if (hour < 11) return 'Guten Morgen';
-    if (hour < 14) return 'Guten Mittag';
-    if (hour < 18) return 'Guten Tag';
-    if (hour < 22) return 'Guten Abend';
-    return 'Gute Nacht';
-  }, [isKioskPark, kioskTimezone]);
+    if (hour < 11) return t('greeting.morning');
+    if (hour < 14) return t('greeting.noon');
+    if (hour < 18) return t('greeting.afternoon');
+    if (hour < 22) return t('greeting.evening');
+    return t('greeting.night');
+  }, [isKioskPark, kioskTimezone, t]);
 
   const firstName = profile?.full_name?.split(' ')[0] ?? '';
 
@@ -672,12 +672,12 @@ export default function Overview() {
     return {
       id: 'insight-revenue-trend',
       source: 'insight',
-      title: isUp ? 'Umsatz steigt' : 'Umsatz sinkt',
-      description: `Dein Umsatz ist in den letzten 7 Tagen im Vergleich zu den 7 Tagen davor um ${Math.abs(changePercent)} % ${isUp ? 'gestiegen' : 'gefallen'}.`,
+      title: isUp ? t('overview.trend_up_title') : t('overview.trend_down_title'),
+      description: t(isUp ? 'overview.trend_up_desc' : 'overview.trend_down_desc', { percent: Math.abs(changePercent) }),
       created_at: new Date().toISOString(),
       severity: isUp ? undefined : 'warning',
     };
-  }, [isKioskPark, kioskDays]);
+  }, [isKioskPark, kioskDays, t]);
 
   const visibleActivityItems = useMemo(() => {
     const items = revenueTrendItem ? [revenueTrendItem, ...activityItems] : activityItems;
@@ -687,18 +687,18 @@ export default function Overview() {
     localRevenueCents > 0
       ? formatCurrency(localRevenueCents)
       : localUnconfirmedCents > 0
-        ? `${formatCurrency(localUnconfirmedCents)} detected`
+        ? t('overview.local_detected', { amount: formatCurrency(localUnconfirmedCents) })
         : localUnknownAmountCount > 0
-          ? 'Unknown'
+          ? t('overview.local_unknown')
           : formatCurrency(0);
   const localRevenueFootnote =
     localRevenueCents > 0
-      ? 'Confirmed local revenue only'
+      ? t('overview.local_note_confirmed')
       : localUnconfirmedCents > 0
-        ? 'Detected in machine data, not confirmed as revenue'
+        ? t('overview.local_note_detected')
         : localUnknownAmountCount > 0
-          ? 'Local sales activity exists without a confirmed amount'
-          : 'No confirmed local revenue yet';
+          ? t('overview.local_note_unknown')
+          : t('overview.local_note_none');
 
   if (loading) {
     return (

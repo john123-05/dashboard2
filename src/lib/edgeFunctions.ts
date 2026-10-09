@@ -127,6 +127,46 @@ export function isEdgeSourceUnavailable(error: string | null): boolean {
   );
 }
 
+type WarningLang = 'de' | 'en' | 'es' | 'fr' | 'it' | 'nl' | 'lv';
+
+const WARNING_TEXT: Record<WarningLang, { unavailable: string; details: string; retry: string }> = {
+  de: { unavailable: '{source} ist vorübergehend nicht erreichbar.', details: 'Details: {error}', retry: 'Bitte versuche es später erneut.' },
+  en: { unavailable: '{source} is temporarily unavailable.', details: 'Details: {error}', retry: 'Please try again later.' },
+  es: { unavailable: '{source} no está disponible temporalmente.', details: 'Detalles: {error}', retry: 'Inténtalo de nuevo más tarde.' },
+  fr: { unavailable: '{source} est temporairement indisponible.', details: 'Détails : {error}', retry: 'Veuillez réessayer plus tard.' },
+  it: { unavailable: '{source} non è temporaneamente disponibile.', details: 'Dettagli: {error}', retry: 'Riprova più tardi.' },
+  nl: { unavailable: '{source} is tijdelijk niet beschikbaar.', details: 'Details: {error}', retry: 'Probeer het later opnieuw.' },
+  lv: { unavailable: '{source} īslaicīgi nav pieejams.', details: 'Detaļas: {error}', retry: 'Lūdzu, mēģini vēlreiz vēlāk.' },
+};
+
+// Namen der Datenquellen, wie sie in Warnungen erscheinen (Schlüssel = englischer Name im Code).
+const SOURCE_NAMES: Record<string, Record<WarningLang, string>> = {
+  'Operations feed': { de: 'Der Betriebs-Feed', en: 'Operations feed', es: 'El feed de operaciones', fr: 'Le flux d’exploitation', it: 'Il feed operativo', nl: 'De bedrijfsfeed', lv: 'Darbības plūsma' },
+  'Stripe data': { de: 'Die Stripe-Daten', en: 'Stripe data', es: 'Los datos de Stripe', fr: 'Les données Stripe', it: 'I dati Stripe', nl: 'De Stripe-gegevens', lv: 'Stripe dati' },
+  'Local sales feed': { de: 'Der Verkaufs-Feed am Automaten', en: 'Local sales feed', es: 'El feed de ventas locales', fr: 'Le flux des ventes locales', it: 'Il feed delle vendite locali', nl: 'De lokale verkoopfeed', lv: 'Vietējo pārdošanas plūsma' },
+  'Lead feed': { de: 'Die Kontaktliste', en: 'Lead feed', es: 'La lista de contactos', fr: 'La liste des contacts', it: 'L’elenco dei contatti', nl: 'De contactenlijst', lv: 'Kontaktu saraksts' },
+  'User feed': { de: 'Die Gästeliste', en: 'User feed', es: 'La lista de huéspedes', fr: 'La liste des visiteurs', it: 'L’elenco degli ospiti', nl: 'De gastenlijst', lv: 'Viesu saraksts' },
+  'Photo feed': { de: 'Die Fotoliste', en: 'Photo feed', es: 'La lista de fotos', fr: 'La liste des photos', it: 'L’elenco delle foto', nl: 'De fotolijst', lv: 'Foto saraksts' },
+  'Error log feed': { de: 'Das Fehlerprotokoll', en: 'Error log feed', es: 'El registro de errores', fr: 'Le journal des erreurs', it: 'Il registro degli errori', nl: 'Het foutenlogboek', lv: 'Kļūdu žurnāls' },
+  'System health feed': { de: 'Die Systemzustand-Daten', en: 'System health feed', es: 'Los datos del estado del sistema', fr: 'Les données d’état du système', it: 'I dati sullo stato del sistema', nl: 'De systeemstatusgegevens', lv: 'Sistēmas stāvokļa dati' },
+  'Legacy health feed': { de: 'Die älteren Systemzustand-Daten', en: 'Legacy health feed', es: 'Los datos antiguos del estado del sistema', fr: 'Les anciennes données d’état du système', it: 'I vecchi dati sullo stato del sistema', nl: 'De oudere systeemstatusgegevens', lv: 'Vecie sistēmas stāvokļa dati' },
+  'Stripe products': { de: 'Die Stripe-Produkte', en: 'Stripe products', es: 'Los productos de Stripe', fr: 'Les produits Stripe', it: 'I prodotti Stripe', nl: 'De Stripe-producten', lv: 'Stripe produkti' },
+};
+
+function currentWarningLanguage(): WarningLang {
+  try {
+    const stored = localStorage.getItem('app_language');
+    if (stored && stored in WARNING_TEXT) return stored as WarningLang;
+  } catch {
+    // localStorage nicht verfügbar: Standardsprache
+  }
+  return 'de';
+}
+
 export function getOptionalSourceWarning(sourceName: string, error: string | null): string {
-  return `${sourceName} is temporarily unavailable. ${error ? `Details: ${error}` : 'Please try again later.'}`;
+  const lang = currentWarningLanguage();
+  const text = WARNING_TEXT[lang];
+  const source = SOURCE_NAMES[sourceName]?.[lang] ?? sourceName;
+  const tail = error ? text.details.replace('{error}', error) : text.retry;
+  return `${text.unavailable.replace('{source}', source)} ${tail}`;
 }
