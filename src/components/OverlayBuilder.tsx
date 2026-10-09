@@ -1,3 +1,4 @@
+import { useI18n } from '../lib/i18n';
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
 import { Type, ImagePlus, Trash2, Loader2, Download, Square, Circle, Minus, Frame, Image as ImgIcon, Sparkles, Copy, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, AlignCenterHorizontal, AlignCenterVertical, Shapes, Crop } from 'lucide-react';
 
@@ -17,18 +18,18 @@ type UploadedImage = { id: string; name: string; img: HTMLImageElement };
 type PanelId = 'format' | 'elements' | 'text' | 'uploads' | 'ai';
 
 const FORMATS = [
-  { id: '4:3', label: '4:3 (Standard)', w: 1600, h: 1200 },
+  { id: '4:3', label: 'builder.fmt_standard', w: 1600, h: 1200 },
   { id: '3:2', label: '3:2', w: 1620, h: 1080 },
-  { id: '16:9', label: '16:9 (Breit)', w: 1920, h: 1080 },
-  { id: '1:1', label: '1:1 (Quadrat)', w: 1080, h: 1080 },
-  { id: '3:4', label: '3:4 (Hochformat)', w: 1200, h: 1600 },
-  { id: '9:16', label: '9:16 (Story)', w: 1080, h: 1920 },
+  { id: '16:9', label: 'builder.fmt_wide', w: 1920, h: 1080 },
+  { id: '1:1', label: 'builder.fmt_square', w: 1080, h: 1080 },
+  { id: '3:4', label: 'builder.fmt_portrait', w: 1200, h: 1600 },
+  { id: '9:16', label: 'builder.fmt_story', w: 1080, h: 1920 },
 ];
 const FONTS = ['Arial', 'Helvetica', 'Georgia', 'Times New Roman', 'Courier New', 'Verdana', 'Tahoma', 'Trebuchet MS', 'Impact', 'Comic Sans MS'];
 const FRAME_PRESETS = [
-  { label: 'Dünn', strokeWidth: 6, radius: 0 },
-  { label: 'Dick', strokeWidth: 18, radius: 0 },
-  { label: 'Abgerundet', strokeWidth: 12, radius: 40 },
+  { label: 'builder.frame_thin', strokeWidth: 6, radius: 0 },
+  { label: 'builder.frame_thick', strokeWidth: 18, radius: 0 },
+  { label: 'builder.frame_round', strokeWidth: 12, radius: 40 },
 ];
 const DISPLAY_W = 900;
 const CHECKER = 'repeating-conic-gradient(#e2e8f0 0% 25%, #f8fafc 0% 50%) 50% / 20px 20px';
@@ -52,6 +53,7 @@ export default function OverlayBuilder({
   generating?: boolean;
   generateError?: string | null;
 }) {
+  const { t } = useI18n();
   const [formatId, setFormatId] = useState('4:3');
   const format = FORMATS.find((f) => f.id === formatId) ?? FORMATS[0];
   const displayH = Math.round(DISPLAY_W * (format.h / format.w));
@@ -229,7 +231,7 @@ export default function OverlayBuilder({
 
   function addTextPreset(fontSize: number) {
     const id = uid();
-    add({ id, type: 'text', x: cx, y: cy, opacity: 1, text: 'Dein Text', fontSize, fill: '#ffffff', fontFamily: 'Arial' });
+    add({ id, type: 'text', x: cx, y: cy, opacity: 1, text: t('builder.your_text'), fontSize, fill: '#ffffff', fontFamily: 'Arial' });
     setEditingTextId(id);
   }
   function addRect() {
@@ -405,11 +407,11 @@ export default function OverlayBuilder({
   }
 
   const RAIL_ITEMS: { id: PanelId; icon: typeof Type; label: string }[] = [
-    { id: 'format', icon: Crop, label: 'Format' },
-    { id: 'elements', icon: Shapes, label: 'Elemente' },
-    { id: 'text', icon: Type, label: 'Text' },
-    { id: 'uploads', icon: ImagePlus, label: 'Uploads' },
-    { id: 'ai', icon: Sparkles, label: 'KI' },
+    { id: 'format', icon: Crop, label: t('builder.cat_format') },
+    { id: 'elements', icon: Shapes, label: t('builder.cat_elements') },
+    { id: 'text', icon: Type, label: t('builder.cat_text') },
+    { id: 'uploads', icon: ImagePlus, label: t('builder.cat_uploads') },
+    { id: 'ai', icon: Sparkles, label: t('builder.cat_ai') },
   ];
 
   function selectPanel(id: PanelId) {
@@ -449,7 +451,7 @@ export default function OverlayBuilder({
         <div className="shrink-0 space-y-4 border-b border-white/30 bg-white/25 p-3 xl:w-44 xl:max-h-[640px] xl:overflow-y-auto xl:border-b-0 xl:border-r">
           {panel === 'format' && (
             <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Format</p>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">{t('builder.cat_format')}</p>
               <div className="grid grid-cols-2 gap-2">
                 {FORMATS.map((f) => (
                   <button
@@ -465,7 +467,7 @@ export default function OverlayBuilder({
                       className="rounded-sm border-2 border-current opacity-70"
                       style={{ width: 22, height: Math.round((22 * f.h) / f.w) }}
                     />
-                    {f.label}
+                    {f.label.startsWith('builder.') ? t(f.label) : f.label}
                   </button>
                 ))}
               </div>
@@ -475,18 +477,18 @@ export default function OverlayBuilder({
           {panel === 'elements' && (
             <>
               <div>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Formen</p>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">{t('builder.shapes')}</p>
                 <div className="grid grid-cols-2 gap-2">
-                  <PanelBtn onClick={addRect} icon={Square} label="Balken" />
-                  <PanelBtn onClick={addEllipse} icon={Circle} label="Kreis" />
-                  <PanelBtn onClick={addLine} icon={Minus} label="Linie" />
+                  <PanelBtn onClick={addRect} icon={Square} label={t('builder.bar')} />
+                  <PanelBtn onClick={addEllipse} icon={Circle} label={t('builder.circle')} />
+                  <PanelBtn onClick={addLine} icon={Minus} label={t('builder.line')} />
                 </div>
               </div>
               <div>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Rahmen</p>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">{t('builder.frames')}</p>
                 <div className="grid grid-cols-2 gap-2">
                   {FRAME_PRESETS.map((fp) => (
-                    <PanelBtn key={fp.label} onClick={() => addFrame(fp)} icon={Frame} label={fp.label} />
+                    <PanelBtn key={fp.label} onClick={() => addFrame(fp)} icon={Frame} label={t(fp.label)} />
                   ))}
                 </div>
               </div>
@@ -495,20 +497,20 @@ export default function OverlayBuilder({
 
           {panel === 'text' && (
             <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Text hinzufügen</p>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">{t('builder.add_text')}</p>
               <div className="space-y-2">
                 <button onClick={() => addTextPreset(48)} className="w-full rounded-xl bg-white/60 px-3 py-3 text-left text-lg font-bold text-slate-800 transition hover:bg-white/90">
-                  Überschrift
+                  {t('builder.heading')}
                 </button>
                 <button onClick={() => addTextPreset(30)} className="w-full rounded-xl bg-white/60 px-3 py-2.5 text-left text-base font-semibold text-slate-800 transition hover:bg-white/90">
-                  Text
+                  {t('builder.cat_text')}
                 </button>
                 <button onClick={() => addTextPreset(20)} className="w-full rounded-xl bg-white/60 px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-white/90">
-                  Kleiner Text
+                  {t('builder.small_text')}
                 </button>
               </div>
               <p className="mt-3 text-xs text-slate-400">
-                Tipp: Doppelklick auf einen Text im Bild, um ihn direkt dort zu bearbeiten.
+                {t('builder.tip_dblclick')}
               </p>
             </div>
           )}
@@ -530,12 +532,12 @@ export default function OverlayBuilder({
                 onClick={() => fileRef.current?.click()}
                 className="glass-button-secondary flex w-full items-center justify-center gap-1.5 text-sm"
               >
-                <ImagePlus className="h-4 w-4" /> Bild hochladen
+                <ImagePlus className="h-4 w-4" /> {t('builder.upload_image')}
               </button>
 
               {uploads.length === 0 ? (
                 <p className="mt-3 text-xs text-slate-400">
-                  Noch keine eigenen Bilder. Lade z. B. dein Logo hoch, um es hier wiederzuverwenden.
+                  {t('builder.no_uploads')}
                 </p>
               ) : (
                 <div className="mt-3 grid grid-cols-2 gap-2">
@@ -544,7 +546,7 @@ export default function OverlayBuilder({
                       key={u.id}
                       className="group relative overflow-hidden rounded-xl border border-white/50 bg-[conic-gradient(#e5e7eb_90deg,#fff_90deg_180deg,#e5e7eb_180deg_270deg,#fff_270deg)] bg-[length:10px_10px]"
                     >
-                      <button onClick={() => insertUpload(u)} className="flex h-16 w-full items-center justify-center p-1.5" title={`${u.name} einfuegen`}>
+                      <button onClick={() => insertUpload(u)} className="flex h-16 w-full items-center justify-center p-1.5" title={t('builder.insert', { name: u.name })}>
                         <img src={u.img.src} alt={u.name} className="max-h-full max-w-full object-contain" />
                       </button>
                       <button
@@ -563,19 +565,19 @@ export default function OverlayBuilder({
 
           {panel === 'ai' && (
             <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Overlay generieren</p>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">{t('builder.generate_title')}</p>
               <div className="space-y-2">
                 <input
                   value={genMessage}
                   onChange={(e) => setGenMessage(e.target.value)}
-                  placeholder="Welche Nachricht möchtest du hinterlassen?"
+                  placeholder={t('builder.message_ph')}
                   className="glass-input w-full text-sm"
                 />
                 <textarea
                   value={genPrompt}
                   onChange={(e) => setGenPrompt(e.target.value)}
                   rows={3}
-                  placeholder="Farben, Anlässe, Stil ... (optional)"
+                  placeholder={t('builder.prompt_ph')}
                   className="glass-input w-full text-sm"
                 />
                 {generateError && <p className="text-xs text-rose-600">{generateError}</p>}
@@ -585,7 +587,7 @@ export default function OverlayBuilder({
                   className="glass-button-primary flex w-full items-center justify-center gap-1.5 text-sm disabled:opacity-60"
                 >
                   {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                  Generieren
+                  {t('builder.generate')}
                 </button>
               </div>
             </div>
@@ -597,7 +599,7 @@ export default function OverlayBuilder({
           statt einer kleinen Ecken-Schaltflaeche, die man leicht uebersieht. */}
       <button
         onClick={() => setPanelCollapsed((c) => !c)}
-        title={panelCollapsed ? 'Kategorien einblenden' : 'Kategorien ausblenden'}
+        title={panelCollapsed ? t('builder.show_categories') : t('builder.hide_categories')}
         className="hidden shrink-0 items-center justify-center rounded-full bg-slate-200 text-slate-500 transition hover:bg-slate-300 hover:text-slate-700 xl:flex xl:my-auto xl:h-14 xl:w-5"
       >
         {panelCollapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
@@ -703,24 +705,24 @@ export default function OverlayBuilder({
         {selected ? (
           <div className="space-y-3 rounded-xl bg-white/40 p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-sm font-semibold text-slate-800">Element</p>
+              <p className="text-sm font-semibold text-slate-800">{t('builder.element')}</p>
               <div className="flex flex-wrap items-center gap-1">
-                <button onClick={centerHorizontal} title="Horizontal zentrieren" className="rounded-lg p-1.5 text-slate-500 hover:bg-white/60 hover:text-slate-800">
+                <button onClick={centerHorizontal} title={t('builder.center_h')} className="rounded-lg p-1.5 text-slate-500 hover:bg-white/60 hover:text-slate-800">
                   <AlignCenterHorizontal className="h-3.5 w-3.5" />
                 </button>
-                <button onClick={centerVertical} title="Vertikal zentrieren" className="rounded-lg p-1.5 text-slate-500 hover:bg-white/60 hover:text-slate-800">
+                <button onClick={centerVertical} title={t('builder.center_v')} className="rounded-lg p-1.5 text-slate-500 hover:bg-white/60 hover:text-slate-800">
                   <AlignCenterVertical className="h-3.5 w-3.5" />
                 </button>
-                <button onClick={sendBackward} title="Nach hinten" className="rounded-lg p-1.5 text-slate-500 hover:bg-white/60 hover:text-slate-800">
+                <button onClick={sendBackward} title={t('builder.backward')} className="rounded-lg p-1.5 text-slate-500 hover:bg-white/60 hover:text-slate-800">
                   <ChevronDown className="h-3.5 w-3.5" />
                 </button>
-                <button onClick={bringForward} title="Nach vorne" className="rounded-lg p-1.5 text-slate-500 hover:bg-white/60 hover:text-slate-800">
+                <button onClick={bringForward} title={t('builder.forward')} className="rounded-lg p-1.5 text-slate-500 hover:bg-white/60 hover:text-slate-800">
                   <ChevronUp className="h-3.5 w-3.5" />
                 </button>
-                <button onClick={duplicateSel} title="Duplizieren" className="rounded-lg p-1.5 text-slate-500 hover:bg-white/60 hover:text-slate-800">
+                <button onClick={duplicateSel} title={t('builder.duplicate')} className="rounded-lg p-1.5 text-slate-500 hover:bg-white/60 hover:text-slate-800">
                   <Copy className="h-3.5 w-3.5" />
                 </button>
-                <button onClick={deleteSel} title="Löschen" className="rounded-lg p-1.5 text-rose-600 hover:bg-rose-50">
+                <button onClick={deleteSel} title={t('builder.delete')} className="rounded-lg p-1.5 text-rose-600 hover:bg-rose-50">
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </div>
@@ -732,27 +734,27 @@ export default function OverlayBuilder({
                   onClick={() => setEditingTextId(selected.id)}
                   className="w-full rounded-lg border border-dashed border-slate-300 bg-white/70 p-2 text-left text-sm text-slate-700 hover:border-brand-300"
                 >
-                  {selected.text || 'Text eingeben...'}
+                  {selected.text || t('builder.enter_text')}
                 </button>
                 <select value={selected.fontFamily} onChange={(e) => patchSel({ fontFamily: e.target.value })} className="glass-input w-full text-sm">
                   {FONTS.map((f) => <option key={f} value={f} style={{ fontFamily: f }}>{f}</option>)}
                 </select>
-                <label className="block text-xs text-slate-500">Größe: {selected.fontSize}px
+                <label className="block text-xs text-slate-500">{t('builder.size_px', { value: selected.fontSize })}
                   <input type="range" min={12} max={200} value={selected.fontSize} onChange={(e) => patchSel({ fontSize: Number(e.target.value) })} className="w-full" />
                 </label>
-                <ColorRow label="Farbe" value={selected.fill} onChange={(v) => patchSel({ fill: v })} />
+                <ColorRow label={t('builder.color')} value={selected.fill} onChange={(v) => patchSel({ fill: v })} />
               </>
             )}
 
             {(selected.type === 'rect' || selected.type === 'ellipse') && (
               <>
-                <ColorRow label="Füllung" value={selected.fill} onChange={(v) => patchSel({ fill: v })} />
-                <ColorRow label="Rand" value={selected.stroke} onChange={(v) => patchSel({ stroke: v })} />
-                <label className="block text-xs text-slate-500">Randstärke: {selected.strokeWidth}px
+                <ColorRow label={t('builder.fill')} value={selected.fill} onChange={(v) => patchSel({ fill: v })} />
+                <ColorRow label={t('builder.border')} value={selected.stroke} onChange={(v) => patchSel({ stroke: v })} />
+                <label className="block text-xs text-slate-500">{t('builder.border_width', { value: selected.strokeWidth })}
                   <input type="range" min={0} max={40} value={selected.strokeWidth} onChange={(e) => patchSel({ strokeWidth: Number(e.target.value) })} className="w-full" />
                 </label>
                 {selected.type === 'rect' && (
-                  <label className="block text-xs text-slate-500">Ecken-Rundung: {selected.radius}px
+                  <label className="block text-xs text-slate-500">{t('builder.corner_radius', { value: selected.radius })}
                     <input type="range" min={0} max={120} value={selected.radius} onChange={(e) => patchSel({ radius: Number(e.target.value) })} className="w-full" />
                   </label>
                 )}
@@ -761,11 +763,11 @@ export default function OverlayBuilder({
 
             {selected.type === 'frame' && (
               <>
-                <ColorRow label="Farbe" value={selected.stroke} onChange={(v) => patchSel({ stroke: v })} />
-                <label className="block text-xs text-slate-500">Stärke: {selected.strokeWidth}px
+                <ColorRow label={t('builder.color')} value={selected.stroke} onChange={(v) => patchSel({ stroke: v })} />
+                <label className="block text-xs text-slate-500">{t('builder.stroke', { value: selected.strokeWidth })}
                   <input type="range" min={1} max={60} value={selected.strokeWidth} onChange={(e) => patchSel({ strokeWidth: Number(e.target.value) })} className="w-full" />
                 </label>
-                <label className="block text-xs text-slate-500">Ecken-Rundung: {selected.radius}px
+                <label className="block text-xs text-slate-500">{t('builder.corner_radius', { value: selected.radius })}
                   <input type="range" min={0} max={200} value={selected.radius} onChange={(e) => patchSel({ radius: Number(e.target.value) })} className="w-full" />
                 </label>
               </>
@@ -773,15 +775,15 @@ export default function OverlayBuilder({
 
             {selected.type === 'line' && (
               <>
-                <ColorRow label="Farbe" value={selected.stroke} onChange={(v) => patchSel({ stroke: v })} />
-                <label className="block text-xs text-slate-500">Dicke: {selected.strokeWidth}px
+                <ColorRow label={t('builder.color')} value={selected.stroke} onChange={(v) => patchSel({ stroke: v })} />
+                <label className="block text-xs text-slate-500">{t('builder.thickness', { value: selected.strokeWidth })}
                   <input type="range" min={1} max={60} value={selected.strokeWidth} onChange={(e) => patchSel({ strokeWidth: Number(e.target.value) })} className="w-full" />
                 </label>
               </>
             )}
 
             <label className="block border-t border-white/40 pt-3 text-xs text-slate-500">
-              Deckkraft: {Math.round(selected.opacity * 100)}%
+              {t('builder.opacity', { value: Math.round(selected.opacity * 100) })}
               <input
                 type="range"
                 min={10}
@@ -794,12 +796,12 @@ export default function OverlayBuilder({
           </div>
         ) : (
           <div className="rounded-xl bg-white/30 p-4 text-xs text-slate-400">
-            Element anklicken, um Farbe, Größe, Schrift und mehr zu ändern.
+            {t('builder.select_hint')}
           </div>
         )}
 
         <button onClick={handleExport} disabled={saving || els.length === 0} className="glass-button-primary flex w-full items-center justify-center gap-2 text-sm disabled:opacity-60">
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} Als Overlay speichern
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} {t('builder.save_overlay')}
         </button>
 
         {previewUrl && (
@@ -807,7 +809,7 @@ export default function OverlayBuilder({
             onClick={() => setShowPhoto((v) => !v)}
             className={`glass-button-secondary flex w-full items-center justify-center gap-1.5 text-sm ${showPhoto ? 'ring-2 ring-brand-500' : ''}`}
           >
-            <ImgIcon className="h-4 w-4" /> Foto zum Vergleich
+            <ImgIcon className="h-4 w-4" /> {t('builder.compare_photo')}
           </button>
         )}
       </div>
