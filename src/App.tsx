@@ -18,6 +18,7 @@ const Kamera = seiteNachladen(() => import('./pages/Kamera'));
 const Configuration = seiteNachladen(() => import('./pages/Configuration'));
 const Shop = seiteNachladen(() => import('./pages/Shop'));
 const ShopPricing = seiteNachladen(() => import('./pages/ShopPricing'));
+const CrmPricing = seiteNachladen(() => import('./pages/CrmPricing'));
 const DemoShop = seiteNachladen(() => import('./pages/DemoShop'));
 const ConfigurationOrders = seiteNachladen(() => import('./pages/ConfigurationOrders'));
 const ConfigurationFaq = seiteNachladen(() => import('./pages/ConfigurationFaq'));
@@ -173,6 +174,7 @@ export default function App() {
                 <Route path="/configuration/bestellungen" element={<ConfigurationOrders />} />
                 <Route path="/configuration/faq" element={<ConfigurationFaq />} />
                 <Route path="/leads" element={<OwnerOnly><Leads /></OwnerOnly>} />
+                <Route path="/leads/preise" element={<OwnerOnly><CrmPricing /></OwnerOnly>} />
                 <Route path="/personalization" element={<Personalization />} />
                 <Route path="/tickets" element={<Support />} />
                 <Route path="/health" element={<SystemHealth />} />

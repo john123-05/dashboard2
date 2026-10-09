@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import SurveyManager from './SurveyManager';
 import SocialManager from './SocialManager';
@@ -89,6 +90,11 @@ export default function UnlockCenter({
               </button>
             ))}
           </div>
+          {tab === 'overview' && (
+            <Link to="/leads/preise" className="glass-button-secondary">
+              Preise und Pakete ansehen
+            </Link>
+          )}
           {shown?.mode && active !== shown.mode && (
             <button
               type="button"
