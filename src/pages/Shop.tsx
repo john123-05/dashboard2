@@ -242,7 +242,7 @@ export default function Shop() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-800">Shop</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-slate-800">Online-Shop</h2>
         </div>
         <div className="flex flex-wrap items-center gap-2">
         <Link

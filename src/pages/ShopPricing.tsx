@@ -94,9 +94,9 @@ export default function ShopPricing() {
       <div>
         <Link to="/shop" className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-800">
           <ArrowLeft className="h-4 w-4" />
-          Zurück zum Shop
+          Zurück zum Online-Shop
         </Link>
-        <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-800">Shop freischalten</h2>
+        <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-800">Online-Shop freischalten</h2>
         <p className="mt-1 text-sm text-slate-500">Drei Wege zu deinem eigenen Foto-Shop. Alle Preise zzgl. MwSt.</p>
       </div>
 
