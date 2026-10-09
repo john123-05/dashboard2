@@ -133,26 +133,28 @@ export default function SpeedmessungOffer() {
               }`}
             >
               {plan.image && (
-                <div className="relative aspect-[16/10] w-full bg-slate-100">
+                <div className="relative h-44 w-full shrink-0 overflow-hidden bg-slate-100">
                   <img src={plan.image} alt="" loading="lazy" className="h-full w-full object-cover" />
                 </div>
               )}
               <div className="flex flex-1 flex-col p-4">
-                {plan.badge && (
-                  <span
-                    className={`mb-2 w-fit rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
-                      hl ? 'bg-amber-400 text-slate-900' : 'bg-emerald-100 text-emerald-800'
-                    }`}
-                  >
-                    {plan.badge}
-                  </span>
-                )}
-                <h4 className="text-sm font-bold text-slate-800">{plan.name}</h4>
+                <div className="mb-2 h-6">
+                  {plan.badge && (
+                    <span
+                      className={`inline-block rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                        hl ? 'bg-amber-400 text-slate-900' : 'bg-emerald-100 text-emerald-800'
+                      }`}
+                    >
+                      {plan.badge}
+                    </span>
+                  )}
+                </div>
+                <h4 className="min-h-[2.5rem] text-sm font-bold leading-snug text-slate-800">{plan.name}</h4>
                 <div className="mt-3 flex items-end gap-1">
                   <span className="text-3xl font-black leading-none tracking-tight text-slate-900">{eur(plan.monthly)}</span>
                   <span className="pb-0.5 text-xs text-slate-500">/ Monat</span>
                 </div>
-                <p className="mt-1.5 min-h-[2rem] text-[11px] leading-snug text-slate-500">
+                <p className="mt-1.5 min-h-[2.25rem] text-[11px] leading-snug text-slate-500">
                   {plan.months} Monate Laufzeit · {plan.fromYear2 ? `im 1. Jahr, ab Jahr 2 ${eur(plan.fromYear2)} / Monat` : 'Hardware 0 €'} · zzgl. MwSt.
                 </p>
                 <p className="mt-3 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Das ist dabei</p>
