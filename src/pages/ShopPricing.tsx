@@ -108,13 +108,16 @@ export default function ShopPricing() {
             Monatlich
           </span>
           <h3 className="text-base font-bold text-slate-800">Einrichtung + Monatspaket</h3>
-          <div className="mt-4 flex items-end gap-1">
-            <span className="text-4xl font-black leading-none tracking-tight text-slate-900">{eur(SETUP_PRICE)}</span>
-            <span className="pb-0.5 text-xs text-slate-500">einmalig, plus</span>
-          </div>
-          <div className="mt-2 flex items-end gap-1">
-            <span className="text-4xl font-black leading-none tracking-tight text-slate-900">{eur(MONTHLY_PRICE)}</span>
-            <span className="pb-0.5 text-xs text-slate-500">/ Monat</span>
+          <div className="mt-4 flex items-start gap-2">
+            <div>
+              <span className="text-4xl font-black leading-none tracking-tight text-slate-900">{eur(SETUP_PRICE)}</span>
+              <p className="mt-1 text-xs text-slate-500">einmalig</p>
+            </div>
+            <span className="text-2xl font-bold leading-none text-slate-400">+</span>
+            <div>
+              <span className="text-4xl font-black leading-none tracking-tight text-slate-900">{eur(MONTHLY_PRICE)}</span>
+              <p className="mt-1 text-xs text-slate-500">pro Monat</p>
+            </div>
           </div>
           <p className="mt-2 min-h-[2.25rem] text-xs leading-snug text-slate-500">
             Einrichtung inklusive Anbindung und Branding.
@@ -136,14 +139,18 @@ export default function ShopPricing() {
             Jährlich · {FREE_MONTHS} Monate geschenkt
           </span>
           <h3 className="text-base font-bold text-slate-800">Einrichtung + 12 Monate im Voraus</h3>
-          <div className="mt-4 flex items-end gap-1">
-            <span className="text-4xl font-black leading-none tracking-tight text-slate-900">{eur(SETUP_PRICE)}</span>
-            <span className="pb-0.5 text-xs text-slate-500">einmalig, plus</span>
-          </div>
-          <div className="mt-2 flex flex-wrap items-end gap-x-2">
-            <span className="text-4xl font-black leading-none tracking-tight text-slate-900">{eur(YEARLY_PRICE)}</span>
-            <span className="pb-0.5 text-sm text-slate-400 line-through">{eur(YEARLY_FULL_PRICE)}</span>
-            <span className="pb-0.5 text-xs text-slate-500">für 12 Monate</span>
+          <div className="mt-4 flex items-start gap-2">
+            <div>
+              <span className="text-4xl font-black leading-none tracking-tight text-slate-900">{eur(SETUP_PRICE)}</span>
+              <p className="mt-1 text-xs text-slate-500">einmalig</p>
+            </div>
+            <span className="text-2xl font-bold leading-none text-slate-400">+</span>
+            <div>
+              <span className="text-4xl font-black leading-none tracking-tight text-slate-900">{eur(YEARLY_PRICE)}</span>
+              <p className="mt-1 text-xs text-slate-500">
+                für 12 Monate <span className="text-slate-400 line-through">{eur(YEARLY_FULL_PRICE)}</span>
+              </p>
+            </div>
           </div>
           <p className="mt-2 min-h-[2.25rem] text-xs leading-snug text-slate-500">
             <span className="font-semibold text-emerald-700">Du sparst {eur(YEARLY_SAVING)}</span> gegenüber{' '}
