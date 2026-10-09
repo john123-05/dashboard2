@@ -73,7 +73,16 @@ export default function UnlockCenter({
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-2xl font-bold tracking-tight text-slate-800">{shown?.label}</h2>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+          <h2 className="text-2xl font-bold tracking-tight text-slate-800">{shown?.label}</h2>
+          {tab === 'overview' && active && (
+            <p className="flex items-center gap-2 text-sm font-medium text-emerald-700">
+              <span className="h-2 w-2 rounded-full bg-emerald-500" aria-hidden="true" />
+              Aktiv: Freischaltung läuft gerade{' '}
+              {active === 'email' ? 'über E-Mail / Telefon' : active === 'survey' ? 'über die Umfrage' : 'über Social Media'}
+            </p>
+          )}
+        </div>
         <div className="flex flex-wrap items-center gap-3">
           <div className="inline-flex rounded-xl bg-white/50 p-1">
             {TABS.map((t) => (

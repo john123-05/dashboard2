@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Camera, Download, ExternalLink, Mail, Minus, Plus, Trash2, UserPlus } from 'lucide-react';
+import { Camera, ClipboardList, Download, Info, Mail, MessageSquare, Minus, Plus, Share2, Star, ThumbsUp, Trash2, UserPlus } from 'lucide-react';
 import { getOptionalSourceWarning, invokeEdgeFunction, isEdgeSourceUnavailable } from '../lib/edgeFunctions';
 import { fetchKioskPhotosForDay, fetchKioskSales, getClosingMinutesForDate, type KioskPurchaseRow } from '../lib/kioskSales';
 import { claimLinkFor, claimSiteBaseFor, fetchRecentPhotos } from '../lib/photoBrowser';
@@ -102,6 +102,8 @@ function CompactMetricCard({
   icon: Icon,
   iconClassName,
   iconWrapClassName,
+  info,
+  active,
 }: {
   title: string;
   value: string;
@@ -109,21 +111,56 @@ function CompactMetricCard({
   icon: typeof UserPlus;
   iconClassName: string;
   iconWrapClassName: string;
+  info?: string;
+  active?: boolean;
 }) {
+  const [infoOpen, setInfoOpen] = useState(false);
   return (
-    <GlassCard className="h-full min-h-[132px] p-4 sm:min-h-[146px]">
+    <GlassCard className={`relative h-full min-h-[132px] p-4 sm:min-h-[146px] ${infoOpen ? 'z-30' : ''}`}>
       <div className="space-y-2.5">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400 sm:text-xs">
-          {title}
-        </p>
+        <div className="flex items-center gap-1.5">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400 sm:text-xs">{title}</p>
+          {info && (
+            <button
+              type="button"
+              onClick={() => setInfoOpen((open) => !open)}
+              aria-label={`Was ist ${title}?`}
+              className="rounded-full text-slate-400 hover:text-slate-600"
+            >
+              <Info className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
         <div className="flex items-center gap-3">
-          <p className="text-[1.85rem] font-bold tracking-tight text-slate-800 sm:text-[2rem]">{value}</p>
+          <p
+            className={`flex items-center gap-2 whitespace-nowrap font-bold tracking-tight text-slate-800 ${
+              value.length > 6 ? 'text-xl sm:text-[1.4rem]' : 'text-[1.85rem] sm:text-[2rem]'
+            }`}
+          >
+            {active !== undefined && (
+              <span className={`h-2.5 w-2.5 rounded-full ${active ? 'bg-emerald-500' : 'bg-slate-300'}`} aria-hidden="true" />
+            )}
+            {value}
+          </p>
           <div className={`rounded-xl p-2 ${iconWrapClassName}`}>
             <Icon className={`h-4.5 w-4.5 ${iconClassName}`} />
           </div>
         </div>
         <p className="text-xs leading-5 text-slate-500 sm:max-w-[10rem] sm:text-sm">{subtitle}</p>
       </div>
+      {info && infoOpen && (
+        <div className="absolute left-3 top-10 z-30 w-72 max-w-[calc(100vw-3rem)] rounded-xl border border-slate-200 bg-white p-3 text-xs leading-relaxed text-slate-600 shadow-lg">
+          <p className="mb-1 font-semibold text-slate-800">{title}</p>
+          {info}
+          <button
+            type="button"
+            onClick={() => setInfoOpen(false)}
+            className="mt-2 block text-xs font-semibold text-sky-600 hover:text-sky-700"
+          >
+            Schließen
+          </button>
+        </div>
+      )}
     </GlassCard>
   );
 }
@@ -583,11 +620,8 @@ function LeadsContacts({
       .then((photos) => active && setLatestPhotoCode(photos[0]?.externalCode ?? null))
       .catch(() => active && setLatestPhotoCode(null));
 
-    if (unlockMode === 'survey') {
-      fetchSurveyResults(parkId, 30).then((r) => active && setOverviewSurvey(r)).catch(() => {});
-    } else if (unlockMode === 'social') {
-      fetchSocialResults(parkId, 30).then((r) => active && setOverviewSocial(r)).catch(() => {});
-    }
+    fetchSurveyResults(parkId, 30).then((r) => active && setOverviewSurvey(r)).catch(() => {});
+    fetchSocialResults(parkId, 30).then((r) => active && setOverviewSocial(r)).catch(() => {});
 
     return () => {
       active = false;
@@ -1329,72 +1363,7 @@ function LeadsContacts({
       {view === 'overview' && (
       <div className="grid gap-4 xl:grid-cols-[1fr_380px]">
         <div className="space-y-4">
-          <GlassCard className="p-5 sm:p-6">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2">
-                  {unlockMode && <span className="h-2 w-2 rounded-full bg-emerald-500" aria-hidden="true" />}
-                  <p className="text-sm font-medium text-slate-700">
-                    {unlockMode === 'email'
-                      ? 'Freischaltung läuft gerade über E-Mail / Telefon'
-                      : unlockMode === 'survey'
-                        ? 'Freischaltung läuft gerade über die Umfrage'
-                        : unlockMode === 'social'
-                          ? 'Freischaltung läuft gerade über Social Media'
-                          : 'Freischalt-Modus wird geladen…'}
-                  </p>
-                </div>
-              </div>
-              {claimSiteBaseFor(parkId) && (
-                <a
-                  href={claimLinkFor(parkId, latestPhotoCode) ?? claimSiteBaseFor(parkId) ?? undefined}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="glass-button-secondary"
-                >
-                  Jetzt dahin kommen
-                  <ExternalLink className="h-4 w-4" />
-                </a>
-              )}
-            </div>
-
-            {unlockMode === 'survey' && overviewSurvey && (
-              <div className="mt-4 grid grid-cols-3 gap-3 border-t border-slate-100 pt-4">
-                <div>
-                  <p className="text-xs text-slate-500">Antworten (30 Tage)</p>
-                  <p className="text-lg font-bold text-slate-800">{formatNumber(overviewSurvey.total)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500">Ø Bewertung</p>
-                  <p className="text-lg font-bold text-slate-800">
-                    {overviewSurvey.average_score != null ? overviewSurvey.average_score.toFixed(1) : '–'}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500">NPS</p>
-                  <p className="text-lg font-bold text-slate-800">{overviewSurvey.nps ?? '–'}</p>
-                </div>
-              </div>
-            )}
-            {unlockMode === 'social' && overviewSocial && (
-              <div className="mt-4 grid grid-cols-3 gap-3 border-t border-slate-100 pt-4">
-                <div>
-                  <p className="text-xs text-slate-500">Freischaltungen (30 Tage)</p>
-                  <p className="text-lg font-bold text-slate-800">{formatNumber(overviewSocial.unlocked)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500">Geteilt</p>
-                  <p className="text-lg font-bold text-slate-800">{formatNumber(overviewSocial.posted)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500">Gewinnspiel-Teilnahmen</p>
-                  <p className="text-lg font-bold text-slate-800">{formatNumber(overviewSocial.giveaway)}</p>
-                </div>
-              </div>
-            )}
-          </GlassCard>
-
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <CompactMetricCard
               title="Fotos verkauft"
               value={lifetimeSold !== null ? formatNumber(lifetimeSold) : '–'}
@@ -1418,6 +1387,53 @@ function LeadsContacts({
               icon={Mail}
               iconClassName="text-emerald-600"
               iconWrapClassName="bg-emerald-50"
+            />
+            <CompactMetricCard
+              title="Umfrage"
+              value={unlockMode === 'survey' ? 'Aktiv' : 'Nicht aktiv'}
+              subtitle={unlockMode === 'survey' ? 'Gäste schalten per Umfrage frei' : 'Gerade nicht aktiv'}
+              icon={ClipboardList}
+              iconClassName="text-amber-600"
+              iconWrapClassName="bg-amber-50"
+              active={unlockMode === 'survey'}
+            />
+            <CompactMetricCard
+              title="Antworten"
+              value={overviewSurvey ? formatNumber(overviewSurvey.total) : '–'}
+              subtitle="Umfrage, letzte 30 Tage"
+              icon={MessageSquare}
+              iconClassName="text-sky-600"
+              iconWrapClassName="bg-sky-50"
+            />
+            <CompactMetricCard
+              title="Zufriedenheit"
+              value={overviewSurvey?.average_score != null ? overviewSurvey.average_score.toFixed(1) : '–'}
+              subtitle="Ø Bewertung von 1 bis 10"
+              icon={Star}
+              iconClassName="text-amber-600"
+              iconWrapClassName="bg-amber-50"
+            />
+            <CompactMetricCard
+              title="NPS"
+              value={overviewSurvey?.nps != null ? String(overviewSurvey.nps) : '–'}
+              subtitle="Weiterempfehlung"
+              icon={ThumbsUp}
+              iconClassName="text-emerald-600"
+              iconWrapClassName="bg-emerald-50"
+              info="Der Net Promoter Score zeigt, wie gern Gäste dich weiterempfehlen. Gäste bewerten von 0 bis 10. Wer 9 oder 10 gibt, ist Promoter, wer 0 bis 6 gibt, ist Kritiker. Der NPS ist der Anteil der Promoter minus der Anteil der Kritiker und liegt zwischen −100 und +100. Über 0 ist gut, über 50 sehr gut."
+            />
+            <CompactMetricCard
+              title="Social Media"
+              value={unlockMode === 'social' ? 'Aktiv' : 'Nicht aktiv'}
+              subtitle={
+                unlockMode === 'social' && overviewSocial
+                  ? `${formatNumber(overviewSocial.unlocked)} Freischaltungen, 30 Tage`
+                  : 'Gerade nicht aktiv'
+              }
+              icon={Share2}
+              iconClassName="text-pink-600"
+              iconWrapClassName="bg-pink-50"
+              active={unlockMode === 'social'}
             />
           </div>
 
