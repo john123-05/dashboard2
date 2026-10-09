@@ -14,6 +14,7 @@ import {
 import GlassCard from '../components/ui/GlassCard';
 import BeforeAfterSlider from '../components/ui/BeforeAfterSlider';
 import { usePark } from '../contexts/ParkContext';
+import { hasGuestActivity } from '../components/GuestActivityAwareOverlay';
 import { ladeZahlungen, type ZahlungsAutomat } from '../lib/zahlungen';
 import { loadParkDashboardData } from '../lib/parkDashboard';
 import { fetchParkEquipment, meldeAusstattungsInteresse, type EquipmentItem } from '../lib/equipment';
@@ -57,21 +58,6 @@ function SectionCard({ title, subtitle, action, children }: { title: string; sub
       </div>
       {children}
     </GlassCard>
-  );
-}
-
-function SpecTile({ sub, label, value, action }: { sub: string; label: string; value: string; action?: ReactNode }) {
-  return (
-    <div className="flex flex-col gap-2 rounded-xl bg-white/60 p-4">
-      <div className="flex items-start justify-between gap-2">
-        <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">{sub}</p>
-        {action}
-      </div>
-      <div>
-        <p className="text-base font-semibold text-slate-800">{value}</p>
-        <p className="text-xs text-slate-500">{label}</p>
-      </div>
-    </div>
   );
 }
 
@@ -157,13 +143,16 @@ export default function Configuration() {
   const empfohlen = items.filter((i) => i.status === 'empfohlen');
   const cardOnlyCount = machines.filter((m) => m.card_only).length;
   const istNurKarte = machines.length > 0 && cardOnlyCount === machines.length;
-  const hatSpeedmessung = machines.some((m) => m.speed_enabled);
+  // speed_enabled ist bei Imst gesetzt, obwohl dort keine Messung läuft - maßgeblich ist dieselbe Liste wie auf der Speedmessung-Seite.
+  const hatSpeedmessung = machines.some((m) => m.speed_enabled) && hasGuestActivity(parkId);
   const hatVideo = machines.some((m) => m.video_enabled);
   const version = machines.find((m) => m.hardware_version)?.hardware_version ?? null;
 
   // "Lichtschranke für Speedmessung" etc. aus der freien Ausstattungsliste ist
   // dasselbe wie die abgeleitete Speed-Messung-Kachel - nicht doppelt zeigen.
   const vorhandenGefiltert = vorhanden.filter((item) => {
+    // "SB-Automat" aus der freien Liste ist dieselbe Information wie die Zeile "Automat" oben.
+    if (item.kategorie === 'Automat' && /automat/i.test(item.titel)) return false;
     if (!hatSpeedmessung) return true;
     const t = item.titel.toLowerCase();
     return !t.includes('speedmessung') && !t.includes('lichtschranke');
@@ -181,29 +170,32 @@ export default function Configuration() {
 
     gruppen.Hardware.push({
       key: 'automat',
-      sub: 'Verkauf',
-      label: machines.length > 1 ? `${machines.length} Automaten` : 'Selbstbedienung',
-      value: machines.length > 1 ? `${machines.length}x SB-Automat` : 'SB-Automat',
+      sub: '',
+      label: 'Automat',
+      value: machines.length > 1 ? `${machines.length}× Selbstbedienung` : 'Selbstbedienung',
     });
     gruppen.Hardware.push({
       key: 'zahlung',
-      sub: 'Verkauf',
-      label: version ? `Version ${version === 'neu' ? 'Neu' : 'Alt'}` : 'Zahlungsart',
+      sub: '',
+      label: 'Zahlung',
       value: istNurKarte ? 'Nur Karte' : 'Bar & Karte',
     });
+    if (version) {
+      gruppen.Hardware.push({ key: 'version', sub: '', label: 'Version', value: version === 'neu' ? 'Neu' : 'Alt' });
+    }
     if (hatSpeedmessung) {
-      gruppen.Hardware.push({ key: 'speed', sub: 'Sensorik', label: 'Lichtschranke', value: 'Speed-Messung' });
+      gruppen.Hardware.push({ key: 'speed', sub: '', label: 'Speedmessung', value: 'Lichtschranke aktiv' });
     }
     if (hatVideo) {
-      gruppen.Hardware.push({ key: 'video', sub: 'Aufnahme', label: 'Zusatzfunktion', value: 'Video-Add-on' });
+      gruppen.Hardware.push({ key: 'video', sub: '', label: 'Video', value: 'Video-Add-on' });
     }
     for (const item of vorhandenGefiltert) {
       const gruppe = KATEGORIE_GRUPPE[item.kategorie] ?? 'Services';
-      gruppen[gruppe].push({ key: item.id, sub: item.kategorie, label: item.kategorie, value: item.titel });
+      gruppen[gruppe].push({ key: item.id, sub: '', label: item.kategorie, value: item.titel });
     }
     gruppen.Materialien.push({
       key: FOTOPAPIER_KEY,
-      sub: 'Verbrauchsmaterial',
+      sub: '',
       label: 'Fotopapier',
       value: paperRemaining != null ? `${formatNumber(paperRemaining)} Blatt übrig` : '—',
       action: (
@@ -272,15 +264,21 @@ export default function Configuration() {
         {loading ? (
           <p className="mt-4 text-sm text-slate-400">Wird geladen…</p>
         ) : (
-          <div className="mt-5 space-y-6">
+          <div className="mt-4 grid gap-x-8 gap-y-5 md:grid-cols-2 xl:grid-cols-3">
             {GRUPPEN_REIHENFOLGE.filter((g) => ausstattungsGruppen[g].length > 0).map((gruppe) => (
               <div key={gruppe}>
-                <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">{gruppe}</p>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                  {ausstattungsGruppen[gruppe].map((tile) => (
-                    <SpecTile key={tile.key} sub={tile.sub} label={tile.label} value={tile.value} action={tile.action} />
+                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">{gruppe}</p>
+                <dl className="divide-y divide-slate-100">
+                  {ausstattungsGruppen[gruppe].map((zeile) => (
+                    <div key={zeile.key} className="flex items-center justify-between gap-3 py-2">
+                      <dt className="text-sm text-slate-500">{zeile.label}</dt>
+                      <dd className="flex items-center gap-2 text-right text-sm font-semibold text-slate-800">
+                        {zeile.value}
+                        {zeile.action}
+                      </dd>
+                    </div>
                   ))}
-                </div>
+                </dl>
               </div>
             ))}
           </div>
