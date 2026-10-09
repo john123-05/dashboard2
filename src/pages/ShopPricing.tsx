@@ -5,7 +5,7 @@ import { usePark } from '../contexts/ParkContext';
 import { meldeAusstattungsInteresse } from '../lib/equipment';
 import { requestShopActivation } from '../lib/shop';
 
-type PlanKey = 'einmalig' | 'monatlich' | 'fullservice';
+type PlanKey = 'monatlich' | 'jaehrlich' | 'fullservice';
 
 const eur = (value: number, digits = 0) =>
   value.toLocaleString('de-DE', { style: 'currency', currency: 'EUR', minimumFractionDigits: digits, maximumFractionDigits: digits });
@@ -14,20 +14,16 @@ const SETUP_PRICE = 749;
 const MONTHLY_PRICE = 99;
 const FREE_MONTHS = 3;
 const YEARLY_PRICE = MONTHLY_PRICE * (12 - FREE_MONTHS);
+const YEARLY_FULL_PRICE = MONTHLY_PRICE * 12;
+const YEARLY_SAVING = YEARLY_FULL_PRICE - YEARLY_PRICE;
 const REVENUE_SHARE_PERCENT = 15;
 
-const ONCE_POINTS = [
+const PACKAGE_POINTS = [
   'Shop im Design deines Parks: Name, Logo, Farbe, Schrift',
   'Einrichtung und Anbindung an dein Fotosystem',
   'Produkte festlegen: Download, Tasse, T-Shirt & Co.',
   'Zahlungsabwicklung über Stripe eingerichtet',
-  'Vorführ-Shop mit QR-Code zum Testen',
-];
-
-const MONTHLY_POINTS = [
-  'Hosting deines Shops',
-  'Service und Support durch uns',
-  'Wartung und laufende Updates',
+  'Hosting, Service und Wartung mit Updates',
   'Verwaltete Datenbank für Bestellungen und Nutzerdaten',
   'Verkäufe und Umsatz live im Dashboard',
 ];
@@ -42,7 +38,6 @@ const FULL_POINTS = [
 
 export default function ShopPricing() {
   const { parkId } = usePark();
-  const [yearly, setYearly] = useState(false);
   const [busy, setBusy] = useState<PlanKey | null>(null);
   const [requested, setRequested] = useState<PlanKey[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -53,10 +48,10 @@ export default function ShopPricing() {
     setError(null);
     try {
       const label =
-        plan === 'einmalig'
-          ? `Shop freischalten: Einmalig, Einrichtung ${SETUP_PRICE} €`
-          : plan === 'monatlich'
-            ? `Shop freischalten: Monatlich ${yearly ? `12 Monate im Voraus ${YEARLY_PRICE} € (${FREE_MONTHS} Monate geschenkt)` : `${MONTHLY_PRICE} €/Monat`} (zzgl. Einrichtung ${SETUP_PRICE} €)`
+        plan === 'monatlich'
+          ? `Shop freischalten: Einrichtung ${SETUP_PRICE} € einmalig + ${MONTHLY_PRICE} €/Monat`
+          : plan === 'jaehrlich'
+            ? `Shop freischalten: Einrichtung ${SETUP_PRICE} € einmalig + 12 Monate im Voraus ${YEARLY_PRICE} € (${FREE_MONTHS} Monate geschenkt)`
             : `Shop freischalten: Full-Service, ${REVENUE_SHARE_PERCENT} % der Shop-Einnahmen, Einrichtung und Monatskosten 0 €`;
       await meldeAusstattungsInteresse(parkId, { label });
       await requestShopActivation(parkId).catch(() => undefined);
@@ -110,70 +105,54 @@ export default function ShopPricing() {
       <div className="grid items-stretch gap-5 pt-3 lg:grid-cols-3">
         <div className={cardBase}>
           <span className="mb-2 w-fit rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-600">
-            Einmalig
+            Monatlich
           </span>
-          <h3 className="text-base font-bold text-slate-800">Einrichtung</h3>
-          <div className="mt-4 flex items-end gap-1">
-            <span className="text-4xl font-black leading-none tracking-tight text-slate-900">{eur(SETUP_PRICE)}</span>
-            <span className="pb-0.5 text-xs text-slate-500">einmalig</span>
+          <h3 className="text-base font-bold text-slate-800">Einrichtung + Monatspaket</h3>
+          <p className="mt-4 text-sm font-semibold text-slate-700">{eur(SETUP_PRICE)} einmalig, plus</p>
+          <div className="mt-1 flex items-end gap-1">
+            <span className="text-4xl font-black leading-none tracking-tight text-slate-900">{eur(MONTHLY_PRICE)}</span>
+            <span className="pb-0.5 text-xs text-slate-500">/ Monat</span>
           </div>
           <p className="mt-2 min-h-[2.25rem] text-xs leading-snug text-slate-500">
-            Fällt einmal an, immer {eur(SETUP_PRICE)}. Dazu kommt das Monatspaket.
+            Einrichtung inklusive Anbindung und Branding.
           </p>
           <p className="mt-4 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Das ist dabei</p>
           <ul className="mt-2 flex-1 space-y-2">
-            {ONCE_POINTS.map((p) => (
+            {PACKAGE_POINTS.map((p) => (
               <li key={p} className="flex items-start gap-2 text-sm leading-snug text-slate-600">
                 <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
                 {p}
               </li>
             ))}
           </ul>
-          <Action plan="einmalig" />
+          <Action plan="monatlich" />
         </div>
 
         <div className={`${cardBase} shadow-xl ring-2 ring-amber-400 lg:-translate-y-4`}>
           <span className="mb-2 w-fit rounded-full bg-amber-400 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-900">
-            Monatlich
+            Jährlich · {FREE_MONTHS} Monate geschenkt
           </span>
-          <h3 className="text-base font-bold text-slate-800">Hosting, Service & Wartung</h3>
-          <div className="mt-3 inline-flex w-fit rounded-lg bg-slate-100 p-0.5 text-xs font-semibold">
-            <button
-              type="button"
-              onClick={() => setYearly(false)}
-              className={`rounded-md px-3 py-1 ${!yearly ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}
-            >
-              Monatlich
-            </button>
-            <button
-              type="button"
-              onClick={() => setYearly(true)}
-              className={`rounded-md px-3 py-1 ${yearly ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}
-            >
-              12 Monate im Voraus
-            </button>
-          </div>
-          <div className="mt-4 flex items-end gap-1">
-            <span className="text-4xl font-black leading-none tracking-tight text-slate-900">
-              {yearly ? eur(YEARLY_PRICE) : eur(MONTHLY_PRICE)}
-            </span>
-            <span className="pb-0.5 text-xs text-slate-500">{yearly ? 'für 12 Monate' : '/ Monat'}</span>
+          <h3 className="text-base font-bold text-slate-800">Einrichtung + 12 Monate im Voraus</h3>
+          <p className="mt-4 text-sm font-semibold text-slate-700">{eur(SETUP_PRICE)} einmalig, plus</p>
+          <div className="mt-1 flex flex-wrap items-end gap-x-2">
+            <span className="text-4xl font-black leading-none tracking-tight text-slate-900">{eur(YEARLY_PRICE)}</span>
+            <span className="pb-0.5 text-sm text-slate-400 line-through">{eur(YEARLY_FULL_PRICE)}</span>
+            <span className="pb-0.5 text-xs text-slate-500">für 12 Monate</span>
           </div>
           <p className="mt-2 min-h-[2.25rem] text-xs leading-snug text-slate-500">
-            {yearly
-              ? `${FREE_MONTHS} Monate geschenkt: du zahlst nur ${12 - FREE_MONTHS} × ${eur(MONTHLY_PRICE)}.`
-              : `Bei 12 Monaten im Voraus sind ${FREE_MONTHS} Monate geschenkt.`}
+            <span className="font-semibold text-emerald-700">Du sparst {eur(YEARLY_SAVING)}</span> gegenüber{' '}
+            {eur(MONTHLY_PRICE)} monatlich.
           </p>
           <p className="mt-4 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Das ist dabei</p>
           <ul className="mt-2 flex-1 space-y-2">
-            {MONTHLY_POINTS.map((p) => (
+            {PACKAGE_POINTS.map((p) => (
               <li key={p} className="flex items-start gap-2 text-sm leading-snug text-slate-600">
                 <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
                 {p}
               </li>
             ))}
           </ul>
-          <Action plan="monatlich" dark />
+          <Action plan="jaehrlich" dark />
         </div>
 
         <div className={cardBase}>
@@ -201,10 +180,6 @@ export default function ShopPricing() {
         </div>
       </div>
 
-      <p className="text-center text-xs text-slate-500">
-        „Einmalig“ und „Monatlich“ gehören zusammen: {eur(SETUP_PRICE)} Einrichtung plus {eur(MONTHLY_PRICE)} im Monat.
-        „Full-Service“ ersetzt beides.
-      </p>
     </div>
   );
 }
