@@ -150,8 +150,10 @@ export default function ConfigurationProduct() {
         : item?.titel === 'Digitale Nachkäufe und Merchandising'
           ? ['PrintBox', 'Cashbox']
           : item?.titel === 'Speedmessung'
-            ? ['Digitale Nachkäufe und Merchandising']
-            : [];
+            ? ['Speedmessung Display', 'Digitale Nachkäufe und Merchandising']
+            : item?.titel === 'Speedmessung Display'
+              ? ['Speedmessung', 'Digitale Nachkäufe und Merchandising']
+              : [];
   const buendel = item
     ? [item, ...partnerTitel.map((t) => alle.find((a) => a.titel === t)).filter((a): a is EquipmentItem => !!a)]
     : [];
