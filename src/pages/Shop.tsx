@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import QRCode from '../lib/vendor/qrcode.bundle.js';
 import { CheckCircle2, ExternalLink, Image as ImageIcon, Monitor, Send, X } from 'lucide-react';
@@ -7,7 +8,6 @@ import { usePark } from '../contexts/ParkContext';
 import { aggregateByDate, fetchKioskSales, type AggregatedDay } from '../lib/kioskSales';
 import {
   fetchShopOverview,
-  requestShopActivation,
   saveShopSettings,
   uploadShopLogo,
   type ShopRedemptions,
@@ -111,7 +111,6 @@ export default function Shop() {
   const [products, setProducts] = useState<EditableProduct[]>([]);
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
-  const [requesting, setRequesting] = useState(false);
   const [desktopOpen, setDesktopOpen] = useState(false);
   const [previewVersion, setPreviewVersion] = useState(0);
   const [qr, setQr] = useState<string | null>(null);
@@ -237,19 +236,6 @@ export default function Shop() {
     }
   }
 
-  async function handleRequest() {
-    if (!parkId) return;
-    setRequesting(true);
-    setError(null);
-    try {
-      applySettings(await requestShopActivation(parkId));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Anfrage fehlgeschlagen.');
-    } finally {
-      setRequesting(false);
-    }
-  }
-
   const requestedAt = settings?.activation_requested_at ? new Date(settings.activation_requested_at) : null;
 
   return (
@@ -258,11 +244,19 @@ export default function Shop() {
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-slate-800">Shop</h2>
         </div>
+        <div className="flex flex-wrap items-center gap-2">
+        <Link
+          to="/shop/preise"
+          className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+        >
+          Preise & Freischalten
+        </Link>
         <span
           className={`rounded-full px-3 py-1 text-xs font-semibold ${requestedAt ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'}`}
         >
           {requestedAt ? 'Aktivierung angefragt' : 'Stripe-Modus: Test'}
         </span>
+        </div>
       </div>
 
       {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
@@ -312,15 +306,13 @@ export default function Shop() {
                   Angefragt am {requestedAt.toLocaleDateString('de-DE')}
                 </div>
               ) : (
-                <button
-                  type="button"
-                  disabled={requesting || loading}
-                  onClick={() => void handleRequest()}
-                  className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+                <Link
+                  to="/shop/preise"
+                  className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
                 >
                   <Send className="h-4 w-4" />
-                  {requesting ? 'Wird gesendet…' : 'Shop freischalten'}
-                </button>
+                  Shop freischalten
+                </Link>
               )}
             </div>
           )}

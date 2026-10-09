@@ -17,6 +17,7 @@ const SystemHealth = seiteNachladen(() => import('./pages/SystemHealth'));
 const Kamera = seiteNachladen(() => import('./pages/Kamera'));
 const Configuration = seiteNachladen(() => import('./pages/Configuration'));
 const Shop = seiteNachladen(() => import('./pages/Shop'));
+const ShopPricing = seiteNachladen(() => import('./pages/ShopPricing'));
 const DemoShop = seiteNachladen(() => import('./pages/DemoShop'));
 const ConfigurationOrders = seiteNachladen(() => import('./pages/ConfigurationOrders'));
 const ConfigurationFaq = seiteNachladen(() => import('./pages/ConfigurationFaq'));
@@ -168,6 +169,7 @@ export default function App() {
                 <Route path="/photos" element={<Photos />} />
                 <Route path="/configuration" element={<Configuration />} />
                 <Route path="/shop" element={<Shop />} />
+                <Route path="/shop/preise" element={<ShopPricing />} />
                 <Route path="/configuration/bestellungen" element={<ConfigurationOrders />} />
                 <Route path="/configuration/faq" element={<ConfigurationFaq />} />
                 <Route path="/leads" element={<OwnerOnly><Leads /></OwnerOnly>} />
