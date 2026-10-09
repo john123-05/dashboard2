@@ -81,6 +81,8 @@ function preisSplit(item: EquipmentItem): { einmalig: number; monatlich: number 
   return { einmalig: erster, monatlich: preisAus(teile[1]) ?? 0 };
 }
 
+const CRM_TITEL = 'Kundendaten-Erfassung und Hosting';
+
 const CRM_PAKETE = [
   { key: 'monatlich', titel: 'Monatlich', zeile: '49 € / Monat', text: 'Flexibel, ohne Vorauszahlung.', preis: 49 },
   { key: 'jaehrlich', titel: '12 Monate im Voraus', zeile: '441 € für 12 Monate', vorher: '588 €', text: '3 Monate geschenkt: du sparst 147 €.', badge: 'Beliebt', preis: 441 },
@@ -127,7 +129,7 @@ export default function ConfigurationProduct() {
   const monatlichGesamt = (monatlich ?? 0) + verfuegbar.filter((z) => gewaehlt.includes(z.key)).reduce((sum, z) => sum + (z.monatlich ?? 0), 0);
   const istShop = item?.kategorie === 'Webshop';
   const istSpeed = item?.titel === 'Speedmessung';
-  const istCrm = item?.titel === 'CRM';
+  const istCrm = item?.titel === CRM_TITEL;
   const istVerkauf = (item?.kategorie === 'Verkauf' || item?.kategorie === 'Zubehoer') && basis != null;
 
   useEffect(() => {
@@ -161,7 +163,7 @@ export default function ConfigurationProduct() {
             ? ['Speedmessung Display', 'Digitale Nachkäufe und Merchandising']
             : item?.titel === 'Speedmessung Display'
               ? ['Speedmessung', 'Digitale Nachkäufe und Merchandising']
-              : item?.titel === 'CRM'
+              : item?.titel === CRM_TITEL
                 ? ['Digitale Nachkäufe und Merchandising', 'Speedmessung']
                 : [];
   const buendel = item
@@ -209,7 +211,7 @@ export default function ConfigurationProduct() {
         await meldeAusstattungsInteresse(parkId, { label });
       } else if (istCrm) {
         const paket = CRM_PAKETE.find((pk) => pk.key === crmPaket);
-        await meldeAusstattungsInteresse(parkId, { label: `CRM freischalten: ${paket?.titel}, ${paket?.zeile}` });
+        await meldeAusstattungsInteresse(parkId, { label: `Kundendaten-Erfassung und Hosting freischalten: ${paket?.titel}, ${paket?.zeile}` });
       } else if (istSpeed) {
         const paket = SPEED_PAKETE.find((p) => p.key === speedPaket);
         await meldeAusstattungsInteresse(parkId, {
