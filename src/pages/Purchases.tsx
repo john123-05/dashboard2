@@ -121,15 +121,15 @@ export default function Purchases() {
         const kioskRows: PurchaseRow[] = ledger.purchases.map((p) => {
           const marke = p.method === 'karte' ? p.card_scheme : null;
           const abgeholt = p.claimed_email
-            ? `, später per QR-Code abgeholt (${p.claimed_email})`
+            ? `, ${t('purchases.picked_up_by_qr', { email: p.claimed_email })}`
             : '';
           const beleg = p.method === 'karte' && p.receipt_no
-            ? `, hobex-Beleg ${p.receipt_no}`
+            ? `, ${t('purchases.receipt', { no: p.receipt_no })}`
             : '';
-          const doppeldruck = (p.print_count ?? 0) > 3 ? `, ${p.print_count} Ausdrucke` : '';
+          const doppeldruck = (p.print_count ?? 0) > 3 ? `, ${t('purchases.prints', { count: p.print_count ?? 0 })}` : '';
           const herkunft =
             p.method === 'unbekannt' && p.method_source === 'kein_flag'
-              ? ', vor der Zahlungsart-Erkennung des Automaten'
+              ? `, ${t('purchases.before_detection')}`
               : '';
 
           return {
@@ -150,16 +150,16 @@ export default function Purchases() {
             status: p.claimed_email ? 'claimed' : 'unknown',
             payment_method:
               p.method === 'bar'
-                ? 'Bar'
+                ? t('purchases.pay_cash')
                 : p.method === 'karte'
                   ? marke
-                    ? `Karte · ${marke}`
-                    : 'Karte'
-                  : 'unbekannt',
-            reference: p.bild_nr ? `Bild ${p.bild_nr}` : '–',
+                    ? `${t('purchases.pay_card')} · ${marke}`
+                    : t('purchases.pay_card')
+                  : t('purchases.pay_unknown'),
+            reference: p.bild_nr ? t('purchases.photo_ref', { no: p.bild_nr }) : '–',
             purchased_at: p.sold_local ?? p.sold_at,
-            customer_or_device: p.claimed_email || p.claimed_name || 'Unbekannt',
-            description: `Foto am Automaten gekauft${abgeholt}${beleg}${doppeldruck}${herkunft}`,
+            customer_or_device: p.claimed_email || p.claimed_name || t('purchases.pay_unknown'),
+            description: `${t('purchases.sold_at_kiosk')}${abgeholt}${beleg}${doppeldruck}${herkunft}`,
           };
         });
         setPurchases(kioskRows);
@@ -220,8 +220,8 @@ export default function Purchases() {
           payment_method: 'stripe',
           reference: payment.id,
           purchased_at: payment.created_at,
-          customer_or_device: payment.customer_email || payment.customer_name || 'Stripe customer',
-          description: payment.description || 'Stripe payment',
+          customer_or_device: payment.customer_email || payment.customer_name || t('purchases.stripe_customer'),
+          description: payment.description || t('purchases.stripe_payment'),
         }))
         .sort((left, right) => new Date(right.purchased_at).getTime() - new Date(left.purchased_at).getTime());
 
@@ -232,7 +232,7 @@ export default function Purchases() {
       setError(null);
       setLoading(false);
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : 'Unknown error');
+      setError(loadError instanceof Error ? loadError.message : t('app.unknown_error'));
       setLoading(false);
     }
   }
@@ -250,7 +250,7 @@ export default function Purchases() {
         (event.purchase_signal === 'manual_print' ? 'local_unknown' : 'local'),
       reference: event.source_file,
       purchased_at: event.occurred_at,
-      customer_or_device: event.device || 'Local device',
+      customer_or_device: event.device || t('purchases.local_device'),
       description: event.description,
     };
   }
@@ -399,8 +399,8 @@ export default function Purchases() {
           <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('purchases.title')}</h2>
           <p className="mt-1 text-sm text-slate-500">
             {isKioskPark
-              ? 'Jeder Kauf am Automaten mit Zahlungsart und Beleg – Monat oben rechts wählbar, Monate zurück'
-              : 'Unified transaction log for Stripe and on-site sales'}
+              ? t('purchases.subtitle_kiosk')
+              : t('purchases.subtitle_mixed')}
           </p>
         </div>
         <button onClick={handleExport} className="glass-button-secondary">
@@ -411,7 +411,7 @@ export default function Purchases() {
 
       {issues.length > 0 && (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-          <p className="text-sm font-medium text-amber-900">Transaction data is partially available.</p>
+          <p className="text-sm font-medium text-amber-900">{t('purchases.partial_data')}</p>
           <p className="mt-1 text-sm text-amber-700">{issues.join(' ')}</p>
         </div>
       )}
@@ -432,7 +432,7 @@ export default function Purchases() {
                   onChange={(event) => setAutomatFilter(event.target.value)}
                   className="rounded-lg border border-slate-200/60 bg-white/60 px-3 py-1.5 text-sm text-slate-700"
                 >
-                  <option value="alle">Alle Automaten</option>
+                  <option value="alle">{t('purchases.all_machines')}</option>
                   {automaten.map((m) => (
                     <option key={m.machine_id} value={m.machine_id}>
                       {m.machine_label}
@@ -462,9 +462,9 @@ export default function Purchases() {
                 }}
                 className="rounded-lg border border-slate-200/60 bg-white/60 px-3 py-1.5 text-sm text-slate-700"
               >
-                <option value="all">All sources</option>
-                <option value="online">Online only</option>
-                <option value="local">Local only</option>
+                <option value="all">{t('purchases.all_sources')}</option>
+                <option value="online">{t('purchases.online_only')}</option>
+                <option value="local">{t('purchases.local_only')}</option>
               </select>
             </div>
           )

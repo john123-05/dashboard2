@@ -277,7 +277,7 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
       setError(null);
       setLoading(false);
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : 'Unknown error');
+      setError(loadError instanceof Error ? loadError.message : t('app.unknown_error'));
       setLoading(false);
     }
   }
@@ -347,7 +347,7 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
       })
       .catch((loadError) => {
         if (cancelled) return;
-        setDayError(loadError instanceof Error ? loadError.message : 'Unknown error');
+        setDayError(loadError instanceof Error ? loadError.message : t('app.unknown_error'));
         setDayLoading(false);
       });
 
