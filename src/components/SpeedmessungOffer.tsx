@@ -23,6 +23,7 @@ const PLANS: {
   monthly: number;
   months: number;
   oneTime?: number;
+  fromYear2?: number;
   highlight?: boolean;
   badge?: string;
   points: string[];
@@ -32,10 +33,11 @@ const PLANS: {
     key: 'display',
     name: 'Speedmessung + Display',
     monthly: 250,
+    fromYear2: 150,
     months: 12,
     highlight: true,
     badge: 'Beliebt',
-    points: ['Alles aus „Enthalten“', 'Großes Display an der Bahn – ohne Einmalkosten', '12 Monate Laufzeit'],
+    points: ['Alles aus „Enthalten“', 'Großes Display an der Bahn – ohne Einmalkosten', 'Ab dem 2. Jahr nur 150 € pro Monat', '12 Monate Laufzeit'],
   },
   {
     key: 'long',
@@ -61,7 +63,7 @@ export default function SpeedmessungOffer() {
     try {
       const label = `Speedmessung nachrüsten: ${plan.name} (${plan.months} Monate, ${plan.monthly} €/Monat${
         plan.oneTime ? ` + ${plan.oneTime} € einmalig` : ''
-      }, Hardware kostenlos)`;
+      }${plan.fromYear2 ? `, ab Jahr 2 ${plan.fromYear2} €/Monat` : ''}, Hardware kostenlos)`;
       await meldeAusstattungsInteresse(parkId, { label });
       setRequested((prev) => [...prev, planKey]);
     } catch (e) {
@@ -121,7 +123,7 @@ export default function SpeedmessungOffer() {
                 <span className="pb-0.5 text-xs text-slate-500">/ Monat</span>
               </div>
               <p className="mt-1.5 min-h-[2rem] text-[11px] leading-snug text-slate-500">
-                {plan.oneTime ? `+ ${eur(plan.oneTime)} einmalig für das Display` : 'Hardware 0 €'} · zzgl. MwSt.
+                {plan.fromYear2 ? `im 1. Jahr, ab Jahr 2 ${eur(plan.fromYear2)} / Monat` : 'Hardware 0 €'} · zzgl. MwSt.
               </p>
               <ul className="mt-3 flex-1 space-y-1.5">
                 {plan.points.map((p) => (
