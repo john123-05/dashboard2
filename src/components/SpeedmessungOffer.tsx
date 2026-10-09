@@ -23,12 +23,11 @@ const INCLUDED = [
 ];
 
 const BENEFITS = [
-  { title: 'Profil wie im Videospiel', text: 'Mit Profilbild und Nutzername antreten. Gerade beliebt bei jungen Gästen.' },
-  { title: 'Bestzeit toppen', text: 'Wer schneller sein will, fährt neu und kauft ein neues Foto. Du gewinnst doppelt.' },
+  { title: 'Profil wie im Videospiel', text: 'Profilbild und Nutzername anlegen, mit anderen messen. Gerade beliebt bei jungen Gästen. Geht nur mit gekauftem Foto.' },
+  { title: 'Bestzeit toppen', text: 'Stammgäste und Einheimische jagen Rekorde. Wer überholt wurde, fährt nochmal und kauft ein neues Foto. Du gewinnst doppelt.' },
   { title: 'Tag, Monat, Allzeit', text: 'Wer war heute, diesen Monat und insgesamt am schnellsten?' },
-  { title: 'Social Media', text: 'Gäste lieben es, ihre Platzierung zu teilen. Starte Aktionen zum Bestzeit-Schlagen.' },
-  { title: 'Stammgäste', text: 'Einheimische jagen ihre Rekorde und kommen immer wieder.' },
-  { title: 'Nur mit gekauftem Foto', text: 'Profil und Listenplatz gibt es nur mit freigeschaltetem Foto.' },
+  { title: 'Social Media', text: 'Gäste lieben es, ihre Platzierung zu teilen. Motiviere sie, die Bestzeit zu schlagen und ihr Foto zu kaufen.' },
+  { title: 'Nur mit gekauftem Foto', text: 'Nur freigeschaltete Fotos landen in der Liste. Das motiviert zum Kaufen und Fahren.' },
 ];
 
 const PLANS: {
