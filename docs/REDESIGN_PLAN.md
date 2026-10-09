@@ -77,7 +77,7 @@ Jede Phase: nur Gestaltung, keine Funktionsänderung. Prüfen mit `npm run typec
 `Support.tsx(170)`, Staff-Dateien), `npm run check:i18n`, `npm run build` und im Browser
 (`npm run dev`, Port 5180) in Desktop- und Handy-Breite. Screenshots vorher/nachher an John.
 
-- [ ] **Phase 1 – Grundlagen:** Schrift, Farben, Karten, Buttons, Eingabefelder, Tabs-Stil,
+- [x] **Phase 1 – Grundlagen:** Schrift, Farben, Karten, Buttons, Eingabefelder, Tabs-Stil,
       Seitenhintergrund (Tokens oben). Danach sieht jede Seite schon ruhiger aus.
 - [ ] **Phase 2 – Navigation (`src/components/layout/Sidebar.tsx`, `DashboardLayout.tsx`):**
   - Dunkle, ruhige Leiste im HubSpot-Stil, aktiver Eintrag hell hinterlegt.
@@ -124,3 +124,8 @@ Jede Phase: nur Gestaltung, keine Funktionsänderung. Prüfen mit `npm run typec
 ## Protokoll
 
 - 09.10.2026: Plan angelegt. Übersetzungen vorher abgeschlossen (siehe `docs/I18N.md`).
+- 09.10.2026: Phase 1 umgesetzt (Lexend Deca über Google Fonts in `index.html`, `brand`-Skala auf
+  dunkles Orange in `tailwind.config.js`, `src/index.css`: Tokens `--ink*`, `--line*`, `--canvas`,
+  Karten weiß ohne Blur, Buttons als Pills, Eingabefelder, Seitenhintergrund flach, Sidebar deckend,
+  Animationen kürzer). Offen für spätere Phasen: viele Seiten nutzen fest `bg-slate-900`-Buttons und
+  `bg-white/40`-Innenflächen statt der Klassen – das wird je Seite angeglichen.

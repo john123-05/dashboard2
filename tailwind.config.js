@@ -3,18 +3,22 @@ export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['"Lexend Deca"', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
+      },
       colors: {
+        // Dunkles Orange als Akzent (Redesign 2026-10, siehe docs/REDESIGN_PLAN.md).
         brand: {
-          50: '#fef3ec',
-          100: '#fde2d0',
-          200: '#fac4a1',
-          300: '#f5a06a',
-          400: '#f08340',
-          500: '#e8722a',
-          600: '#d4621f',
-          700: '#b04e18',
-          800: '#8c3e14',
-          900: '#6b3011',
+          50: '#fff4ed',
+          100: '#ffe6d5',
+          200: '#fdc9a8',
+          300: '#f9a271',
+          400: '#ea7a3f',
+          500: '#d2561a',
+          600: '#c2410c',
+          700: '#9a3412',
+          800: '#7c2d12',
+          900: '#5c220e',
         },
         glass: {
           50: 'rgba(255, 255, 255, 0.05)',
@@ -30,8 +34,8 @@ export default {
         },
       },
       animation: {
-        'fade-in': 'fadeIn 0.5s ease-out',
-        'slide-up': 'slideUp 0.4s ease-out',
+        'fade-in': 'fadeIn 0.2s ease-out',
+        'slide-up': 'slideUp 0.25s ease-out',
         'slide-in-left': 'slideInLeft 0.3s ease-out',
         'pulse-soft': 'pulseSoft 3s ease-in-out infinite',
         'shimmer': 'shimmer 2s linear infinite',
@@ -42,7 +46,7 @@ export default {
           '100%': { opacity: '1' },
         },
         slideUp: {
-          '0%': { opacity: '0', transform: 'translateY(16px)' },
+          '0%': { opacity: '0', transform: 'translateY(4px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
         },
         slideInLeft: {
