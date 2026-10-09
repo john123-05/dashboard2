@@ -29,6 +29,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useI18n } from '../../lib/i18n';
 import { usePark } from '../../contexts/ParkContext';
 import { supabase } from '../../lib/supabase';
+import ProfileParkSwitcher from './ProfileParkSwitcher';
 
 type NavItem = {
   to: string;
@@ -354,14 +355,7 @@ export default function Sidebar({
       </nav>
 
       <div className="border-t border-white/[0.06] p-3">
-        {showFull && profile && (
-          <div className="mb-3 rounded-xl bg-white/[0.06] px-3 py-2.5">
-            <p className="truncate text-sm font-medium text-slate-200">
-              {profile.full_name}
-            </p>
-            <p className="truncate text-xs text-slate-500">{profile.email}</p>
-          </div>
-        )}
+        {showFull && <ProfileParkSwitcher onSwitched={onCloseMobile} />}
 
         <div className={`flex ${showFull ? '' : 'flex-col'} gap-1`}>
           <button
