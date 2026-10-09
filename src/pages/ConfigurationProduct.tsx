@@ -16,9 +16,35 @@ function beschreibungPunkte(text: string | null): string[] {
 }
 
 /** Zusatzleistungen bei Verkaufs-Modulen (PrintBox, Cashbox). Preise netto, einmalig. */
-type Zusatz = { key: string; titel: string; preis: number; text: string; nur?: string };
+type Zusatz = {
+  key: string;
+  titel: string;
+  preis: number;
+  text: string;
+  nur?: string;
+  /** Streichpreis, wenn der Zusatz im Kombi-Paket günstiger ist. */
+  vorher?: number;
+  /** Zusätzliche monatliche Kosten, die der Zusatz mitbringt. */
+  monatlich?: number;
+  badge?: string;
+};
+
+/** Kombi-Preis: Wer PrintBox/Cashbox mit dem Online-Shop bucht, zahlt die Shop-Einrichtung nicht. */
+const SHOP_EINRICHTUNG = 749;
+const SHOP_MONATLICH = 99;
+const SHOP_JAHR = SHOP_MONATLICH * 9;
+const SHOP_ANTEIL = 15;
 
 const ZUSAETZE: Zusatz[] = [
+  {
+    key: 'onlineshop',
+    titel: 'Online-Shop: digitale Nachkäufe und Merchandising',
+    preis: 0,
+    vorher: SHOP_EINRICHTUNG,
+    monatlich: SHOP_MONATLICH,
+    badge: 'Oft zusammen gekauft',
+    text: 'PrintBox und Cashbox funktionieren im Verbund mit dem Online-Shop. Im Kombi-Paket entfällt die Einrichtung, es bleiben 99 € im Monat.',
+  },
   {
     key: 'personalisierung',
     titel: 'Personalisierung & Beklebung',
@@ -73,6 +99,8 @@ export default function ConfigurationProduct() {
   const [angefragt, setAngefragt] = useState(false);
   const [gewaehlt, setGewaehlt] = useState<string[]>([]);
   const [raten, setRaten] = useState(false);
+  const [alle, setAlle] = useState<EquipmentItem[]>([]);
+  const [shopPlan, setShopPlan] = useState<'monatlich' | 'jaehrlich' | 'revshare'>('jaehrlich');
 
   const preisTexte = (item?.mehrwert_text ?? '').split('·').map((t) => t.trim()).filter(Boolean);
   const basis = preisAus(preisTexte[0]);
@@ -80,6 +108,8 @@ export default function ConfigurationProduct() {
   const verfuegbar = ZUSAETZE.filter((z) => !z.nur || z.nur === item?.titel);
   const zusatzSumme = verfuegbar.filter((z) => gewaehlt.includes(z.key)).reduce((sum, z) => sum + z.preis, 0);
   const einmalig = (basis ?? 0) + zusatzSumme;
+  const monatlichGesamt = (monatlich ?? 0) + verfuegbar.filter((z) => gewaehlt.includes(z.key)).reduce((sum, z) => sum + (z.monatlich ?? 0), 0);
+  const istShop = item?.kategorie === 'Webshop';
   const istVerkauf = (item?.kategorie === 'Verkauf' || item?.kategorie === 'Zubehoer') && basis != null;
 
   useEffect(() => {
@@ -89,6 +119,7 @@ export default function ConfigurationProduct() {
     fetchParkEquipment(parkId)
       .then((items) => {
         if (!aktiv) return;
+        setAlle(items);
         setItem(items.find((i) => i.id === id) ?? null);
         setIndex(0);
       })
@@ -107,9 +138,17 @@ export default function ConfigurationProduct() {
       if (istVerkauf) {
         const namen = verfuegbar.filter((z) => gewaehlt.includes(z.key)).map((z) => z.titel);
         const label = `${item.titel} anfragen${namen.length ? ` mit ${namen.join(', ')}` : ''}, Summe ${eur(einmalig)} einmalig${
-          monatlich != null ? ` + ${eur(monatlich)}/Monat Service` : ''
+          monatlichGesamt > 0 ? ` + ${eur(monatlichGesamt)}/Monat` : ''
         }${raten ? `, in ${RATEN} Raten à ${eurGenau(einmalig / RATEN)}` : ''}`;
         await meldeAusstattungsInteresse(parkId, { label });
+      } else if (istShop) {
+        const planText =
+          shopPlan === 'monatlich'
+            ? `Einrichtung ${eur(SHOP_EINRICHTUNG)} einmalig + ${eur(SHOP_MONATLICH)}/Monat`
+            : shopPlan === 'jaehrlich'
+              ? `Einrichtung ${eur(SHOP_EINRICHTUNG)} einmalig + 12 Monate im Voraus ${eur(SHOP_JAHR)} (3 Monate geschenkt)`
+              : `Revenue Share ${SHOP_ANTEIL} % der Shop-Einnahmen, Einrichtung und Monatskosten 0 €`;
+        await meldeAusstattungsInteresse(parkId, { label: `${item.titel}: ${planText}` });
       } else {
         await meldeAusstattungsInteresse(parkId, { itemId: item.id });
       }
@@ -244,7 +283,20 @@ export default function ConfigurationProduct() {
                               {an && <Check className="h-3 w-3" />}
                             </span>
                           </span>
-                          <span className="mt-0.5 text-sm font-semibold text-slate-700">+ {eur(zusatz.preis)}</span>
+                          {zusatz.badge && (
+                            <span className="mt-1 w-fit rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800">
+                              {zusatz.badge}
+                            </span>
+                          )}
+                          <span className="mt-0.5 text-sm font-semibold text-slate-700">
+                            + {eur(zusatz.preis)}
+                            {zusatz.vorher != null && (
+                              <span className="ml-1.5 font-normal text-slate-400 line-through">{eur(zusatz.vorher)}</span>
+                            )}
+                            {zusatz.monatlich != null && (
+                              <span className="font-normal text-slate-500"> und {eur(zusatz.monatlich)} / Monat</span>
+                            )}
+                          </span>
                           <span className="mt-1 text-xs leading-snug text-slate-500">{zusatz.text}</span>
                         </button>
                       );
@@ -304,7 +356,74 @@ export default function ConfigurationProduct() {
                       <span>{eur(monatlich)} / Monat</span>
                     </div>
                   )}
+                  {verfuegbar.filter((z) => gewaehlt.includes(z.key) && z.monatlich).map((z) => (
+                    <div key={z.key} className="flex justify-between text-slate-600">
+                      <span>Online-Shop</span>
+                      <span>{eur(z.monatlich ?? 0)} / Monat</span>
+                    </div>
+                  ))}
                 </div>
+              </div>
+            )}
+
+
+            {istShop && (
+              <div className="space-y-4">
+                <div>
+                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Abo wählen</p>
+                  <div className="grid gap-2.5">
+                    {([
+                      { key: 'monatlich', titel: 'Monatlich', zeile: `${eur(SHOP_EINRICHTUNG)} einmalig + ${eur(SHOP_MONATLICH)} / Monat`, text: 'Einrichtung einmalig, dann monatlich für Hosting, Service und Wartung.' },
+                      { key: 'jaehrlich', titel: '12 Monate im Voraus', zeile: `${eur(SHOP_EINRICHTUNG)} einmalig + ${eur(SHOP_JAHR)} für 12 Monate`, vorher: eur(SHOP_MONATLICH * 12), text: '3 Monate geschenkt: du zahlst nur 9 × 99 €.', badge: 'Beliebt' },
+                      { key: 'revshare', titel: 'Full-Service mit Revenue Share', zeile: `0 € Einrichtung, 0 € monatlich, ${SHOP_ANTEIL} % der Shop-Einnahmen`, text: 'Wir kümmern uns auch um Druck und Versand der Artikel. Der Rest der Einnahmen ist dein Gewinn.' },
+                    ] as { key: 'monatlich' | 'jaehrlich' | 'revshare'; titel: string; zeile: string; vorher?: string; text: string; badge?: string }[]).map((plan) => (
+                      <button
+                        key={plan.key}
+                        type="button"
+                        onClick={() => setShopPlan(plan.key)}
+                        aria-pressed={shopPlan === plan.key}
+                        className={`rounded-xl border-2 p-3 text-left transition ${
+                          shopPlan === plan.key ? 'border-sky-500 bg-sky-50/60' : 'border-slate-200 bg-white hover:border-slate-300'
+                        }`}
+                      >
+                        <span className="flex items-center gap-2">
+                          <span className="text-sm font-bold text-slate-800">{plan.titel}</span>
+                          {plan.badge && (
+                            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800">
+                              {plan.badge}
+                            </span>
+                          )}
+                        </span>
+                        <span className="mt-0.5 block text-sm font-semibold text-slate-700">
+                          {plan.zeile}
+                          {plan.vorher && <span className="ml-1.5 font-normal text-slate-400 line-through">{plan.vorher}</span>}
+                        </span>
+                        <span className="mt-1 block text-xs text-slate-500">{plan.text}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {alle.some((a) => a.titel === 'PrintBox' || a.titel === 'Cashbox') && (
+                  <div className="rounded-xl bg-slate-50 p-3">
+                    <p className="text-sm font-bold text-slate-800">Passt dazu</p>
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      PrintBox und Cashbox funktionieren nur im Verbund mit dem Online-Shop. Im Kombi-Paket entfällt die
+                      Einrichtung.
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {alle.filter((a) => a.titel === 'PrintBox' || a.titel === 'Cashbox').map((a) => (
+                        <Link
+                          key={a.id}
+                          to={`/configuration/produkt/${a.id}`}
+                          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+                        >
+                          {a.titel} ansehen
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
