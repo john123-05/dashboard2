@@ -52,7 +52,7 @@ const PLANS: {
     fromYear2: 149,
     highlight: true,
     badge: 'speed.offer.popular',
-    image: '/speedmessung/display.jpg?v=2',
+    image: '/speedmessung/display.jpg?v=3',
     extras: [
       'speed.offer.display_large', 'speed.offer.display_free',
       'speed.offer.display_year2', 'speed.offer.term_12',
