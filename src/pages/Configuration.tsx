@@ -10,6 +10,7 @@ import {
   Search,
   Server,
   ShoppingBag,
+  X,
 } from 'lucide-react';
 import GlassCard from '../components/ui/GlassCard';
 import BeforeAfterSlider from '../components/ui/BeforeAfterSlider';
@@ -86,6 +87,15 @@ function HeaderIconLink({ to, label, icon: Icon }: { to: string; label: string; 
   );
 }
 
+/**
+ * Sind Startbild, Bild 2 und Bild 3 alle gesetzt, ist das eine Bildergalerie
+ * (Startbild, Produkte/Beschreibung, Preise) und kein Vorher/Nachher-Regler.
+ */
+function galerieBilder(item: EquipmentItem): string[] {
+  if (!item.image_url || !item.before_image_url || !item.after_image_url) return [];
+  return [item.image_url, item.before_image_url, item.after_image_url];
+}
+
 export default function Configuration() {
   const { parkId, isKioskPark } = usePark();
   const [machines, setMachines] = useState<ZahlungsAutomat[]>([]);
@@ -97,6 +107,7 @@ export default function Configuration() {
   const [requestedKeys, setRequestedKeys] = useState<Set<string>>(new Set());
   const [suche, setSuche] = useState('');
   const [filterKategorie, setFilterKategorie] = useState<string | null>(null);
+  const [galerie, setGalerie] = useState<{ item: EquipmentItem; index: number } | null>(null);
 
   useEffect(() => {
     if (!parkId) return;
@@ -319,7 +330,19 @@ export default function Configuration() {
                   key={item.id}
                   className="flex flex-col overflow-hidden rounded-xl border border-slate-200/60 bg-white/70"
                 >
-                  {item.before_image_url && item.after_image_url ? (
+                  {galerieBilder(item).length > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => setGalerie({ item, index: 0 })}
+                      className="group relative h-44 w-full shrink-0 overflow-hidden bg-slate-100"
+                      aria-label={`${item.titel}: Bilder ansehen`}
+                    >
+                      <img src={item.image_url ?? ''} alt={item.titel} className="h-full w-full object-cover" />
+                      <span className="absolute bottom-2 right-2 rounded-full bg-slate-900/80 px-2.5 py-1 text-[11px] font-semibold text-white group-hover:bg-slate-900">
+                        3 Bilder ansehen
+                      </span>
+                    </button>
+                  ) : item.before_image_url && item.after_image_url ? (
                     <div className="h-44 w-full shrink-0">
                       <BeforeAfterSlider beforeUrl={item.before_image_url} afterUrl={item.after_image_url} />
                     </div>
@@ -384,6 +407,64 @@ export default function Configuration() {
           </div>
         </SectionCard>
       )}
+
+      {galerie && (() => {
+        const bilder = galerieBilder(galerie.item);
+        const aktuell = bilder[galerie.index] ?? bilder[0];
+        return (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 p-4"
+            onClick={() => setGalerie(null)}
+            role="dialog"
+            aria-modal="true"
+          >
+            <div
+              className="flex max-h-full w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-5 py-4">
+                <div>
+                  <p className="text-base font-semibold text-slate-800">{galerie.item.titel}</p>
+                  {galerie.item.mehrwert_text && (
+                    <p className="mt-0.5 text-sm text-slate-500">{galerie.item.mehrwert_text}</p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setGalerie(null)}
+                  className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                  aria-label="Schließen"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="flex min-h-0 flex-1 items-center justify-center bg-slate-50 p-3">
+                <img src={aktuell} alt={galerie.item.titel} className="max-h-[60vh] w-auto max-w-full object-contain" />
+              </div>
+              <div className="flex gap-2 overflow-x-auto border-t border-slate-100 px-5 py-3">
+                {bilder.map((url, index) => (
+                  <button
+                    key={url}
+                    type="button"
+                    onClick={() => setGalerie({ item: galerie.item, index })}
+                    className={`h-16 w-24 shrink-0 overflow-hidden rounded-lg border-2 bg-white ${
+                      index === galerie.index ? 'border-sky-500' : 'border-transparent opacity-70 hover:opacity-100'
+                    }`}
+                    aria-label={`Bild ${index + 1}`}
+                  >
+                    <img src={url} alt="" className="h-full w-full object-cover" />
+                  </button>
+                ))}
+              </div>
+              {galerie.item.beschreibung && (
+                <p className="border-t border-slate-100 px-5 py-3 text-sm leading-relaxed text-slate-600">
+                  {galerie.item.beschreibung}
+                </p>
+              )}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
