@@ -81,7 +81,9 @@ function preisSplit(item: EquipmentItem): { einmalig: number; monatlich: number 
   return { einmalig: erster, monatlich: preisAus(teile[1]) ?? 0 };
 }
 
-const CRM_TITEL = 'CRM Besucherdaten und Digitale Version Hosting';
+/** Das CRM-Produkt hieß früher kürzer; beides gilt. */
+const istCrmTitel = (titel: string | undefined) => !!titel && (titel === 'CRM' || titel.startsWith('CRM ') || titel === 'Kundendaten-Erfassung und Hosting');
+
 
 const CRM_PAKETE = [
   { key: 'monatlich', titel: 'Monatlich', zeile: '49 € / Monat', text: 'Flexibel, ohne Vorauszahlung.', preis: 49 },
@@ -129,7 +131,7 @@ export default function ConfigurationProduct() {
   const monatlichGesamt = (monatlich ?? 0) + verfuegbar.filter((z) => gewaehlt.includes(z.key)).reduce((sum, z) => sum + (z.monatlich ?? 0), 0);
   const istShop = item?.kategorie === 'Webshop';
   const istSpeed = item?.titel === 'Speedmessung';
-  const istCrm = item?.titel === CRM_TITEL;
+  const istCrm = istCrmTitel(item?.titel);
   const istVerkauf = (item?.kategorie === 'Verkauf' || item?.kategorie === 'Zubehoer') && basis != null;
 
   useEffect(() => {
@@ -163,7 +165,7 @@ export default function ConfigurationProduct() {
             ? ['Speedmessung Display', 'Digitale Nachkäufe und Merchandising']
             : item?.titel === 'Speedmessung Display'
               ? ['Speedmessung', 'Digitale Nachkäufe und Merchandising']
-              : item?.titel === CRM_TITEL
+              : istCrmTitel(item?.titel)
                 ? ['Digitale Nachkäufe und Merchandising', 'Speedmessung']
                 : [];
   const buendel = item
