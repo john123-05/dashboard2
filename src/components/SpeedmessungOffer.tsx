@@ -17,6 +17,9 @@ const INCLUDED = [
   'Tagesbestenliste als Seite für Gäste, im Design deines Parks',
   'Geschwindigkeit direkt auf dem Foto',
   'Gäste tragen sich per Foto-Code ein, kein Passwort nötig',
+  'Hosting & Betrieb von Rangliste und Gästeseite inklusive',
+  'Verwaltete Datenbank für Gästeprofile & Ranglisten',
+  'Laufende Wartung, Updates & Überwachung durch uns',
 ];
 
 const STEPS = [
@@ -117,6 +120,10 @@ export default function SpeedmessungOffer() {
             </li>
           ))}
         </ol>
+        <p className="mt-5 border-t border-slate-100 pt-4 text-xs leading-relaxed text-slate-500">
+          Im Monatspreis steckt der laufende Betrieb: Server und Hosting, die verwaltete Datenbank für Gästeprofile und
+          Ranglisten sowie Wartung und Updates. Du kümmerst dich um nichts.
+        </p>
       </div>
 
       {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-center text-sm text-rose-700">{error}</p>}
