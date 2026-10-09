@@ -30,6 +30,7 @@ import { ParkProvider } from './contexts/ParkContext';
 import KioskAwareOverlay from './components/KioskAwareOverlay';
 import GuestActivityAwareOverlay from './components/GuestActivityAwareOverlay';
 import OwnerOnly from './components/OwnerOnly';
+import CameraAvailableOnly from './components/CameraAvailableOnly';
 const Team = seiteNachladen(() => import('./pages/Team'));
 const StaffAdminLayout = seiteNachladen(() => import('./staff/components/AdminLayout'));
 const StaffLoginPage = seiteNachladen(() => import('./staff/pages/StaffLoginPage'));
@@ -178,7 +179,7 @@ export default function App() {
                 <Route path="/personalization" element={<Personalization />} />
                 <Route path="/tickets" element={<Support />} />
                 <Route path="/health" element={<SystemHealth />} />
-                <Route path="/kamera" element={<Kamera />} />
+                <Route path="/kamera" element={<CameraAvailableOnly><Kamera /></CameraAvailableOnly>} />
                 <Route path="/team" element={<OwnerOnly><Team /></OwnerOnly>} />
                 <Route path="/settings" element={<OwnerOnly><Settings /></OwnerOnly>} />
               </Route>

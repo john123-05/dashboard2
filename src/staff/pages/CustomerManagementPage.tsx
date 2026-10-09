@@ -829,6 +829,7 @@ export default function CustomerManagementPage() {
       kioskOpeningHours: null,
       kioskOpeningHoursConfig: null,
       kioskCheckLoading: false,
+      cameraControlAvailable: true,
     }),
     [expandedPark],
   );

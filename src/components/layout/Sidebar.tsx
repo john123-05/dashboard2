@@ -79,7 +79,7 @@ export default function Sidebar({
   const { profile, currentOrg, signOut, isStaff, isOwner, refreshProfile } = useAuth();
   const location = useLocation();
   const { t } = useI18n();
-  const { parkName, setPark, isKioskPark, parkId } = usePark();
+  const { parkName, setPark, isKioskPark, parkId, cameraControlAvailable } = usePark();
   // Scaffolding only for now: persists the choice and tags <html> so the
   // rest of the dashboard's pages can opt into dark styles later without
   // touching this component again. No page actually has dark styles yet,
@@ -99,6 +99,7 @@ export default function Sidebar({
   const showFull = !collapsed || mobileOpen;
 
   const visibleItemsDefaultOrder = navItems.filter((item) => {
+    if (item.to === '/kamera' && cameraControlAvailable !== true) return false;
     if (isStaff) return item.staffAllowed;
     if (item.ownerOnly) return isOwner;
     return true;

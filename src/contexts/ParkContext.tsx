@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { fetchKioskSales, type OpeningHours } from '../lib/kioskSales';
+import { fetchCameraControlAvailable } from '../lib/cameraControl';
 import type { OpeningHoursConfig } from '../lib/types';
 
 export interface ParkState {
@@ -16,6 +17,9 @@ export interface ParkState {
   kioskOpeningHours: OpeningHours | null;
   kioskOpeningHoursConfig: OpeningHoursConfig | null;
   kioskCheckLoading: boolean;
+  // true: Kamerasoftware erreichbar, Einstellungen bedienbar. false: nicht erreichbar.
+  // null: noch nicht geprüft.
+  cameraControlAvailable: boolean | null;
 }
 
 export const ParkContext = createContext<ParkState | null>(null);
@@ -31,6 +35,7 @@ export function ParkProvider({ children }: { children: ReactNode }) {
   const [kioskOpeningHoursConfig, setKioskOpeningHoursConfig] = useState<OpeningHoursConfig | null>(null);
   const [kioskCheckLoading, setKioskCheckLoading] = useState(true);
   const [kioskRefreshNonce, setKioskRefreshNonce] = useState(0);
+  const [cameraControlAvailable, setCameraControlAvailable] = useState<boolean | null>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -83,6 +88,24 @@ export function ParkProvider({ children }: { children: ReactNode }) {
     };
   }, [parkId, kioskRefreshNonce]);
 
+  // Kamera-Seite nur zeigen, wenn die Kamerasoftware gerade erreichbar ist.
+  useEffect(() => {
+    let cancelled = false;
+    setCameraControlAvailable(null);
+    if (!parkId) return;
+
+    const check = () =>
+      fetchCameraControlAvailable(parkId)
+        .then((available) => !cancelled && setCameraControlAvailable(available))
+        .catch(() => !cancelled && setCameraControlAvailable(false));
+    void check();
+    const timer = window.setInterval(() => void check(), 5 * 60_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [parkId]);
+
   const setPark = (id: string | null, name: string | null) => {
     setParkId(id);
     setParkName(name);
@@ -110,6 +133,7 @@ export function ParkProvider({ children }: { children: ReactNode }) {
         kioskOpeningHours,
         kioskOpeningHoursConfig,
         kioskCheckLoading,
+        cameraControlAvailable,
       }}
     >
       {children}
