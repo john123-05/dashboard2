@@ -16,6 +16,7 @@ const Support = seiteNachladen(() => import('./pages/Support'));
 const SystemHealth = seiteNachladen(() => import('./pages/SystemHealth'));
 const Kamera = seiteNachladen(() => import('./pages/Kamera'));
 const Configuration = seiteNachladen(() => import('./pages/Configuration'));
+const ConfigurationProduct = seiteNachladen(() => import('./pages/ConfigurationProduct'));
 const Shop = seiteNachladen(() => import('./pages/Shop'));
 const ShopPricing = seiteNachladen(() => import('./pages/ShopPricing'));
 const CrmPricing = seiteNachladen(() => import('./pages/CrmPricing'));
@@ -170,6 +171,7 @@ export default function App() {
                 />
                 <Route path="/photos" element={<Photos />} />
                 <Route path="/configuration" element={<Configuration />} />
+                <Route path="/configuration/produkt/:id" element={<ConfigurationProduct />} />
                 <Route path="/shop" element={<Shop />} />
                 <Route path="/shop/preise" element={<ShopPricing />} />
                 <Route path="/configuration/bestellungen" element={<ConfigurationOrders />} />

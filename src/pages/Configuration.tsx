@@ -10,7 +10,6 @@ import {
   Search,
   Server,
   ShoppingBag,
-  X,
 } from 'lucide-react';
 import GlassCard from '../components/ui/GlassCard';
 import BeforeAfterSlider from '../components/ui/BeforeAfterSlider';
@@ -87,7 +86,7 @@ function HeaderIconLink({ to, label, icon: Icon }: { to: string; label: string; 
   );
 }
 
-/** Alle Bilder eines Eintrags in Reihenfolge: Startbild, Bild 2, Bild 3. */
+/** Anzahl der Bilder eines Eintrags: Startbild, Bild 2, Bild 3. */
 function eintragBilder(item: EquipmentItem): string[] {
   return [item.image_url, item.before_image_url, item.after_image_url].filter((u): u is string => !!u);
 }
@@ -108,7 +107,6 @@ export default function Configuration() {
   const [requestedKeys, setRequestedKeys] = useState<Set<string>>(new Set());
   const [suche, setSuche] = useState('');
   const [filterKategorie, setFilterKategorie] = useState<string | null>(null);
-  const [detail, setDetail] = useState<{ item: EquipmentItem; index: number } | null>(null);
 
   useEffect(() => {
     if (!parkId) return;
@@ -332,9 +330,8 @@ export default function Configuration() {
                   className="flex flex-col overflow-hidden rounded-xl border border-slate-200/60 bg-white/70"
                 >
                   {eintragBilder(item).length >= 3 || (!(item.before_image_url && item.after_image_url) && item.image_url) ? (
-                    <button
-                      type="button"
-                      onClick={() => setDetail({ item, index: 0 })}
+                    <Link
+                      to={`/configuration/produkt/${item.id}`}
                       className="group relative h-44 w-full shrink-0 overflow-hidden bg-white"
                       aria-label={`${item.titel}: Details ansehen`}
                     >
@@ -344,7 +341,7 @@ export default function Configuration() {
                           {eintragBilder(item).length} Bilder
                         </span>
                       )}
-                    </button>
+                    </Link>
                   ) : item.before_image_url && item.after_image_url ? (
                     <div className="h-44 w-full shrink-0">
                       <BeforeAfterSlider beforeUrl={item.before_image_url} afterUrl={item.after_image_url} />
@@ -382,13 +379,12 @@ export default function Configuration() {
                       )}
                     </div>
                     <div className="mt-auto flex flex-col gap-2 pt-2">
-                      <button
-                        type="button"
-                        onClick={() => setDetail({ item, index: 0 })}
+                      <Link
+                        to={`/configuration/produkt/${item.id}`}
                         className="inline-flex w-full items-center justify-center rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
                       >
                         Details ansehen
-                      </button>
+                      </Link>
                       {item.preview_url && (
                         <a
                           href={item.preview_url}
@@ -420,96 +416,6 @@ export default function Configuration() {
         </SectionCard>
       )}
 
-      {detail && (() => {
-        const bilder = eintragBilder(detail.item);
-        const aktuell = bilder[detail.index] ?? bilder[0];
-        const punkte = beschreibungPunkte(detail.item.beschreibung);
-        const preise = (detail.item.mehrwert_text ?? '').split('·').map((t) => t.trim()).filter(Boolean);
-        return (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 p-4"
-            onClick={() => setDetail(null)}
-            role="dialog"
-            aria-modal="true"
-          >
-            <div
-              className="relative flex max-h-full w-full max-w-5xl flex-col overflow-y-auto rounded-2xl bg-white shadow-2xl md:flex-row md:overflow-hidden"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                type="button"
-                onClick={() => setDetail(null)}
-                className="absolute right-3 top-3 z-10 rounded-lg bg-white/90 p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-                aria-label="Schließen"
-              >
-                <X className="h-5 w-5" />
-              </button>
-
-              <div className="flex shrink-0 flex-col-reverse gap-3 bg-slate-50 p-4 md:w-[55%] md:flex-row">
-                {bilder.length > 1 && (
-                  <div className="flex gap-2 md:flex-col">
-                    {bilder.map((url, index) => (
-                      <button
-                        key={url}
-                        type="button"
-                        onClick={() => setDetail({ item: detail.item, index })}
-                        onMouseEnter={() => setDetail({ item: detail.item, index })}
-                        className={`h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2 bg-white ${
-                          index === detail.index ? 'border-sky-500' : 'border-slate-200 opacity-80 hover:opacity-100'
-                        }`}
-                        aria-label={`Bild ${index + 1}`}
-                      >
-                        <img src={url} alt="" className="h-full w-full object-contain" />
-                      </button>
-                    ))}
-                  </div>
-                )}
-                <div className="flex min-h-[260px] flex-1 items-center justify-center rounded-xl bg-white p-2 md:min-h-[460px]">
-                  {aktuell && <img src={aktuell} alt={detail.item.titel} className="max-h-[70vh] max-w-full object-contain" />}
-                </div>
-              </div>
-
-              <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-6">
-                <div>
-                  <span className="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide text-slate-500">
-                    {detail.item.kategorie}
-                  </span>
-                  <h3 className="mt-2 text-2xl font-bold tracking-tight text-slate-800">{detail.item.titel}</h3>
-                </div>
-                {preise.length > 0 && (
-                  <div className="border-y border-slate-100 py-3">
-                    <p className="text-2xl font-black text-slate-900">{preise[0]}</p>
-                    {preise.slice(1).map((t) => (
-                      <p key={t} className="text-sm text-slate-500">{t}</p>
-                    ))}
-                    <p className="mt-1 text-xs text-slate-400">Alle Preise zzgl. MwSt.</p>
-                  </div>
-                )}
-                {punkte.length > 1 ? (
-                  <ul className="space-y-1.5">
-                    {punkte.map((punkt) => (
-                      <li key={punkt} className="flex items-start gap-2 text-sm leading-snug text-slate-600">
-                        <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-400" />
-                        {punkt}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  punkte[0] && <p className="text-sm leading-relaxed text-slate-600">{punkte[0]}</p>
-                )}
-                <button
-                  type="button"
-                  onClick={() => void handleAnfrage(detail.item.id, { itemId: detail.item.id })}
-                  disabled={requestKey === detail.item.id || requestedKeys.has(detail.item.id)}
-                  className="mt-auto inline-flex w-full items-center justify-center rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-500 disabled:opacity-60"
-                >
-                  {anfrageLabel(detail.item.id)}
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
     </div>
   );
 }
