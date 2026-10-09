@@ -23,12 +23,12 @@ const INCLUDED = [
 ];
 
 const BENEFITS = [
-  { title: 'Profil wie im Videospiel', text: 'Gäste legen ein Profil mit Bild an und messen sich mit anderen.' },
-  { title: 'Bestzeit toppen', text: 'Wer überholt wurde, fährt nochmal und kauft wieder Fotos.' },
+  { title: 'Profil wie im Videospiel', text: 'Profilbild anlegen, mit anderen messen. Gerade beliebt bei jungen Gästen.' },
+  { title: 'Bestzeit toppen', text: 'Stammgäste und Einheimische jagen Rekorde. Wer überholt wurde, fährt nochmal.' },
   { title: 'Tag, Monat, Allzeit', text: 'Wer war heute, diesen Monat und insgesamt am schnellsten?' },
-  { title: 'Social Media', text: 'Gäste teilen „Ich war der Schnellste“. Du startest Aktionen dazu.' },
-  { title: 'Stammgäste', text: 'Einheimische jagen ihre Rekorde und kommen immer wieder.' },
-  { title: 'Nur mit Foto-Kauf', text: 'In die Liste kommt nur, wer sein Foto kauft. Der QR-Code führt direkt hin.' },
+  { title: 'Social Media: Gestern', text: '„Wer war gestern der Schnellste?“ Gäste teilen ihre Platzierung.' },
+  { title: 'Social Media: Aktion', text: 'Motiviere Gäste, die Bestzeit zu schlagen und ihr Foto zu kaufen.' },
+  { title: 'Nur mit gekauftem Foto', text: 'Nur freigeschaltete Fotos landen in der Liste. Das motiviert zum Kaufen und Fahren.' },
 ];
 
 const PLANS: {
@@ -107,7 +107,7 @@ export default function SpeedmessungOffer() {
         </span>
         <h3 className="mt-3 text-xl font-bold tracking-tight text-slate-900">Mach jede Fahrt zum Wettkampf</h3>
         <p className="mt-1 max-w-xl text-sm leading-relaxed text-slate-600">
-          Wer war der Schnellste? Das will jeder wissen. Und jeder will es besser machen.
+          Gäste fahren, das Tempo wird gemessen und steht auf dem Foto. Wer es kauft, taucht in der Rangliste auf.
         </p>
         <ul className="mt-4 grid gap-x-6 gap-y-3 sm:grid-cols-2 xl:grid-cols-3">
           {BENEFITS.map((item) => (
