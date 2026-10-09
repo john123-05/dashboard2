@@ -81,7 +81,7 @@ function preisSplit(item: EquipmentItem): { einmalig: number; monatlich: number 
   return { einmalig: erster, monatlich: preisAus(teile[1]) ?? 0 };
 }
 
-const CRM_TITEL = 'CRM Besucherdaten';
+const CRM_TITEL = 'CRM Besucherdaten und Digitale Version Hosting';
 
 const CRM_PAKETE = [
   { key: 'monatlich', titel: 'Monatlich', zeile: '49 € / Monat', text: 'Flexibel, ohne Vorauszahlung.', preis: 49 },
@@ -211,7 +211,7 @@ export default function ConfigurationProduct() {
         await meldeAusstattungsInteresse(parkId, { label });
       } else if (istCrm) {
         const paket = CRM_PAKETE.find((pk) => pk.key === crmPaket);
-        await meldeAusstattungsInteresse(parkId, { label: `CRM Besucherdaten freischalten: ${paket?.titel}, ${paket?.zeile}` });
+        await meldeAusstattungsInteresse(parkId, { label: `CRM Besucherdaten und Digitale Version Hosting freischalten: ${paket?.titel}, ${paket?.zeile}` });
       } else if (istSpeed) {
         const paket = SPEED_PAKETE.find((p) => p.key === speedPaket);
         await meldeAusstattungsInteresse(parkId, {
