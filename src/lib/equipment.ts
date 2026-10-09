@@ -1,7 +1,7 @@
 import { EXTERNAL_SUPABASE_URL, EXTERNAL_SUPABASE_ANON_KEY } from './supabase';
 import { getFunctionSession } from './functionAuth';
 
-export type EquipmentKategorie = 'Automat' | 'Kamera' | 'Zubehoer' | 'Software' | 'Webshop' | 'Sonstiges';
+export type EquipmentKategorie = 'Automat' | 'Kamera' | 'Zubehoer' | 'Verkauf' | 'Software' | 'Webshop' | 'Sonstiges';
 export type EquipmentStatus = 'vorhanden' | 'empfohlen' | 'bestellt';
 export type Bestellstatus = 'bestellung_erhalten' | 'in_bearbeitung' | 'versendet' | 'installiert';
 

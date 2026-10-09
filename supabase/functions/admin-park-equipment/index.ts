@@ -17,7 +17,7 @@ import { handleOptions, json, requireAdminFromRequest, supabaseService } from '.
  */
 
 const BUCKET = 'equipment-images';
-const KATEGORIEN = ['Automat', 'Kamera', 'Zubehoer', 'Software', 'Webshop', 'Sonstiges'];
+const KATEGORIEN = ['Automat', 'Kamera', 'Zubehoer', 'Verkauf', 'Software', 'Webshop', 'Sonstiges'];
 const STATUS = ['vorhanden', 'empfohlen', 'bestellt'];
 const BESTELLSTATUS = ['bestellung_erhalten', 'in_bearbeitung', 'versendet', 'installiert'];
 const MAX_FILE_BYTES = 8 * 1024 * 1024;

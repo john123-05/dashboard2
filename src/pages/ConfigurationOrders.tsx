@@ -10,6 +10,7 @@ const KATEGORIE_ICON: Record<string, typeof Camera> = {
   Automat: Server,
   Kamera: Camera,
   Zubehoer: Printer,
+  Verkauf: ShoppingBag,
   Software: Gauge,
   Webshop: ShoppingBag,
   Sonstiges: Gauge,
