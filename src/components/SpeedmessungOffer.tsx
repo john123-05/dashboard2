@@ -22,10 +22,13 @@ const INCLUDED = [
   'Laufende Wartung, Updates & Überwachung durch uns',
 ];
 
-const STEPS = [
-  { title: 'Fahrt wird gemessen', text: 'Die Hardware an der Bahn misst jede Fahrt automatisch.' },
-  { title: 'Tempo steht auf dem Foto', text: 'Gäste sehen ihre km/h direkt auf ihrem Erinnerungsfoto.' },
-  { title: 'Rangliste motiviert', text: 'Wer es in die Tagesbestenliste schafft, kommt gern nochmal.' },
+const BENEFITS = [
+  { title: 'Profil wie im Videospiel', text: 'Gäste legen ein Profil mit Bild an und messen sich mit anderen.' },
+  { title: 'Bestzeit toppen', text: 'Wer überholt wurde, fährt nochmal und kauft wieder Fotos.' },
+  { title: 'Tag, Monat, Allzeit', text: 'Wer war heute, diesen Monat und insgesamt am schnellsten?' },
+  { title: 'Social Media', text: 'Gäste teilen „Ich war der Schnellste“. Du startest Aktionen dazu.' },
+  { title: 'Stammgäste', text: 'Einheimische jagen ihre Rekorde und kommen immer wieder.' },
+  { title: 'Nur mit Foto-Kauf', text: 'In die Liste kommt nur, wer sein Foto kauft. Der QR-Code führt direkt hin.' },
 ];
 
 const PLANS: {
@@ -102,27 +105,24 @@ export default function SpeedmessungOffer() {
         <span className="inline-block rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
           Noch nicht freigeschaltet
         </span>
-        <h3 className="mt-3 text-xl font-bold tracking-tight text-slate-900">Wer war heute der Schnellste?</h3>
-        <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-slate-600">
-          Mit der Speedmessung wird jede Fahrt zum kleinen Wettkampf. Gäste fahren öfter, vergleichen sich und kommen
-          wieder.
+        <h3 className="mt-3 text-xl font-bold tracking-tight text-slate-900">Mach jede Fahrt zum Wettkampf</h3>
+        <p className="mt-1 max-w-xl text-sm leading-relaxed text-slate-600">
+          Wer war der Schnellste? Das will jeder wissen. Und jeder will es besser machen.
         </p>
-        <ol className="mt-5 grid gap-4 sm:grid-cols-3">
-          {STEPS.map((step, i) => (
-            <li key={step.title} className="flex gap-3">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-bold text-white">
-                {i + 1}
-              </span>
+        <ul className="mt-4 grid gap-x-6 gap-y-3 sm:grid-cols-2 xl:grid-cols-3">
+          {BENEFITS.map((item) => (
+            <li key={item.title} className="flex gap-2">
+              <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
               <span>
-                <span className="block text-sm font-semibold text-slate-800">{step.title}</span>
-                <span className="mt-0.5 block text-xs leading-snug text-slate-500">{step.text}</span>
+                <span className="block text-[13px] font-semibold leading-snug text-slate-800">{item.title}</span>
+                <span className="block text-xs leading-snug text-slate-500">{item.text}</span>
               </span>
             </li>
           ))}
-        </ol>
-        <p className="mt-5 border-t border-slate-100 pt-4 text-xs leading-relaxed text-slate-500">
-          Im Monatspreis steckt der laufende Betrieb: Server und Hosting, die verwaltete Datenbank für Gästeprofile und
-          Ranglisten sowie Wartung und Updates. Du kümmerst dich um nichts.
+        </ul>
+        <p className="mt-4 border-t border-slate-100 pt-3 text-xs leading-relaxed text-slate-500">
+          Die Rangliste läuft am Monitor, die Nutzerdaten verwaltest du im Dashboard. Im Monatspreis stecken Hosting,
+          Datenbank und Wartung.
         </p>
       </div>
 
