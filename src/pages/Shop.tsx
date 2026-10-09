@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import QRCode from 'qrcode';
+import QRCode from '../lib/vendor/qrcode.bundle.js';
 import { CheckCircle2, ExternalLink, Image as ImageIcon, Monitor, Send, X } from 'lucide-react';
 import GlassCard from '../components/ui/GlassCard';
 import ProductMockup from '../components/shop/ProductMockup';
