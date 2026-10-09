@@ -62,7 +62,7 @@ const PLANS: {
   },
 ];
 
-export default function SpeedmessungOffer() {
+export default function SpeedmessungOffer({ compact = false }: { compact?: boolean }) {
   const { parkId } = usePark();
   const [busy, setBusy] = useState<PlanKey | null>(null);
   const [requested, setRequested] = useState<PlanKey[]>([]);
@@ -87,13 +87,17 @@ export default function SpeedmessungOffer() {
   }
 
   return (
-    <section className="mx-auto mt-14 max-w-5xl space-y-6 border-t border-slate-200/70 pt-10">
-      <div className="text-center">
+    <section className={compact ? 'space-y-5' : 'mx-auto mt-14 max-w-5xl space-y-6 border-t border-slate-200/70 pt-10'}>
+      <div className={compact ? 'text-left' : 'text-center'}>
         <span className="inline-block rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
           Noch nicht freigeschaltet
         </span>
         <h3 className="mt-3 text-2xl font-bold tracking-tight text-slate-800">Speedmessung nachrüsten</h3>
-        <p className="mx-auto mt-2 flex max-w-xl items-start justify-center gap-2 text-sm leading-relaxed text-slate-600">
+        <p
+          className={`mt-2 flex max-w-xl items-start gap-2 text-sm leading-relaxed text-slate-600 ${
+            compact ? '' : 'mx-auto justify-center'
+          }`}
+        >
           <Truck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
           <span>
             Alles ist für deinen Park schon vorbereitet – du musst es nur freischalten. Wir schicken dir die Hardware
@@ -102,7 +106,7 @@ export default function SpeedmessungOffer() {
         </p>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className={`grid gap-3 ${compact ? '' : 'sm:grid-cols-3'}`}>
         {[
           { icon: Gauge, title: 'Geschwindigkeit sehen', text: 'Jede Fahrt wird gemessen – live im Dashboard und auf dem Foto.' },
           { icon: Trophy, title: 'Tagesrangliste', text: 'Gäste tragen sich ein, die Schnellsten des Tages werden gefeiert.' },
@@ -120,7 +124,7 @@ export default function SpeedmessungOffer() {
 
       {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-center text-sm text-rose-700">{error}</p>}
 
-      <div className="grid gap-5 pt-3 md:grid-cols-3">
+      <div className={`grid gap-5 pt-3 ${compact ? 'sm:grid-cols-2' : 'md:grid-cols-3'}`}>
         {PLANS.map((plan) => {
           const dark = plan.highlight;
           const done = requested.includes(plan.key);

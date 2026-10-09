@@ -1,3 +1,5 @@
+import SpeedmessungOffer from '../components/SpeedmessungOffer';
+import { hasGuestActivity } from '../components/GuestActivityAwareOverlay';
 import { useEffect, useState } from 'react';
 import { Users as UsersIcon, Search, Trophy, Gauge, TrendingDown, TrendingUp, ExternalLink, Trash2, Upload } from 'lucide-react';
 import { getOptionalSourceWarning, invokeEdgeFunction, isEdgeSourceUnavailable } from '../lib/edgeFunctions';
@@ -473,6 +475,7 @@ export default function Users() {
               )}
             </div>
           </GlassCard>
+          {!hasGuestActivity(parkId) && <SpeedmessungOffer compact />}
         </div>
 
         {parkId && (
