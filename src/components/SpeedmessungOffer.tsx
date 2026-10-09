@@ -153,7 +153,7 @@ export default function SpeedmessungOffer() {
                   <span className="pb-0.5 text-xs text-slate-500">/ Monat</span>
                 </div>
                 <p className="mt-1.5 min-h-[2rem] text-[11px] leading-snug text-slate-500">
-                  {plan.fromYear2 ? `im 1. Jahr, ab Jahr 2 ${eur(plan.fromYear2)} / Monat` : 'Hardware 0 €'} · zzgl. MwSt.
+                  {plan.months} Monate Laufzeit · {plan.fromYear2 ? `im 1. Jahr, ab Jahr 2 ${eur(plan.fromYear2)} / Monat` : 'Hardware 0 €'} · zzgl. MwSt.
                 </p>
                 <p className="mt-3 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Das ist dabei</p>
                 <ul className="mt-2 flex-1 space-y-1.5">
