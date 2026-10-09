@@ -27,16 +27,15 @@ const PLANS: {
   badge?: string;
   points: string[];
 }[] = [
-  { key: 'basis', name: 'Speedmessung', monthly: 250, months: 12, points: ['Alles aus „Enthalten“', '12 Monate Laufzeit'] },
+  { key: 'basis', name: 'Speedmessung', monthly: 150, months: 12, points: ['Alles aus „Enthalten“', '12 Monate Laufzeit'] },
   {
     key: 'display',
     name: 'Speedmessung + Display',
     monthly: 250,
     months: 12,
-    oneTime: 1000,
     highlight: true,
     badge: 'Beliebt',
-    points: ['Alles aus „Enthalten“', 'Großes Display an der Bahn', '12 Monate Laufzeit'],
+    points: ['Alles aus „Enthalten“', 'Großes Display an der Bahn – ohne Einmalkosten', '12 Monate Laufzeit'],
   },
   {
     key: 'long',
@@ -44,7 +43,7 @@ const PLANS: {
     monthly: 199,
     months: 48,
     badge: 'Sparpreis',
-    points: ['Alles aus „Enthalten“', '51 € weniger pro Monat', '48 Monate Laufzeit'],
+    points: ['Alles aus „Enthalten“', 'Günstiger bei langer Laufzeit', '48 Monate Laufzeit'],
   },
 ];
 
