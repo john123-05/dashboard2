@@ -76,9 +76,7 @@ export default function SpeedmessungOffer() {
     setBusy(planKey);
     setError(null);
     try {
-      const label = `Speedmessung nachrüsten: ${plan.name} (${plan.months} Monate, ${plan.monthly} €/Monat${
-        plan.oneTime ? ` + ${plan.oneTime} € einmalig` : ''
-      }${plan.fromYear2 ? `, ab Jahr 2 ${plan.fromYear2} €/Monat` : ''}, Hardware kostenlos)`;
+      const label = `Speedmessung nachrüsten: ${plan.name} (${plan.months} Monate, ${plan.monthly} €/Monat${plan.fromYear2 ? `, ab Jahr 2 ${plan.fromYear2} €/Monat` : ''}, Hardware kostenlos)`;
       await meldeAusstattungsInteresse(parkId, { label });
       setRequested((prev) => [...prev, planKey]);
     } catch (e) {
