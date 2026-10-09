@@ -3,15 +3,16 @@ import { CreditCard } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import GlassCard from './ui/GlassCard';
 import { formatCurrency, formatNumber } from '../lib/utils';
+import { useI18n } from '../lib/i18n';
 import type { MachineRevenue } from '../lib/kioskSales';
 
 export type Zeitraum = 'heute' | 'woche' | 'monat' | 'gesamt';
 
 export const AUTOMATEN_ZEITRAEUME: { key: Zeitraum; label: string }[] = [
-  { key: 'heute', label: 'Heute' },
-  { key: 'woche', label: '7 Tage' },
-  { key: 'monat', label: 'Monat' },
-  { key: 'gesamt', label: 'Gesamt' },
+  { key: 'heute', label: 'revenue.period.heute' },
+  { key: 'woche', label: 'revenue.period.woche' },
+  { key: 'monat', label: 'revenue.period.monat' },
+  { key: 'gesamt', label: 'revenue.period.gesamt' },
 ];
 const ZEITRAEUME = AUTOMATEN_ZEITRAEUME;
 
@@ -24,6 +25,7 @@ export default function AutomatenUebersicht({
   machines: MachineRevenue[];
   zeitraum: Zeitraum;
 }) {
+  const { t } = useI18n();
   const summe = useMemo(
     () => machines.reduce(
       (acc, m) => ({ cent: acc.cent + m[zeitraum].cent, anzahl: acc.anzahl + m[zeitraum].anzahl }),
@@ -42,7 +44,7 @@ export default function AutomatenUebersicht({
   return (
       <div className="grid gap-4 lg:grid-cols-[minmax(260px,320px)_minmax(0,1fr)]">
         <GlassCard className="p-5">
-          <h4 className="text-base font-semibold text-slate-800">Verteilung nach Automaten</h4>
+          <h4 className="text-base font-semibold text-slate-800">{t('machines.distribution')}</h4>
           {/* Derselbe Ring wie "Status-Verteilung" auf der Fotoseite (recharts,
               gleiche Maße): läuft beim Laden und beim Umschalten von selbst ein. */}
           <div className="relative mx-auto mt-4 h-40 w-40">
@@ -51,7 +53,7 @@ export default function AutomatenUebersicht({
                 <Pie
                   data={gesamtWert > 0
                     ? machines.map((m) => ({ name: m.machine_label, value: wert(m) }))
-                    : [{ name: 'Noch keine Käufe', value: 1 }]}
+                    : [{ name: t('machines.no_purchases_yet'), value: 1 }]}
                   cx="50%"
                   cy="50%"
                   innerRadius={44}
@@ -69,7 +71,7 @@ export default function AutomatenUebersicht({
                 </Pie>
                 {gesamtWert > 0 && (
                   <Tooltip
-                    formatter={(value) => (nachUmsatz ? formatCurrency(Number(value), 'eur') : `${formatNumber(Number(value))} Käufe`)}
+                    formatter={(value) => (nachUmsatz ? formatCurrency(Number(value), 'eur') : t('machines.purchases', { count: formatNumber(Number(value)) }))}
                     contentStyle={{ background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.08)' }}
                   />
                 )}
@@ -79,7 +81,7 @@ export default function AutomatenUebersicht({
               <span className="text-base font-semibold tabular-nums text-slate-800">
                 {(summe.cent / 100).toLocaleString('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })}
               </span>
-              <span className="text-[11px] text-slate-500">{formatNumber(summe.anzahl)} Käufe</span>
+              <span className="text-[11px] text-slate-500">{t('machines.purchases', { count: formatNumber(summe.anzahl) })}</span>
             </div>
           </div>
           <ul className="mt-4 space-y-2">
@@ -117,41 +119,41 @@ export default function AutomatenUebersicht({
                   <span className="h-3 w-3 rounded-full" style={{ backgroundColor: farbe }} />
                   <h4 className="text-sm font-semibold text-slate-800">{m.machine_label}</h4>
                   <span className="ml-auto rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
-                    {m.card_only ? 'Nur Karte' : 'Bar & Karte'}
+                    {m.card_only ? t('machines.card_only') : t('machines.cash_and_card')}
                   </span>
                 </div>
 
                 <p className="mt-4 text-3xl font-semibold tabular-nums text-slate-800">
                   {formatCurrency(m[zeitraum].cent, 'eur')}
                 </p>
-                <p className="text-sm text-slate-500">{formatNumber(m[zeitraum].anzahl)} Käufe</p>
+                <p className="text-sm text-slate-500">{t('machines.purchases', { count: formatNumber(m[zeitraum].anzahl) })}</p>
 
                 <dl className="mt-4 grid grid-cols-3 gap-2 text-xs">
-                  {([['heute', 'Heute'], ['woche', '7 Tage'], ['gesamt', 'Gesamt']] as const).map(([key, label]) => (
+                  {([['heute', t('revenue.period.heute')], ['woche', t('revenue.period.woche')], ['gesamt', t('revenue.period.gesamt')]] as const).map(([key, label]) => (
                     <div key={key} className="rounded-lg bg-white/60 px-2.5 py-2">
                       <dt className="text-slate-400">{label}</dt>
                       <dd className="mt-0.5 font-medium tabular-nums text-slate-700">{formatCurrency(m[key].cent, 'eur')}</dd>
-                      <dd className="tabular-nums text-slate-400">{formatNumber(m[key].anzahl)} Käufe</dd>
+                      <dd className="tabular-nums text-slate-400">{t('machines.purchases', { count: formatNumber(m[key].anzahl) })}</dd>
                     </div>
                   ))}
                 </dl>
 
                 <div className="mt-4">
-                  <p className="mb-1.5 text-xs font-medium text-slate-500">Bezahlt mit</p>
+                  <p className="mb-1.5 text-xs font-medium text-slate-500">{t('machines.paid_with')}</p>
                   {m.card_only ? (
                     <p className="inline-flex items-center gap-1.5 rounded-lg bg-sky-50 px-3 py-1.5 text-sm font-medium text-sky-800">
-                      <CreditCard className="h-4 w-4" /> Nur Karte
+                      <CreditCard className="h-4 w-4" /> {t('machines.card_only')}
                     </p>
                   ) : karteAnteil === null ? (
-                    <p className="text-sm text-slate-400">noch keine Zuordnung</p>
+                    <p className="text-sm text-slate-400">{t('machines.no_assignment')}</p>
                   ) : (
                     <>
                       <div className="flex h-2.5 overflow-hidden rounded-full bg-emerald-200">
                         <div className="bg-sky-500" style={{ width: `${karteAnteil * 100}%` }} />
                       </div>
                       <p className="mt-1.5 flex justify-between text-xs text-slate-500">
-                        <span>Karte {Math.round(karteAnteil * 100)} %</span>
-                        <span>Bar {Math.round((1 - karteAnteil) * 100)} %</span>
+                        <span>{t('machines.card_share', { percent: Math.round(karteAnteil * 100) })}</span>
+                        <span>{t('machines.cash_share', { percent: Math.round((1 - karteAnteil) * 100) })}</span>
                       </p>
                     </>
                   )}
@@ -159,7 +161,7 @@ export default function AutomatenUebersicht({
 
                 {(liste.length > 0 || markeUnbekannt) && (
                   <div className="mt-3">
-                    <p className="mb-1.5 text-xs font-medium text-slate-500">Kartenmarken ({ZEITRAEUME.find((z) => z.key === zeitraum)?.label})</p>
+                    <p className="mb-1.5 text-xs font-medium text-slate-500">{t('machines.card_brands_period', { period: t(ZEITRAEUME.find((z) => z.key === zeitraum)?.label ?? '') })}</p>
                     {liste.length > 0 ? (
                       <div className="flex flex-wrap gap-1.5">
                         {liste.slice(0, 4).map((x) => (
@@ -173,7 +175,7 @@ export default function AutomatenUebersicht({
                       </div>
                     ) : (
                       <p className="text-xs text-slate-400">
-                        Nicht erfasst – vom Kartenterminal dieses Automaten kommen noch keine Belege.
+                        {t('machines.brands_not_recorded')}
                       </p>
                     )}
                   </div>
