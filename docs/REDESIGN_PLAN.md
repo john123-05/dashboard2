@@ -188,3 +188,7 @@ Jede Phase: nur Gestaltung, keine Funktionsänderung. Prüfen mit `npm run typec
   Liste, „Sonstige Protokolle“ (unbekannte Logs am Automaten) dort ausgefiltert. Ereignisse mit
   Unterstrich-Reitern, Filter als Pills; ohne Datei-Meldungen öffnet automatisch der Verlauf. Zeiten und
   Zahlen jetzt nach Sprache formatiert (vorher „this minute“, „17,722“). Funktionen unverändert.
+- 10.10.2026: Ablauf-Streifen mit Lichtlauf: alle 650 ms leuchtet die nächste Station kurz grün auf (Warnung:
+  gelb), auf der Linie davor läuft ein Lichtstreif (`lp-flow-line` in `index.css`), danach 4 Takte Pause.
+  Erste rote Station: Lauf stoppt davor, die Station pulsiert rot (`lp-red-glow`). Bei „weniger Bewegung“
+  im System keine Animation.

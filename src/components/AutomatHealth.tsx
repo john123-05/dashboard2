@@ -820,6 +820,27 @@ function Automat({ m, farbe, mehrere, detailed, busyKey, laufend, jetzt, onResta
   // draussen, ausser sie melden ein Problem.
   const stationen = eintraege.filter((e) => e.kind !== 'system' || e.ton === 'bad' || e.ton === 'warn');
   const inOrdnung = sichtbar.filter((e) => e.ton === 'ok' || e.ton === 'ruhig').length;
+
+  // Lichtlauf: Station für Station leuchtet kurz auf, die Linie davor läuft mit.
+  // An der ersten roten Station bleibt er stehen - sie pulsiert dann rot.
+  const ersteRote = stationen.findIndex((e) => e.ton === 'bad');
+  const letzteLauf = ersteRote === -1 ? stationen.length - 1 : ersteRote - 1;
+  const [lauf, setLauf] = useState(-1);
+  const [laufRunde, setLaufRunde] = useState(0);
+  useEffect(() => {
+    if (letzteLauf < 0 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setLauf(-1);
+      return;
+    }
+    const PAUSE = 4; // Takte Ruhe zwischen zwei Durchläufen
+    let schritt = -1;
+    const timer = window.setInterval(() => {
+      schritt = schritt >= letzteLauf + PAUSE ? 0 : schritt + 1;
+      setLauf(schritt <= letzteLauf ? schritt : -1);
+      if (schritt === 0) setLaufRunde((r) => r + 1);
+    }, 650);
+    return () => window.clearInterval(timer);
+  }, [letzteLauf]);
   const papierWarn = m.paper_warn_remaining ?? 30;
 
   return (
@@ -886,8 +907,26 @@ function Automat({ m, farbe, mehrere, detailed, busyKey, laufend, jetzt, onResta
             {stationen.map((e, i) => {
               const Icon = KIND_ICON[e.kind] ?? Cpu;
               const z = ZUSTAND[e.ton];
+              const aktiv = lauf === i;
+              const glow = e.ton === 'warn'
+                ? 'border-amber-400 shadow-[0_0_0_4px_rgba(245,158,11,0.14),0_0_14px_rgba(245,158,11,0.55)]'
+                : 'border-emerald-400 shadow-[0_0_0_4px_rgba(16,185,129,0.14),0_0_14px_rgba(16,185,129,0.55)]';
               return [
-                i > 0 ? <li key={`${e.name}-linie`} className="mt-[18px] h-px min-w-6 flex-1 bg-[color:var(--line-strong)]" aria-hidden /> : null,
+                i > 0 ? (
+                  <li key={`${e.name}-linie`} className="relative mt-[18px] h-px min-w-6 flex-1 overflow-hidden bg-[color:var(--line-strong)]" aria-hidden>
+                    {aktiv && (
+                      <span
+                        key={`${laufRunde}-${i}`}
+                        className={`lp-flow-line absolute inset-y-0 left-0 w-full ${
+                          e.ton === 'warn'
+                            ? 'bg-[linear-gradient(90deg,transparent,rgba(245,158,11,0.9),transparent)]'
+                            : 'bg-[linear-gradient(90deg,transparent,rgba(16,185,129,0.9),transparent)]'
+                        }`}
+                        style={{ height: 2, top: -0.5 }}
+                      />
+                    )}
+                  </li>
+                ) : null,
                 <li key={e.name} className="shrink-0">
                   <button
                     type="button"
@@ -895,7 +934,11 @@ function Automat({ m, farbe, mehrere, detailed, busyKey, laufend, jetzt, onResta
                     title={`${e.name} · ${z.label}`}
                     className="group flex w-24 flex-col items-center gap-1.5 text-center"
                   >
-                    <span className="relative flex h-9 w-9 items-center justify-center rounded-full border border-[color:var(--line-strong)] bg-white text-[color:var(--ink-2)] transition group-hover:border-brand-400">
+                    <span
+                      className={`relative flex h-9 w-9 items-center justify-center rounded-full border bg-white text-[color:var(--ink-2)] transition-[border-color,box-shadow] duration-500 group-hover:border-brand-400 ${
+                        e.ton === 'bad' && i === ersteRote ? 'lp-red-glow border-rose-400' : aktiv ? `${glow} delay-200` : 'border-[color:var(--line-strong)]'
+                      }`}
+                    >
                       <Icon className="h-4 w-4" />
                       <span className={`absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full ring-2 ring-white ${z.punkt}`} />
                     </span>
