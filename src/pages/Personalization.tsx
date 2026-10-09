@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Image as ImageIcon, Upload, Loader2, Trash2 } from 'lucide-react';
+import { Image as ImageIcon, Upload, Loader2, Trash2, PencilRuler, CheckCircle2, RefreshCw } from 'lucide-react';
 import { invokeEdgeFunction } from '../lib/edgeFunctions';
 import { supabase } from '../lib/supabase';
 import GlassCard from '../components/ui/GlassCard';
-import OverlayBuilder from '../components/OverlayBuilder';
+import OverlayBuilder, { type OpenRequest } from '../components/OverlayBuilder';
+import { UpgradePageHeader } from '../components/upgrade/UpgradeHero';
 import AutomatBranding from '../components/AutomatBranding';
 import { useI18n } from '../lib/i18n';
 import { usePark } from '../contexts/ParkContext';
@@ -74,13 +75,14 @@ function anchorToObjectPosition(anchor: string) {
 
 export default function Personalization() {
   const { t } = useI18n();
-  const { parkId } = usePark();
+  const { parkId, parkName } = usePark();
   const { user } = useAuth();
   const [baseImage, setBaseImage] = useState<string | null>(null);
   const [assets, setAssets] = useState<OverlayAssetWithPreview[]>([]);
   const [campaigns, setCampaigns] = useState<OverlayCampaignWithLayers[]>([]);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'preview' | 'edit'>('edit');
+  const [openRequest, setOpenRequest] = useState<OpenRequest | null>(null);
+  const galleryRef = useRef<HTMLDivElement | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -215,7 +217,7 @@ export default function Personalization() {
       if (activatedCampaignId) {
         setSelectedCampaignId(activatedCampaignId);
       }
-      setViewMode('preview');
+      galleryRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     } catch (err) {
       setActionError(err instanceof Error ? err.message : t('perso.save_failed'));
     } finally {
@@ -322,7 +324,6 @@ export default function Personalization() {
       await loadOverlayData();
       if (activatedCampaignId) {
         setSelectedCampaignId(activatedCampaignId);
-        setViewMode('preview');
       }
     } catch (error) {
       setActionError(error instanceof Error ? error.message : t('perso.upload_failed'));
@@ -371,7 +372,6 @@ export default function Personalization() {
       await loadOverlayData();
       if (activatedCampaignId) {
         setSelectedCampaignId(activatedCampaignId);
-        setViewMode('preview');
       }
     } catch (uploadError) {
       setGenerateError(
@@ -433,228 +433,196 @@ export default function Personalization() {
     }
   }
 
+  function openInEditor(url: string) {
+    setOpenRequest({ url, nonce: Date.now() });
+  }
+
+  const checker = 'repeating-conic-gradient(#e5e9f0 0% 25%, #ffffff 0% 50%) 50% / 12px 12px';
+
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('personalization.title')}</h2>
-        <p className="mt-1 text-sm text-slate-500">{t('personalization.subtitle')}</p>
-      </div>
-
-      <AutomatBranding />
+      <UpgradePageHeader title={t('personalization.title')} subtitle={t('personalization.subtitle')} />
 
       {!parkId && (
         <GlassCard className="p-4">
-          <p className="text-sm text-amber-700">
-            {t('perso.no_park_note')}
-          </p>
+          <p className="text-sm text-amber-700">{t('perso.no_park_note')}</p>
         </GlassCard>
       )}
 
       {actionError && (
-        <GlassCard className="p-4">
-          <p className="text-sm text-rose-600">{actionError}</p>
-        </GlassCard>
+        <div className="rounded-lg bg-rose-50 px-4 py-3 text-sm text-rose-700">{actionError}</div>
       )}
 
-      <GlassCard className="p-4 sm:p-6">
-        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h3 className="text-base font-semibold text-slate-800">{t('perso.overlay_images')}</h3>
-            <p className="mt-1 text-sm text-slate-500">
-              {viewMode === 'preview'
-                ? t('perso.preview_sub')
-                : t('perso.edit_sub')}
-            </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <div className="inline-flex rounded-xl bg-white/40 p-1">
-              <button
-                type="button"
-                onClick={() => setViewMode('edit')}
-                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
-                  viewMode === 'edit' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                }`}
-              >
-                {t('perso.create_overlay')}
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode('preview')}
-                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
-                  viewMode === 'preview' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                }`}
-              >
-                {t('perso.preview')}
-              </button>
-            </div>
-            {viewMode === 'preview' && (
-              <button onClick={loadRecent} className="glass-button-secondary">
-                {t('app.refresh')}
-              </button>
-            )}
-          </div>
+      <AutomatBranding onOpenInEditor={openInEditor} />
+
+      <section className="space-y-3">
+        <div>
+          <h3 className="text-base font-semibold text-[color:var(--ink)]">{t('perso.studio_title')}</h3>
+          <p className="mt-0.5 text-sm text-[color:var(--ink-3)]">{t('perso.edit_sub')}</p>
         </div>
+        <OverlayBuilder
+          onSave={handleBuilderSave}
+          saving={builderSaving}
+          previewUrl={baseImage}
+          onGenerate={handleGenerate}
+          generating={generating}
+          generateError={generateError}
+          parkId={parkId}
+          brandName={parkName}
+          openRequest={openRequest}
+        />
+      </section>
 
-        {viewMode === 'preview' ? (
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_240px]">
-            <div className="relative w-full overflow-hidden rounded-2xl bg-slate-100 aspect-[4/3] xl:aspect-[16/10]">
-              {loading ? (
-                <div className="absolute inset-0 animate-pulse bg-white/40" />
-              ) : baseImage ? (
-                <img src={baseImage} alt="Recent" className="h-full w-full object-cover" />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center text-slate-400">
-                  <ImageIcon className="h-6 w-6" />
-                  <span className="ml-2 text-sm">{t('personalization.no_recent_photo')}</span>
-                </div>
-              )}
-
-              {selectedLayers.map((layer) => {
-                const preview = assetById.get(layer.asset_id)?.preview_url;
-                if (!preview) return null;
-                return (
-                  <img
-                    key={layer.id}
-                    src={preview}
-                    alt="Overlay"
-                    className="pointer-events-none absolute inset-0 h-full w-full"
-                    style={{
-                      zIndex: layer.z_index,
-                      opacity: layer.opacity,
-                      mixBlendMode: layer.blend_mode,
-                      objectFit: layer.fit === 'fill' ? 'fill' : layer.fit,
-                      objectPosition: anchorToObjectPosition(layer.anchor),
-                      transform: `scale(${layer.scale})`,
-                    }}
-                  />
-                );
-              })}
+      <div ref={galleryRef}>
+        <GlassCard className="p-5 sm:p-6">
+          <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h3 className="text-base font-semibold text-[color:var(--ink)]">{t('perso.saved_overlays')}</h3>
+              <p className="mt-0.5 text-sm text-[color:var(--ink-3)]">{t('perso.gallery_sub')}</p>
             </div>
-
-            <div className="rounded-2xl bg-white/30 p-4">
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <div>
-                  <h4 className="text-sm font-semibold text-slate-800">{t('perso.saved_overlays')}</h4>
-                  <p className="text-xs text-slate-500">{t('perso.click_to_apply')}</p>
-                </div>
-                <span className="rounded-full bg-white/60 px-2.5 py-1 text-xs font-medium text-slate-600">
-                  {assets.length}
-                </span>
-              </div>
-
-              {assets.length > 0 ? (
-                <div className="flex gap-3 overflow-x-auto pb-2 xl:grid xl:max-h-[28rem] xl:grid-cols-1 xl:overflow-y-auto xl:overflow-x-hidden xl:pb-0">
-                  {assets.map((asset) => {
-                    const isDeleting = deletingAssetId === asset.id;
-                    const isActivating = activatingAssetId === asset.id;
-                    const isActive = selectedAssetIds.has(asset.id);
-
-                    return (
-                      <button
-                        type="button"
-                        key={asset.id}
-                        onClick={() => !isActive && void handleActivateAsset(asset)}
-                        disabled={isActivating}
-                        className={`w-36 shrink-0 rounded-2xl border p-3 text-left shadow-sm transition sm:w-40 xl:w-auto ${
-                          isActive
-                            ? 'border-brand-300 bg-brand-50/60 ring-1 ring-brand-200'
-                            : 'border-white/40 bg-white/70 hover:bg-white/90'
-                        }`}
-                      >
-                        <div className="mb-2 flex items-start justify-between gap-2">
-                          <span
-                            className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                              isActive ? 'bg-brand-100 text-brand-700' : 'bg-slate-100 text-slate-500'
-                            }`}
-                          >
-                            {isActivating ? t('perso.activating') : isActive ? t('perso.active') : 'Overlay'}
-                          </span>
-                          <span
-                            role="button"
-                            tabIndex={0}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              void handleDeleteAsset(asset);
-                            }}
-                            aria-label={t('perso.delete_asset', { name: pathBasename(asset.path) })}
-                            className="rounded-full p-1 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
-                          >
-                            {isDeleting ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              <Trash2 className="h-3.5 w-3.5" />
-                            )}
-                          </span>
-                        </div>
-
-                        <div className="flex h-24 items-center justify-center overflow-hidden rounded-xl bg-slate-100">
-                          {asset.preview_url ? (
-                            <img
-                              src={asset.preview_url}
-                              alt={pathBasename(asset.path)}
-                              className="h-full w-full object-contain"
-                            />
-                          ) : (
-                            <div className="flex h-full w-full items-center justify-center text-slate-300">
-                              <ImageIcon className="h-5 w-5" />
-                            </div>
-                          )}
-                        </div>
-
-                        <p className="mt-2 truncate text-sm font-medium text-slate-700">
-                          {pathBasename(asset.path)}
-                        </p>
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : (
-                <p className="text-sm text-slate-400">
-                  {t('perso.no_overlays')}
-                </p>
-              )}
-            </div>
-          </div>
-        ) : (
-          <div>
-            <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl bg-white/20 px-3 py-2">
+            <div className="flex flex-wrap items-center gap-3">
+              <label className="flex items-center gap-2 text-xs text-[color:var(--ink-2)]">
+                <input type="checkbox" checked={autoApplyUpload} onChange={(e) => setAutoApplyUpload(e.target.checked)} className="accent-[#c2410c]" />
+                {t('perso.use_on_save')}
+              </label>
               <input
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
                 multiple
                 className="hidden"
-                onChange={(e) => handleAddOverlay(e.target.files)}
+                onChange={(e) => {
+                  void handleAddOverlay(e.target.files);
+                  e.target.value = '';
+                }}
               />
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="glass-button-secondary text-sm"
-                disabled={!parkId || uploading}
-              >
-                <Upload className="h-4 w-4" />
+              <button onClick={() => fileInputRef.current?.click()} className="glass-button-secondary py-1.5 text-sm" disabled={!parkId || uploading}>
+                {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                 {uploading ? t('perso.uploading') : t('perso.upload_ready')}
               </button>
-              <label className="flex items-center gap-2 text-xs text-slate-500">
-                <input
-                  type="checkbox"
-                  checked={autoApplyUpload}
-                  onChange={(e) => setAutoApplyUpload(e.target.checked)}
-                />
-                {t('perso.use_on_save')}
-              </label>
+            </div>
+          </div>
+
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+            <div>
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-xs font-semibold text-[color:var(--ink-2)]">{t('perso.preview')}</p>
+                <button onClick={loadRecent} className="inline-flex items-center gap-1 text-xs text-[color:var(--ink-3)] hover:text-[color:var(--ink)]">
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  {t('app.refresh')}
+                </button>
+              </div>
+              <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg bg-slate-100">
+                {loading ? (
+                  <div className="absolute inset-0 animate-pulse bg-slate-100" />
+                ) : baseImage ? (
+                  <img src={baseImage} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-slate-400">
+                    <ImageIcon className="h-6 w-6" />
+                    <span className="ml-2 text-sm">{t('personalization.no_recent_photo')}</span>
+                  </div>
+                )}
+                {selectedLayers.map((layer) => {
+                  const preview = assetById.get(layer.asset_id)?.preview_url;
+                  if (!preview) return null;
+                  return (
+                    <img
+                      key={layer.id}
+                      src={preview}
+                      alt=""
+                      className="pointer-events-none absolute inset-0 h-full w-full"
+                      style={{
+                        zIndex: layer.z_index,
+                        opacity: layer.opacity,
+                        mixBlendMode: layer.blend_mode,
+                        objectFit: layer.fit === 'fill' ? 'fill' : layer.fit,
+                        objectPosition: anchorToObjectPosition(layer.anchor),
+                        transform: `scale(${layer.scale})`,
+                      }}
+                    />
+                  );
+                })}
+              </div>
+              <p className="mt-2 text-xs text-[color:var(--ink-3)]">{t('perso.preview_sub')}</p>
             </div>
 
-            <OverlayBuilder
-              onSave={handleBuilderSave}
-              saving={builderSaving}
-              previewUrl={baseImage}
-              onGenerate={handleGenerate}
-              generating={generating}
-              generateError={generateError}
-            />
+            <div>
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-xs font-semibold text-[color:var(--ink-2)]">{t('perso.click_to_apply')}</p>
+                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">{assets.length}</span>
+              </div>
+              {assets.length > 0 ? (
+                <div className="grid max-h-[34rem] grid-cols-2 gap-3 overflow-y-auto pr-1 sm:grid-cols-3 xl:grid-cols-2 2xl:grid-cols-3">
+                  {assets.map((asset) => {
+                    const isDeleting = deletingAssetId === asset.id;
+                    const isActivating = activatingAssetId === asset.id;
+                    const isActive = selectedAssetIds.has(asset.id);
+                    return (
+                      <div
+                        key={asset.id}
+                        className={`group overflow-hidden rounded-lg border bg-white transition ${
+                          isActive ? 'border-brand-600 ring-1 ring-brand-600' : 'border-[color:var(--line)] hover:border-[color:var(--line-strong)]'
+                        }`}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => !isActive && void handleActivateAsset(asset)}
+                          disabled={isActivating}
+                          className="relative flex aspect-[4/3] w-full items-center justify-center overflow-hidden"
+                          style={{ background: checker }}
+                          title={t('perso.click_to_apply')}
+                        >
+                          {asset.preview_url ? (
+                            <img src={asset.preview_url} alt={pathBasename(asset.path)} className="h-full w-full object-contain" />
+                          ) : (
+                            <ImageIcon className="h-5 w-5 text-slate-300" />
+                          )}
+                          {(isActive || isActivating) && (
+                            <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1 rounded-full bg-brand-600 px-2 py-0.5 text-[10px] font-semibold text-white">
+                              {isActivating ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
+                              {isActivating ? t('perso.activating') : t('perso.active')}
+                            </span>
+                          )}
+                        </button>
+                        <div className="flex items-center gap-1 border-t border-[color:var(--line)] px-2 py-1.5">
+                          <p className="min-w-0 flex-1 truncate text-[11px] text-[color:var(--ink-3)]">
+                            {new Date(asset.created_at).toLocaleDateString()}
+                          </p>
+                          {asset.preview_url && (
+                            <button
+                              type="button"
+                              onClick={() => openInEditor(asset.preview_url!)}
+                              title={t('branding.open_in_editor')}
+                              aria-label={t('branding.open_in_editor')}
+                              className="rounded p-1 text-[color:var(--ink-3)] hover:bg-slate-100 hover:text-brand-700"
+                            >
+                              <PencilRuler className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => void handleDeleteAsset(asset)}
+                            aria-label={t('perso.delete_asset', { name: pathBasename(asset.path) })}
+                            title={t('builder.delete')}
+                            className="rounded p-1 text-[color:var(--ink-3)] hover:bg-rose-50 hover:text-rose-600"
+                          >
+                            {isDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="rounded-lg border border-dashed border-[color:var(--line-strong)] px-4 py-6 text-center text-sm text-[color:var(--ink-3)]">
+                  {t('perso.no_overlays')}
+                </p>
+              )}
+            </div>
           </div>
-        )}
-      </GlassCard>
+        </GlassCard>
+      </div>
     </div>
   );
 }

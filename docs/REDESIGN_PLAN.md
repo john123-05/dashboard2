@@ -160,3 +160,22 @@ Jede Phase: nur Gestaltung, keine Funktionsänderung. Prüfen mit `npm run typec
   angepasst. Die Navigation ist ausgenommen (ist schon dunkel). `index.html` setzt das Attribut vor dem
   ersten Zeichnen. Vorschauen (Shop, Rangliste, Freischaltseite) bleiben bewusst hell – so sehen Gäste
   sie. Neue Farbklassen, die im Dunkeln falsch aussehen: in `operator-dark.css` ergänzen.
+- 10.10.2026: Personalisierung neu (Johns Auftrag: „wie Canva, aber besser“). Aufbau der Seite:
+  1. **Overlays ändern** (`AutomatBranding.tsx`): drei Kacheln (Foto-Overlay, Logo, Hintergrund) mit
+     dem, was gerade zu sehen ist. Neu „Aktuellen Stand hinterlegen“: lädt das Bild, das schon auf dem
+     Automaten ist, nur zur Anzeige hoch (Ablage `overlays/<park>/aktuell/…`, kein Senden, kein
+     Neustart). Gezeigt wird das neuere von „gesendet“ und „hinterlegt“. „Im Editor öffnen“ lädt es ins
+     Studio. Senden + Neustart unverändert.
+  2. **Overlay-Studio** (`OverlayBuilder.tsx` + `src/components/overlay/`: `model.ts`, `render.tsx`,
+     `exportPng.ts`, `templates.ts`): Werkzeugleiste (Format, Hintergrund transparent/weiß/Farbe,
+     Foto einblenden mit Deckkraft, Rückgängig/Wiederholen, Fläche leeren, Speichern), links Vorlagen
+     (6 Stück), Elemente (Rechteck, Verlauf, Kreis, Dreieck, Stern, Linie, 3 Rahmen), Text (inkl.
+     Etikett), Bibliothek (bleibt gespeichert unter `overlays/<park>/bibliothek/`, Fallback nur für die
+     Sitzung), KI. Rechts aufklappbare Bereiche (Text, Aussehen, Position und Größe) und Ebenen mit
+     Drag & Drop, Ein/Aus, Sperren. Auf der Fläche: verschieben mit Hilfslinien (Alt = aus), Größe an
+     Ecke/Kanten, Drehgriff, Pfeiltasten, ⌘Z/⌘⇧Z, ⌘D, Entf. Entwurf wird pro Park im Browser gesichert.
+     Export: 4:3 jetzt in Automaten-Auflösung 2362 × 1772.
+  3. **Gespeicherte Overlays**: Vorschau auf dem neuesten Foto + Galerie (Anwenden, Bearbeiten, Löschen),
+     „Fertige Datei hochladen“ und „Beim Speichern sofort verwenden“ dort.
+  Keine DB-Änderung; Speicherregeln des Buckets `overlays` erlauben Unterordner unter `<park_id>/`
+  (Auflisten geprüft, Hochladen in Unterordner bei John im Browser prüfen).
