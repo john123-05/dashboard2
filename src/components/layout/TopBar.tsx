@@ -595,7 +595,7 @@ function ProfileMenu({ onClose }: { onClose: () => void }) {
         <p className="mt-2 text-xs text-[color:var(--ink-3)]">
           {entitlements.loading ? t('app.loading') : t('plans.your_plan', { plan: t(PLAN_LABEL_KEY[entitlements.plan]) })}
           {' · '}
-          <button type="button" onClick={() => go('/leads/preise')} className="font-medium text-brand-700 hover:underline">
+          <button type="button" onClick={() => go('/plaene')} className="font-medium text-brand-700 hover:underline">
             {t('shop.view_plans')}
           </button>
         </p>

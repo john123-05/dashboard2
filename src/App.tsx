@@ -20,6 +20,7 @@ const ConfigurationProduct = seiteNachladen(() => import('./pages/ConfigurationP
 const Shop = seiteNachladen(() => import('./pages/Shop'));
 const ShopPricing = seiteNachladen(() => import('./pages/ShopPricing'));
 const CrmPricing = seiteNachladen(() => import('./pages/CrmPricing'));
+const Plans = seiteNachladen(() => import('./pages/Plans'));
 const DemoShop = seiteNachladen(() => import('./pages/DemoShop'));
 const ConfigurationOrders = seiteNachladen(() => import('./pages/ConfigurationOrders'));
 const ConfigurationFaq = seiteNachladen(() => import('./pages/ConfigurationFaq'));
@@ -177,6 +178,7 @@ export default function App() {
                 <Route path="/shop/preise" element={<ShopPricing />} />
                 <Route path="/configuration/bestellungen" element={<ConfigurationOrders />} />
                 <Route path="/configuration/faq" element={<ConfigurationFaq />} />
+                <Route path="/plaene" element={<OwnerOnly><Plans /></OwnerOnly>} />
                 <Route path="/leads/preise" element={<OwnerOnly><CrmPricing /></OwnerOnly>} />
                 {/* Die CRM-Reiter sind eigene Seiten (CRM_TABS in survey/UnlockCenter.tsx).
                     Bewusst EINE Route mit `*` statt je Reiter eine: so bleibt die Seite

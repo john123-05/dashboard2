@@ -223,7 +223,7 @@ früheren (O)-Aufgaben in Abschnitt 6a ausgeschrieben und damit (S). Opus nur no
     zeigt bei fehlender Freischaltung `UpgradeHero` mit Plan-Namen und Button „Pläne ansehen“ (→ /plaene).
   - Profilmenü (`TopBar.tsx` → `ProfileMenu`): Zeile „Plan: Basis“ + Link „Pläne ansehen“.
   - Texte: `plans.*` (7 Sprachen).
-- [ ] **B4 Seite „Pläne“ `/plaene`** (S) – Voraussetzung B1.
+- [x] **B4 Seite „Pläne“ `/plaene`** (S) – erledigt 10.10.2026 – Voraussetzung B1.
   - Datei `src/pages/Plans.tsx`, Route in `App.tsx`, Link im Profilmenü und in Upgrade-Seiten.
   - Aufbau: `UpgradePageHeader` → drei `PlanCard` (Basis/Starter/Pro, Pro hervorgehoben) → darunter
     Vergleichstabelle (Zeilen aus Abschnitt 3.1, Häkchen-Icons) → Add-ons als kleine Karten
@@ -831,3 +831,4 @@ keine Vertriebs-Pipeline für Parks. Keine Preise ändern ohne John.
 - 10.10.2026: Entscheidungen von John eingetragen (Pro 149 €, Versand über Make, Teilen-Link statt Instagram, Bewertungslink in Pro, Artikel später). Tabellennamen für Parks mit `park_`-Präfix, weil `email_campaigns`/`email_sends` schon dem Liftpictures-CRM gehören.
 - 10.10.2026: `operator-entitlements` wurde im Supabase-Editor angelegt; die Adresse ist `hyper-processor` (Editor vergibt Zufallsadressen, nicht änderbar). `src/lib/plans.ts` nutzt deshalb `ENTITLEMENTS_FUNCTION = 'hyper-processor'`. Beim Anlegen weiterer Functions im Editor immer die Adresse prüfen (Zeile unter dem Titel); per CLI gilt der gewählte Name.
 - 10.10.2026: B2 aktiv. Tabelle `park_entitlements` im shared-Projekt (hat eine zusätzliche Spalte `notiz`, harmlos), beide Functions im Supabase-Editor angelegt, JWT-Prüfung aus. Adressen: `hyper-processor` (= operator-entitlements), `admin-park-entitlements`. Per curl geprüft: beide antworten 401 „Missing bearer token“ aus unserem Code. Noch offen: Sichtprüfung im Dashboard (Profilmenü „Plan: …“), sobald die Chrome-Erweiterung wieder verbunden ist; Pläne je Park setzt später das Staff-Dashboard.
+- 10.10.2026: B4 umgesetzt: `src/pages/Plans.tsx`, Route `/plaene` (nur Inhaber). Drei Karten (Basis 0 €, Starter 49 €, Pro 149 € hervorgehoben, aktueller Plan markiert), Vergleichstabelle mit „In Entwicklung“-Marke für noch nicht gebaute Funktionen (E-Mail, Kampagnen, Berichte, Rechte je Seite), Add-ons als Links, Anfragen über `meldeAusstattungsInteresse`. Links: PlanGate und Profilmenü zeigen auf `/plaene`. Das Einstiegsangebot („3 Monate gratis bei zu wenig Kontakten“) ist NICHT auf der Seite – war nur ein Vorschlag, braucht Johns Freigabe. Sichtprüfung im Browser steht aus (Chrome-Verbindung getrennt).

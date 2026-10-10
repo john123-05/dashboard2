@@ -38,7 +38,7 @@ export default function PlanGate({ feature, children }: { feature?: FeatureKey; 
       title={t('plans.gate_title', { plan })}
       intro={t('plans.gate_text', { plan })}
       actions={
-        <Link to="/leads/preise" className="glass-button-primary">
+        <Link to="/plaene" className="glass-button-primary">
           {t('shop.view_plans')}
         </Link>
       }
