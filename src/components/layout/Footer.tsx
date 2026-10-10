@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom';
-import { LIFTPICTURES_CRM_URL } from '../../lib/crmLink';
 import { useI18n } from '../../lib/i18n';
 
 export default function Footer() {
@@ -30,14 +29,6 @@ export default function Footer() {
             >
               {t('footer.website')}
             </a>
-            {LIFTPICTURES_CRM_URL && (
-              <a
-                href={LIFTPICTURES_CRM_URL}
-                className="rounded-full bg-slate-100 px-3 py-1 text-slate-600 transition-colors hover:bg-slate-200 hover:text-slate-800"
-              >
-                {t('footer.staff')}
-              </a>
-            )}
           </div>
         </div>
       </div>

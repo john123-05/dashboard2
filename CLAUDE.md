@@ -11,7 +11,7 @@ Supabase projects, customers, photo pipeline, incident history) lives in
 > Repo entfernt. Er lebt vollständig im Repo `liftpictures-crm` (Vercel, Kundenmanagement, Angebote,
 > Support, Ausstattung, Pläne …). Die Beschreibungen „Staff Dashboard“ weiter unten sind Geschichte
 > und gelten nur noch dort. Sicherungsmarke mit dem alten Stand: Git-Tag `staff-vor-entfernung-2026-10-10`.
-> Alte `/staff/...`-Adressen leiten auf `LIFTPICTURES_CRM_URL` (`src/lib/crmLink.ts`) weiter.
+> Alte `/staff/...`-Adressen führen zur Anmeldung; im Footer gibt es bewusst keinen Mitarbeiter-Link mehr.
 
 ## What this repo is
 

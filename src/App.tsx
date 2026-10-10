@@ -32,7 +32,6 @@ import { ParkProvider } from './contexts/ParkContext';
 import KioskAwareOverlay from './components/KioskAwareOverlay';
 import GuestActivityAwareOverlay from './components/GuestActivityAwareOverlay';
 import OwnerOnly from './components/OwnerOnly';
-import { LIFTPICTURES_CRM_URL } from './lib/crmLink';
 import PlanGate from './components/upgrade/PlanGate';
 import CameraAvailableOnly from './components/CameraAvailableOnly';
 const Team = seiteNachladen(() => import('./pages/Team'));
@@ -45,21 +44,6 @@ function AppShellMetaController() {
   }, [location.pathname, location.search]);
 
   return null;
-}
-
-/**
- * Alte Adressen des früheren Staff-Bereichs (/staff/...). Der Bereich lebt jetzt
- * im Liftpictures-CRM (eigenes Repo `liftpictures-crm`, eigene Adresse, siehe
- * src/lib/crmLink.ts). Mit gesetzter Adresse geht es dorthin, sonst zur Anmeldung.
- */
-function StaffMoved() {
-  const location = useLocation();
-  useEffect(() => {
-    if (LIFTPICTURES_CRM_URL) {
-      window.location.replace(`${LIFTPICTURES_CRM_URL}${location.pathname.replace(/^\/staff/, '')}${location.search}`);
-    }
-  }, [location.pathname, location.search]);
-  return LIFTPICTURES_CRM_URL ? null : <Navigate to="/login" replace />;
 }
 
 /**
@@ -155,7 +139,7 @@ export default function App() {
               </Route>
 
               {/* Früherer Staff-Bereich: wohnt jetzt im Liftpictures-CRM. */}
-              <Route path="/staff/*" element={<StaffMoved />} />
+              <Route path="/staff/*" element={<Navigate to="/login" replace />} />
             </Routes>
             </Suspense>
             </NachladeGrenze>
