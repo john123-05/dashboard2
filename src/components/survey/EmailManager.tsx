@@ -8,6 +8,7 @@ import { PlanBadge } from '../upgrade/PlanGate';
 import { inputClass } from './SurveyManager';
 import { useI18n, useLocaleTag } from '../../lib/i18n';
 import { usePark } from '../../contexts/ParkContext';
+import { fetchSegments, type ContactSegment } from '../../lib/contactSegments';
 import { blocksToHtml } from '../../lib/emailHtml';
 import {
   deleteEmailCampaign,
@@ -111,6 +112,10 @@ function Editor({ parkId, initial, locked, onBack }: { parkId: string; initial: 
   const [notice, setNotice] = useState<string | null>(null);
   const [audience, setAudience] = useState<number | null>(null);
   const [scheduled, setScheduled] = useState('');
+  const [segments, setSegments] = useState<ContactSegment[]>([]);
+  useEffect(() => {
+    fetchSegments(parkId).then(setSegments).catch(() => setSegments([]));
+  }, [parkId]);
 
   const html = useMemo(() => blocksToHtml(draft.body_json), [draft.body_json]);
   const previewHtml = useMemo(
@@ -173,6 +178,21 @@ function Editor({ parkId, initial, locked, onBack }: { parkId: string; initial: 
               <p className="mb-1 text-xs font-medium text-slate-600">{t('email.preheader')}</p>
               <input className={inputClass} value={draft.preheader} onChange={(e) => patch({ preheader: e.target.value })} />
             </div>
+            {segments.length > 0 && (
+              <div>
+                <p className="mb-1 text-xs font-medium text-slate-600">{t('seg.only')}</p>
+                <select
+                  className={inputClass}
+                  value={draft.segment.segment_id ?? ''}
+                  onChange={(e) => patch({ segment: { ...draft.segment, segment_id: e.target.value || undefined } })}
+                >
+                  <option value="">{t('seg.none')}</option>
+                  {segments.map((segment) => (
+                    <option key={segment.id} value={segment.id}>{segment.name} ({t('seg.count', { count: segment.member_count })})</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div className="grid gap-4 sm:grid-cols-3">
               <div>
                 <p className="mb-1 text-xs font-medium text-slate-600">{t('email.language')}</p>

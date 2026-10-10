@@ -51,6 +51,8 @@ export interface EmailOverview {
 export interface EmailSegment {
   countries?: string[];
   since?: string;
+  /** Von Hand zusammengestellte Kontaktliste (CRM → Kontakte). */
+  segment_id?: string;
 }
 
 export interface EmailCampaignFull extends EmailCampaignSummary {

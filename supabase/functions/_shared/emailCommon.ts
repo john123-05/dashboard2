@@ -8,7 +8,7 @@ export const BLOCK_SIZE = 100;
 /** Mails pro Monat je Plan (Vorschlag, mit dem Make-Tarif abgleichen) – gespiegelt in src/lib/plans.ts. */
 export const EMAIL_QUOTA: Record<string, number> = { basis: 0, marketing_starter: 2000, marketing_pro: 10000 };
 
-export type Segment = { countries?: string[]; since?: string };
+export type Segment = { countries?: string[]; since?: string; segment_id?: string };
 export type Audience = { claimId: string; email: string; name: string };
 
 export function monthStart(date = new Date()): string {
@@ -57,8 +57,18 @@ export async function resolveAudience(parkId: string, language: string | null, s
     query = query.in('country_code', segment.countries.map((c) => c.toUpperCase()));
   }
   const { data } = await query;
+  // Segment (von Hand zusammengestellte Liste): nur deren Mitglieder.
+  let members: Set<string> | null = null;
+  if (segment.segment_id) {
+    const { data: seg } = await supabaseService.from('park_contact_segments').select('id').eq('id', segment.segment_id).eq('park_id', parkId).maybeSingle();
+    const { data: rows } = seg
+      ? await supabaseService.from('park_contact_segment_members').select('claim_id').eq('segment_id', segment.segment_id).limit(50000)
+      : { data: [] };
+    members = new Set(((rows ?? []) as Array<{ claim_id: string }>).map((r) => String(r.claim_id)));
+  }
   const seen = new Map<string, Audience>();
   for (const row of (data ?? []) as Array<Record<string, unknown>>) {
+    if (members && !members.has(String(row.id))) continue;
     const email = String(row.email ?? '').trim().toLowerCase();
     if (!email.includes('@') || seen.has(email)) continue;
     seen.set(email, { claimId: String(row.id), email, name: String(row.full_name ?? '') });

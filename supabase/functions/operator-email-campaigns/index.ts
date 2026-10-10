@@ -38,6 +38,8 @@ function cleanSegment(value: unknown): Segment {
   if (Array.isArray(input.countries)) {
     out.countries = input.countries.map((c) => text(c, 2).toUpperCase()).filter((c) => /^[A-Z]{2}$/.test(c)).slice(0, 60);
   }
+  const segmentId = text(input.segment_id, 40);
+  if (UUID.test(segmentId)) out.segment_id = segmentId;
   const since = text(input.since, 30);
   if (since && !Number.isNaN(Date.parse(since))) out.since = new Date(since).toISOString();
   return out;

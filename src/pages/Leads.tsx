@@ -9,6 +9,15 @@ import DataTable from '../components/ui/DataTable';
 import { useI18n, useLocaleTag } from '../lib/i18n';
 import { usePark } from '../contexts/ParkContext';
 import MarketingHome from '../components/marketing/MarketingHome';
+import {
+  addToSegment,
+  createSegment,
+  deleteSegment,
+  fetchSegmentMembers,
+  fetchSegments,
+  removeFromSegment,
+  type ContactSegment,
+} from '../lib/contactSegments';
 import UnlockCenter from '../components/survey/UnlockCenter';
 import ContactSettings from '../components/survey/ContactSettings';
 import {
@@ -599,6 +608,81 @@ function LeadsContacts({ view }: { view: 'overview' | 'list' }) {
     }
   });
   const [columnMenuOpen, setColumnMenuOpen] = useState(false);
+  // Segmente (von Hand zusammengestellte Kontaktlisten, C3)
+  const [segments, setSegments] = useState<ContactSegment[]>([]);
+  const [segmentFilter, setSegmentFilter] = useState('');
+  const [segmentMembers, setSegmentMembers] = useState<Set<string>>(new Set());
+  const [segmentMenuOpen, setSegmentMenuOpen] = useState(false);
+  const [segmentNote, setSegmentNote] = useState<string | null>(null);
+
+  const reloadSegments = useCallback(async () => {
+    if (!parkId) return;
+    try {
+      setSegments(await fetchSegments(parkId));
+    } catch {
+      setSegments([]);
+    }
+  }, [parkId]);
+  useEffect(() => {
+    if (view === 'list') void reloadSegments();
+  }, [view, reloadSegments]);
+  useEffect(() => {
+    if (!parkId || !segmentFilter) {
+      setSegmentMembers(new Set());
+      return;
+    }
+    let active = true;
+    fetchSegmentMembers(parkId, segmentFilter)
+      .then((ids) => active && setSegmentMembers(new Set(ids)))
+      .catch(() => active && setSegmentMembers(new Set()));
+    return () => {
+      active = false;
+    };
+  }, [parkId, segmentFilter]);
+
+  async function addSelectedToSegment(target: ContactSegment | 'new') {
+    if (!parkId || selectedLeadIds.length === 0) return;
+    setSegmentMenuOpen(false);
+    try {
+      let segment = target;
+      if (segment === 'new') {
+        const name = window.prompt(t('seg.name_prompt'))?.trim();
+        if (!name) return;
+        const created = await createSegment(parkId, name);
+        segment = { id: created.id, name, member_count: 0 };
+      }
+      const res = await addToSegment(parkId, segment.id, selectedLeadIds);
+      setSegmentNote(t('seg.added', { count: res.added, name: segment.name }));
+      await reloadSegments();
+      if (segmentFilter === segment.id) setSegmentMembers(new Set(await fetchSegmentMembers(parkId, segment.id)));
+    } catch (e) {
+      setSegmentNote(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  async function removeSelectedFromSegment() {
+    if (!parkId || !segmentFilter || selectedLeadIds.length === 0) return;
+    try {
+      const res = await removeFromSegment(parkId, segmentFilter, selectedLeadIds);
+      setSegmentNote(t('seg.removed', { count: res.removed }));
+      setSegmentMembers((current) => new Set([...current].filter((id) => !selectedLeadIds.includes(id))));
+      setSelectedLeadIds([]);
+      await reloadSegments();
+    } catch (e) {
+      setSegmentNote(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  async function removeSegment() {
+    if (!parkId || !segmentFilter || !window.confirm(t('seg.confirm_delete'))) return;
+    try {
+      await deleteSegment(parkId, segmentFilter);
+      setSegmentFilter('');
+      await reloadSegments();
+    } catch (e) {
+      setSegmentNote(e instanceof Error ? e.message : String(e));
+    }
+  }
   const [drawerLead, setDrawerLead] = useState<Record<string, unknown> | null>(null);
   function toggleColumn(key: string) {
     setHiddenColumns((current) => {
@@ -844,6 +928,7 @@ function LeadsContacts({ view }: { view: 'overview' | 'list' }) {
       if (rowCountry !== countryFilter) return false;
     }
     if (sourceFilter !== 'all' && lead.source !== sourceFilter) return false;
+    if (segmentFilter && !segmentMembers.has(String(lead.id))) return false;
     if (periodFilter !== 'all') {
       const time = typeof lead.created_at === 'string' ? Date.parse(lead.created_at) : NaN;
       if (Number.isNaN(time) || time < Date.now() - Number(periodFilter) * 86_400_000) return false;
@@ -1798,6 +1883,56 @@ function LeadsContacts({ view }: { view: 'overview' | 'list' }) {
                 </option>
               ))}
             </select>
+            {(segments.length > 0 || segmentFilter) && (
+              <select
+                value={segmentFilter}
+                onChange={(e) => { setSegmentFilter(e.target.value); setSegmentNote(null); }}
+                className="rounded-lg border border-[color:var(--line-strong)] bg-white px-3 py-1.5 text-sm text-slate-700"
+                aria-label={t('seg.segment')}
+              >
+                <option value="">{t('seg.all')}</option>
+                {segments.map((segment) => (
+                  <option key={segment.id} value={segment.id}>{segment.name} ({segment.member_count})</option>
+                ))}
+              </select>
+            )}
+            {segmentFilter && (
+              <button type="button" onClick={() => void removeSegment()} className="rounded-lg px-2 py-1.5 text-sm font-medium text-rose-600 hover:bg-rose-50">
+                {t('seg.delete')}
+              </button>
+            )}
+            {selectionMode && selectedLeadIds.length > 0 && (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setSegmentMenuOpen((open) => !open)}
+                  className="rounded-lg border border-[color:var(--line-strong)] bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
+                >
+                  {t('seg.add')} ({selectedLeadIds.length})
+                </button>
+                {segmentMenuOpen && (
+                  <>
+                    <div className="fixed inset-0 z-30" onClick={() => setSegmentMenuOpen(false)} />
+                    <div className="absolute right-0 z-40 mt-2 max-h-72 w-60 overflow-y-auto rounded-lg border border-[color:var(--line)] bg-white p-1.5 shadow-lg">
+                      {segments.map((segment) => (
+                        <button key={segment.id} type="button" onClick={() => void addSelectedToSegment(segment)} className="block w-full rounded-md px-2.5 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-50">
+                          {segment.name} <span className="text-slate-400">({segment.member_count})</span>
+                        </button>
+                      ))}
+                      <button type="button" onClick={() => void addSelectedToSegment('new')} className="block w-full rounded-md px-2.5 py-1.5 text-left text-sm font-medium text-brand-700 hover:bg-slate-50">
+                        {t('seg.new')}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+            {selectionMode && selectedLeadIds.length > 0 && segmentFilter && (
+              <button type="button" onClick={() => void removeSelectedFromSegment()} className="rounded-lg border border-[color:var(--line-strong)] bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100">
+                {t('seg.remove')}
+              </button>
+            )}
+            {segmentNote && <span className="text-xs text-[color:var(--ink-3)]">{segmentNote}</span>}
             {selectionMode && selectedLeadIds.length > 0 && (
               <button
                 type="button"
