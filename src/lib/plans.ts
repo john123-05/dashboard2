@@ -1,4 +1,7 @@
-import { useMemo } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { AuthContext } from '../contexts/AuthContext';
+import { EXTERNAL_SUPABASE_URL, EXTERNAL_SUPABASE_ANON_KEY } from './supabase';
+import { getFunctionSession } from './functionAuth';
 import { usePark } from '../contexts/ParkContext';
 import { hasGuestActivity } from '../components/GuestActivityAwareOverlay';
 
@@ -8,7 +11,7 @@ import { hasGuestActivity } from '../components/GuestActivityAwareOverlay';
 // Navigation und Upgrade-Hinweise fragen nur noch `useEntitlements().has(feature)`
 // statt eigene Regeln zu haben.
 //
-// Übergangsregel, bis die Tabelle `park_entitlements` existiert (Aufgabe B2):
+// Übergangsregel, wenn für den Park noch keine Zeile in `park_entitlements` existiert:
 // - Jeder Park hat „Marketing Starter“ - das CRM ist heute für alle offen, so
 //   ändert sich für niemanden etwas.
 // - Pro-Funktionen sind aus (es gibt sie noch nicht).
@@ -48,7 +51,7 @@ export const FEATURE_PLAN: Record<FeatureKey, PlanKey | 'addon'> = {
 /** Rangfolge der Pläne: ein höherer Plan enthält alles der niedrigeren. */
 export const PLAN_ORDER: PlanKey[] = ['basis', 'marketing_starter', 'marketing_pro'];
 
-/** Übersetzungsschlüssel für Plannamen (Texte folgen mit Aufgabe B3). */
+/** Übersetzungsschlüssel für Plannamen. */
 export const PLAN_LABEL_KEY: Record<PlanKey, string> = {
   basis: 'plans.basis',
   marketing_starter: 'plans.marketing_starter',
@@ -96,23 +99,121 @@ export type Entitlements = {
   /** Kleinster Plan, der die Funktion enthält - für Upgrade-Hinweise. */
   requiredPlan: (feature: FeatureKey) => PlanKey | 'addon';
   loading: boolean;
+  error: boolean;
+  refresh: () => void;
 };
+
+export type ParkEntitlement = {
+  park_id: string;
+  plan: PlanKey;
+  features: FeatureKey[];
+  status: 'active' | 'trial' | 'paused' | 'cancelled';
+  trial_until: string | null;
+};
+
+/** Pausierte/gekündigte und abgelaufene Testpläne fallen auf Basis zurück.
+ * Zusätzliche Features gelten nur bei aktiver Freischaltung. Das Test-Enddatum
+ * zählt einschließlich des ganzen Tages in Europe/Berlin.
+ */
+export function resolveEntitlements(row: ParkEntitlement | null, parkId: string | null, now = new Date()) {
+  if (!row) {
+    const addons: FeatureKey[] = hasGuestActivity(parkId) ? ['speed'] : [];
+    return { plan: 'marketing_starter' as PlanKey, features: addons };
+  }
+  const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Berlin' }).format(now);
+  const active = row.status === 'active' ||
+    (row.status === 'trial' && row.trial_until !== null && row.trial_until >= today);
+  return {
+    plan: active ? row.plan : 'basis' as PlanKey,
+    features: active ? row.features : [],
+  };
+}
+
+function isEntitlement(value: unknown, parkId: string): value is ParkEntitlement {
+  if (!value || typeof value !== 'object') return false;
+  const row = value as ParkEntitlement;
+  return row.park_id === parkId && PLAN_ORDER.includes(row.plan) &&
+    ['active', 'trial', 'paused', 'cancelled'].includes(row.status) &&
+    Array.isArray(row.features) && row.features.every((f) => Object.prototype.hasOwnProperty.call(FEATURE_PLAN, f)) &&
+    (row.trial_until === null || (typeof row.trial_until === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(row.trial_until))) &&
+    (row.status !== 'trial' || row.trial_until !== null);
+}
+
+// Sidebar, Profilmenü und PlanGate teilen gleichzeitige Anfragen. Keine Daten
+// in localStorage; Schlüssel enthält Park UND Sitzung. Fehler sind nie „Starter“.
+const pending = new Map<string, Promise<ParkEntitlement | null>>();
+async function fetchEntitlements(parkId: string): Promise<ParkEntitlement | null> {
+  const { data: { session } } = await getFunctionSession();
+  if (!session?.access_token) throw new Error('Missing session');
+  const key = `${parkId}:${session.access_token}`;
+  const existing = pending.get(key);
+  if (existing) return existing;
+  const request = (async () => {
+    const response = await fetch(
+      `${EXTERNAL_SUPABASE_URL}/functions/v1/operator-entitlements?${new URLSearchParams({ park_id: parkId })}`,
+      {
+        headers: { Authorization: `Bearer ${session.access_token}`, apikey: EXTERNAL_SUPABASE_ANON_KEY },
+        signal: AbortSignal.timeout(12_000),
+      },
+    );
+    if (!response.ok) throw new Error(`Entitlements HTTP ${response.status}`);
+    const body = await response.json();
+    if (body?.data === null) return null;
+    if (!isEntitlement(body?.data, parkId)) throw new Error('Invalid entitlements response');
+    return body.data;
+  })();
+  pending.set(key, request);
+  try { return await request; } finally { pending.delete(key); }
+}
 
 export function useEntitlements(): Entitlements {
   const { parkId } = usePark();
+  const auth = useContext(AuthContext);
+  const sessionKey = auth?.session?.access_token ?? '';
+  const [refreshId, setRefreshId] = useState(0);
+  const refresh = useCallback(() => setRefreshId((n) => n + 1), []);
+  const [state, setState] = useState<{
+    parkId: string; sessionKey: string; row: ParkEntitlement | null; error: boolean;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!parkId) return;
+    let cancelled = false;
+    // Nach Ablauf des Zeitlimits oder bei Netzfehlern gesperrt lassen. Nur eine
+    // ausdrücklich bestätigte fehlende Zeile aktiviert die Übergangsregel.
+    void fetchEntitlements(parkId).then(
+      (row) => { if (!cancelled) setState({ parkId, sessionKey, row, error: false }); },
+      () => { if (!cancelled) setState({ parkId, sessionKey, row: null, error: true }); },
+    );
+    return () => { cancelled = true; };
+  }, [parkId, sessionKey, refreshId]);
+
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === 'visible') refresh(); };
+    document.addEventListener('visibilitychange', onVisible);
+    // Änderungen durch Staff und das Ende eines Testtages zeitnah übernehmen.
+    const timer = window.setInterval(onVisible, 60_000);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.clearInterval(timer);
+    };
+  }, [refresh]);
 
   return useMemo(() => {
-    // Übergangsregel (siehe Kopfkommentar). Mit B2 kommen Plan und Add-ons aus
-    // `park_entitlements`; fehlt dort eine Zeile, gilt weiter diese Regel.
-    const plan: PlanKey = 'marketing_starter';
-    const addons: FeatureKey[] = hasGuestActivity(parkId) ? ['speed'] : [];
-
+    const current = state?.parkId === parkId && state?.sessionKey === sessionKey ? state : null;
+    const loading = !!parkId && !current;
+    const error = current?.error ?? false;
+    const { plan, features } = current && !error
+      ? resolveEntitlements(current.row, parkId)
+      : { plan: 'basis' as PlanKey, features: [] as FeatureKey[] };
     return {
       plan,
-      addons,
-      has: (feature) => planIncludes(plan, feature) || addons.includes(feature),
-      requiredPlan: (feature) => FEATURE_PLAN[feature],
-      loading: false,
+      addons: features.filter((feature) => FEATURE_PLAN[feature] === 'addon'),
+      has: (feature: FeatureKey) => !loading && !error && (planIncludes(plan, feature) || features.includes(feature)),
+      requiredPlan: (feature: FeatureKey) => FEATURE_PLAN[feature],
+      loading,
+      error,
+      refresh,
     };
-  }, [parkId]);
+  }, [parkId, sessionKey, state, refresh]);
 }

@@ -383,7 +383,7 @@ export default function Sidebar({
     // Speedmessung) behalten ihr „(Upgrade)“ - so wollte John es.
     const feature = featureForPath(item.to);
     const required = feature ? entitlements.requiredPlan(feature) : null;
-    const lockedPlan = feature && required && required !== 'addon' && !entitlements.has(feature) ? required : null;
+    const lockedPlan = !entitlements.loading && !entitlements.error && feature && required && required !== 'addon' && !entitlements.has(feature) ? required : null;
     const badge = badgeFor(item);
     const label = t(item.labelKey);
     const canDrag = showFull && pinnedItems.length > 1;

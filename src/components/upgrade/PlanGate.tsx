@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import UpgradeHero from './UpgradeHero';
+import GlassCard from '../ui/GlassCard';
 import { useI18n } from '../../lib/i18n';
 import { PLAN_LABEL_KEY, featureForPath, useEntitlements, type FeatureKey } from '../../lib/plans';
 
@@ -17,9 +18,24 @@ export default function PlanGate({ feature, children }: { feature?: FeatureKey; 
   const entitlements = useEntitlements();
   const key = feature ?? featureForPath(pathname);
 
-  if (!key || entitlements.loading || entitlements.has(key)) return <>{children}</>;
+  if (!key) return <>{children}</>;
   const required = entitlements.requiredPlan(key);
   if (required === 'addon') return <>{children}</>;
+  if (entitlements.loading || entitlements.error) {
+    return (
+      <GlassCard className="p-5 sm:p-6">
+        <p role="status" className="text-sm text-[color:var(--ink-3)]">
+          {t(entitlements.loading ? 'app.loading' : 'app.loading_error')}
+        </p>
+        {entitlements.error && (
+          <button type="button" onClick={entitlements.refresh} className="glass-button-secondary mt-4">
+            {t('app.retry')}
+          </button>
+        )}
+      </GlassCard>
+    );
+  }
+  if (entitlements.has(key)) return <>{children}</>;
 
   const plan = t(PLAN_LABEL_KEY[required]);
   return (

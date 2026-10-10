@@ -189,6 +189,10 @@ Legende Modell: **S** = Sonnet/Codex medium reicht · **O** = Opus empfohlen (Ar
     Zusätzlich: `featureForPath(pathname)`, `planIncludes(plan, feature)`, `PLAN_LABEL_KEY` (Texte `plans.*` mit B3).
   - Fertig, wenn: tsc grün, noch keine sichtbare Änderung.
 - [ ] **B2 Tabelle `park_entitlements`** (O) – Voraussetzung B1.
+  **Code vorbereitet 10.10.2026; Aktivierung offen:** CLI und Connector verweigern Zugriff auf shared
+  (403); auch der Browser hat keinen Projektzugriff. Erst mit dem richtigen Supabase-Konto die zwei
+  Functions bereitstellen, SQL von John einspielen lassen und den vollständigen Browser-Test abschließen.
+  Bis dahin B2 nicht als erledigt markieren und den neuen Frontend-Stand nicht veröffentlichen.
   - Migration (shared, `supabase/migrations/2026101012…_park_entitlements.sql`):
     `park_id uuid references parks, plan text check in (...), features text[] default '{}',
     status text check in ('active','trial','paused','cancelled'), trial_until date, source text
@@ -382,3 +386,21 @@ keine Vertriebs-Pipeline für Parks. Keine Preise ändern ohne John.
   auf der Übersicht übersetzt („Warnung“ statt „warning“).
 - 10.10.2026: B1 umgesetzt: `src/lib/plans.ts` (Plan-/Funktionsliste, Seiten-Zuordnung, `useEntitlements()` mit Übergangsregel). Noch nirgends eingebunden, keine sichtbare Änderung.
 - 10.10.2026: B3 umgesetzt: Navigation in Gruppen Betrieb/Marketing/Verwaltung (`group` in `navItems`, Reihenfolge innerhalb der Gruppe frei per Drag & Drop), Upgrade-Symbol bei gesperrten Plan-Funktionen, `PlanGate`/`PlanBadge` (`src/components/upgrade/PlanGate.tsx`, um `/leads/*` gelegt), Profilmenü „Plan: …“. Links auf Pläne zeigen bis B4 auf `/leads/preise`. Durch die Übergangsregel ist noch nichts gesperrt.
+
+- 10.10.2026: B3 (`ab0cb97`) auf Johns Auftrag gepusht; bolt.new benötigt Publish. B2-Code vorbereitet:
+  Migration `20261010120000_park_entitlements.sql` (shared, RLS, keine Client-Rechte, keine Bestandsdaten),
+  `operator-entitlements` (GET mit Park-Prüfung), `admin-park-entitlements` (GET/POST nur admin_users,
+  validierte manuelle Einstellungen), `useEntitlements()` lädt je Park/Sitzung, bündelt parallele
+  Anfragen und aktualisiert nach spätestens einer Minute bei sichtbarer Seite. Fehlende Zeile/Tabelle
+  behält Starter-Übergang; pausiert/gekündigt/Test abgelaufen ergibt Basis ohne Zusatzfeatures.
+  Test-Enddatum gilt einschließlich Europe/Berlin. Lade-/Netzfehler geben keine Funktionen frei;
+  PlanGate zeigt vorhandene übersetzte Lade-/Fehlertexte, Profil/Navigation vermeiden falsche Plananzeigen.
+  Prüfungen: i18n (1646 Schlüssel × 7), Build und Deno-Prüfung bestanden; tsc nur bekannte Altfehler.
+  `node scripts/test-entitlements.mjs` prüft Planlogik, Testablauf, Park-/Sitzungswechsel und Fehler;
+  `deno test --allow-env supabase/functions/operator-entitlements/entitlements_test.ts` prüft Auth,
+  fremde Parks und Schreibvalidierung mit vollständig abgefangenen HTTP-Anfragen (kein SQL ausgeführt).
+  Sichtprüfung localhost:5180 Desktop und 390 px: Fehleransicht korrekt, kein seitliches Scrollen.
+  **Offen:** Deployment beider Functions auf kvpcwlcfgmsmarjtwpsx (403 bei CLI/Connector, auch Browser ohne
+  Zugriff), John spielt SQL ein, dann normale Plananzeige live prüfen. Neuer Code nur lokal committet.
+  Deployment nach Anmeldung: `npx supabase functions deploy operator-entitlements admin-park-entitlements
+  --project-ref kvpcwlcfgmsmarjtwpsx --use-api`. Kein SQL ausgeführt, keine Pläne geändert.

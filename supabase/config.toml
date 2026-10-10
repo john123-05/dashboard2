@@ -75,3 +75,11 @@ verify_jwt = false
 # Same cross-project operator auth pattern as operator-notification-settings:
 # the browser sends an operator-project token, validated in _shared/operatorAuth.ts.
 verify_jwt = false
+
+[functions.operator-entitlements]
+# Eigene Prüfung des Operator-Tokens und Park-Zugriffs, wie operator-survey.
+verify_jwt = false
+
+[functions.admin-park-entitlements]
+# Eigene Prüfung von Shared-Session und admin_users, wie admin-park-equipment.
+verify_jwt = false
