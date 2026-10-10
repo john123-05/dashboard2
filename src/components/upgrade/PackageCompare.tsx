@@ -1,7 +1,8 @@
 import { useI18n, useLocaleTag } from '../../lib/i18n';
 import CompareTable, { type CompareRow } from './CompareTable';
 import { MONTHLY_PRICE, REVENUE_SHARE_PERCENT, SETUP_PRICE } from './ShopPackages';
-import { PLANS, SOFTWARE_MONTHLY } from './SpeedPackages';
+import { PLANS } from './SpeedPackages';
+import { SOFTWARE_MONTHLY } from './SoftwarePackages';
 
 const eur = (value: number, locale: string) =>
   value.toLocaleString(locale, { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
@@ -59,8 +60,8 @@ export function SpeedCompare() {
     all4('speed.offer.hosting'),
     all4('speed.offer.database'),
     all4('speed.offer.maintenance'),
-    { labelKey: 'speed.offer.display_large', cells: [false, true, false, false] },
-    { labelKey: 'pp.row_monthly', cells: [...[basis, display, long].map((p) => eur(p.monthly, locale)), eur(SOFTWARE_MONTHLY, locale)] },
+    { labelKey: 'speed.offer.display_large', cells: [false, true, false, 'pp.cell_optional'] },
+    { labelKey: 'pp.row_monthly', cells: [...[basis, display, long].map((p) => eur(p.monthly, locale)), 'pp.cell_sw_monthly'] },
     { labelKey: 'pp.row_year2', cells: [eur(basis.monthly, locale), eur(display.fromYear2 ?? display.monthly, locale), eur(long.monthly, locale), eur(SOFTWARE_MONTHLY, locale)] },
     { labelKey: 'pp.row_term', cells: [...[basis, display, long].map((p) => (p.months === 48 ? 'pp.cell_48m' : 'pp.cell_12m')), 'pp.cell_12m'] },
   ];

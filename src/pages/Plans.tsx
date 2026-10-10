@@ -94,7 +94,10 @@ export default function Plans() {
   const locale = useLocaleTag();
   const { parkId } = usePark();
   const { plan: currentPlan, has } = useEntitlements();
-  const [filter, setFilter] = useState<Filter>('all');
+  const [filter, setFilter] = useState<Filter>(() => {
+    const wanted = new URLSearchParams(window.location.search).get('gruppe');
+    return FILTERS.some((item) => item.key === wanted) ? (wanted as Filter) : 'all';
+  });
   const [mailRequested, setMailRequested] = useState(false);
   const [busy, setBusy] = useState<PlanKey | null>(null);
   const [requested, setRequested] = useState<PlanKey[]>([]);

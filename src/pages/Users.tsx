@@ -784,6 +784,13 @@ export default function Users() {
               )}
             </div>
           </GlassCard>
+          <Link
+            to="/plaene?gruppe=speed"
+            className="flex items-center justify-between gap-3 rounded-lg border border-[color:var(--line)] bg-white px-5 py-4 text-sm font-semibold text-brand-700 hover:bg-slate-50"
+          >
+            {t('pp.speed_have_hw_link')}
+            <span aria-hidden>→</span>
+          </Link>
             </>
           )}
         </div>
