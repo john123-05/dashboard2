@@ -206,7 +206,7 @@
   }
 
   .operator-app main.operator-main > div {
-    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
   }
 
   .operator-app .mobile-nav-backdrop {
@@ -297,5 +297,19 @@
   .operator-app .text-\[11px\],
   .operator-app .text-\[10px\] {
     font-size: 12px;
+  }
+}
+
+/* iPhone: Eingabefelder unter 16 px lassen Safari beim Antippen hineinzoomen – und der Zoom bleibt
+   danach auf allen Seiten stehen (z. B. nach der Anmeldung). Deshalb überall mind. 16 px am Handy. */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+@media (max-width: 640px) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']),
+  select,
+  textarea {
+    font-size: 16px;
   }
 }

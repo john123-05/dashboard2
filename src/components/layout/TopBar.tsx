@@ -204,7 +204,7 @@ function MobileTabBar({
   return (
     <nav
       aria-label={t('nav.more')}
-      className="operator-tabbar-mobile fixed inset-x-0 bottom-0 z-[70] grid grid-cols-5 border-t border-white/10 bg-[var(--sidebar-bg)] pb-[env(safe-area-inset-bottom,0px)] min-[901px]:hidden"
+      className="operator-tabbar-mobile fixed inset-x-0 bottom-0 z-[70] grid grid-cols-5 border-t border-white/10 bg-[var(--sidebar-bg)] pb-[calc(env(safe-area-inset-bottom,0px)+10px)] min-[901px]:hidden"
     >
       {link('/', t('nav.overview'), LayoutDashboard)}
       {link('/revenue', t('nav.revenue'), DollarSign)}
