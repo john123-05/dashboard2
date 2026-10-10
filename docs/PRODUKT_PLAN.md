@@ -32,6 +32,10 @@ Dann:
 - Git: nur benannte Dateien stagen, nie `git add -A`. Commit mit kurzer deutscher Nachricht.
   NICHT pushen ohne Johns Okay. Nach Push braucht bolt.new einen Publish-Klick.
 - Nach der Aufgabe: Häkchen `[x]` in Abschnitt 6 setzen und eine Zeile im Protokoll (Abschnitt 9).
+- Lässt eine Aufgabe eine Produktentscheidung offen: die für den Kunden sichere Variante wählen
+  (nichts sperren, nichts löschen, nichts teurer machen), im Protokoll vermerken und John fragen.
+- Aufgaben mit (O) nur umsetzen, wenn Datenmodell/Schnittstelle im Plan ausgeschrieben sind – sonst
+  zuerst nur den Entwurf in den Plan schreiben und John zeigen.
 - Kommuniziere mit John auf Deutsch, kurz, ohne Fachjargon.
 ```
 
