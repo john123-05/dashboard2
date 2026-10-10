@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Check, Minus, ChevronRight } from 'lucide-react';
 import { usePark } from '../contexts/ParkContext';
 import { meldeAusstattungsInteresse } from '../lib/equipment';
+import { BillingDisabledError, openBillingPortal, startCheckout } from '../lib/billing';
 import { useI18n, useLocaleTag } from '../lib/i18n';
 import { PLAN_LABEL_KEY, useEntitlements, type PlanKey } from '../lib/plans';
 import GlassCard from '../components/ui/GlassCard';
@@ -47,11 +48,11 @@ const ROWS: { labelKey: string; cells: [Cell, Cell, Cell]; soon?: boolean }[] = 
   { labelKey: 'plans.row_contacts', cells: [false, true, true] },
   { labelKey: 'plans.row_survey', cells: [false, true, true] },
   { labelKey: 'plans.row_pixel', cells: [false, true, true] },
-  { labelKey: 'plans.row_email', cells: [false, '2.000', '10.000'], soon: true },
-  { labelKey: 'plans.row_social', cells: [false, 'plans.cell_share_unlock', 'plans.cell_campaigns'], soon: true },
+  { labelKey: 'plans.row_email', cells: [false, '2.000', '10.000'] },
+  { labelKey: 'plans.row_social', cells: [false, 'plans.cell_share_unlock', 'plans.cell_campaigns'] },
   { labelKey: 'plans.row_review', cells: [false, false, true] },
   { labelKey: 'plans.row_reports', cells: [false, false, true], soon: true },
-  { labelKey: 'plans.row_rights', cells: [false, false, true], soon: true },
+  { labelKey: 'plans.row_rights', cells: [false, false, true] },
 ];
 
 const ADDONS = [
@@ -77,6 +78,15 @@ export default function Plans() {
     setBusy(plan);
     setError(null);
     try {
+      // Mit eingerichteter Stripe-Abrechnung geht es direkt zur Buchung; sonst wie bisher als Anfrage.
+      if (plan !== 'basis') {
+        try {
+          window.location.assign(await startCheckout(parkId, plan));
+          return;
+        } catch (billingError) {
+          if (!(billingError instanceof BillingDisabledError)) throw billingError;
+        }
+      }
       const name = plan === 'marketing_pro' ? 'Marketing Pro' : 'Marketing Starter';
       await meldeAusstattungsInteresse(parkId, { label: `Plan anfragen: ${name} (${PRICE[plan]} €/Monat)` });
       setRequested((prev) => [...prev, plan]);
@@ -84,6 +94,18 @@ export default function Plans() {
       setError(e instanceof Error ? e.message : t('crm_pricing.request_failed'));
     } finally {
       setBusy(null);
+    }
+  }
+
+  const billingResult = new URLSearchParams(window.location.search).get('billing');
+
+  async function manageBilling() {
+    if (!parkId) return;
+    setError(null);
+    try {
+      window.location.assign(await openBillingPortal(parkId));
+    } catch (e) {
+      setError(e instanceof BillingDisabledError ? t('plans.request_note') : e instanceof Error ? e.message : String(e));
     }
   }
 
@@ -98,6 +120,13 @@ export default function Plans() {
       <UpgradePageHeader title={t('plans.page_title')} subtitle={t('plans.page_subtitle')} />
 
       {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
+      {billingResult === 'success' && <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{t('plans.billing_success')}</p>}
+      {billingResult === 'cancel' && <p className="rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-700">{t('plans.billing_cancel')}</p>}
+      {currentPlan !== 'basis' && (
+        <button type="button" onClick={() => void manageBilling()} className="glass-button-secondary">
+          {t('plans.manage_billing')}
+        </button>
+      )}
 
       <div className="grid items-stretch gap-5 pt-3 lg:grid-cols-3">
         {CARDS.map((card) => {

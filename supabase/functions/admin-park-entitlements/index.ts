@@ -4,7 +4,7 @@ const PLANS = ['basis', 'marketing_starter', 'marketing_pro'];
 const STATUS = ['active', 'trial', 'paused', 'cancelled'];
 const FEATURES = [
   'crm_contacts', 'crm_survey', 'crm_social', 'crm_pixel', 'email_marketing',
-  'social_campaigns', 'review_routing', 'team_permissions', 'reports_pro', 'online_shop', 'speed',
+  'email_automations', 'social_campaigns', 'review_routing', 'team_permissions', 'reports_pro', 'online_shop', 'speed',
 ];
 const COLUMNS = 'park_id, plan, features, status, trial_until, source, stripe_subscription_id, updated_at';
 const UUID = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
@@ -47,7 +47,7 @@ export async function handler(req: Request): Promise<Response> {
         !Array.isArray(raw.features) || raw.features.some((f: unknown) => typeof f !== 'string' || !FEATURES.includes(f)) ||
         (raw.trial_until != null && !validDate(raw.trial_until)) ||
         (raw.status === 'trial' && !validDate(raw.trial_until)) ||
-        (raw.source !== undefined && raw.source !== 'manual') || raw.stripe_subscription_id !== undefined) {
+        (raw.source !== undefined && raw.source !== 'manual') || raw.stripe_subscription_id !== undefined || (raw.force !== undefined && typeof raw.force !== 'boolean')) {
       return json({ error: 'Invalid entitlement settings' }, 400);
     }
 
@@ -55,6 +55,12 @@ export async function handler(req: Request): Promise<Response> {
       .select('id').eq('id', parkId).maybeSingle();
     if (parkError) return json({ error: 'Park lookup failed' }, 503);
     if (!park) return json({ error: 'Park not found' }, 404);
+
+    // Über Stripe verwaltete Abos nicht still überschreiben (außer ausdrücklich mit force).
+    const { data: existing } = await supabaseService.from('park_entitlements').select('source').eq('park_id', parkId).maybeSingle();
+    if (existing?.source === 'stripe' && raw.force !== true) {
+      return json({ error: 'Dieser Park wird über Stripe verwaltet. Änderung nur mit force möglich.' }, 409);
+    }
 
     const { data, error } = await supabaseService.from('park_entitlements').upsert({
       park_id: parkId,

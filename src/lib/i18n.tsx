@@ -1913,6 +1913,10 @@ const translations: Record<Language, Record<string, string>> = {
     'email.auto_confirm_season': "Die Saisonstart-Mail jetzt an alle Gäste mit Einwilligung senden? Das lässt sich nicht zurücknehmen.",
     'email.auto_season_ok': "Die Saisonstart-Mail ist eingereiht ({count} Empfänger).",
     'email.template_note': "Das ist die Vorlage dieser Automation. Sie wird nie als Ganzes verschickt.",
+    'plans.billing_success': "Danke! Dein Abo wird eingerichtet – das dauert einen Moment. Lade die Seite gleich neu.",
+    'plans.billing_cancel': "Die Buchung wurde abgebrochen. Es wurde nichts berechnet.",
+    'plans.manage_billing': "Abo und Rechnungen verwalten",
+    'plans.book_now': "Jetzt buchen",
   },
   en: {
     'app.loading': 'Loading…',
@@ -3809,6 +3813,10 @@ const translations: Record<Language, Record<string, string>> = {
     'email.auto_confirm_season': "Send the season start email to all consenting guests now? This cannot be undone.",
     'email.auto_season_ok': "The season start email is queued ({count} recipients).",
     'email.template_note': "This is the template of this automation. It is never sent as a whole.",
+    'plans.billing_success': "Thank you! Your subscription is being set up – this takes a moment. Reload the page shortly.",
+    'plans.billing_cancel': "The booking was cancelled. You were not charged.",
+    'plans.manage_billing': "Manage subscription and invoices",
+    'plans.book_now': "Book now",
   },
   es: {
     'app.loading': 'Cargando…',
@@ -5705,6 +5713,10 @@ const translations: Record<Language, Record<string, string>> = {
     'email.auto_confirm_season': "¿Enviar ahora el correo de inicio de temporada a todos los invitados con consentimiento? No se puede deshacer.",
     'email.auto_season_ok': "El correo de inicio de temporada está en cola ({count} destinatarios).",
     'email.template_note': "Esta es la plantilla de esta automatización. Nunca se envía completa.",
+    'plans.billing_success': "¡Gracias! Tu suscripción se está configurando; tarda un momento. Recarga la página en breve.",
+    'plans.billing_cancel': "La reserva se canceló. No se cobró nada.",
+    'plans.manage_billing': "Gestionar suscripción y facturas",
+    'plans.book_now': "Reservar ahora",
   },
   fr: {
     'app.loading': 'Chargement…',
@@ -7601,6 +7613,10 @@ const translations: Record<Language, Record<string, string>> = {
     'email.auto_confirm_season': "Envoyer maintenant l’e-mail de début de saison à tous les invités consentants ? Irréversible.",
     'email.auto_season_ok': "L’e-mail de début de saison est en file d’attente ({count} destinataires).",
     'email.template_note': "Ceci est le modèle de cette automatisation. Il n’est jamais envoyé en bloc.",
+    'plans.billing_success': "Merci ! Votre abonnement est en cours de mise en place, cela prend un instant. Rechargez la page dans un instant.",
+    'plans.billing_cancel': "La réservation a été annulée. Rien n’a été facturé.",
+    'plans.manage_billing': "Gérer l’abonnement et les factures",
+    'plans.book_now': "Réserver maintenant",
   },
   it: {
     'app.loading': 'Caricamento…',
@@ -9497,6 +9513,10 @@ const translations: Record<Language, Record<string, string>> = {
     'email.auto_confirm_season': "Inviare ora l’email di inizio stagione a tutti gli ospiti consenzienti? Non si può annullare.",
     'email.auto_season_ok': "L’email di inizio stagione è in coda ({count} destinatari).",
     'email.template_note': "Questo è il modello di questa automazione. Non viene mai inviato in blocco.",
+    'plans.billing_success': "Grazie! L’abbonamento è in fase di attivazione, ci vuole un momento. Ricarica la pagina tra poco.",
+    'plans.billing_cancel': "La prenotazione è stata annullata. Non è stato addebitato nulla.",
+    'plans.manage_billing': "Gestisci abbonamento e fatture",
+    'plans.book_now': "Prenota ora",
   },
   nl: {
     'app.loading': 'Laden…',
@@ -11393,6 +11413,10 @@ const translations: Record<Language, Record<string, string>> = {
     'email.auto_confirm_season': "De seizoensstartmail nu naar alle gasten met toestemming sturen? Dit kan niet ongedaan worden gemaakt.",
     'email.auto_season_ok': "De seizoensstartmail staat in de wachtrij ({count} ontvangers).",
     'email.template_note': "Dit is het sjabloon van deze automatisering. Het wordt nooit in één keer verstuurd.",
+    'plans.billing_success': "Bedankt! Je abonnement wordt ingesteld – dat duurt even. Ververs de pagina zo.",
+    'plans.billing_cancel': "De boeking is geannuleerd. Er is niets in rekening gebracht.",
+    'plans.manage_billing': "Abonnement en facturen beheren",
+    'plans.book_now': "Nu boeken",
   },
   lv: {
     'app.loading': 'Ielādē…',
@@ -13289,6 +13313,10 @@ const translations: Record<Language, Record<string, string>> = {
     'email.auto_confirm_season': "Nosūtīt sezonas sākuma e-pastu visiem viesiem ar piekrišanu? To nevar atsaukt.",
     'email.auto_season_ok': "Sezonas sākuma e-pasts ir rindā ({count} saņēmēji).",
     'email.template_note': "Šī ir šīs automatizācijas veidne. Tā nekad netiek nosūtīta kopumā.",
+    'plans.billing_success': "Paldies! Jūsu abonements tiek iestatīts – tas prasa brīdi. Pēc brīža pārlādējiet lapu.",
+    'plans.billing_cancel': "Rezervācija atcelta. Nekas netika iekasēts.",
+    'plans.manage_billing': "Pārvaldīt abonementu un rēķinus",
+    'plans.book_now': "Rezervēt tagad",
   },
 };
 

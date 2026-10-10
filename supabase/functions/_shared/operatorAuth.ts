@@ -177,3 +177,27 @@ export async function fetchOperatorEmail(req: Request): Promise<string | null> {
     return null;
   }
 }
+
+/**
+ * Nur Inhaber (org_owner/platform_admin) – z. B. für Abrechnung. Token von Mitarbeitern oder Staff-Admins
+ * (ohne Mitgliedschaft im Betreiber-Projekt) werden abgewiesen.
+ */
+export async function requireOwnerForPark(req: Request, parkId: string): Promise<OperatorAuthResult> {
+  const auth = await requireOperatorForParkBase(req, parkId);
+  if (!auth.ok) return auth;
+  const authHeader = req.headers.get("authorization") || "";
+  const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  if (!token) return { ok: false, status: 401, message: "Missing bearer token" };
+  try {
+    const response = await fetch(
+      `${OPERATOR_SUPABASE_URL}/rest/v1/organization_memberships?select=role&user_id=eq.${encodeURIComponent(auth.userId)}`,
+      { headers: { apikey: OPERATOR_SUPABASE_ANON_KEY, Authorization: `Bearer ${token}` } },
+    );
+    const rows = response.ok ? await response.json().catch(() => []) : [];
+    const role = Array.isArray(rows) && rows[0] ? String(rows[0].role) : "";
+    if (role === "org_owner" || role === "platform_admin") return auth;
+  } catch {
+    // fällt unten auf "verweigert"
+  }
+  return { ok: false, status: 403, message: "Nur der Betreiber darf das Abo verwalten." };
+}
