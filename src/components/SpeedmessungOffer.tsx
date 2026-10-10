@@ -23,6 +23,8 @@ const BENEFITS = [
   { title: 'speed.offer.benefit_periods', text: 'speed.offer.benefit_periods_text' },
   { title: 'speed.offer.benefit_social', text: 'speed.offer.benefit_social_text' },
   { title: 'speed.offer.benefit_purchased', text: 'speed.offer.benefit_purchased_text' },
+  { title: 'speed.offer.benefit_edit', text: 'speed.offer.benefit_edit_text' },
+  { title: 'speed.offer.benefit_analyse', text: 'speed.offer.benefit_analyse_text' },
 ];
 
 const PLANS: {

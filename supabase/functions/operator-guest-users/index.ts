@@ -296,6 +296,8 @@ Deno.serve(async (req) => {
         .select('id');
       if (claimsError) return json({ error: claimsError.message }, 500);
       anonymizedClaims = updated?.length ?? 0;
+      // Auch die dauerhaft gespeicherten Speed-Ergebnisse dieser Adresse entfernen (Bestenlisten).
+      await supabaseService.from('park_speed_results').delete().eq('park_id', auth.parkId).eq('email', email);
     }
 
     return json({ ok: true, data: { action, anonymizedClaims } });
