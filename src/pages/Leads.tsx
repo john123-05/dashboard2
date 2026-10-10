@@ -767,12 +767,24 @@ function LeadsContacts({ view }: { view: 'overview' | 'list' }) {
     };
   }, [showLocationDetails, worldMapSvg]);
 
+  // Die Karte ist immer aufgeklappt. Die 1,1-MB-Datei wird aber erst geholt, wenn der Bereich in
+  // Sichtweite kommt – so bleibt der Seitenstart schnell (C4).
   useEffect(() => {
-    if (!showLocationDetails) return;
-    requestAnimationFrame(() => {
-      locationDetailsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-  }, [showLocationDetails]);
+    if (view !== 'overview' || showLocationDetails) return;
+    const node = locationDetailsRef.current;
+    if (!node || typeof IntersectionObserver === 'undefined') {
+      setShowLocationDetails(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) setShowLocationDetails(true);
+      },
+      { rootMargin: '400px' },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [view, showLocationDetails, loading]);
 
   useEffect(() => {
     let active = true;
@@ -1575,21 +1587,6 @@ function LeadsContacts({ view }: { view: 'overview' | 'list' }) {
                     );
                   })}
                 </ul>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setShowLocationDetails((current) => {
-                      const next = !current;
-                      if (next) {
-                        resetDetailMapView();
-                      }
-                      return next;
-                    })
-                  }
-                  className="mt-3 text-sm font-medium text-sky-600 transition-colors hover:text-sky-700"
-                >
-                  {showLocationDetails ? t('leads.hide_map') : t('leads.show_map')}
-                </button>
               </div>
 
               <div className="px-6 py-5">
@@ -1635,32 +1632,21 @@ function LeadsContacts({ view }: { view: 'overview' | 'list' }) {
             </div>
           </GlassCard>
 
-          {showLocationDetails && (
+          {(
             <div ref={locationDetailsRef}>
             <GlassCard className="overflow-hidden">
-              <div className="border-b border-slate-100 px-6 py-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-500">{t('leads.location')}</p>
-                    <h3 className="mt-2 text-2xl font-semibold text-slate-800">{t('leads.world_map')}</h3>
-                    <p className="mt-1 text-sm text-slate-500">
-                      {t('leads.world_map_desc')}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowLocationDetails(false)}
-                    className="shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
-                  >
-                    {t('leads.collapse')}
-                  </button>
-                </div>
+              <div className="border-b border-[color:var(--line)] px-6 py-5">
+                <h3 className="text-base font-semibold text-[color:var(--ink)]">{t('leads.world_map')}</h3>
+                <p className="mt-1 text-sm text-[color:var(--ink-3)]">
+                  {t('leads.world_map_desc')}
+                </p>
               </div>
 
               <div className="space-y-5 p-4 sm:p-6">
                 <div className="space-y-4">
                   <div className="-mx-2 overflow-x-auto pb-2 sm:mx-0 sm:overflow-visible sm:pb-0">
                     <div className="min-w-[320px] w-full sm:min-w-0">
+                      {worldMapMarkup ? (
                       <LeadWorldMap
                         svgMarkup={worldMapMarkup}
                         styleCss={worldMapStyle}
@@ -1678,6 +1664,9 @@ function LeadsContacts({ view }: { view: 'overview' | 'list' }) {
                         onResetView={resetDetailMapView}
                         onHoverCountry={setHoveredCountryInfo}
                       />
+                      ) : (
+                        <div className="h-[320px] animate-pulse rounded-xl bg-slate-100" />
+                      )}
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
@@ -1741,7 +1730,7 @@ function LeadsContacts({ view }: { view: 'overview' | 'list' }) {
         </div>
 
         {claimSiteBaseFor(parkId) && (
-          <GlassCard className="flex h-full min-h-[700px] flex-col overflow-hidden p-0">
+          <GlassCard className="flex h-[760px] max-h-[calc(100vh-3rem)] flex-col overflow-hidden p-0 xl:sticky xl:top-6 xl:self-start">
             <div className="shrink-0 border-b border-slate-100/90 px-4 py-3">
               <p className="text-sm font-semibold text-slate-800">Live-Vorschau</p>
               <p className="text-xs text-slate-500">

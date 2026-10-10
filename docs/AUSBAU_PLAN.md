@@ -1,0 +1,280 @@
+# Ausbau-Plan (Stufe 2): Speedmessung, Online-Shop, Dein Fotosystem, Hinweise, Kamera, Mobil
+
+Stand: 10.10.2026 · Autor: Claude (Opus) mit John · baut auf `docs/PRODUKT_PLAN.md` auf (Stufe 1 ist dort
+abgeschlossen bzw. protokolliert). Diese Datei ist der Arbeitsplan für alles, was John am 10.10.2026 abends
+bestellt hat. **Ganz unten steht „Hier geht es weiter“** – dort fängt jede neue Sitzung an.
+
+Repos: Dashboard `~/Downloads/Cursor/dashboard2-4` (`john123-05/dashboard2`, Bolt-Publish nötig) ·
+Claim-Seiten `~/Downloads/Cursor/imst` (Remote `imstneu`, Bolt-Publish nötig; enthält Imst, Tarzans, Plose,
+Grünberg) · Staff-CRM `~/Downloads/Cursor/liftpictures-crm` (Vercel, Push = live).
+Supabase: geteilt `kvpcwlcfgmsmarjtwpsx`, Betreiber `xcrxltiiovpoladpaewd`. Claude darf SQL, Secrets und
+Function-Deploys selbst über die Supabase-CLI ausführen (Johns Freigabe vom 10.10.2026).
+
+---
+
+## 1. Was John will (in seinen Worten, sortiert)
+
+1. **Speedmessung als richtiges Produkt.** Zurück- und Vorblättern je Tag (runde Pfeil-Knöpfe wie auf der
+   Fotos-Seite), Zeiträume heute / Woche / Monat / Allzeit, einstellen, wer als Schnellster gilt.
+   Die öffentliche Tagesbesten-Seite komplett neu: läuft auf dem Fernseher von selbst langsam hoch und
+   runter, zeigt immer wieder den Tagesschnellsten, hat auf der großen Ansicht einen QR-Code, der die Seite
+   auf dem Handy öffnet (dort blättern und Zeiträume wählen). QR-Code abschaltbar. Ein Bereich
+   „Bearbeiten“ wie beim Online-Shop (Sprüche ändern, Instagram-Aufruf, Gewinnspiel) und „Auswerten“
+   (mit Knopf zum E-Mail-Marketing). Sauberer Zustand, wenn die Speedmessung noch nicht gebucht ist.
+2. **Online-Shop aufgeräumter.** Bearbeiten nicht mehr als lange Seite, sondern als eigener Editor
+   (aufklappbare Bereiche / Unterseite). Mehr Produkte (Wandbilder usw.), Anordnen, Auswertungen – als
+   Plan, sichtbar als „kommt“. Die Shop-Vorschau soll nicht mehr nach „KI-Shop“ aussehen, sondern wie die
+   echte Claim-Seite bzw. die Shops der Parks.
+3. **Marketing-CRM Start:** detaillierte Karte immer offen; die Live-Vorschau rechts nur so lang wie die
+   Seite wirklich ist.
+4. **„Konfiguration“ heißt „Dein Fotosystem“.** Oben die Ausstattung, darunter die drei Pläne.
+   **Preise & Pakete** wie bei HubSpot: Filter (Marketing, Online-Shop, Speedmessung, Fotosystem), zusätzlich
+   Buchbares mit Preisen, unten der Vergleich.
+5. **Hinweise (Pop-ups) aus unserem CRM je Kunde:** auf welcher Seite, an welcher Stelle (unten rechts,
+   oben links …), mit Text, Knopf und QR-Code; dazu Push-Benachrichtigung aufs Gerät.
+6. **Kamera-Seite** komplett überarbeiten (verständlicher, gleiche Funktionen).
+7. **Mitarbeiter-Seite** in Gestaltung und Technik verbessern.
+8. **Mobil-Plan:** wie alles auf dem Handy angeordnet wird.
+9. Alles „im HubSpot-Stil“ und so geplant, dass jemand anderes weiterarbeiten kann.
+
+## 2. Recherche: wie Profi-Werkzeuge das lösen
+
+| Thema | Vorbild | Was wir übernehmen |
+|---|---|---|
+| Bestenlisten auf dem Bildschirm | Kart-Zeitnahme (Apex Timing, SMS-Timing u. a.): TV-Modul mit Podium, „Fast Lap“-Einblendung, eigenem Branding. Leaderboarded: Anzeige auf TV/Tablet/Handy, Beitritt per QR-Code. | Großer „Tagesschnellste/r“-Block, Top 3 als Podium, automatischer Durchlauf, QR-Code zum Mitnehmen aufs Handy, Park-Farben. Zeiträume heute/Woche/Monat/Allzeit haben die Kart-Systeme nicht einheitlich – wir bauen sie selbst. |
+| Preise | HubSpot: Produkte („Hubs“) als Reiter, je Produkt Stufen, Zusatzleistungen als eigene Zeilen mit Preis, unten Vergleichstabelle. | Filter-Reiter oben, Pläne als Karten, „Zusätzlich buchbar“ als Karten mit Preis, Vergleich unten. |
+| Shop-Verwaltung | Shopify-Admin: Start · Produkte · Kollektionen · Online-Shop (Theme „Anpassen“ mit Abschnitten links, Vorschau rechts) · Auswertungen · Rabatte. | Shop-Übersicht + eigener Editor (Abschnitte links, Vorschau rechts), Auswertungs-Kacheln, Produkte als Liste mit Schalter und Preis. |
+| Hinweise in der App | Appcues/Intercom/Userflow: Banner je Seite gezielt, dauerhaft schließbar, Modal nur für Wichtiges, höchstens eine Meldung zugleich. | Kleine Karte in einer Ecke, je Seite steuerbar, einmal geschlossen = weg, höchstens eine sichtbar, Ansichten/Klicks zählen. |
+
+Quellen: apex-timing.com (Karting-Zeitnahme), leaderboarded.com (QR + TV), help.shopify.com (Admin-Übersicht),
+docs.appcues.com (Banner), mehrere HubSpot-Preisübersichten (instant.one, eesel.ai).
+
+## 3. Leitlinien (gelten für alles hier)
+
+- Bausteine aus `PRODUKT_PLAN.md` Abschnitt 4: Seitentitel `text-[28px] font-light`, Karten `GlassCard`,
+  Farben `--ink/--ink-2/--ink-3/--line`, Akzent `brand-600`, Segment-Schalter dunkel aktiv, `Modal`,
+  `Drawer`, `EmptyState`, `Skeleton`.
+- Neue Texte nur über `t('…')` in 7 Sprachen (`scripts/i18n_apply.py`), `npm run check:i18n`.
+- Nichts sperren, was heute läuft. Neue Tabellen nur additiv, Functions mit Rückfall, wenn die Tabelle fehlt.
+- Öffentliche Seiten (Bestenliste, Shop-Vorschau) folgen dem Aussehen der jeweiligen Park-Seite, nicht dem
+  Dashboard: Papier-Hintergrund, schwarze Schrift, kursive Großbuchstaben-Überschriften, kleine Radien,
+  Akzentfarbe sparsam.
+- Ohne gebuchte Funktion: echte Seite mit Beispieldaten + Angebot, nie eine leere Wand.
+
+---
+
+## 4. Aufgaben
+
+Legende: `[x]` erledigt · `[~]` gebaut, Sichtprüfung/Feinschliff offen · `[ ]` offen.
+
+### Phase SP – Speedmessung
+
+- [ ] **SP1 Daten dauerhaft** – Tabelle `park_speed_results` (jede freigeschaltete Fahrt mit km/h, Tag in
+  Park-Zeit, ausblendbar), Trigger an `photo_claims`, Nachtrag aus den vorhandenen Fotos. Grund: `photos`
+  wird nach ca. 30 Tagen gelöscht, Woche/Monat/Allzeit brauchen eigene Daten. Tabelle `park_speed_settings`.
+- [ ] **SP2 Öffentliche Schnittstelle `park-leaderboard`** – eine Function für alle Parks: Zeitraum
+  (`day`, `week`, `month`, `all`), Datum, liefert Rangliste (beste Fahrt je Gast), Tagesschnellste/n,
+  öffentliche Einstellungen. Ersetzt für die neue Seite die drei `*-leaderboard`-Functions (die bleiben).
+- [ ] **SP3 Betreiber-Schnittstelle `operator-speed`** – Rangliste mit Verwaltung (Fahrt ausblenden),
+  Tageswerte, Einstellungen speichern.
+- [ ] **SP4 Dashboard-Seite Speedmessung** – Tag blättern (runde Pfeile + Datum), Zeitraum-Schalter,
+  Kennzahlen des gewählten Tags, Rangliste mit „ausblenden“, „Top 10 als Segment“ + „E-Mail schreiben“,
+  aufklappbarer Bereich **Bestenliste bearbeiten** (Texte, Instagram, Gewinnspiel, QR, Durchlauf,
+  Höchstwert), Vorschau rechts, registrierte Gäste wie bisher.
+- [ ] **SP5 Öffentliche Seite neu** (Repo `imst`, eine gemeinsame Komponente für Imst/Tarzans/Plose/
+  Grünberg): Tagesschnellste/r groß, Podium, Liste, Zeitraum-Reiter und Tag blättern, automatischer
+  Durchlauf auf großen Bildschirmen, QR-Code, Sprüche aus den Einstellungen, Beispieldaten mit `?demo=1`.
+- [ ] **SP6 Paket-Beschreibung** – in Preise & Pakete und im Angebot: „Bearbeiten & Auswerten“, Gewinnspiel
+  für die Tagesbesten, Verbindung zum E-Mail-Marketing.
+- [ ] **SP7 (später)** Gewinnspiel-Automatik: Tagessieger automatisch anschreiben (E-Mail-Automation
+  `speed_winner`), Urkunde als Bild zum Teilen, Rekord-Benachrichtigung an den Betreiber.
+
+### Phase OS – Online-Shop
+
+- [ ] **OS1 Seite aufräumen** – `/shop` = Übersicht (Potenzial, Status, Vorschau, Auswertung);
+  **Shop bearbeiten** als eigener Editor `/shop/bearbeiten` mit aufklappbaren Abschnitten links
+  (Design · Texte · Produkte & Preise · Anordnung · Zahlungen) und Vorschau rechts.
+- [ ] **OS2 Shop-Vorschau professioneller** – `DemoShop` in beiden Repos im Stil der Claim-Seiten:
+  Kopf wie die Park-Seite, Foto-Raster ohne bunte Fläche, klare Produktzeilen, Vertrauenszeile, fester
+  Warenkorb-Balken auf dem Handy, Fußzeile mit Rechtstexten.
+- [ ] **OS3 Mehr Produkte** – Katalog erweitern (Poster, Leinwand/Wandbild, Fotobuch-Seite, Schlüsselanhänger,
+  Puzzle) in `_shared/shopCatalog.ts` + Mockups; Standard „aus“, damit bestehende Shops unverändert bleiben.
+- [ ] **OS4 Auswertung (Vorschau)** – Kacheln Bestellungen, Umsatz, Kaufquote, beliebtestes Produkt; echte
+  Zahlen aus den Test-Käufen, sonst als „kommt mit der Freischaltung“ gekennzeichnet.
+- [ ] **OS5 (später)** Anordnung per Ziehen, Kollektionen (z. B. „Erinnerungen“, „Geschenke“), Rabattcodes,
+  Versand-/Druckpartner-Anbindung, Bestellverwaltung. Entwurf in Abschnitt 5.
+
+### Phase FS – Dein Fotosystem, Preise & Pakete
+
+- [ ] **FS1 Umbenennen** – Navigation „Konfiguration“ → „Dein Fotosystem“ (7 Sprachen).
+- [ ] **FS2 Seite** – oben „Deine Ausstattung“, darunter „Dein Plan“ (drei Pläne kompakt, aktueller markiert,
+  Link zu Preise & Pakete), darunter „Mehr aus deinem Fotosystem“ (bestehende Produktkacheln).
+- [ ] **FS3 Preise & Pakete `/plaene`** – Filter-Reiter Alle · Marketing · Online-Shop · Speedmessung ·
+  Fotosystem; Pläne; „Zusätzlich buchbar“ (Online-Shop, Speedmessung, Zusatz-E-Mails, Hardware) mit Preisen
+  und Link zur Detailseite; Vergleichstabelle unten.
+
+### Phase HW – Hinweise aus dem CRM
+
+- [ ] **HW1 Datenmodell + Functions** – `park_announcements`, `park_announcement_events`;
+  `operator-announcements` (aktive Hinweise für Park/Seite, Ereignisse), `admin-park-announcements`
+  (anlegen, ändern, löschen, Push senden).
+- [ ] **HW2 Dashboard** – `AnnouncementHost` im Layout: Karte in der gewählten Ecke, optional QR-Code und
+  Knopf, einmal geschlossen = weg, höchstens eine zugleich.
+- [ ] **HW3 CRM-Seite „Hinweise“** – Liste, Formular (Kunde oder alle, Seiten, Position, Zeitraum, Text,
+  Knopf, QR), Zahlen (gesehen/geklickt/geschlossen), „Als Push senden“.
+
+### Phase KA / MI / CR
+
+- [ ] **KA1 Kamera-Seite** – Kopf mit Status, Bild links (klebt), Einstellungen rechts in vier Gruppen
+  (Belichtung · Farbe · Kontrast & Dynamik · Schärfe & Rauschen) mit Erklärung zum Aufklappen und
+  „Zurücksetzen“ je Regler, feste Änderungsleiste unten, technische Werte eingeklappt.
+- [ ] **MI1 Mitarbeiter-Seite** – Kopf mit Zähler und Limit, „Mitarbeiter einladen“ als Dialog, Tabelle mit
+  Initialen, Rolle, Seiten als Chips, zuletzt aktiv, Status; Aktionen im Zeilenmenü.
+- [ ] **CR1 Marketing-CRM Start** – Karte immer offen; Live-Vorschau mit fester Höhe, klebt beim Scrollen.
+
+### Phase MB – Mobil
+
+- [ ] **MB1 Plan** – siehe Abschnitt 6. Umsetzung je Seite beim Bau gleich mit (kein eigener Durchgang).
+
+---
+
+## 5. Entwürfe (Datenmodell und Schnittstellen)
+
+### SP – Speedmessung
+
+```sql
+create table public.park_speed_results (
+  id uuid primary key default gen_random_uuid(),
+  park_id uuid not null references public.parks(id) on delete cascade,
+  photo_id uuid not null,            -- bewusst ohne Fremdschlüssel: Fotos werden nach ~30 Tagen gelöscht
+  claim_id uuid,
+  email text not null,               -- klein geschrieben; Name/Bild kommen aus park_guest_profiles
+  speed_kmh numeric not null,
+  captured_at timestamptz not null,
+  day date not null,                 -- Kalendertag in Park-Zeit
+  hidden boolean not null default false,  -- vom Betreiber ausgeblendet (Messfehler, Unfug)
+  created_at timestamptz not null default now(),
+  unique (park_id, photo_id, email)
+);
+create table public.park_speed_settings (
+  park_id uuid primary key references public.parks(id) on delete cascade,
+  settings jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+```
+`settings`: `headline`, `subline`, `cta_title`, `cta_text`, `winner_text`, `instagram_handle`, `hashtag`,
+`prize_text`, `show_qr` (Standard an), `auto_scroll` (Standard an), `rows` (10), `max_speed_kmh` (leer = keine
+Grenze), `periods` (welche Reiter die Gäste sehen).
+
+Trigger `photo_claims_speed_result` (nach Einfügen/Statuswechsel auf `claimed`): schreibt die Fahrt aus
+`photos` (nur mit km/h, keine Testfotos) in `park_speed_results`; Fehler werden verschluckt.
+
+`park-leaderboard` (öffentlich): `POST { park_id, period, date? }` →
+`{ period, date, from, to, rows: [{ rank, speedKmh, capturedAt, displayName, avatarUrl }], total, champion,
+settings, hasData }`. Beste Fahrt je Gast, ohne abgemeldete und ausgeblendete, ohne Werte über `max_speed_kmh`.
+
+`operator-speed` (Betreiber): `GET ?park_id=&period=&date=` → zusätzlich `id`, `email`, `claimId`, `hidden`,
+`stats` (Fahrten, schnellste, langsamste, Schnitt des Tages), `settings`.
+`POST { action: 'save_settings' | 'hide' | 'unhide' }`.
+
+### HW – Hinweise
+
+```sql
+create table public.park_announcements (
+  id uuid primary key default gen_random_uuid(),
+  park_id uuid references public.parks(id) on delete cascade,   -- null = alle Parks
+  title text not null,
+  body text not null default '',
+  cta_label text, cta_url text, qr_url text,
+  position text not null default 'bottom-right'
+    check (position in ('bottom-right','bottom-left','top-right','top-left','center')),
+  pages text[] not null default '{}',     -- Seiten-Schlüssel wie src/lib/permissions.ts; leer = überall
+  audience text not null default 'all' check (audience in ('all','owner','staff')),
+  tone text not null default 'info' check (tone in ('info','offer','warning')),
+  starts_at timestamptz, ends_at timestamptz,
+  active boolean not null default true,
+  created_at timestamptz not null default now(), updated_at timestamptz not null default now()
+);
+create table public.park_announcement_events (
+  announcement_id uuid not null references public.park_announcements(id) on delete cascade,
+  park_id uuid not null, user_id text not null,
+  event text not null check (event in ('seen','clicked','dismissed')),
+  created_at timestamptz not null default now(),
+  primary key (announcement_id, park_id, user_id, event)
+);
+```
+`operator-announcements`: `GET ?park_id=` → aktive Hinweise (ohne die vom Nutzer geschlossenen);
+`POST { park_id, announcement_id, event }`.
+`admin-park-announcements` (nur `admin_users`): `GET` (Liste + Zähler), `POST save|delete|push`.
+Push nutzt `operator_push_subscriptions` + `_shared/webpush.ts`.
+
+### OS – Online-Shop (Ausbau später, damit jemand weiterbauen kann)
+
+- `park_shop_settings.products` bleibt die Quelle (Schlüssel, an/aus, Preis). Neu dazu `sort` (Zahl) je
+  Produkt und `collections` (`[{ key, label, product_keys }]`) als JSON in derselben Zeile.
+- Bestellungen: Tabelle `park_shop_orders` (Stripe-Sitzung, Positionen, Status `paid|in_production|shipped|
+  delivered`, Sendungsnummer) – wird vom Webhook geschrieben, in `/shop/bestellungen` verwaltet.
+- Druckpartner: eine Function `shop-fulfilment` je Anbieter (Auftrag übergeben, Status abholen).
+- Rabattcodes: Stripe-Gutscheine, im Editor als Liste.
+- Live-Schalten je Park: `park_shop_settings.live = true` + Stripe-Live-Schlüssel; bis dahin Testmodus.
+
+## 6. Mobil-Plan (Handy, 360–430 px)
+
+Grundsätze (gelten für jede Seite, alt wie neu):
+1. **Rahmen:** schmale Leiste oben (Park, Hilfe, Glocke, Profil), feste Leiste unten mit 5 Zielen
+   (Übersicht · Umsatz · Systemzustand · Benachrichtigungen · Mehr). Steht seit Stufe 1.
+2. **Eine Spalte.** Rechte Spalten (Vorschau, Details) rutschen unter den Inhalt; Vorschauen bekommen einen
+   Knopf „Vorschau“ statt eines dauerhaft sichtbaren Rahmens, wenn sie höher als der Bildschirm wären.
+3. **Kopf:** Titel, darunter höchstens zwei Knöpfe; weitere Aktionen in ein „…“-Menü.
+4. **Filter:** als waagerecht scrollbare Chips; Datum blättern mit zwei runden Pfeilen links/rechts vom Datum.
+5. **Tabellen** als Karten (steht), Zwischenzeilen als graue Überschrift.
+6. **Formulare:** Felder untereinander, Speichern als feste Leiste über der unteren Navigation.
+7. **Schubladen und Dialoge** in voller Breite von unten.
+8. **Tippflächen** mindestens 40 px, Eingaben 16 px Schrift (kein Zoom am iPhone).
+
+Je Seite:
+| Seite | Anordnung auf dem Handy |
+|---|---|
+| Speedmessung | Datum-Blättern → Zeitraum-Chips → 2×2 Kennzahlen → Rangliste → „Bearbeiten“ eingeklappt → Gäste; Vorschau als Knopf „Öffentliche Seite ansehen“. |
+| Öffentliche Bestenliste | Tagesschnellste/r oben, Zeitraum-Chips kleben unter dem Kopf, Liste, Aufruf-Karte am Ende; kein Durchlauf, kein QR-Code. |
+| Online-Shop | Status → Kennzahlen untereinander → „Shop bearbeiten“ → Vorschau; im Editor Abschnitte als Akkordeon, Vorschau über einen Umschalter „Bearbeiten / Vorschau“. |
+| Dein Fotosystem | Ausstattung als Liste → Plan-Karte → Produkte einspaltig. |
+| Preise & Pakete | Filter-Chips, Pläne untereinander (aktueller zuerst), Zusatzleistungen untereinander, Vergleich waagerecht scrollbar mit fester erster Spalte. |
+| Kamera | Bild oben (klebt nicht), Gruppen als Akkordeon, Änderungsleiste fest über der Navigation. |
+| Mitarbeiter | Karten je Person, Aktionen im „…“-Menü, Einladen als Dialog von unten. |
+| Marketing-CRM | Reiter als scrollbare Chips, Vorschau ganz unten. |
+| Hinweise | unten: volle Breite über der Navigation; oben: unter der oberen Leiste; Mitte: Dialog. |
+
+## 7. Annahmen (von Claude getroffen, weil John nicht gefragt werden wollte)
+
+1. „Einstellen, wer der Schnellste ist“ = Zeitraum wählen UND einzelne Fahrten ausblenden bzw. einen
+   Höchstwert setzen (gegen Messfehler). Ein von Hand gesetzter Sieger ist nicht vorgesehen.
+2. Ranglisten zeigen die **beste Fahrt je Gast** (vorher: jede Fahrt einzeln).
+3. „Webbilder“ = Wandbilder (Poster, Leinwand).
+4. Hinweise sieht, wer die Seite sehen darf; Zielgruppe wählbar (alle / nur Inhaber / nur Mitarbeiter).
+5. Neue Shop-Produkte sind standardmäßig aus.
+6. Öffentliche Seiten bleiben auf Deutsch (wie bisher); Sprüche sind freie Texte des Betreibers.
+
+## 8. Protokoll
+
+(wird beim Bauen ergänzt)
+
+---
+
+## 9. HIER GEHT ES WEITER
+
+```text
+Du arbeitest am Liftpictures-Betreiber-Dashboard. Lies zuerst CLAUDE.md, dann docs/PRODUKT_PLAN.md
+(Abschnitt 0 und 4) und diese Datei (docs/AUSBAU_PLAN.md).
+1. Nimm die erste Aufgabe in Abschnitt 4 mit [ ] (oder [~], wenn nur die Sichtprüfung fehlt und John
+   Rückmeldung gegeben hat). Entwurf dazu steht in Abschnitt 5.
+2. Baue nur diese Aufgabe. Texte über t('…') in 7 Sprachen, danach npm run check:i18n,
+   npx tsc --noEmit -p tsconfig.app.json, npm run build.
+3. SQL/Functions darfst du selbst einspielen (Supabase-CLI ist angemeldet):
+   supabase db query --linked --project-ref <ref> -f <datei.sql>
+   supabase functions deploy <name> --project-ref <ref> --no-verify-jwt --use-api
+   Vor dem Überschreiben einer bestehenden Function: herunterladen und mit dem Repo vergleichen.
+4. Setze das Häkchen, schreibe eine Zeile ins Protokoll (Abschnitt 8), committe und pushe.
+5. Sag John auf Deutsch und ohne Fachwörter, was fertig ist, was er in Bolt veröffentlichen muss und was er
+   ansehen soll. Claude kann die Seiten nicht selbst sehen, solange die Chrome-Erweiterung getrennt ist.
+```
