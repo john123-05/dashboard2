@@ -118,34 +118,36 @@ export default function GetStarted() {
 
   return (
     <div className="space-y-6">
-      {/* Kopf mit Fortschritt */}
-      <div className="flex flex-wrap items-center gap-5 rounded-xl border border-[color:var(--line)] bg-white p-5 sm:p-7">
-        <span className="hidden sm:inline-flex">
-          <ProgressRing percent={percent} size={84} stroke={7}>
-            <span className="text-lg font-semibold text-[color:var(--ink)]">{percent}%</span>
-          </ProgressRing>
-        </span>
-        <div className="min-w-0 flex-1">
-          <h1 className="text-[24px] font-light leading-tight tracking-tight text-[color:var(--ink)] sm:text-[32px]">
-            {complete ? t('ob.all_done_title') : firstName ? t('ob.welcome', { name: firstName }) : t('ob.welcome_plain')}
-          </h1>
-          <p className="mt-1.5 max-w-2xl text-sm text-[color:var(--ink-3)]">{complete ? t('ob.all_done_text') : t('ob.hero_text')}</p>
-          <div className="mt-3 flex items-center gap-3">
-            <div className="h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-slate-100">
-              <div className="h-full rounded-full bg-brand-600 transition-[width] duration-500" style={{ width: `${percent}%` }} />
+      {/* Kopf mit Fortschritt: auf dem Handy untereinander (Ring + Titel, Text, Balken, Knöpfe), ab lg nebeneinander. */}
+      <div className="rounded-xl border border-[color:var(--line)] bg-white p-5 sm:p-7">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-4">
+              <ProgressRing percent={percent} size={64} stroke={6}>
+                <span className="text-sm font-semibold text-[color:var(--ink)]">{percent}%</span>
+              </ProgressRing>
+              <h1 className="min-w-0 flex-1 text-[24px] font-light leading-tight tracking-tight text-[color:var(--ink)] sm:text-[32px]">
+                {complete ? t('ob.all_done_title') : firstName ? t('ob.welcome', { name: firstName }) : t('ob.welcome_plain')}
+              </h1>
             </div>
-            <span className="shrink-0 text-xs font-medium text-[color:var(--ink-2)]">{t('ob.progress', { done: doneCount, total })}</span>
+            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[color:var(--ink-3)]">{complete ? t('ob.all_done_text') : t('ob.hero_text')}</p>
+            <div className="mt-3 flex items-center gap-3">
+              <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-slate-100 sm:max-w-xs">
+                <div className="h-full rounded-full bg-brand-600 transition-[width] duration-500" style={{ width: `${percent}%` }} />
+              </div>
+              <span className="shrink-0 text-xs font-medium text-[color:var(--ink-2)]">{t('ob.progress', { done: doneCount, total })}</span>
+            </div>
           </div>
-        </div>
-        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap [&>*]:justify-center">
-          <button type="button" onClick={startTour} className="glass-button-secondary">
-            <PlayCircle className="h-4 w-4" /> {t('ob.start_tour')}
-          </button>
-          {next && !next.action && (
-            <Link to={next.path} className="glass-button-primary">
-              {t('ob.continue')} <ArrowRight className="h-4 w-4" />
-            </Link>
-          )}
+          <div className="flex flex-col gap-2 sm:flex-row lg:shrink-0 [&>*]:justify-center">
+            <button type="button" onClick={startTour} className="glass-button-secondary">
+              <PlayCircle className="h-4 w-4" /> {t('ob.start_tour')}
+            </button>
+            {next && !next.action && (
+              <Link to={next.path} className="glass-button-primary">
+                {t('ob.continue')} <ArrowRight className="h-4 w-4" />
+              </Link>
+            )}
+          </div>
         </div>
       </div>
 
