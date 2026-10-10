@@ -563,7 +563,7 @@ export default function Photos() {
 
   return (
     <div className="space-y-6">
-      <div className="customer-operator-pagehead">
+      <div className="">
         <h2 className="text-[28px] font-light tracking-tight text-[color:var(--ink)] sm:text-[32px]">{t('photos.title')}</h2>
         <p className="mt-1 text-sm text-slate-500">{t('photos.subtitle')}</p>
       </div>
@@ -582,7 +582,7 @@ export default function Photos() {
             <p className="text-xs text-slate-400">{t('photos.stats_day_note')}</p>
           </div>
           <div className="flex items-center gap-2">
-            <button type="button" onClick={() => stepDay(-1)} className="glass-button-secondary customer-operator-btn p-2" aria-label={t('photos.prev_day')}>
+            <button type="button" onClick={() => stepDay(-1)} className="glass-button-secondary p-2" aria-label={t('photos.prev_day')}>
               <ChevronLeft className="h-4 w-4" />
             </button>
             <input
@@ -590,19 +590,19 @@ export default function Photos() {
               value={selectedDate}
               max={todayStr}
               onChange={(e) => e.target.value && setSelectedDate(e.target.value)}
-              className="rounded-xl border border-[color:var(--line)] bg-slate-50 px-3 py-2 text-sm text-slate-700 customer-operator-input"
+              className="rounded-xl border border-[color:var(--line)] bg-slate-50 px-3 py-2 text-sm text-slate-700 "
             />
             <button
               type="button"
               onClick={() => stepDay(1)}
               disabled={selectedDate >= todayStr}
-              className="glass-button-secondary customer-operator-btn p-2 disabled:opacity-40"
+              className="glass-button-secondary p-2 disabled:opacity-40"
               aria-label={t('photos.next_day')}
             >
               <ChevronRight className="h-4 w-4" />
             </button>
             {selectedDate !== todayStr && (
-              <button type="button" onClick={() => setSelectedDate(todayStr)} className="glass-button-secondary customer-operator-btn px-3 py-2 text-sm">
+              <button type="button" onClick={() => setSelectedDate(todayStr)} className="glass-button-secondary px-3 py-2 text-sm">
                 Heute
               </button>
             )}
@@ -917,7 +917,7 @@ export default function Photos() {
             <button
               onClick={handleRefreshBrowse}
               disabled={browseLoading}
-              className="glass-button-secondary customer-operator-btn flex items-center gap-2 text-sm"
+              className="glass-button-secondary flex items-center gap-2 text-sm"
             >
               <RefreshCw className={`h-4 w-4 ${browseLoading ? 'animate-spin' : ''}`} />
               Aktualisieren
@@ -935,7 +935,7 @@ export default function Photos() {
                 key={`t-${a.id}`}
                 onClick={() => void automatAuftrag(a, 'testphoto')}
                 disabled={automatBusy !== null}
-                className="glass-button-primary customer-operator-btn flex items-center gap-2 text-sm disabled:opacity-40"
+                className="glass-button-primary flex items-center gap-2 text-sm disabled:opacity-40"
               >
                 <Camera className="h-4 w-4" />
                 {automatBusy === `${a.id}:testphoto` ? 'wird ausgelöst…' : 'Testfoto aufnehmen'}
@@ -950,7 +950,7 @@ export default function Photos() {
                   key={`c-${a.id}`}
                   onClick={() => void automatAuftrag(a, 'camera')}
                   disabled={automatBusy !== null}
-                  className="glass-button-secondary customer-operator-btn flex items-center gap-2 text-sm disabled:opacity-40"
+                  className="glass-button-secondary flex items-center gap-2 text-sm disabled:opacity-40"
                 >
                   <RotateCw className={`h-4 w-4 ${automatBusy === `${a.id}:camera` ? 'animate-spin' : ''}`} />
                   {automatBusy === `${a.id}:camera` ? 'wird neu gestartet…' : 'Kamera-Software neu starten'}
@@ -967,9 +967,9 @@ export default function Photos() {
               value={codeQuery}
               onChange={(e) => setCodeQuery(e.target.value)}
               placeholder={t('photos.enter_number')}
-              className="glass-input customer-operator-input w-full text-sm sm:w-48"
+              className="glass-input w-full text-sm sm:w-48"
             />
-            <button type="submit" className="glass-button-secondary customer-operator-btn flex items-center gap-1.5 text-sm">
+            <button type="submit" className="glass-button-secondary flex items-center gap-1.5 text-sm">
               <Search className="h-4 w-4" />
               Suchen
             </button>
@@ -980,9 +980,9 @@ export default function Photos() {
               type="datetime-local"
               value={dateTimeQuery}
               onChange={(e) => setDateTimeQuery(e.target.value)}
-              className="glass-input customer-operator-input w-full text-sm"
+              className="glass-input w-full text-sm"
             />
-            <button type="submit" className="glass-button-secondary customer-operator-btn flex items-center gap-1.5 text-sm">
+            <button type="submit" className="glass-button-secondary flex items-center gap-1.5 text-sm">
               <CalendarClock className="h-4 w-4" />
               Suchen
             </button>
@@ -991,7 +991,7 @@ export default function Photos() {
           {activeSearch !== 'recent' && (
             <button
               onClick={handleClearSearch}
-              className="customer-operator-reset-btn flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm text-slate-500 hover:text-slate-700"
+              className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm text-slate-500 hover:text-slate-700"
             >
               <X className="h-4 w-4" />
               Suche zurücksetzen

@@ -365,7 +365,7 @@ export default function SystemHealth() {
 
   return (
     <div className="space-y-6">
-      <div className="customer-operator-pagehead">
+      <div className="">
         <UpgradePageHeader
           title={t('health.title')}
           actions={
@@ -375,7 +375,7 @@ export default function SystemHealth() {
                   {t('health.checked_at', { time: checkedAt.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }) })}
                 </span>
               )}
-              <button onClick={handleRefresh} disabled={refreshing} className="glass-button-secondary customer-operator-btn">
+              <button onClick={handleRefresh} disabled={refreshing} className="glass-button-secondary ">
                 <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
                 {t('app.refresh')}
               </button>

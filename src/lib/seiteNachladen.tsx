@@ -31,7 +31,7 @@ const MERKER = 'liftpic:nachladefehler-neu-geladen';
 
 // Dieselbe Signatur wie Reacts eigenes `lazy`. Das `any` steht hier bewusst:
 // die Seiten haben unterschiedliche Eigenschaften, und ein engerer Typ wuerde
-// jede Seite ausschliessen, die welche entgegennimmt (etwa `embedded`).
+// jede Seite ausschliessen, die welche entgegennimmt.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function seiteNachladen<T extends ComponentType<any>>(
   laden: () => Promise<{ default: T }>,

@@ -480,7 +480,7 @@ export default function Revenue() {
 
   return (
     <div className="space-y-6">
-      <div className="customer-operator-pagehead flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-[28px] font-light tracking-tight text-[color:var(--ink)] sm:text-[32px]">{t('revenue.title')}</h2>
           <p className="mt-1 text-sm text-slate-500">
@@ -503,7 +503,7 @@ export default function Revenue() {
               </button>
             </div>
           )}
-          <button onClick={handleExport} className="glass-button-secondary customer-operator-btn">
+          <button onClick={handleExport} className="glass-button-secondary ">
             <Download className="h-4 w-4" />
             {t('revenue.export')}
           </button>
@@ -616,11 +616,11 @@ export default function Revenue() {
                   {chartMode === 'trend' ? t('overview.kiosk_daily_revenue') : t('revenue.hourly_revenue')}
                 </p>
               </div>
-              <div className="customer-operator-segment flex flex-wrap rounded-md border border-[color:var(--line-strong)] p-0.5">
+              <div className="flex flex-wrap rounded-md border border-[color:var(--line-strong)] p-0.5">
                 <button
                   type="button"
                   onClick={() => setChartMode('trend')}
-                  className={`customer-operator-segment-btn rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                  className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
                     chartMode === 'trend' ? 'bg-[color:var(--ink)] text-white' : 'text-[color:var(--ink-2)] hover:bg-slate-100'
                   }`}
                 >
@@ -632,7 +632,7 @@ export default function Revenue() {
                     setChartMode('day');
                     selectDay(todayStr);
                   }}
-                  className={`customer-operator-segment-btn rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                  className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
                     chartMode === 'day' && dayTab === 'heute'
                       ? 'bg-[color:var(--ink)] text-white'
                       : 'text-[color:var(--ink-2)] hover:bg-slate-100'
@@ -646,7 +646,7 @@ export default function Revenue() {
                     setChartMode('day');
                     selectDay(yesterdayStr);
                   }}
-                  className={`customer-operator-segment-btn rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                  className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
                     chartMode === 'day' && dayTab === 'gestern'
                       ? 'bg-[color:var(--ink)] text-white'
                       : 'text-[color:var(--ink-2)] hover:bg-slate-100'
@@ -660,7 +660,7 @@ export default function Revenue() {
                     setChartMode('day');
                     setDayTab('other');
                   }}
-                  className={`customer-operator-segment-btn rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                  className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
                     chartMode === 'day' && dayTab === 'other'
                       ? 'bg-[color:var(--ink)] text-white'
                       : 'text-[color:var(--ink-2)] hover:bg-slate-100'
@@ -751,7 +751,7 @@ export default function Revenue() {
                         type="button"
                         onClick={() => stepDay(-1)}
                         disabled={selectedDate <= minSelectableDate}
-                        className="customer-operator-icon-btn rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
+                        className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
                         aria-label={t('revenue.previous_day')}
                       >
                         <ChevronLeft className="h-4 w-4" />
@@ -767,14 +767,14 @@ export default function Revenue() {
                           min={minSelectableDate}
                           max={maxSelectableDate}
                           onChange={(event) => selectDay(event.target.value)}
-                          className="glass-input customer-operator-input"
+                          className="glass-input "
                         />
                       </div>
                       <button
                         type="button"
                         onClick={() => stepDay(1)}
                         disabled={selectedDate >= maxSelectableDate}
-                        className="customer-operator-icon-btn rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
+                        className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
                         aria-label={t('revenue.next_day')}
                       >
                         <ChevronRight className="h-4 w-4" />
