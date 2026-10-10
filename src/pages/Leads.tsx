@@ -165,9 +165,19 @@ function CompactMetricCard({
   );
 }
 
-function buildWorldMapMarkup(svgSource: string, points: CountryStat[], selectedCountry: string | null): string {
+// Die Weltkarte ist eine 1,1-MB-SVG mit über 2.000 Länderformen. Sie wird deshalb nur EINMAL
+// zu Markup verarbeitet (`buildWorldMapSvg`); alles, was sich beim Überfahren/Auswählen ändert,
+// steckt in einem kleinen separaten Stilblatt (`buildWorldMapStyle`). Früher wurde die ganze Karte
+// bei jeder Mausbewegung neu gebaut und vom Browser neu eingelesen (Hänger im CRM).
+function buildWorldMapSvg(svgSource: string): string {
   if (!svgSource) return '';
+  return svgSource
+    .replace('<svg ', `<svg preserveAspectRatio="xMidYMid meet" `)
+    .replace(/width="[^"]*"/, '')
+    .replace(/height="[^"]*"/, '');
+}
 
+function buildWorldMapStyle(points: CountryStat[], selectedCountry: string | null): string {
   const maxCount = Math.max(...points.map((point) => point.count), 1);
   const countryStyles = points
     .map((point) => {
@@ -183,8 +193,7 @@ function buildWorldMapMarkup(svgSource: string, points: CountryStat[], selectedC
     })
     .join('');
 
-  const styleBlock = `
-    <style>
+  return `
       .landxx{fill:#e8eef7 !important;stroke:#c5d2e3 !important;stroke-width:1.6 !important;}
       .coastxx{fill:#e8eef7 !important;stroke:#c5d2e3 !important;stroke-width:1.6 !important;}
       .circlexx{opacity:0 !important;}
@@ -192,14 +201,7 @@ function buildWorldMapMarkup(svgSource: string, points: CountryStat[], selectedC
       .limitxx,.unxx,.antxx{stroke:#c5d2e3 !important;}
       path{vector-effect:non-scaling-stroke;}
       ${countryStyles}
-    </style>
   `;
-
-  return svgSource
-    .replace('<svg ', `<svg preserveAspectRatio="xMidYMid meet" `)
-    .replace(/width="[^"]*"/, '')
-    .replace(/height="[^"]*"/, '')
-    .replace('>', `>${styleBlock}`);
 }
 
 function parseSvgViewBox(svgMarkup: string): SvgViewBox | null {
@@ -287,6 +289,7 @@ function resolveLeadMapPoints(points: CountryStat[], svgMarkup: string): Country
 
 function LeadWorldMap({
   svgMarkup,
+  styleCss,
   points,
   selectedCountry,
   onSelectCountry,
@@ -303,6 +306,8 @@ function LeadWorldMap({
   compact = false,
 }: {
   svgMarkup: string;
+  /** Hervorhebung der Länder (Auswahl/Hover) - getrennt von der schweren Karte. */
+  styleCss?: string;
   points: CountryStat[];
   selectedCountry: string | null;
   onSelectCountry: (countryCode: string) => void;
@@ -321,6 +326,8 @@ function LeadWorldMap({
   const { t } = useI18n();
   const mapRef = useRef<HTMLDivElement | null>(null);
   const dragStateRef = useRef<{ startX: number; startY: number; originX: number; originY: number } | null>(null);
+  const pendingHoverRef = useRef<{ countryCode: string | null; x: number; y: number } | null>(null);
+  const hoverFrameRef = useRef<number | null>(null);
   const viewBox = useMemo(() => parseSvgViewBox(svgMarkup), [svgMarkup]);
   const effectiveScale = zoom;
   const visiblePoints = points.filter((point) => point.x !== null && point.y !== null);
@@ -350,11 +357,18 @@ function LeadWorldMap({
     const countryCode = getCountryFromEventTarget(event.target);
     if (onHoverCountry && mapRef.current) {
       const bounds = mapRef.current.getBoundingClientRect();
-      onHoverCountry({
+      pendingHoverRef.current = {
         countryCode,
         x: event.clientX - bounds.left,
         y: event.clientY - bounds.top,
-      });
+      };
+      // Höchstens ein Update pro Bild: jede Mausbewegung rendert sonst die ganze CRM-Seite neu.
+      if (hoverFrameRef.current === null) {
+        hoverFrameRef.current = requestAnimationFrame(() => {
+          hoverFrameRef.current = null;
+          if (pendingHoverRef.current) onHoverCountry(pendingHoverRef.current);
+        });
+      }
     }
 
     if (!compact && dragStateRef.current) {
@@ -385,10 +399,12 @@ function LeadWorldMap({
       onPointerUp={handlePointerUp}
       onPointerLeave={() => {
         dragStateRef.current = null;
+        pendingHoverRef.current = null;
         onHoverCountry?.({ countryCode: null, x: 0, y: 0 });
       }}
       className={`relative overflow-hidden rounded-[24px] bg-white ${compact ? 'aspect-[2.5/1] min-h-[150px] sm:aspect-[2.34/1] sm:min-h-[220px] lg:min-h-[230px]' : 'aspect-[2.34/1] min-h-[320px] sm:min-h-[420px]'} ${compact ? '' : 'cursor-grab active:cursor-grabbing'}`}
     >
+      {styleCss && <style>{styleCss}</style>}
       {!compact && (
         <div
           className="absolute right-4 top-4 z-20 flex items-center gap-2 rounded-full border border-slate-200 bg-white/92 px-2 py-2 shadow-sm"
@@ -866,14 +882,23 @@ function LeadsContacts({
   }, [leads, locale]);
 
   const optInRate = stats.total > 0 ? Math.round((stats.optedIn / stats.total) * 100) : 0;
-  const worldMapMarkup = useMemo(
-    () => buildWorldMapMarkup(worldMapSvg, countryStats, hoveredCountryInfo?.countryCode || selectedCountry),
-    [countryStats, hoveredCountryInfo?.countryCode, selectedCountry, worldMapSvg],
+  const worldMapMarkup = useMemo(() => buildWorldMapSvg(worldMapSvg), [worldMapSvg]);
+  const worldMapStyle = useMemo(
+    () => buildWorldMapStyle(countryStats, hoveredCountryInfo?.countryCode || selectedCountry),
+    [countryStats, hoveredCountryInfo?.countryCode, selectedCountry],
   );
-  const resolvedCountryStats = useMemo(
-    () => resolveLeadMapPoints(countryStats, worldMapMarkup),
-    [countryStats, worldMapMarkup],
-  );
+  // Positionen der Länderpunkte: messen ist teuer (die ganze Karte wird dafür unsichtbar
+  // aufgebaut). Nur wenn sich Karte oder Länderliste ändern - nie beim Überfahren - und erst
+  // nach dem ersten Zeichnen, damit die Seite sofort bedienbar ist.
+  const [resolvedCountryStats, setResolvedCountryStats] = useState<CountryStat[]>(countryStats);
+  useEffect(() => {
+    setResolvedCountryStats(countryStats);
+    if (!worldMapMarkup) return;
+    const timer = window.setTimeout(() => {
+      setResolvedCountryStats(resolveLeadMapPoints(countryStats, worldMapMarkup));
+    }, 50);
+    return () => window.clearTimeout(timer);
+  }, [countryStats, worldMapMarkup]);
   const topCountries = resolvedCountryStats.slice(0, 6);
   const hoveredCountryStat = hoveredCountryInfo?.countryCode
     ? resolvedCountryStats.find((country) => country.countryCode === hoveredCountryInfo.countryCode) || null
@@ -1458,6 +1483,7 @@ function LeadsContacts({
                   <div className="w-full">
                     <LeadWorldMap
                       svgMarkup={worldMapMarkup}
+                      styleCss={worldMapStyle}
                       points={resolvedCountryStats}
                       selectedCountry={selectedCountryStat?.countryCode || null}
                       onSelectCountry={setSelectedCountry}
@@ -1554,6 +1580,7 @@ function LeadsContacts({
                     <div className="min-w-[320px] w-full sm:min-w-0">
                       <LeadWorldMap
                         svgMarkup={worldMapMarkup}
+                        styleCss={worldMapStyle}
                         points={resolvedCountryStats}
                         selectedCountry={selectedCountryStat?.countryCode || null}
                         onSelectCountry={setSelectedCountry}
