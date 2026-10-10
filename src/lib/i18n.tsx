@@ -1972,6 +1972,8 @@ const translations: Record<Language, Record<string, string>> = {
     'pp.row_addon_shop': "Online-Shop",
     'pp.row_addon_speed': "Speedmessung mit Bestenliste",
     'pp.cell_addon': "zubuchbar",
+    'ann.scan': "Mit dem Handy scannen",
+    'ann.label': "Hinweis von Liftpictures",
   },
   en: {
     'app.loading': 'Loading…',
@@ -3927,6 +3929,8 @@ const translations: Record<Language, Record<string, string>> = {
     'pp.row_addon_shop': "Online shop",
     'pp.row_addon_speed': "Speed measurement with leaderboard",
     'pp.cell_addon': "add-on",
+    'ann.scan': "Scan with your phone",
+    'ann.label': "Notice from Liftpictures",
   },
   es: {
     'app.loading': 'Cargando…',
@@ -5882,6 +5886,8 @@ const translations: Record<Language, Record<string, string>> = {
     'pp.row_addon_shop': "Tienda online",
     'pp.row_addon_speed': "Medición de velocidad con clasificación",
     'pp.cell_addon': "complemento",
+    'ann.scan': "Escanea con el móvil",
+    'ann.label': "Aviso de Liftpictures",
   },
   fr: {
     'app.loading': 'Chargement…',
@@ -7837,6 +7843,8 @@ const translations: Record<Language, Record<string, string>> = {
     'pp.row_addon_shop': "Boutique en ligne",
     'pp.row_addon_speed': "Mesure de vitesse avec classement",
     'pp.cell_addon': "option",
+    'ann.scan': "Scannez avec votre téléphone",
+    'ann.label': "Message de Liftpictures",
   },
   it: {
     'app.loading': 'Caricamento…',
@@ -9792,6 +9800,8 @@ const translations: Record<Language, Record<string, string>> = {
     'pp.row_addon_shop': "Negozio online",
     'pp.row_addon_speed': "Misurazione velocità con classifica",
     'pp.cell_addon': "aggiuntivo",
+    'ann.scan': "Scansiona con il telefono",
+    'ann.label': "Avviso da Liftpictures",
   },
   nl: {
     'app.loading': 'Laden…',
@@ -11747,6 +11757,8 @@ const translations: Record<Language, Record<string, string>> = {
     'pp.row_addon_shop': "Webshop",
     'pp.row_addon_speed': "Snelheidsmeting met klassement",
     'pp.cell_addon': "bij te boeken",
+    'ann.scan': "Scan met je telefoon",
+    'ann.label': "Bericht van Liftpictures",
   },
   lv: {
     'app.loading': 'Ielādē…',
@@ -13702,6 +13714,8 @@ const translations: Record<Language, Record<string, string>> = {
     'pp.row_addon_shop': "Tiešsaistes veikals",
     'pp.row_addon_speed': "Ātruma mērīšana ar reitingu",
     'pp.cell_addon': "papildus",
+    'ann.scan': "Skenējiet ar tālruni",
+    'ann.label': "Paziņojums no Liftpictures",
   },
 };
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Outlet, Navigate, useLocation } from 'react-router-dom';
 import { canSee, firstAllowedPath, pageKeyForPath } from '../../lib/permissions';
+import AnnouncementHost from './AnnouncementHost';
 import { useAuth } from '../../contexts/AuthContext';
 import Sidebar from './Sidebar';
 import WelcomeTour from '../WelcomeTour';
@@ -129,6 +130,7 @@ export default function DashboardLayout() {
         </div>
       </main>
       <TopBar onOpenNav={() => setMobileNavOpen(true)} />
+      <AnnouncementHost sidebarWidth={collapsed ? 72 : 256} />
       <WelcomeTour />
     </div>
     </NotificationsProvider>
