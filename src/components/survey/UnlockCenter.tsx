@@ -5,6 +5,7 @@ import SurveyManager from './SurveyManager';
 import SocialManager from './SocialManager';
 import TrackingManager from './TrackingManager';
 import CampaignsManager from './CampaignsManager';
+import EmailManager from './EmailManager';
 import { fetchSurveyConfig, setUnlockMode, type SurveyConfig, type UnlockMode } from '../../lib/surveyApi';
 import { CRM_TABS, crmTabForPath, type TabKey } from '../../lib/crmTabs';
 import { PlanBadge } from '../upgrade/PlanGate';
@@ -123,6 +124,7 @@ export default function UnlockCenter({
 
       {tab === 'overview' && <div className="space-y-5">{children('overview')}</div>}
       {tab === 'allContacts' && <div className="space-y-5">{children('list')}</div>}
+      {tab === 'email' && <EmailManager parkId={parkId} />}
       {tab === 'survey' && <SurveyManager parkId={parkId} />}
       {tab === 'social' && config && (
         <div className="space-y-8">

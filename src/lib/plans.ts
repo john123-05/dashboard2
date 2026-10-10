@@ -69,6 +69,7 @@ export const ROUTE_FEATURE: [string, FeatureKey][] = [
   ['/leads/umfrage', 'crm_survey'],
   ['/leads/social', 'crm_social'],
   ['/leads/pixel', 'crm_pixel'],
+  ['/leads/email', 'email_marketing'],
   ['/marketing/email', 'email_marketing'],
   ['/shop', 'online_shop'],
   ['/users', 'speed'],
