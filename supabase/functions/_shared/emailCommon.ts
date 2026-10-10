@@ -116,3 +116,13 @@ export async function postToMake(webhookUrl: string, payload: unknown): Promise<
     return { ok: false, error: e instanceof Error ? e.message : 'Make nicht erreichbar' };
   }
 }
+
+/** Automationen gehören zu Marketing Pro (oder einzeln freigeschaltet über `features`). */
+export async function automationsAllowed(parkId: string): Promise<boolean> {
+  const { data } = await supabaseService.from('park_entitlements')
+    .select('plan, status, trial_until, features').eq('park_id', parkId).maybeSingle();
+  if (!data) return false;
+  if (Array.isArray(data.features) && data.features.includes('email_automations')) return true;
+  const active = data.status === 'active' || (data.status === 'trial' && (!data.trial_until || Date.parse(data.trial_until) + 86_400_000 > Date.now()));
+  return active && data.plan === 'marketing_pro';
+}

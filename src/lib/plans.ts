@@ -26,6 +26,7 @@ export type FeatureKey =
   | 'crm_social'
   | 'crm_pixel'
   | 'email_marketing'
+  | 'email_automations'
   | 'social_campaigns'
   | 'review_routing'
   | 'team_permissions'
@@ -40,6 +41,7 @@ export const FEATURE_PLAN: Record<FeatureKey, PlanKey | 'addon'> = {
   crm_social: 'marketing_starter',
   crm_pixel: 'marketing_starter',
   email_marketing: 'marketing_starter',
+  email_automations: 'marketing_pro',
   social_campaigns: 'marketing_pro',
   review_routing: 'marketing_pro',
   team_permissions: 'marketing_pro',

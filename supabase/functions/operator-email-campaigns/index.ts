@@ -1,7 +1,7 @@
 import { handleOptions, json, supabaseService } from '../_shared/sameProjectAdminAuth.ts';
 import { requireOperatorForPark, fetchOperatorEmail } from '../_shared/operatorAuth.ts';
 import {
-  BLOCK_SIZE, monthStart, postToMake, quotaFor, renderMail, resolveAudience, usageThisMonth,
+  BLOCK_SIZE, automationsAllowed, monthStart, postToMake, quotaFor, renderMail, resolveAudience, usageThisMonth,
   type Segment,
 } from '../_shared/emailCommon.ts';
 
@@ -58,11 +58,19 @@ async function parkName(parkId: string): Promise<string> {
 async function list(parkId: string) {
   const { data, error } = await supabaseService.from('park_email_campaigns')
     .select('id, name, subject, status, scheduled_at, sent_at, recipients, opened, language, updated_at')
-    .eq('park_id', parkId).order('created_at', { ascending: false }).limit(200);
+    .eq('park_id', parkId).eq('is_template', false).order('created_at', { ascending: false }).limit(200);
   if (isMissingTable(error)) return { migration_pending: true, campaigns: [], settings: null, usage: { sent: 0, quota: 0, plan: 'marketing_starter' } };
   if (error) throw new Error(error.message);
   const { plan, quota } = await quotaFor(parkId);
-  return { campaigns: data ?? [], settings: await loadSettings(parkId), usage: { sent: await usageThisMonth(parkId), quota, plan } };
+  const { data: automations } = await supabaseService.from('park_email_automations')
+    .select('type, enabled, campaign_id, delay_hours').eq('park_id', parkId);
+  return {
+    campaigns: data ?? [],
+    settings: await loadSettings(parkId),
+    usage: { sent: await usageThisMonth(parkId), quota, plan },
+    automations: automations ?? [],
+    automations_allowed: await automationsAllowed(parkId),
+  };
 }
 
 async function saveCampaign(parkId: string, raw: unknown) {
@@ -89,8 +97,48 @@ async function saveCampaign(parkId: string, raw: unknown) {
     const { error } = await supabaseService.from('park_email_campaigns').update(row).eq('id', id).eq('park_id', parkId);
     return error ? { error: error.message } : { ok: true, id };
   }
-  const { data, error } = await supabaseService.from('park_email_campaigns').insert(row).select('id').single();
-  return error ? { error: error.message } : { ok: true, id: data.id as string };
+  const templateFor = text(c.template_for, 20);
+  const { data, error } = await supabaseService.from('park_email_campaigns')
+    .insert({ ...row, is_template: templateFor === 'welcome' || templateFor === 'season_start' }).select('id').single();
+  if (error) return { error: error.message };
+  if (templateFor === 'welcome' || templateFor === 'season_start') {
+    await supabaseService.from('park_email_automations').upsert(
+      { park_id: parkId, type: templateFor, campaign_id: data.id, updated_at: new Date().toISOString() },
+      { onConflict: 'park_id,type' },
+    );
+  }
+  return { ok: true, id: data.id as string };
+}
+
+/** Empfänger in die Warteschlange legen (gemeinsam für „Senden“ und „Saisonstart“). */
+async function queueCampaign(parkId: string, id: string, scheduled: string): Promise<{ error?: string; status?: number; data?: Row }> {
+  const { data: campaign } = await supabaseService.from('park_email_campaigns').select('*').eq('id', id).eq('park_id', parkId).maybeSingle();
+  if (!campaign) return { error: 'Mail nicht gefunden.', status: 404 };
+  if (campaign.status !== 'draft') return { error: 'Diese Mail wurde schon versendet oder ist geplant.', status: 409 };
+  const audience = await resolveAudience(parkId, campaign.language, (campaign.segment ?? {}) as Segment);
+  if (audience.length === 0) return { error: 'Keine passenden Empfänger mit Einwilligung gefunden.', status: 400 };
+  const { quota, plan } = await quotaFor(parkId);
+  const used = await usageThisMonth(parkId);
+  if (quota === 0) return { error: 'E-Mail-Marketing gehört zu Marketing Starter oder Pro.', status: 403, data: { plan } };
+  if (used + audience.length > quota) {
+    return { error: `Das Monatskontingent reicht nicht (${used} von ${quota} schon genutzt, ${audience.length} Empfänger).`, status: 403, data: { quota, used } };
+  }
+  const nowIso = new Date().toISOString();
+  const sendAfter = scheduled && !Number.isNaN(Date.parse(scheduled)) && Date.parse(scheduled) > Date.now() ? new Date(scheduled).toISOString() : nowIso;
+  const { data: claimed } = await supabaseService.from('park_email_campaigns')
+    .update({ status: sendAfter > nowIso ? 'scheduled' : 'sending', scheduled_at: sendAfter, recipients: audience.length, updated_at: nowIso })
+    .eq('id', id).eq('status', 'draft').select('id').maybeSingle();
+  if (!claimed) return { error: 'Diese Mail ist kein Entwurf mehr.', status: 409 };
+  for (let i = 0; i < audience.length; i += 500) {
+    const rows = audience.slice(i, i + 500).map((a) => ({ campaign_id: id, park_id: parkId, claim_id: a.claimId, email: a.email, send_after: sendAfter }));
+    const { error } = await supabaseService.from('park_email_sends').insert(rows);
+    if (error) {
+      await supabaseService.from('park_email_sends').delete().eq('campaign_id', id);
+      await supabaseService.from('park_email_campaigns').update({ status: 'draft' }).eq('id', id);
+      return { error: error.message, status: 500 };
+    }
+  }
+  return { data: { recipients: audience.length, send_after: sendAfter, block_size: BLOCK_SIZE, month: monthStart() } };
 }
 
 export async function handler(req: Request): Promise<Response> {
@@ -180,32 +228,51 @@ export async function handler(req: Request): Promise<Response> {
         return sent.ok ? json({ ok: true, data: { to } }) : json({ error: sent.error ?? 'Versand fehlgeschlagen' }, 502);
       }
 
-      if (campaign.status !== 'draft') return json({ error: 'Diese Mail wurde schon versendet oder ist geplant.' }, 409);
-      const audience = await resolveAudience(auth.parkId, campaign.language, (campaign.segment ?? {}) as Segment);
-      if (audience.length === 0) return json({ error: 'Keine passenden Empfänger mit Einwilligung gefunden.' }, 400);
-      const { quota, plan } = await quotaFor(auth.parkId);
-      const used = await usageThisMonth(auth.parkId);
-      if (quota === 0) return json({ error: 'E-Mail-Marketing gehört zu Marketing Starter oder Pro.', plan }, 403);
-      if (used + audience.length > quota) {
-        return json({ error: `Das Monatskontingent reicht nicht (${used} von ${quota} schon genutzt, ${audience.length} Empfänger).`, quota, used }, 403);
+      const queued = await queueCampaign(auth.parkId, id, text(body.scheduled_at, 40));
+      return queued.error ? json({ error: queued.error, ...(queued.data ?? {}) }, queued.status ?? 400) : json({ ok: true, data: queued.data });
+    }
+
+    if (action === 'save_automation') {
+      const type = text(body.type, 20);
+      if (type !== 'welcome') return json({ error: 'Unbekannte Automation.' }, 400);
+      if (!(await automationsAllowed(auth.parkId))) return json({ error: 'Automationen gehören zu Marketing Pro.' }, 403);
+      const enabled = body.enabled === true;
+      const delay = Math.min(720, Math.max(0, Math.round(Number(body.delay_hours) || 0)));
+      const { data: current } = await supabaseService.from('park_email_automations').select('campaign_id').eq('park_id', auth.parkId).eq('type', type).maybeSingle();
+      if (enabled) {
+        if (!current?.campaign_id) return json({ error: 'Bitte zuerst die Mail für diese Automation schreiben.' }, 400);
+        const { data: template } = await supabaseService.from('park_email_campaigns').select('subject, html').eq('id', current.campaign_id).maybeSingle();
+        if (!template || !String(template.subject).trim() || !String(template.html).trim()) return json({ error: 'Die Mail braucht Betreff und Inhalt.' }, 400);
+        if (!(await loadSettings(auth.parkId))) return json({ error: 'Bitte zuerst die Absender-Einstellungen ausfüllen.' }, 400);
       }
-      const scheduled = text(body.scheduled_at, 40);
-      const sendAfter = scheduled && !Number.isNaN(Date.parse(scheduled)) && Date.parse(scheduled) > Date.now()
-        ? new Date(scheduled).toISOString() : new Date().toISOString();
-      const { data: claimed } = await supabaseService.from('park_email_campaigns')
-        .update({ status: sendAfter > new Date().toISOString() ? 'scheduled' : 'sending', scheduled_at: sendAfter, recipients: audience.length, updated_at: new Date().toISOString() })
-        .eq('id', id).eq('status', 'draft').select('id').maybeSingle();
-      if (!claimed) return json({ error: 'Diese Mail ist kein Entwurf mehr.' }, 409);
-      for (let i = 0; i < audience.length; i += 500) {
-        const rows = audience.slice(i, i + 500).map((a) => ({ campaign_id: id, park_id: auth.parkId, claim_id: a.claimId, email: a.email, send_after: sendAfter }));
-        const { error } = await supabaseService.from('park_email_sends').insert(rows);
-        if (error) {
-          await supabaseService.from('park_email_sends').delete().eq('campaign_id', id);
-          await supabaseService.from('park_email_campaigns').update({ status: 'draft' }).eq('id', id);
-          return json({ error: error.message }, 500);
-        }
+      const { error } = await supabaseService.from('park_email_automations').upsert(
+        { park_id: auth.parkId, type, enabled, delay_hours: delay, updated_at: new Date().toISOString() },
+        { onConflict: 'park_id,type' },
+      );
+      return error ? json({ error: error.message }, 400) : json({ ok: true, data: await list(auth.parkId) });
+    }
+
+    if (action === 'send_template') {
+      // Saisonstart: Kopie der Vorlage als neue Mail an alle Gäste mit Einwilligung.
+      if (!(await automationsAllowed(auth.parkId))) return json({ error: 'Automationen gehören zu Marketing Pro.' }, 403);
+      if (!webhook || !secret || !fromEmail) return json({ error: 'Der E-Mail-Versand ist noch nicht eingerichtet.' }, 503);
+      if (!(await loadSettings(auth.parkId))) return json({ error: 'Bitte zuerst die Absender-Einstellungen ausfüllen.' }, 400);
+      const { data: auto } = await supabaseService.from('park_email_automations').select('campaign_id').eq('park_id', auth.parkId).eq('type', 'season_start').maybeSingle();
+      if (!auto?.campaign_id) return json({ error: 'Bitte zuerst die Saisonstart-Mail schreiben.' }, 400);
+      const { data: template } = await supabaseService.from('park_email_campaigns').select('*').eq('id', auto.campaign_id).maybeSingle();
+      if (!template || !String(template.subject).trim() || !String(template.html).trim()) return json({ error: 'Die Mail braucht Betreff und Inhalt.' }, 400);
+      const stamp = new Date().toLocaleDateString('de-DE');
+      const { data: copy, error: copyError } = await supabaseService.from('park_email_campaigns').insert({
+        park_id: auth.parkId, name: `${template.name} (${stamp})`, subject: template.subject, preheader: template.preheader, language: template.language,
+        body_json: template.body_json, html: template.html, segment: template.segment, is_template: false,
+      }).select('id').single();
+      if (copyError || !copy) return json({ error: copyError?.message ?? 'Kopie fehlgeschlagen' }, 500);
+      const queued = await queueCampaign(auth.parkId, copy.id as string, '');
+      if (queued.error) {
+        await supabaseService.from('park_email_campaigns').delete().eq('id', copy.id);
+        return json({ error: queued.error, ...(queued.data ?? {}) }, queued.status ?? 400);
       }
-      return json({ ok: true, data: { recipients: audience.length, send_after: sendAfter, block_size: BLOCK_SIZE, month: monthStart() } });
+      return json({ ok: true, data: queued.data });
     }
 
     return json({ error: 'Unknown action' }, 400);

@@ -13,9 +13,13 @@ import {
   fetchEmailOverview,
   previewAudience,
   saveEmailCampaign,
+  saveAutomation,
   saveEmailSettings,
   sendEmailCampaign,
+  sendSeasonStart,
   sendTestEmail,
+  type AutomationType,
+  type EmailAutomation,
   type EmailBlock,
   type EmailDraft,
   type EmailOverview,
@@ -95,6 +99,7 @@ function SettingsForm({ parkId, initial, onSaved }: { parkId: string; initial: E
 }
 
 function Editor({ parkId, initial, locked, onBack }: { parkId: string; initial: EmailDraft; locked: boolean; onBack: () => void }) {
+  const isTemplate = Boolean(initial.template_for);
   const { t } = useI18n();
   const { parkName } = usePark();
   const [draft, setDraft] = useState<EmailDraft>(initial);
@@ -135,7 +140,7 @@ function Editor({ parkId, initial, locked, onBack }: { parkId: string; initial: 
   }
 
   const persist = async (): Promise<string | null> => {
-    const res = await saveEmailCampaign(parkId, { ...draft, id, html });
+    const res = await saveEmailCampaign(parkId, { ...draft, id, html, template_for: id ? undefined : initial.template_for });
     setId(res.id);
     return res.id;
   };
@@ -149,6 +154,7 @@ function Editor({ parkId, initial, locked, onBack }: { parkId: string; initial: 
           <ArrowLeft className="h-4 w-4" /> {t('email.back')}
         </button>
         {locked && <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">{t('email.locked_edit')}</p>}
+        {isTemplate && <p className="rounded-lg bg-sky-50 px-3 py-2 text-sm text-sky-800">{t('email.template_note')}</p>}
         <fieldset disabled={locked} className="space-y-5">
           <GlassCard className="space-y-4 p-5 sm:p-6">
             <div className="grid gap-4 sm:grid-cols-2">
@@ -246,7 +252,7 @@ function Editor({ parkId, initial, locked, onBack }: { parkId: string; initial: 
           <button type="button" className="glass-button-secondary" disabled={busy !== null || locked || !draft.name.trim()} onClick={() => void run('save', async () => { await persist(); setNotice(t('email.saved')); })}>
             {busy === 'save' && <Loader2 className="h-4 w-4 animate-spin" />} {t('email.save')}
           </button>
-          <button type="button" className="glass-button-secondary" disabled={busy !== null || !draft.name.trim()} onClick={() => void run('audience', async () => { setAudience((await previewAudience(parkId, draft.language, draft.segment)).count); })}>
+          <button type="button" className="glass-button-secondary" hidden={isTemplate} disabled={busy !== null || !draft.name.trim()} onClick={() => void run('audience', async () => { setAudience((await previewAudience(parkId, draft.language, draft.segment)).count); })}>
             {busy === 'audience' && <Loader2 className="h-4 w-4 animate-spin" />} {t('email.check_audience')}
           </button>
           <button type="button" className="glass-button-secondary" disabled={busy !== null || !draft.name.trim()} onClick={() => void run('test', async () => {
@@ -255,7 +261,7 @@ function Editor({ parkId, initial, locked, onBack }: { parkId: string; initial: 
           })}>
             {busy === 'test' && <Loader2 className="h-4 w-4 animate-spin" />} {t('email.test')}
           </button>
-          {!locked && id && (
+          {!locked && id && !isTemplate && (
             <button
               type="button"
               className="rounded-lg px-3 py-2 text-sm font-medium text-rose-600 hover:bg-rose-50"
@@ -269,7 +275,7 @@ function Editor({ parkId, initial, locked, onBack }: { parkId: string; initial: 
               {t('email.delete')}
             </button>
           )}
-          {!locked && (
+          {!locked && !isTemplate && (
             <>
               <label className="text-xs text-[color:var(--ink-3)]">
                 {t('email.schedule')}
@@ -306,6 +312,117 @@ function Editor({ parkId, initial, locked, onBack }: { parkId: string; initial: 
   );
 }
 
+function AutomationsPanel({ parkId, data, onReload, onEdit, onError }: {
+  parkId: string;
+  data: EmailOverview;
+  onReload: () => Promise<void>;
+  onEdit: (type: AutomationType, campaignId: string | null) => void;
+  onError: (message: string | null) => void;
+}) {
+  const { t } = useI18n();
+  const [busy, setBusy] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const allowed = data.automations_allowed === true;
+  const find = (type: AutomationType): EmailAutomation | undefined => data.automations?.find((a) => a.type === type);
+  const welcome = find('welcome');
+  const season = find('season_start');
+
+  async function run(key: string, action: () => Promise<unknown>) {
+    setBusy(key);
+    onError(null);
+    setNotice(null);
+    try {
+      await action();
+      await onReload();
+    } catch (e) {
+      onError(e instanceof Error ? e.message : String(e));
+    }
+    setBusy(null);
+  }
+
+  return (
+    <div className="space-y-3 pt-2">
+      <div className="flex flex-wrap items-center gap-3">
+        <h3 className="text-base font-semibold text-[color:var(--ink)]">{t('email.auto_title')}</h3>
+        <PlanBadge feature="email_automations" />
+      </div>
+      {!allowed && (
+        <p className="text-sm text-[color:var(--ink-3)]">
+          {t('email.auto_locked')} <Link to="/plaene" className="font-medium text-brand-700 hover:underline">{t('shop.view_plans')}</Link>
+        </p>
+      )}
+      {notice && <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{notice}</p>}
+
+      <GlassCard className={`space-y-3 p-4 ${allowed ? '' : 'opacity-60'}`}>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-[color:var(--ink)]">{t('email.auto_welcome')}</p>
+            <p className="text-xs text-[color:var(--ink-3)]">{t('email.auto_welcome_desc')}</p>
+          </div>
+          <button type="button" disabled={!allowed || busy !== null} className="glass-button-secondary" onClick={() => onEdit('welcome', welcome?.campaign_id ?? null)}>
+            {welcome?.campaign_id ? t('email.auto_edit') : t('email.auto_write')}
+          </button>
+        </div>
+        <div className="flex flex-wrap items-center gap-4">
+          <label className="flex items-center gap-2 text-sm text-[color:var(--ink-2)]">
+            <input
+              type="checkbox"
+              checked={welcome?.enabled === true}
+              disabled={!allowed || busy !== null || !welcome?.campaign_id}
+              onChange={(e) => void run('welcome', () => saveAutomation(parkId, 'welcome', e.target.checked, welcome?.delay_hours ?? 0))}
+            />
+            {welcome?.enabled ? t('email.auto_on') : t('email.auto_off')}
+          </label>
+          <label className="flex items-center gap-2 text-sm text-[color:var(--ink-2)]">
+            {t('email.auto_delay')}
+            <select
+              className="rounded-lg border border-[color:var(--line-strong)] bg-white px-2 py-1 text-sm"
+              disabled={!allowed || busy !== null}
+              value={welcome?.delay_hours ?? 0}
+              onChange={(e) => void run('welcome', () => saveAutomation(parkId, 'welcome', welcome?.enabled === true, Number(e.target.value)))}
+            >
+              {[0, 1, 24, 72].map((h) => (
+                <option key={h} value={h}>{h === 0 ? t('email.auto_delay_now') : t('email.auto_delay_hours', { n: h })}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+      </GlassCard>
+
+      <GlassCard className={`space-y-3 p-4 ${allowed ? '' : 'opacity-60'}`}>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-[color:var(--ink)]">{t('email.auto_season')}</p>
+            <p className="text-xs text-[color:var(--ink-3)]">{t('email.auto_season_desc')}</p>
+          </div>
+          <button type="button" disabled={!allowed || busy !== null} className="glass-button-secondary" onClick={() => onEdit('season_start', season?.campaign_id ?? null)}>
+            {season?.campaign_id ? t('email.auto_edit') : t('email.auto_write')}
+          </button>
+          <button
+            type="button"
+            disabled={!allowed || busy !== null || !season?.campaign_id}
+            className="glass-button-primary"
+            onClick={() => {
+              if (!window.confirm(t('email.auto_confirm_season'))) return;
+              void run('season', async () => {
+                const res = await sendSeasonStart(parkId);
+                setNotice(t('email.auto_season_ok', { count: res.recipients }));
+              });
+            }}
+          >
+            {busy === 'season' && <Loader2 className="h-4 w-4 animate-spin" />} {t('email.auto_send_now')}
+          </button>
+        </div>
+      </GlassCard>
+
+      <GlassCard className="p-4 opacity-60">
+        <p className="text-sm font-semibold text-[color:var(--ink)]">{t('email.auto_photo')}</p>
+        <p className="text-xs text-[color:var(--ink-3)]">{t('email.auto_photo_soon')}</p>
+      </GlassCard>
+    </div>
+  );
+}
+
 export default function EmailManager({ parkId }: { parkId: string }) {
   const { t } = useI18n();
   const locale = useLocaleTag();
@@ -331,6 +448,27 @@ export default function EmailManager({ parkId }: { parkId: string }) {
         locked: campaign.status !== 'draft',
         draft: {
           id: campaign.id, name: campaign.name, subject: campaign.subject, preheader: campaign.preheader,
+          language: campaign.language, body_json: campaign.body_json ?? [], html: campaign.html, segment: campaign.segment ?? {},
+        },
+      });
+      setView('edit');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  async function editTemplate(type: AutomationType, campaignId: string | null) {
+    if (!campaignId) {
+      setEditing({ locked: false, draft: { ...NEW_DRAFT, name: t(type === 'welcome' ? 'email.auto_welcome' : 'email.auto_season'), template_for: type } });
+      setView('edit');
+      return;
+    }
+    try {
+      const { campaign } = await fetchEmailCampaign(parkId, campaignId);
+      setEditing({
+        locked: false,
+        draft: {
+          id: campaign.id, template_for: type, name: campaign.name, subject: campaign.subject, preheader: campaign.preheader,
           language: campaign.language, body_json: campaign.body_json ?? [], html: campaign.html, segment: campaign.segment ?? {},
         },
       });
@@ -408,6 +546,9 @@ export default function EmailManager({ parkId }: { parkId: string }) {
           <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_STYLE[c.status]}`}>{t(`email.status_${c.status}`)}</span>
         </button>
       ))}
+      {data && !data.migration_pending && (
+        <AutomationsPanel parkId={parkId} data={data} onReload={load} onEdit={(type, id) => void editTemplate(type, id)} onError={setError} />
+      )}
     </div>
   );
 }

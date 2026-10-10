@@ -1,5 +1,5 @@
 import { handleOptions, json, supabaseService } from '../_shared/sameProjectAdminAuth.ts';
-import { BLOCK_SIZE, monthStart, postToMake, renderMail } from '../_shared/emailCommon.ts';
+import { BLOCK_SIZE, monthStart, postToMake, quotaFor, renderMail, usageThisMonth } from '../_shared/emailCommon.ts';
 
 /**
  * park-email-dispatch (docs/PRODUKT_PLAN.md, F1) – jede Minute per pg_cron, verify_jwt = false.
@@ -52,8 +52,29 @@ export async function handler(req: Request): Promise<Response> {
     const { data: claims } = await supabaseService.from('photo_claims').select('id, full_name').in('id', claimIds);
     const nameOf = new Map((claims ?? []).map((c: Row) => [String(c.id), String(c.full_name ?? '')]));
 
-    for (let i = 0; i < sends.length; i += BLOCK_SIZE) {
-      const block = sends.slice(i, i + BLOCK_SIZE);
+    // Wer sich inzwischen abgemeldet hat, bekommt nichts mehr (auch nicht aus der Warteschlange).
+    const emails = sends.map((s) => String(s.email));
+    const optedOut = new Set<string>();
+    for (let k = 0; k < emails.length; k += 500) {
+      const { data: out } = await supabaseService.from('crm_marketing_opt_outs').select('email').in('email', emails.slice(k, k + 500));
+      for (const row of (out ?? []) as Row[]) optedOut.add(String(row.email).toLowerCase());
+    }
+    const skipped = sends.filter((s) => optedOut.has(String(s.email).toLowerCase())).map((s) => s.id);
+    if (skipped.length > 0) {
+      await supabaseService.from('park_email_sends').update({ status: 'skipped', error: 'abgemeldet' }).in('id', skipped);
+    }
+    const active = sends.filter((s) => !optedOut.has(String(s.email).toLowerCase()));
+
+    for (let i = 0; i < active.length; i += BLOCK_SIZE) {
+      const block = active.slice(i, i + BLOCK_SIZE);
+      // Automations-Mails (laufend einzeln eingereiht) prüfen das Monatskontingent erst beim Versand.
+      if (campaign.is_template) {
+        const { quota } = await quotaFor(parkId);
+        if ((await usageThisMonth(parkId)) + block.length > quota) {
+          await supabaseService.from('park_email_sends').update({ status: 'skipped', error: 'Monatskontingent erreicht' }).in('id', block.map((s) => s.id));
+          continue;
+        }
+      }
       const recipients = [];
       for (const send of block) {
         recipients.push({
@@ -80,6 +101,8 @@ export async function handler(req: Request): Promise<Response> {
       }
     }
 
+    // Vorlagen von Automationen bleiben Entwurf und laufen dauerhaft weiter.
+    if (campaign.is_template) continue;
     // Alle Mails der Kampagne erledigt? Dann abschließen.
     const { count } = await supabaseService.from('park_email_sends').select('id', { count: 'exact', head: true }).eq('campaign_id', campaignId).eq('status', 'queued');
     if (count === 0) {

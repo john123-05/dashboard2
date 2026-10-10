@@ -31,10 +31,20 @@ export interface EmailSettings {
   footer_address: string;
 }
 
+export type AutomationType = 'welcome' | 'season_start';
+export interface EmailAutomation {
+  type: AutomationType;
+  enabled: boolean;
+  campaign_id: string | null;
+  delay_hours: number;
+}
+
 export interface EmailOverview {
   campaigns: EmailCampaignSummary[];
   settings: EmailSettings | null;
   usage: { sent: number; quota: number; plan: string };
+  automations?: EmailAutomation[];
+  automations_allowed?: boolean;
   migration_pending?: boolean;
 }
 
@@ -52,6 +62,8 @@ export interface EmailCampaignFull extends EmailCampaignSummary {
 
 export type EmailDraft = {
   id?: string;
+  /** Neue Vorlage einer Automation (nur beim ersten Speichern). */
+  template_for?: AutomationType;
   name: string;
   subject: string;
   preheader: string;
@@ -95,3 +107,6 @@ export const previewAudience = (parkId: string, language: string | null, segment
 export const sendTestEmail = (parkId: string, id: string) => post<{ to: string }>(parkId, { action: 'test', id });
 export const sendEmailCampaign = (parkId: string, id: string, scheduledAt?: string) =>
   post<{ recipients: number }>(parkId, { action: 'send', id, scheduled_at: scheduledAt });
+export const saveAutomation = (parkId: string, type: AutomationType, enabled: boolean, delayHours: number) =>
+  post<EmailOverview>(parkId, { action: 'save_automation', type, enabled, delay_hours: delayHours });
+export const sendSeasonStart = (parkId: string) => post<{ recipients: number }>(parkId, { action: 'send_template' });
