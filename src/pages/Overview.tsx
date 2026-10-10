@@ -66,6 +66,7 @@ import { fetchRecentPhotos, type BrowsablePhoto } from '../lib/photoBrowser';
 import { useAuth } from '../contexts/AuthContext';
 import { usePark } from '../contexts/ParkContext';
 import { useI18n, useLocaleTag } from '../lib/i18n';
+import { useNotifications } from '../contexts/NotificationsContext';
 import {
   formatCurrency as baseFormatCurrency,
   formatNumber as baseFormatNumber,
@@ -134,6 +135,7 @@ export default function Overview() {
     kioskCheckLoading,
   } = usePark();
   const { t } = useI18n();
+  const feed = useNotifications();
   const locale = useLocaleTag();
   const formatCurrency = (cents: number, currency = 'usd') => baseFormatCurrency(cents, currency, locale);
   const formatNumber = (value: number) => baseFormatNumber(value, locale);
@@ -710,10 +712,29 @@ export default function Overview() {
     };
   }, [isKioskPark, kioskDays, t]);
 
+  // Meldungen aus dem gemeinsamen Feed (Glocke oben rechts): Automat offline,
+  // Gerät ausgefallen, Papier knapp ... Support-Antworten bringt die Übersicht
+  // schon selbst mit, daher hier ohne. Wegklicken = in den Papierkorb, wie in
+  // der Glocke. Nur die letzten 7 Tage.
+  const feedActivityItems = useMemo<ActivityItem[]>(() => {
+    const cutoff = Date.now() - 7 * 86_400_000;
+    return feed.all
+      .filter((item) => item.kind !== 'support' && new Date(item.createdAt).getTime() >= cutoff)
+      .map((item) => ({
+        id: `feed-${item.id}`,
+        source: 'ops' as const,
+        title: item.title,
+        description: item.text,
+        created_at: item.createdAt,
+        severity: item.severity === 'info' ? undefined : item.severity,
+      }));
+  }, [feed.all]);
+
   const visibleActivityItems = useMemo(() => {
-    const items = revenueTrendItem ? [revenueTrendItem, ...activityItems] : activityItems;
-    return items.filter((item) => !dismissedActivityIds.includes(item.id));
-  }, [activityItems, revenueTrendItem, dismissedActivityIds]);
+    const items = [...feedActivityItems, ...(revenueTrendItem ? [revenueTrendItem] : []), ...activityItems]
+      .filter((item) => !dismissedActivityIds.includes(item.id));
+    return items.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }, [feedActivityItems, activityItems, revenueTrendItem, dismissedActivityIds]);
   const localRevenueDisplay =
     localRevenueCents > 0
       ? formatCurrency(localRevenueCents)
@@ -885,6 +906,10 @@ export default function Overview() {
   }
 
   function dismissActivityItem(itemId: string) {
+    if (itemId.startsWith('feed-')) {
+      feed.moveToTrash(itemId.slice(5));
+      return;
+    }
     setDismissedActivityIds((current) =>
       current.includes(itemId) ? current : [...current, itemId],
     );
@@ -1143,7 +1168,7 @@ export default function Overview() {
                         <div className="mb-1 flex items-center gap-2">
                           {item.severity ? (
                             <span className={`rounded-lg px-2 py-1 text-xs font-semibold ${severityColor(item.severity)}`}>
-                              {item.severity}
+                              {t(`health.sev_${item.severity}`)}
                             </span>
                           ) : (
                             <span className="status-badge bg-slate-50 text-slate-600 ring-slate-200">
@@ -1432,7 +1457,7 @@ export default function Overview() {
                       <div className="mb-1 flex items-center gap-2">
                         {item.severity ? (
                           <span className={`rounded-lg px-2 py-1 text-xs font-semibold ${severityColor(item.severity)}`}>
-                            {item.severity}
+                            {t(`health.sev_${item.severity}`)}
                           </span>
                         ) : (
                           <span className="status-badge bg-slate-50 text-slate-600 ring-slate-200">

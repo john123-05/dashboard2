@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import Sidebar from './Sidebar';
 import WelcomeTour from '../WelcomeTour';
 import TopBar from './TopBar';
+import { NotificationsProvider } from '../../contexts/NotificationsContext';
 import { Loader2, Mountain, ArrowRight, Menu } from 'lucide-react';
 import { useI18n } from '../../lib/i18n';
 import { usePark } from '../../contexts/ParkContext';
@@ -100,6 +101,7 @@ export default function DashboardLayout() {
   }
 
   return (
+    <NotificationsProvider>
     <div className="operator-app mesh-gradient flex min-h-screen overflow-x-clip">
       {mobileNavOpen && (
         <div className="mobile-nav-backdrop" onClick={() => setMobileNavOpen(false)} />
@@ -132,5 +134,6 @@ export default function DashboardLayout() {
       <TopBar />
       <WelcomeTour />
     </div>
+    </NotificationsProvider>
   );
 }

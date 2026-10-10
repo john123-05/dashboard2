@@ -30,6 +30,10 @@ export type FeedItem = {
 
 type Stored = {
   items: FeedItem[];
+  /** Laufende Automaten-Störungen: Störungsschlüssel -> id der Meldung. Solange
+   *  eine Störung anhält, bleibt es EINE Meldung; ist sie weg und kommt wieder,
+   *  entsteht eine neue. */
+  active: Record<string, string>;
   read: string[];
   trash: Record<string, number>;
   deleted: string[];
@@ -57,8 +61,6 @@ type HealthMachine = {
   coin_warnings?: { cent: number; stufe: 'knapp' | 'leer'; text: string }[];
 };
 
-const today = () => new Date().toISOString().slice(0, 10);
-
 async function machineItems(parkId: string): Promise<FeedItem[]> {
   const { data: { session } } = await getFunctionSession();
   if (!session?.access_token) return [];
@@ -68,7 +70,6 @@ async function machineItems(parkId: string): Promise<FeedItem[]> {
   if (!res.ok) return [];
   const body = await res.json().catch(() => null);
   const machines = (body?.data?.machines ?? []) as HealthMachine[];
-  const day = today();
   const now = new Date().toISOString();
   const out: FeedItem[] = [];
 
@@ -76,7 +77,7 @@ async function machineItems(parkId: string): Promise<FeedItem[]> {
     const name = m.machine_label || m.machine_id;
     if (!m.reachable) {
       out.push({
-        id: `offline-${m.id}-${m.last_seen_at ?? day}`,
+        id: `offline-${m.id}`,
         kind: 'offline',
         title: t('notif.machine_offline', { name }),
         text: t('notif.machine_offline_text'),
@@ -99,7 +100,7 @@ async function machineItems(parkId: string): Promise<FeedItem[]> {
     const warnAt = m.paper_warn_remaining ?? 30;
     if (typeof m.paper_remaining === 'number' && m.paper_remaining <= warnAt) {
       out.push({
-        id: `paper-${m.id}-${day}`,
+        id: `paper-${m.id}`,
         kind: 'paper',
         title: t('notif.paper_low', { name }),
         text: t('notif.paper_low_text', { count: m.paper_remaining }),
@@ -118,7 +119,7 @@ async function machineItems(parkId: string): Promise<FeedItem[]> {
       seen.add(device);
       const detail = (d as { plain?: string | null }).plain || d.detail || null;
       out.push({
-        id: `fault-${m.id}-${device}-${day}`,
+        id: `fault-${m.id}-${device}`,
         kind: 'fault',
         title: t('notif.device_fault', { device, name }),
         text: detail || t('notif.device_fault_text'),
@@ -130,7 +131,7 @@ async function machineItems(parkId: string): Promise<FeedItem[]> {
     for (const c of m.coin_warnings ?? []) {
       if (c.stufe !== 'leer') continue;
       out.push({
-        id: `coins-${m.id}-${c.cent}-${day}`,
+        id: `coins-${m.id}-${c.cent}`,
         kind: 'coins',
         title: t('notif.coins_empty', { name }),
         text: c.text,
@@ -170,12 +171,21 @@ function loadStored(key: string): Stored {
     const raw = localStorage.getItem(key);
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<Stored>;
-      return { items: parsed.items ?? [], read: parsed.read ?? [], trash: parsed.trash ?? {}, deleted: parsed.deleted ?? [] };
+      // Ältere Fassung hängte das Datum an Automaten-Meldungen (eine Störung =
+      // eine Meldung pro Tag). Diese Einträge verwerfen, sie entstehen neu.
+      const oldFormat = /^(offline|paper|fault|coins)-.*-(\d{4}-\d{2}-\d{2}|\d{4}-\d{2}-\d{2}T.*)$/;
+      return {
+        items: (parsed.items ?? []).filter((i) => !oldFormat.test(i.id)),
+        active: parsed.active ?? {},
+        read: parsed.read ?? [],
+        trash: parsed.trash ?? {},
+        deleted: parsed.deleted ?? [],
+      };
     }
   } catch {
     // nicht lesbar - neu anfangen
   }
-  return { items: [], read: [], trash: {}, deleted: [] };
+  return { items: [], active: {}, read: [], trash: {}, deleted: [] };
 }
 
 function saveStored(key: string, value: Stored) {
@@ -188,7 +198,7 @@ function saveStored(key: string, value: Stored) {
 
 export function useNotificationFeed(userId: string | null | undefined, parkId: string | null | undefined) {
   const key = userId && parkId ? storageKey(userId, parkId) : null;
-  const [stored, setStored] = useState<Stored>({ items: [], read: [], trash: {}, deleted: [] });
+  const [stored, setStored] = useState<Stored>({ items: [], active: {}, read: [], trash: {}, deleted: [] });
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -216,9 +226,18 @@ export function useNotificationFeed(userId: string | null | undefined, parkId: s
     const cutoff = Date.now() - KEEP_DAYS * 86_400_000;
     update((prev) => {
       const known = new Map(prev.items.map((i) => [i.id, i]));
-      for (const item of [...machines, ...support]) {
-        // Erstmals gesehen: Zeitpunkt festhalten, damit er nicht bei jedem
-        // Abruf auf "jetzt" springt. Texte dürfen sich aktualisieren.
+      // Automaten-Meldungen: `item.id` ist der Störungsschlüssel. Läuft die
+      // Störung schon, wird die bestehende Meldung aktualisiert, sonst neu angelegt.
+      const active: Record<string, string> = {};
+      for (const item of machines) {
+        const existingId = prev.active[item.id];
+        const id = existingId && known.has(existingId) ? existingId : `${item.id}@${Date.now()}`;
+        const old = known.get(id);
+        known.set(id, { ...item, id, createdAt: old ? old.createdAt : item.createdAt });
+        active[item.id] = id;
+      }
+      for (const item of support) {
+        // Erstmals gesehen: Zeitpunkt festhalten, Texte dürfen sich aktualisieren.
         const old = known.get(item.id);
         known.set(item.id, old ? { ...item, createdAt: old.createdAt } : item);
       }
@@ -226,7 +245,7 @@ export function useNotificationFeed(userId: string | null | undefined, parkId: s
         .filter((i) => new Date(i.createdAt).getTime() >= cutoff && !prev.deleted.includes(i.id))
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
         .slice(0, MAX_ITEMS);
-      return { ...prev, items };
+      return { ...prev, items, active };
     });
     setLoading(false);
   }, [parkId, key, update]);

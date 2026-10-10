@@ -34,7 +34,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { usePark } from '../../contexts/ParkContext';
 import { useI18n, useLocaleTag } from '../../lib/i18n';
 import { formatRelative } from '../../lib/utils';
-import { useNotificationFeed, type FeedItem, type NotificationFeed } from '../../lib/notificationFeed';
+import { type FeedItem, type NotificationFeed } from '../../lib/notificationFeed';
+import { useNotifications } from '../../contexts/NotificationsContext';
 import {
   HELP_ARTICLES,
   SUPPORT_EMAIL,
@@ -70,11 +71,10 @@ function startTour() {
 
 export default function TopBar() {
   const { t } = useI18n();
-  const { user, profile, isOwner, isStaff } = useAuth();
-  const { parkId } = usePark();
+  const { profile, isOwner, isStaff } = useAuth();
   const location = useLocation();
   const [panel, setPanel] = useState<Panel>(null);
-  const feed = useNotificationFeed(user?.id, parkId);
+  const feed = useNotifications();
 
   // Seitenwechsel schliesst Menü und Schublade (das Hilfe-Center darf offen bleiben).
   useEffect(() => {
