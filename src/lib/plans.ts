@@ -148,6 +148,13 @@ function isEntitlement(value: unknown, parkId: string): value is ParkEntitlement
 // eine Anzeige-Regel, kein Schutz der Daten - ein Aussetzer darf zahlende
 // Kunden nicht aus ihrem CRM werfen und keine offenen Formulare schließen.
 const lastKnown = new Map<string, ParkEntitlement | null>();
+
+// Adresse der Function `operator-entitlements` im shared-Projekt. Sie wurde im
+// Supabase-Editor angelegt, der dabei eine Zufalls-Adresse vergibt („hyper-processor“);
+// der Name `operator-entitlements` steht nur in der Anzeige. Wird die Function einmal per
+// CLI neu bereitgestellt (`supabase functions deploy operator-entitlements`), hier
+// zurück auf 'operator-entitlements' stellen.
+const ENTITLEMENTS_FUNCTION = 'hyper-processor';
 const pending = new Map<string, Promise<ParkEntitlement | null>>();
 async function fetchEntitlements(parkId: string): Promise<ParkEntitlement | null> {
   const { data: { session } } = await getFunctionSession();
@@ -157,7 +164,7 @@ async function fetchEntitlements(parkId: string): Promise<ParkEntitlement | null
   if (existing) return existing;
   const request = (async () => {
     const response = await fetch(
-      `${EXTERNAL_SUPABASE_URL}/functions/v1/operator-entitlements?${new URLSearchParams({ park_id: parkId })}`,
+      `${EXTERNAL_SUPABASE_URL}/functions/v1/${ENTITLEMENTS_FUNCTION}?${new URLSearchParams({ park_id: parkId })}`,
       {
         headers: { Authorization: `Bearer ${session.access_token}`, apikey: EXTERNAL_SUPABASE_ANON_KEY },
         signal: AbortSignal.timeout(12_000),
