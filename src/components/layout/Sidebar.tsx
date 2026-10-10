@@ -14,6 +14,7 @@ import {
   Settings,
   LogOut,
   ChevronDown,
+  ArrowUpCircle,
   ChevronRight,
   UserCog,
   Package,
@@ -34,6 +35,7 @@ import { usePark } from '../../contexts/ParkContext';
 import { supabase } from '../../lib/supabase';
 import ProfileParkSwitcher from './ProfileParkSwitcher';
 import { CRM_TABS } from '../../lib/crmTabs';
+import { featureForPath, useEntitlements, PLAN_LABEL_KEY } from '../../lib/plans';
 
 type NavItem = {
   to: string;
@@ -49,29 +51,42 @@ type NavItem = {
   ownerOnly?: boolean;
   /** Unterseiten, die sich unter dem Eintrag aufklappen lassen. */
   children?: { to: string; labelKey: string }[];
+  /** Gruppe in der Navigation (docs/PRODUKT_PLAN.md, B3). */
+  group: NavGroup;
 };
 
+type NavGroup = 'betrieb' | 'marketing' | 'verwaltung';
+
+// Reihenfolge und Überschriften der Gruppen. „Betrieb“ ist der kostenlose
+// Basis-Plan, „Marketing“ die bezahlten Pläne und Add-ons.
+const NAV_GROUPS: { key: NavGroup; labelKey: string }[] = [
+  { key: 'betrieb', labelKey: 'nav.group_operations' },
+  { key: 'marketing', labelKey: 'nav.group_marketing' },
+  { key: 'verwaltung', labelKey: 'nav.group_admin' },
+];
+
 const navItems: NavItem[] = [
-  { to: '/', icon: LayoutDashboard, labelKey: 'nav.overview', comingSoon: true, kioskUnlocks: true },
-  { to: '/revenue', icon: DollarSign, labelKey: 'nav.revenue', comingSoon: true, kioskUnlocks: true },
-  { to: '/purchases', icon: ShoppingCart, labelKey: 'nav.purchases', comingSoon: true, kioskUnlocks: true },
-  { to: '/users', icon: Users, labelKey: 'nav.speed', comingSoon: true, guestActivityUnlocks: true },
-  { to: '/photos', icon: Camera, labelKey: 'nav.photos', staffAllowed: true },
+  { to: '/', icon: LayoutDashboard, labelKey: 'nav.overview', comingSoon: true, kioskUnlocks: true, group: 'betrieb' },
+  { to: '/revenue', icon: DollarSign, labelKey: 'nav.revenue', comingSoon: true, kioskUnlocks: true, group: 'betrieb' },
+  { to: '/purchases', icon: ShoppingCart, labelKey: 'nav.purchases', comingSoon: true, kioskUnlocks: true, group: 'betrieb' },
+  { to: '/users', icon: Users, labelKey: 'nav.speed', comingSoon: true, guestActivityUnlocks: true, group: 'marketing' },
+  { to: '/photos', icon: Camera, labelKey: 'nav.photos', staffAllowed: true, group: 'betrieb' },
   {
     to: '/leads',
     icon: Mail,
     labelKey: 'nav.leads',
     // Die CRM-Reiter sind eigene Seiten (CRM_TABS in survey/UnlockCenter.tsx).
     children: CRM_TABS.filter((tab) => tab.key !== 'overview').map((tab) => ({ to: tab.path, labelKey: tab.labelKey })),
+    group: 'marketing',
   },
-  { to: '/personalization', icon: Wand2, labelKey: 'nav.personalization', staffAllowed: true },
-  { to: '/tickets', icon: LifeBuoy, labelKey: 'nav.support', staffAllowed: true },
-  { to: '/health', icon: Activity, labelKey: 'nav.system_health', staffAllowed: true },
-  { to: '/kamera', icon: Camera, labelKey: 'nav.camera', staffAllowed: true },
-  { to: '/configuration', icon: Package, labelKey: 'nav.configuration' },
-  { to: '/shop', icon: Store, labelKey: 'nav.shop', upgrade: true },
-  { to: '/team', icon: UserCog, labelKey: 'nav.team', ownerOnly: true },
-  { to: '/settings', icon: Settings, labelKey: 'nav.settings' },
+  { to: '/personalization', icon: Wand2, labelKey: 'nav.personalization', staffAllowed: true, group: 'betrieb' },
+  { to: '/tickets', icon: LifeBuoy, labelKey: 'nav.support', staffAllowed: true, group: 'verwaltung' },
+  { to: '/health', icon: Activity, labelKey: 'nav.system_health', staffAllowed: true, group: 'betrieb' },
+  { to: '/kamera', icon: Camera, labelKey: 'nav.camera', staffAllowed: true, group: 'betrieb' },
+  { to: '/configuration', icon: Package, labelKey: 'nav.configuration', group: 'verwaltung' },
+  { to: '/shop', icon: Store, labelKey: 'nav.shop', upgrade: true, group: 'marketing' },
+  { to: '/team', icon: UserCog, labelKey: 'nav.team', ownerOnly: true, group: 'verwaltung' },
+  { to: '/settings', icon: Settings, labelKey: 'nav.settings', group: 'verwaltung' },
 ];
 
 // Same breakpoint as the mobile drawer in index.css. There the sidebar is a
@@ -173,6 +188,7 @@ export default function Sidebar({
   const { t } = useI18n();
   const { parkName, setPark, isKioskPark, parkId, cameraControlAvailable } = usePark();
   const isMobile = useIsMobile();
+  const entitlements = useEntitlements();
   // Light/dark switch: tags <html data-operator-theme>, the dark styles live in
   // src/styles/operator-dark.css. index.html sets the attribute before the first
   // paint so a reload in dark mode doesn't flash white.
@@ -223,7 +239,15 @@ export default function Sidebar({
   });
 
   const unpinnedIds = unpinnedOverride ?? savedUnpinned;
-  const pinnedItems = visibleItems.filter((item) => !unpinnedIds.includes(item.to));
+  // Innerhalb einer Gruppe gilt die eigene Reihenfolge (Drag & Drop), die
+  // Gruppen selbst stehen fest. Ein in eine andere Gruppe gezogener Eintrag
+  // springt so in seine Gruppe zurück.
+  const groupIndex = (item: NavItem) => NAV_GROUPS.findIndex((g) => g.key === item.group);
+  const pinnedItems = visibleItems
+    .filter((item) => !unpinnedIds.includes(item.to))
+    .map((item, i) => ({ item, i }))
+    .sort((a, b) => groupIndex(a.item) - groupIndex(b.item) || a.i - b.i)
+    .map(({ item }) => item);
   const unpinnedItems = visibleItems.filter((item) => unpinnedIds.includes(item.to));
 
   const [moreAnchor, setMoreAnchor] = useState<HTMLElement | null>(null);
@@ -355,6 +379,11 @@ export default function Sidebar({
     // Mit aufgeklappten Unterseiten markiert der Haupteintrag nur noch seine
     // eigene Seite - sonst wären zwei Zeilen gleichzeitig hervorgehoben.
     const isActive = hasChildren ? isExactPath(item.to) : isActivePath(item.to);
+    // Plan-Funktion ohne Freischaltung: Upgrade-Symbol. Add-ons (Online-Shop,
+    // Speedmessung) behalten ihr „(Upgrade)“ - so wollte John es.
+    const feature = featureForPath(item.to);
+    const required = feature ? entitlements.requiredPlan(feature) : null;
+    const lockedPlan = feature && required && required !== 'addon' && !entitlements.has(feature) ? required : null;
     const badge = badgeFor(item);
     const label = t(item.labelKey);
     const canDrag = showFull && pinnedItems.length > 1;
@@ -424,6 +453,11 @@ export default function Sidebar({
               <span className="truncate">
                 {label}
                 {badge && <span className="ml-1 text-xs text-slate-500">({badge})</span>}
+              </span>
+            )}
+            {showFull && lockedPlan && (
+              <span title={t('plans.included_in', { plan: t(PLAN_LABEL_KEY[lockedPlan]) })} className="ml-auto shrink-0 text-brand-400">
+                <ArrowUpCircle className="h-4 w-4" />
               </span>
             )}
           </NavLink>
@@ -574,7 +608,24 @@ export default function Sidebar({
 
       <nav className="flex-1 overflow-y-auto px-3 py-4 scrollbar-thin" onScroll={() => setTip(null)}>
         <div className={`space-y-0.5 ${drag ? 'select-none' : ''}`}>
-          {pinnedItems.map((item, index) => renderNavRow(item, index))}
+          {pinnedItems.map((item, index) => {
+            const startsGroup = index === 0 || pinnedItems[index - 1].group !== item.group;
+            const group = NAV_GROUPS.find((g) => g.key === item.group);
+            return (
+              <div key={item.to}>
+                {startsGroup && group && (
+                  showFull ? (
+                    <p className={`px-3 pb-1 text-[11px] font-medium text-slate-500 ${index === 0 ? 'pt-0' : 'pt-4'}`}>
+                      {t(group.labelKey)}
+                    </p>
+                  ) : (
+                    index > 0 && <div className="mx-3 my-2 h-px bg-white/10" aria-hidden />
+                  )
+                )}
+                {renderNavRow(item, index)}
+              </div>
+            );
+          })}
         </div>
 
         {unpinnedItems.length > 0 && (

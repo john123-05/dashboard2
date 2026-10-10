@@ -198,7 +198,7 @@ Legende Modell: **S** = Sonnet/Codex medium reicht · **O** = Opus empfohlen (Ar
     Park-Prüfung), Staff schreibt über `admin-park-entitlements` (Muster `admin-park-equipment`).
   - `useEntitlements()` liest daraus; fehlt eine Zeile → Übergangsregel aus B1.
   - SQL an John übergeben (pbcopy + Link), nicht ausführen.
-- [ ] **B3 Kennzeichnung in Navigation und Seiten** (S) – Voraussetzung B1.
+- [x] **B3 Kennzeichnung in Navigation und Seiten** (S) – erledigt 10.10.2026 – Voraussetzung B1.
   - `Sidebar.tsx`: Gruppenüberschriften „Betrieb“ / „Marketing“ (klein, `text-[11px] text-slate-500`,
     nur bei ausgeklappter Leiste); gesperrte Einträge mit Upgrade-Symbol (`ArrowUpCircle`, wie
     `UpgradeBadge`) statt Text, Tooltip „Teil von Marketing Starter“. „(Upgrade)“ bei Online-Shop/
@@ -381,3 +381,4 @@ keine Vertriebs-Pipeline für Parks. Keine Preise ändern ohne John.
   Jetzt eine Meldung je Störung, solange sie andauert (`active` in `notificationFeed.ts`); Schweregrad
   auf der Übersicht übersetzt („Warnung“ statt „warning“).
 - 10.10.2026: B1 umgesetzt: `src/lib/plans.ts` (Plan-/Funktionsliste, Seiten-Zuordnung, `useEntitlements()` mit Übergangsregel). Noch nirgends eingebunden, keine sichtbare Änderung.
+- 10.10.2026: B3 umgesetzt: Navigation in Gruppen Betrieb/Marketing/Verwaltung (`group` in `navItems`, Reihenfolge innerhalb der Gruppe frei per Drag & Drop), Upgrade-Symbol bei gesperrten Plan-Funktionen, `PlanGate`/`PlanBadge` (`src/components/upgrade/PlanGate.tsx`, um `/leads/*` gelegt), Profilmenü „Plan: …“. Links auf Pläne zeigen bis B4 auf `/leads/preise`. Durch die Übergangsregel ist noch nichts gesperrt.

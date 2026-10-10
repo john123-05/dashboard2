@@ -36,6 +36,7 @@ import { useI18n, useLocaleTag } from '../../lib/i18n';
 import { formatRelative } from '../../lib/utils';
 import { type FeedItem, type NotificationFeed } from '../../lib/notificationFeed';
 import { useNotifications } from '../../contexts/NotificationsContext';
+import { PLAN_LABEL_KEY, useEntitlements } from '../../lib/plans';
 import {
   HELP_ARTICLES,
   SUPPORT_EMAIL,
@@ -542,6 +543,7 @@ function ProfileMenu({ onClose }: { onClose: () => void }) {
   const navigate = useNavigate();
   const { profile, currentOrg, isOwner, isStaff, signOut } = useAuth();
   const { parkName, setPark } = usePark();
+  const entitlements = useEntitlements();
   const ref = useRef<HTMLDivElement>(null);
   const [shown, setShown] = useState(false);
 
@@ -590,6 +592,13 @@ function ProfileMenu({ onClose }: { onClose: () => void }) {
         <p className="text-xs text-[color:var(--ink-3)]">{t('top.park')}</p>
         <p className="mt-0.5 text-sm font-semibold text-[color:var(--ink)]">{parkName || '—'}</p>
         {currentOrg?.name && currentOrg.name !== parkName && <p className="text-xs text-[color:var(--ink-3)]">{currentOrg.name}</p>}
+        <p className="mt-2 text-xs text-[color:var(--ink-3)]">
+          {t('plans.your_plan', { plan: t(PLAN_LABEL_KEY[entitlements.plan]) })}
+          {' · '}
+          <button type="button" onClick={() => go('/leads/preise')} className="font-medium text-brand-700 hover:underline">
+            {t('shop.view_plans')}
+          </button>
+        </p>
       </div>
 
       <div className="border-b border-[color:var(--line)] py-2">

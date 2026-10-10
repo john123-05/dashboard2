@@ -6,6 +6,7 @@ import SocialManager from './SocialManager';
 import TrackingManager from './TrackingManager';
 import { fetchSurveyConfig, setUnlockMode, type SurveyConfig, type UnlockMode } from '../../lib/surveyApi';
 import { CRM_TABS, crmTabForPath, type TabKey } from '../../lib/crmTabs';
+import { PlanBadge } from '../upgrade/PlanGate';
 import { useI18n } from '../../lib/i18n';
 
 export type { TabKey };
@@ -78,6 +79,7 @@ export default function UnlockCenter({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
           <h2 className="text-2xl font-bold tracking-tight text-slate-800">{tab === 'overview' ? t('crm.overview_title') : shown ? t(shown.labelKey) : ''}</h2>
+          <PlanBadge feature="crm_contacts" />
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <div className="inline-flex rounded-xl bg-white/50 p-1">

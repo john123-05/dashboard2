@@ -31,6 +31,7 @@ import { ParkProvider } from './contexts/ParkContext';
 import KioskAwareOverlay from './components/KioskAwareOverlay';
 import GuestActivityAwareOverlay from './components/GuestActivityAwareOverlay';
 import OwnerOnly from './components/OwnerOnly';
+import PlanGate from './components/upgrade/PlanGate';
 import CameraAvailableOnly from './components/CameraAvailableOnly';
 const Team = seiteNachladen(() => import('./pages/Team'));
 const StaffAdminLayout = seiteNachladen(() => import('./staff/components/AdminLayout'));
@@ -181,7 +182,7 @@ export default function App() {
                     Bewusst EINE Route mit `*` statt je Reiter eine: so bleibt die Seite
                     beim Wechsel geladen und holt die Kontakte nicht jedes Mal neu.
                     `/leads/preise` steht darüber und gewinnt als genauerer Pfad. */}
-                <Route path="/leads/*" element={<OwnerOnly><Leads /></OwnerOnly>} />
+                <Route path="/leads/*" element={<OwnerOnly><PlanGate><Leads /></PlanGate></OwnerOnly>} />
                 <Route path="/personalization" element={<Personalization />} />
                 <Route path="/tickets" element={<Support />} />
                 <Route path="/health" element={<SystemHealth />} />
