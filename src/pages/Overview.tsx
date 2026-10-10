@@ -1155,7 +1155,7 @@ export default function Overview() {
 
           <GlassCard className="overflow-hidden p-5 sm:p-6">
             <h3 className="text-base font-semibold text-slate-800">{t('overview.notifications_activity')}</h3>
-            <div className="mt-3 max-h-[360px] space-y-3 overflow-y-auto pr-1">
+            <div className="mt-3 max-h-[240px] space-y-3 overflow-y-auto pr-1">
               {visibleActivityItems.length === 0 ? (
                 <p className="text-sm text-slate-500">
                   {activityItems.length === 0 ? t('overview.no_activity_items') : t('overview.all_dismissed')}
@@ -1444,7 +1444,7 @@ export default function Overview() {
               </p>
             </div>
           </div>
-          <div className="max-h-[360px] space-y-3 overflow-y-auto pr-1">
+          <div className="max-h-[240px] space-y-3 overflow-y-auto pr-1">
             {visibleActivityItems.length === 0 ? (
               <p className="text-sm text-slate-500">
                 {activityItems.length === 0 ? t('overview.no_activity_items') : t('overview.all_dismissed')}
