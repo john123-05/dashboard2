@@ -53,7 +53,7 @@ export default function Drawer({
             onClick={onClose}
             aria-label={t('mk.close')}
             className="rounded-md p-1.5 text-[color:var(--ink-3)] hover:bg-slate-100"
-          >
+           title={t('mk.close')}>
             <X className="h-5 w-5" />
           </button>
         </div>

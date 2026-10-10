@@ -119,7 +119,7 @@ function PromptCloseButton({
       onClick={onClose}
       className="relative flex h-11 w-11 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
       aria-label={t('tour.close_label')}
-    >
+     title={t('tour.close_label')}>
       <svg className="absolute inset-0 h-11 w-11 -rotate-90" viewBox="0 0 44 44" aria-hidden="true">
         <circle cx="22" cy="22" r={radius} fill="none" stroke="rgba(148,163,184,0.2)" strokeWidth="2.5" />
         <circle
@@ -273,7 +273,7 @@ export default function WelcomeTour() {
             onClick={closeTour}
             className="rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
             aria-label={t('tour.close_label')}
-          >
+           title={t('tour.close_label')}>
             <X className="h-4 w-4" />
           </button>
         </div>

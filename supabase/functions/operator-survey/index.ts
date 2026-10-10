@@ -321,7 +321,7 @@ async function loadSocialResults(parkId: string, days: number) {
   };
 }
 
-async function loadResults(parkId: string, days: number) {
+async function loadResults(parkId: string, days: number, filterLocale = '', filterCountry = '') {
   const since = new Date(Date.now() - days * 86_400_000).toISOString();
   const [{ data: questions }, { data: settings }, { data: rows }] = await Promise.all([
     supabaseService.from('park_survey_questions').select('*').eq('park_id', parkId).order('position'),
@@ -336,7 +336,13 @@ async function loadResults(parkId: string, days: number) {
       .limit(5000),
   ]);
 
-  const responses = rows ?? [];
+  const allRows = (rows ?? []) as Array<{ locale: string | null; country_code: string | null }>;
+  const languages = [...new Set(allRows.map((r) => (r.locale ?? '').toLowerCase()).filter(Boolean))].sort();
+  const countries = [...new Set(allRows.map((r) => (r.country_code ?? '').toUpperCase()).filter(Boolean))].sort();
+  const responses = allRows.filter((r) =>
+    (!filterLocale || (r.locale ?? '').toLowerCase() === filterLocale) &&
+    (!filterCountry || (r.country_code ?? '').toUpperCase() === filterCountry)
+  ) as typeof rows & Array<Record<string, unknown>>;
   const scored = responses.filter((r: { score: number | null }) => typeof r.score === 'number');
   const promoters = scored.filter((r: { score: number }) => r.score >= 9).length;
   const detractors = scored.filter((r: { score: number }) => r.score <= 6).length;
@@ -430,7 +436,9 @@ async function loadResults(parkId: string, days: number) {
     distribution,
     timeline,
     questions: perQuestion,
-    truncated: responses.length >= 5000,
+    truncated: allRows.length >= 5000,
+    languages,
+    countries,
   };
 }
 
@@ -447,7 +455,9 @@ Deno.serve(async (req) => {
 
     if (url.searchParams.get('view') === 'results') {
       const days = Math.min(Math.max(Number(url.searchParams.get('days')) || 30, 1), 730);
-      return json({ ok: true, data: await loadResults(auth.parkId, days) });
+      const locale = (url.searchParams.get('locale') ?? '').toLowerCase().slice(0, 5);
+      const country = (url.searchParams.get('country') ?? '').toUpperCase().slice(0, 2);
+      return json({ ok: true, data: await loadResults(auth.parkId, days, locale, country) });
     }
     if (url.searchParams.get('view') === 'social') {
       const days = Math.min(Math.max(Number(url.searchParams.get('days')) || 30, 1), 730);

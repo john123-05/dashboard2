@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ArrowLeft, Check, ExternalLink, Loader2, Lock, Plus, Trophy } from 'lucide-react';
+import { ArrowLeft, Check, ExternalLink, Loader2, Lock, Megaphone, Plus, Trophy } from 'lucide-react';
 import GlassCard from '../ui/GlassCard';
+import EmptyState from '../ui/EmptyState';
+import Skeleton from '../ui/Skeleton';
 import { PlanBadge } from '../upgrade/PlanGate';
 import { LocalizedField, inputClass } from './SurveyManager';
 import { useI18n, useLocaleTag } from '../../lib/i18n';
@@ -560,11 +562,9 @@ export default function CampaignsManager({ parkId }: { parkId: string }) {
       {list?.migration_pending && (
         <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">{t('camp.migration_pending')}</p>
       )}
-      {!list && !error && <Loader2 className="h-5 w-5 animate-spin text-slate-400" />}
+      {!list && !error && <Skeleton lines={3} />}
       {list && !list.migration_pending && list.campaigns.length === 0 && (
-        <GlassCard className="p-6">
-          <p className="text-sm text-[color:var(--ink-3)]">{t('camp.empty')}</p>
-        </GlassCard>
+        <EmptyState icon={Megaphone} text={t('camp.empty')} />
       )}
       {list?.campaigns.map((c) => (
         <button

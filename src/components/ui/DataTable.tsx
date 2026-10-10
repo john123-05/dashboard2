@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import GlassCard from './GlassCard';
 import { useI18n } from '../../lib/i18n';
@@ -21,6 +21,9 @@ interface DataTableProps<T extends object> {
   pageSize?: number;
   actions?: React.ReactNode;
   embeddedOperator?: boolean;
+  /** Zwischenzeilen: Zeilen mit gleichem Schlüssel (z. B. Tag) stehen unter einer gemeinsamen Überschrift. */
+  groupBy?: (item: T) => string;
+  renderGroup?: (key: string, items: T[]) => React.ReactNode;
 }
 
 export default function DataTable<T extends object>({
@@ -32,6 +35,8 @@ export default function DataTable<T extends object>({
   pageSize = 10,
   actions,
   embeddedOperator = false,
+  groupBy,
+  renderGroup,
 }: DataTableProps<T>) {
   const { t } = useI18n();
   const [search, setSearch] = useState('');
@@ -97,18 +102,28 @@ export default function DataTable<T extends object>({
                 </td>
               </tr>
             ) : (
-              paginated.map((item, i) => (
-                <tr
-                  key={i}
-                  className="transition-colors hover:bg-slate-50"
-                >
-                  {columns.map((col) => (
-                    <td key={col.key} className={`px-6 py-3.5 text-sm text-slate-700 ${col.className || ''}`}>
-                      {col.render ? col.render(item) : String(item[col.key as keyof T] ?? '')}
-                    </td>
-                  ))}
-                </tr>
-              ))
+              paginated.map((item, i) => {
+                const key = groupBy ? groupBy(item) : null;
+                const startsGroup = groupBy && renderGroup && (i === 0 || groupBy(paginated[i - 1]) !== key);
+                return (
+                  <Fragment key={i}>
+                    {startsGroup && key !== null && (
+                      <tr className="bg-slate-50">
+                        <td colSpan={columns.length} className="px-6 py-2 text-xs font-medium text-slate-500">
+                          {renderGroup(key, paginated.filter((row) => groupBy(row) === key))}
+                        </td>
+                      </tr>
+                    )}
+                    <tr className="transition-colors hover:bg-slate-50">
+                      {columns.map((col) => (
+                        <td key={col.key} className={`px-6 py-3.5 text-sm text-slate-700 ${col.className || ''}`}>
+                          {col.render ? col.render(item) : String(item[col.key as keyof T] ?? '')}
+                        </td>
+                      ))}
+                    </tr>
+                  </Fragment>
+                );
+              })
             )}
           </tbody>
         </table>
@@ -126,8 +141,16 @@ export default function DataTable<T extends object>({
               const actionCol = columns.find((col) => col.key === 'actions');
               const dataCols = columns.filter((col) => col.key !== 'select' && col.key !== 'actions');
               const [main, ...rest] = dataCols;
+              const key = groupBy ? groupBy(item) : null;
+              const startsGroup = groupBy && renderGroup && (i === 0 || groupBy(paginated[i - 1]) !== key);
               return (
-                <li key={i} className="space-y-2 px-4 py-3.5">
+                <Fragment key={i}>
+                {startsGroup && key !== null && (
+                  <li className="bg-slate-50 px-4 py-2 text-xs font-medium text-slate-500">
+                    {renderGroup(key, paginated.filter((row) => groupBy(row) === key))}
+                  </li>
+                )}
+                <li className="space-y-2 px-4 py-3.5">
                   <div className="flex items-start gap-3">
                     {selectCol && <div className="pt-0.5">{cell(selectCol)}</div>}
                     <div className="min-w-0 flex-1 text-sm font-semibold text-slate-800">{main && cell(main)}</div>
@@ -146,6 +169,7 @@ export default function DataTable<T extends object>({
                     </dl>
                   )}
                 </li>
+                </Fragment>
               );
             })}
           </ul>

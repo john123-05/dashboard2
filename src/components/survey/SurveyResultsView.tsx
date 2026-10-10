@@ -135,6 +135,9 @@ export default function SurveyResultsView({ parkId }: { parkId: string }) {
   const { t } = useI18n();
   const localeTag = useLocaleTag();
   const [days, setDays] = useState<number>(30);
+  const [locale, setLocale] = useState('');
+  const [country, setCountry] = useState('');
+  const [options, setOptions] = useState<{ languages: string[]; countries: string[] }>({ languages: [], countries: [] });
   const [data, setData] = useState<SurveyResults | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -142,10 +145,12 @@ export default function SurveyResultsView({ parkId }: { parkId: string }) {
   useEffect(() => {
     let active = true;
     setLoading(true);
-    fetchSurveyResults(parkId, days)
+    fetchSurveyResults(parkId, days, { locale, country })
       .then((r) => {
         if (!active) return;
         setData(r);
+        // Auswahllisten nur aus der ungefilterten Abfrage übernehmen, damit sie nicht schrumpfen.
+        if (!locale && !country) setOptions({ languages: r.languages ?? [], countries: r.countries ?? [] });
         setError(null);
       })
       .catch((e) => active && setError(e instanceof Error ? e.message : t('survey.load_failed')))
@@ -153,7 +158,7 @@ export default function SurveyResultsView({ parkId }: { parkId: string }) {
     return () => {
       active = false;
     };
-  }, [parkId, days]);
+  }, [parkId, days, locale, country]);
 
   const npsTotal = data ? data.promoters + data.passives + data.detractors : 0;
   const maxDay = Math.max(1, ...(data?.timeline ?? []).map((d) => d.count));
@@ -218,6 +223,18 @@ export default function SurveyResultsView({ parkId }: { parkId: string }) {
               </button>
             ))}
           </div>
+          {options.languages.length > 1 && (
+            <select value={locale} onChange={(e) => setLocale(e.target.value)} className="rounded-lg border border-[color:var(--line-strong)] bg-white px-2.5 py-1.5 text-sm text-[color:var(--ink-2)]">
+              <option value="">{t('email.all_languages')}</option>
+              {options.languages.map((l) => <option key={l} value={l}>{l.toUpperCase()}</option>)}
+            </select>
+          )}
+          {options.countries.length > 1 && (
+            <select value={country} onChange={(e) => setCountry(e.target.value)} className="rounded-lg border border-[color:var(--line-strong)] bg-white px-2.5 py-1.5 text-sm text-[color:var(--ink-2)]">
+              <option value="">{t('survey.all_countries')}</option>
+              {options.countries.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          )}
           <button
             type="button"
             onClick={exportAnswers}

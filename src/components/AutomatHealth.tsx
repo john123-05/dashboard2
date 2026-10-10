@@ -1470,7 +1470,7 @@ function ZustandsHilfe() {
         type="button"
         aria-label={t('health.states_help')}
         className="flex h-5 w-5 items-center justify-center rounded-full text-[color:var(--ink-3)] transition hover:text-[color:var(--ink)] focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
-      >
+       title={t('health.states_help')}>
         <HelpCircle className="h-3.5 w-3.5" />
       </button>
       <span

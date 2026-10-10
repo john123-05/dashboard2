@@ -244,7 +244,7 @@ export default function DemoShop() {
                 Das hier war eine Testzahlung – es wurde nichts berechnet.
               </p>
             </div>
-            <button type="button" onClick={dismissResult} className="text-emerald-700" aria-label="Schließen">
+            <button type="button" onClick={dismissResult} className="text-emerald-700" aria-label="Schließen" title="Schließen">
               <X className="h-4 w-4" />
             </button>
           </div>
@@ -254,7 +254,7 @@ export default function DemoShop() {
         <div className="mx-auto mt-6 max-w-6xl px-4">
           <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-sm">
             <span>Zahlung abgebrochen – dein Warenkorb ist noch da.</span>
-            <button type="button" onClick={dismissResult} className="text-slate-500" aria-label="Schließen">
+            <button type="button" onClick={dismissResult} className="text-slate-500" aria-label="Schließen" title="Schließen">
               <X className="h-4 w-4" />
             </button>
           </div>

@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowDown, ArrowLeft, ArrowUp, Check, Loader2, Plus, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowUp, Check, Loader2, Mail, Plus, Trash2 } from 'lucide-react';
 import GlassCard from '../ui/GlassCard';
+import EmptyState from '../ui/EmptyState';
+import Skeleton from '../ui/Skeleton';
 import { PlanBadge } from '../upgrade/PlanGate';
 import { inputClass } from './SurveyManager';
 import { useI18n, useLocaleTag } from '../../lib/i18n';
@@ -507,7 +509,7 @@ export default function EmailManager({ parkId }: { parkId: string }) {
       </div>
       {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
       {data?.migration_pending && <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">{t('email.migration_pending')}</p>}
-      {!data && !error && <Loader2 className="h-5 w-5 animate-spin text-slate-400" />}
+      {!data && !error && <Skeleton lines={4} />}
 
       {usage && usage.quota > 0 && (
         <GlassCard className="p-4">
@@ -524,7 +526,7 @@ export default function EmailManager({ parkId }: { parkId: string }) {
       )}
 
       {data && !data.migration_pending && data.campaigns.length === 0 && (
-        <GlassCard className="p-6"><p className="text-sm text-[color:var(--ink-3)]">{t('email.empty')}</p></GlassCard>
+        <EmptyState icon={Mail} text={t('email.empty')} action={<button type="button" className="glass-button-primary" onClick={() => { setEditing({ draft: NEW_DRAFT, locked: false }); setView('edit'); }}><Plus className="h-4 w-4" /> {t('email.new')}</button>} />
       )}
       {data?.campaigns.map((c) => (
         <button

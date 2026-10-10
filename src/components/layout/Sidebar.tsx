@@ -605,7 +605,7 @@ export default function Sidebar({
           className="mobile-nav-close"
           aria-label={t('nav.close')}
           onClick={onCloseMobile}
-        >
+         title={t('nav.close')}>
           <X className="h-4 w-4" />
         </button>
       </div>

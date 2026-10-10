@@ -85,6 +85,9 @@ export interface SurveyResults {
   timeline: { day: string; count: number; avg_score: number | null }[];
   questions: SurveyQuestionResult[];
   truncated: boolean;
+  /** Sprachen/Länder, aus denen Antworten vorliegen (für die Filter). */
+  languages?: string[];
+  countries?: string[];
 }
 
 /** Text in der gewünschten Sprache, sonst Englisch, Deutsch, irgendeine. */
@@ -127,8 +130,19 @@ export function saveSurveyConfig(parkId: string, config: SurveyConfig): Promise<
   );
 }
 
-export function fetchSurveyResults(parkId: string, days: number): Promise<SurveyResults> {
-  return call<SurveyResults>({ method: 'GET' }, { park_id: parkId, view: 'results', days: String(days) });
+export function fetchSurveyResults(
+  parkId: string,
+  days: number,
+  filter: { locale?: string; country?: string } = {},
+): Promise<SurveyResults> {
+  return call<SurveyResults>(
+    { method: 'GET' },
+    {
+      park_id: parkId, view: 'results', days: String(days),
+      ...(filter.locale ? { locale: filter.locale } : {}),
+      ...(filter.country ? { country: filter.country } : {}),
+    },
+  );
 }
 
 /** Startvorlage: Weiterempfehlung + zwei Folgefragen. */

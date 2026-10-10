@@ -1917,6 +1917,7 @@ const translations: Record<Language, Record<string, string>> = {
     'plans.billing_cancel': "Die Buchung wurde abgebrochen. Es wurde nichts berechnet.",
     'plans.manage_billing': "Abo und Rechnungen verwalten",
     'plans.book_now': "Jetzt buchen",
+    'survey.all_countries': "Alle Länder",
   },
   en: {
     'app.loading': 'Loading…',
@@ -3817,6 +3818,7 @@ const translations: Record<Language, Record<string, string>> = {
     'plans.billing_cancel': "The booking was cancelled. You were not charged.",
     'plans.manage_billing': "Manage subscription and invoices",
     'plans.book_now': "Book now",
+    'survey.all_countries': "All countries",
   },
   es: {
     'app.loading': 'Cargando…',
@@ -5717,6 +5719,7 @@ const translations: Record<Language, Record<string, string>> = {
     'plans.billing_cancel': "La reserva se canceló. No se cobró nada.",
     'plans.manage_billing': "Gestionar suscripción y facturas",
     'plans.book_now': "Reservar ahora",
+    'survey.all_countries': "Todos los países",
   },
   fr: {
     'app.loading': 'Chargement…',
@@ -7617,6 +7620,7 @@ const translations: Record<Language, Record<string, string>> = {
     'plans.billing_cancel': "La réservation a été annulée. Rien n’a été facturé.",
     'plans.manage_billing': "Gérer l’abonnement et les factures",
     'plans.book_now': "Réserver maintenant",
+    'survey.all_countries': "Tous les pays",
   },
   it: {
     'app.loading': 'Caricamento…',
@@ -9517,6 +9521,7 @@ const translations: Record<Language, Record<string, string>> = {
     'plans.billing_cancel': "La prenotazione è stata annullata. Non è stato addebitato nulla.",
     'plans.manage_billing': "Gestisci abbonamento e fatture",
     'plans.book_now': "Prenota ora",
+    'survey.all_countries': "Tutti i paesi",
   },
   nl: {
     'app.loading': 'Laden…',
@@ -11417,6 +11422,7 @@ const translations: Record<Language, Record<string, string>> = {
     'plans.billing_cancel': "De boeking is geannuleerd. Er is niets in rekening gebracht.",
     'plans.manage_billing': "Abonnement en facturen beheren",
     'plans.book_now': "Nu boeken",
+    'survey.all_countries': "Alle landen",
   },
   lv: {
     'app.loading': 'Ielādē…',
@@ -13317,6 +13323,7 @@ const translations: Record<Language, Record<string, string>> = {
     'plans.billing_cancel': "Rezervācija atcelta. Nekas netika iekasēts.",
     'plans.manage_billing': "Pārvaldīt abonementu un rēķinus",
     'plans.book_now': "Rezervēt tagad",
+    'survey.all_countries': "Visas valstis",
   },
 };
 

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { UserPlus, Trash2, ShieldCheck, Loader2, Pencil } from 'lucide-react';
 import { invokeEdgeFunction } from '../lib/edgeFunctions';
 import Modal from '../components/ui/Modal';
+import Skeleton from '../components/ui/Skeleton';
 import { ASSIGNABLE_PAGES, ROLE_PRESETS, STAFF_DEFAULT_PAGES } from '../lib/permissions';
 import { PLAN_LABEL_KEY, useEntitlements, type PlanKey } from '../lib/plans';
 
@@ -254,9 +255,7 @@ export default function Team() {
           <h3 className="text-base font-semibold text-slate-800">Mitarbeiter ({staff.length})</h3>
         </div>
         {loading ? (
-          <div className="flex items-center gap-2 py-6 text-sm text-slate-500">
-            <Loader2 className="h-4 w-4 animate-spin" /> {t('team.loading')}
-          </div>
+          <Skeleton lines={3} className="py-3" />
         ) : staff.length === 0 ? (
           <p className="py-6 text-sm text-slate-500">{t('team.none_yet')}</p>
         ) : (

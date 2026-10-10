@@ -440,6 +440,11 @@ export default function Purchases() {
         searchable
         searchKeys={['customer_or_device', 'payment_method', 'description', 'reference']}
         pageSize={12}
+        groupBy={(item) => new Date(item.purchased_at).toLocaleDateString('sv-SE')}
+        renderGroup={(day, rows) => {
+          const sum = rows.reduce((total, row) => total + (row.amount_cents ?? 0), 0);
+          return `${new Date(`${day}T12:00:00`).toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} · ${rows.length} · ${formatCurrency(sum, rows[0]?.currency || 'EUR')}`;
+        }}
         actions={
           isKioskPark ? (
             <div className="flex items-center gap-2">

@@ -286,7 +286,7 @@ function NotificationsDrawer({ open, onClose, feed }: { open: boolean; onClose: 
       >
         <div className="flex items-center justify-between px-6 pb-2 pt-5">
           <h2 className="text-[22px] font-light text-[color:var(--ink)]">{t('top.notifications')}</h2>
-          <button type="button" onClick={onClose} aria-label={t('nav.close')} className="rounded-full p-1.5 text-[color:var(--ink-3)] hover:bg-slate-100 hover:text-[color:var(--ink)]">
+          <button type="button" onClick={onClose} aria-label={t('nav.close')} className="rounded-full p-1.5 text-[color:var(--ink-3)] hover:bg-slate-100 hover:text-[color:var(--ink)]" title={t('nav.close')}>
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -502,7 +502,7 @@ function HelpCenter({ onClose }: { onClose: () => void }) {
         <button type="button" onClick={() => setMinimized(false)} aria-label={t('top.expand')} className="rounded-full p-1.5 hover:bg-white/10">
           <Maximize2 className="h-4 w-4" />
         </button>
-        <button type="button" onClick={onClose} aria-label={t('nav.close')} className="rounded-full p-1.5 hover:bg-white/10">
+        <button type="button" onClick={onClose} aria-label={t('nav.close')} className="rounded-full p-1.5 hover:bg-white/10" title={t('nav.close')}>
           <X className="h-4 w-4" />
         </button>
       </div>
@@ -538,7 +538,7 @@ function HelpCenter({ onClose }: { onClose: () => void }) {
             <button type="button" onClick={() => setMinimized(true)} aria-label={t('top.minimize')} title={t('top.minimize')} className="rounded-full p-1.5 text-[color:var(--ink-3)] hover:bg-slate-100 hover:text-[color:var(--ink)]">
               <Minimize2 className="h-4 w-4" />
             </button>
-            <button type="button" onClick={onClose} aria-label={t('nav.close')} className="rounded-full p-1.5 text-[color:var(--ink-3)] hover:bg-slate-100 hover:text-[color:var(--ink)]">
+            <button type="button" onClick={onClose} aria-label={t('nav.close')} className="rounded-full p-1.5 text-[color:var(--ink-3)] hover:bg-slate-100 hover:text-[color:var(--ink)]" title={t('nav.close')}>
               <X className="h-5 w-5" />
             </button>
           </div>
