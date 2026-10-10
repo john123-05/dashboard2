@@ -169,7 +169,8 @@ ohne seitliches Scrollen funktionieren.
 
 ## 6. Aufgabenliste (in dieser Reihenfolge)
 
-Legende Modell: **S** = Sonnet/Codex medium reicht · **O** = Opus empfohlen (Architektur/Datenmodell).
+Legende Modell: **S** = Sonnet/Codex medium reicht · **O** = Opus empfohlen. Seit 10.10.2026 sind alle
+früheren (O)-Aufgaben in Abschnitt 6a ausgeschrieben und damit (S). Opus nur noch zum Gegenlesen am Ende einer Phase.
 
 ### Phase A – Sofort (klein)
 
@@ -235,7 +236,7 @@ Legende Modell: **S** = Sonnet/Codex medium reicht · **O** = Opus empfohlen (Ar
 - [ ] **C1 Navigation „Marketing-CRM“ mit Unterseiten** (S)
   - `crmTabs.ts`: Reihenfolge Start · Kontakte · E-Mail-Marketing · Social-Media-Kampagnen · Umfrage ·
     Werbe-Pixel. (E-Mail erst sichtbar, wenn F1 fertig.) „Übersicht“-Reiter heißt „Start“.
-- [ ] **C2 Startseite Marketing-CRM** (O für Aufbau, S für Umsetzung)
+- [ ] **C2 Startseite Marketing-CRM** (S – Entwurf in 6a)
   - Datei: `Leads.tsx` Ansicht `overview` neu (Logik bleibt, Darstellung neu), am besten eigene
     Komponente `src/components/marketing/MarketingHome.tsx`.
   - Aufbau von oben: Kopf „Marketing-CRM“ + Plan-Abzeichen · **Einrichtungsassistent** (HubSpot
@@ -263,13 +264,13 @@ Legende Modell: **S** = Sonnet/Codex medium reicht · **O** = Opus empfohlen (Ar
 - [ ] **D2 Fragen-Editor** (S) – `SurveyManager.tsx`: Vorlagen (NPS, Zufriedenheit 1–5, „Wie hast du
   von uns erfahren?“, „Was können wir besser machen?“), Fragetypen-Auswahl als Karten, Reihenfolge per
   Drag & Drop (Muster Ebenen-Liste `OverlayBuilder.tsx`), Vorschau rechts.
-- [ ] **D3 Bewertungs-Weiterleitung (Pro)** (O) – nach NPS ≥ 9 zeigt die Abholseite „Bewerte uns auf
+- [ ] **D3 Bewertungs-Weiterleitung (Pro)** (S – Entwurf in 6a, wartet auf Johns Entscheidung) – nach NPS ≥ 9 zeigt die Abholseite „Bewerte uns auf
   Google“ (Link aus Einstellungen). Feld `review_url` existiert schon (`review_*` in
   `park_survey_settings`) → prüfen und nutzen; Claim-Seite im Repo `imst`.
 
 ### Phase E – Social-Media-Kampagnen (auf Fotos zugeschnitten)
 
-- [ ] **E1 Kampagnen statt Einzelfeld** (O) – Datenmodell `park_social_campaigns` (shared): `id, park_id,
+- [ ] **E1 Kampagnen statt Einzelfeld** (S – Entwurf in 6a) – Datenmodell `park_social_campaigns` (shared): `id, park_id,
   name, type ('share_unlock'|'giveaway'|'record'), hashtag, mention, prize, starts_at, ends_at,
   status, rules_text, created_at`; `park_social_entries.campaign_id` hinzufügen.
   Kampagnentypen: **Teilen & freischalten** (heute), **Gewinnspiel** (Teilnahme = Teilen mit Hashtag,
@@ -278,7 +279,7 @@ Legende Modell: **S** = Sonnet/Codex medium reicht · **O** = Opus empfohlen (Ar
 - [ ] **E2 Kampagnen-Seite** (S) – Liste der Kampagnen (Status-Chips), „Neue Kampagne“ als
   3-Schritt-Assistent (Typ → Details → Vorschau Abholseite), Detailseite mit Teilnehmern, Filter
   „geprüft/ungeprüft“, Ziehung („Gewinner ziehen“ → zufällig aus geprüften, protokolliert).
-- [ ] **E3 Prüfung über Instagram (Pro)** (O, später) – Park verbindet sein Instagram-Business-Konto
+- [ ] **E3 Prüfung über Instagram (Pro)** (später – Entwurf in 6a, braucht Meta-Freigabe) – Park verbindet sein Instagram-Business-Konto
   (Meta App, Graph API). Abruf `/{ig-user-id}/tags` (Beiträge, in denen der Park markiert ist) und
   Hashtag-Suche → Abgleich mit Teilnehmer-Benutzernamen → Eintrag „geprüft“. Hinweis für John: Meta
   App Review nötig, dauert Wochen; bis dahin manuelle Prüfung (Link öffnen, Haken setzen).
@@ -287,7 +288,7 @@ Legende Modell: **S** = Sonnet/Codex medium reicht · **O** = Opus empfohlen (Ar
 
 - [ ] **F0 Entscheidung John** – Versanddienst: Vorschlag **Brevo** (EU, günstig, DSGVO) oder Resend.
   „Make“ nur für Automationen, nicht für Massenversand. Absender-Domain je Park (SPF/DKIM).
-- [ ] **F1 Datenmodell + Versand** (O) – Tabellen `email_campaigns` (id, park_id, subject, preheader,
+- [ ] **F1 Datenmodell + Versand** (S – Entwurf in 6a; Voraussetzung F0) – Tabellen `email_campaigns` (id, park_id, subject, preheader,
   body_json, language, segment_json, status draft/scheduled/sent, scheduled_at, sent_count,
   open_count, click_count), `email_usage` (park_id, month, sent). Edge Function
   `operator-email-campaigns` (CRUD, Testversand, Versand in Stapeln, Kontingent prüfen),
@@ -297,12 +298,12 @@ Legende Modell: **S** = Sonnet/Codex medium reicht · **O** = Opus empfohlen (Ar
   Editor mit Blöcken (Überschrift, Text, Bild, Button, Foto-des-Gastes-Platzhalter) · Sprache wählen
   (je Sprache eigene Fassung, Versand an Kontakte mit dieser Sprache) · Kontingent-Anzeige
   („1.240 von 2.000 E-Mails diesen Monat“) mit Upsell bei 80 %.
-- [ ] **F3 Automationen (Pro)** (O) – Willkommens-Mail nach Freischaltung, „Saisonstart“-Mail an alle
+- [ ] **F3 Automationen (Pro)** (S – Entwurf in 6a) – Willkommens-Mail nach Freischaltung, „Saisonstart“-Mail an alle
   Opt-ins, „Dein Foto wartet noch“ (Erinnerung Online-Shop).
 
 ### Phase G – Ratgeber (Artikel)
 
-- [ ] **G1 Datenmodell** (O) – Tabelle `articles` (shared): `id, slug unique, title, excerpt,
+- [ ] **G1 Datenmodell** (S – Entwurf in 6a) – Tabelle `articles` (shared): `id, slug unique, title, excerpt,
   body_md, cover_url, category ('tipps'|'marketing'|'technik'|'neu'), language, status
   ('draft'|'published'), published_at, author`. Bucket `article-images` (public).
   Lesen: Edge Function `public-articles` (nur published). Schreiben: `admin-articles` (Staff).
@@ -315,7 +316,7 @@ Legende Modell: **S** = Sonnet/Codex medium reicht · **O** = Opus empfohlen (Ar
 
 ### Phase H – Mitarbeiter & Rechte
 
-- [ ] **H1 Datenmodell** (O) – Spalte `organization_memberships.allowed_pages text[]` (null = Standard der
+- [ ] **H1 Datenmodell** (S – Entwurf in 6a) – Spalte `organization_memberships.allowed_pages text[]` (null = Standard der
   Rolle). Rollen-Vorlagen im Code (`src/lib/permissions.ts`): **Betriebsleitung** (alles außer
   Mitarbeiter/Einstellungen), **Buchhaltung** (Übersicht, Umsatz, Käufe), **Marketing**
   (Marketing-CRM, Fotos, Personalisierung, Ratgeber), **Technik** (Systemzustand, Kamera, Fotos,
@@ -325,7 +326,7 @@ Legende Modell: **S** = Sonnet/Codex medium reicht · **O** = Opus empfohlen (Ar
   Status) · „Mitarbeiter hinzufügen“ als Schublade: Name, E-Mail, Passwort, Rolle (Vorlagen als Karten)
   → darunter Häkchen-Matrix aller Seiten (vorbelegt aus Vorlage, änderbar) · Bearbeiten/Deaktivieren.
 - [ ] **H3 Durchsetzen** (S) – `Sidebar.tsx` filtert nach `allowed_pages`; neuer `PageGuard` in
-  `App.tsx` statt nur `OwnerOnly`; Edge Functions für Umsatz/Käufe prüfen Rolle serverseitig (O).
+  `App.tsx` statt nur `OwnerOnly`; Edge Functions prüfen das Recht serverseitig (Entwurf in 6a, „H3 serverseitig“).
 
 ### Phase I – Seiten aufwerten
 
@@ -370,10 +371,343 @@ Leiste oben rechts. CRM-Gestaltung steckt in Phase C/D, Käufe/Kamera/Support in
 
 ### Phase S – Stripe & Liftpictures-CRM (später)
 
-- [ ] **S1 Stripe Billing** (O) – Produkte/Preise je Plan + Add-on, Checkout-Session aus `/plaene`,
+- [ ] **S1 Stripe Billing** (S – Entwurf in 6a) – Produkte/Preise je Plan + Add-on, Checkout-Session aus `/plaene`,
   Kundenportal-Link im Profilmenü, Webhook → `park_entitlements` (`source='stripe'`).
 - [ ] **S2 Staff-CRM: Kunden-Freischaltungen** (S) – im Staff-Dashboard „Kunden Management“ ein Reiter
   „Plan & Add-ons“: Plan setzen, Testzeitraum, Pausieren, Verlauf.
+
+## 6a. Entwürfe für die (O)-Aufgaben (fertig ausgeschrieben – damit sind sie (S))
+
+Geschrieben von Opus am 10.10.2026. Wer eine dieser Aufgaben umsetzt, hält sich an Tabellen, Namen und
+Schnittstellen hier. SQL immer als Migration ablegen und John als Codeblock + Link geben (nie ausführen).
+„shared“ = `kvpcwlcfgmsmarjtwpsx`, „operator“ = `xcrxltiiovpoladpaewd`.
+
+Gemeinsame Muster für neue Functions im shared-Projekt:
+- Betreiber-Functions: `verify_jwt = false` in `supabase/config.toml`, Prüfung mit
+  `requireOperatorForPark(req, parkId)` aus `_shared/operatorAuth.ts`, Antworten mit `json()` /
+  `handleOptions()` aus `_shared/sameProjectAdminAuth.ts` (Vorlage: `operator-entitlements/index.ts`).
+- Staff-Functions: `requireAdminFromRequest(req)` (Vorlage: `admin-park-entitlements/index.ts`).
+- Tabellen: RLS an, **keine** Client-Policies, `revoke all … from public, anon, authenticated`,
+  Zugriff nur über Functions (Vorlage: Migration `20261010120000_park_entitlements.sql`).
+- Frontend-Abruf: `fetch(`${EXTERNAL_SUPABASE_URL}/functions/v1/<name>`)` mit
+  `Authorization: Bearer <session.access_token>` und `apikey: EXTERNAL_SUPABASE_ANON_KEY`
+  (Vorlage: `fetchEntitlements` in `src/lib/plans.ts`).
+
+### C2 – Startseite Marketing-CRM
+
+Datei neu: `src/components/marketing/MarketingHome.tsx`. `Leads.tsx` rendert sie in der Ansicht
+`overview` anstelle des heutigen Übersichts-Rasters und reicht die dort schon berechneten Werte als
+Props durch (nichts neu laden): `leads`, verkaufte Fotos, Opt-ins, Umfragewerte (Antworten, Ø, NPS),
+aktiver Freischaltmodus, Social-Status, Vorschau-URL.
+
+Aufbau von oben nach unten (Desktop: linke Spalte flexibel, rechte Spalte 380 px mit Live-Vorschau;
+unter 1280 px einspaltig, Vorschau zuletzt):
+
+1. **Einrichtungsassistent** (`GlassCard`, einklappbar): Titel `mk.setup_title`, Fortschrittsbalken
+   (`h-1.5 rounded-full bg-slate-200`, Füllung `bg-brand-600`), fünf Zeilen mit Kreis-Haken
+   (erledigt: `CheckCircle2 text-emerald-600`, offen: leerer Kreis) und Link „Öffnen“:
+   | Schritt | erledigt, wenn | Link |
+   |---|---|---|
+   | Freischaltung gewählt | `config.settings.mode` gesetzt | `/leads` (Karte „Gerade aktiv“) |
+   | Erste Kontakte gesammelt | `leads.length > 0` | `/leads/kontakte` |
+   | Umfrage angelegt | mindestens 1 Frage | `/leads/umfrage` |
+   | Werbe-Pixel eingetragen | Tracking `enabled` und eine ID | `/leads/pixel` |
+   | Bewertungslink hinterlegt | `settings.review_url` nicht leer | `/leads/umfrage` |
+   Ausblenden, wenn alle fünf erledigt oder weggeklickt (`localStorage` `lp-crm-setup:<parkId>` = `hidden`).
+2. **Kennzahlen-Zeile** (4 Kacheln, Baustein „Kennzahl“): Neue Kontakte (30 Tage) · Opt-in-Quote ·
+   NPS · Antworten Umfrage (30 Tage). Unter jeder Zahl klein der Vergleich zu den 30 Tagen davor
+   (`+12 %` grün / `−8 %` rot, nur wenn beide Werte > 0).
+3. **Trichter** (`GlassCard`, Titel `mk.funnel_title`): drei waagerechte Balken untereinander,
+   Breite relativ zum ersten: Verkaufte Fotos → Kontakte → Mit Einwilligung. Rechts neben jedem
+   Balken Zahl und Prozent vom vorherigen Schritt. Balkenfarbe `bg-brand-600`, `bg-brand-400`, `bg-brand-300`.
+4. **Gerade aktiv** + **Zeit zwischen Kauf und Einlösung**: die heutigen Karten, unverändert im Inhalt.
+5. **Besucher nach Standort**: Karte zunächst nur als Länderliste (Top 5 mit Balken). Button
+   „Karte anzeigen“ lädt die Weltkarte per `React.lazy` (gehört zu C4).
+
+Texte: Schlüssel `mk.*` in 7 Sprachen. Keine neuen Abrufe, keine Datenbankänderung.
+
+### D3 – Bewertungs-Weiterleitung
+
+Gibt es technisch schon: `park_survey_settings.review_url`, `review_min_score`, `review_text` und die
+Abholseiten zeigen den Link ab dem Mindestwert. Offen ist nur die Produktfrage (Abschnitt 7, Punkt 6):
+bleibt das in Starter oder wird es Pro? **Bis John entscheidet: nichts sperren.** Umsetzung danach:
+im `SurveyManager` den Bewertungs-Block in `PlanGate feature="review_routing"` legen.
+
+### E1 – Social-Media-Kampagnen: Datenmodell und Schnittstelle (shared)
+
+```sql
+create table public.park_social_campaigns (
+  id uuid primary key default gen_random_uuid(),
+  park_id uuid not null references public.parks(id) on delete cascade,
+  name text not null,
+  type text not null check (type in ('share_unlock', 'giveaway', 'record')),
+  status text not null default 'draft' check (status in ('draft', 'active', 'ended')),
+  hashtag text,
+  mention text,
+  prize text,
+  rules_text jsonb not null default '{}'::jsonb,   -- je Sprache: {"de": "...", "en": "..."}
+  starts_at timestamptz,
+  ends_at timestamptz,
+  winner_entry_id uuid,
+  drawn_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index park_social_campaigns_park_idx on public.park_social_campaigns (park_id, status);
+-- höchstens eine aktive Kampagne je Park
+create unique index park_social_campaigns_one_active on public.park_social_campaigns (park_id) where status = 'active';
+alter table public.park_social_campaigns enable row level security;
+revoke all on table public.park_social_campaigns from public, anon, authenticated;
+
+alter table public.park_social_entries
+  add column if not exists campaign_id uuid references public.park_social_campaigns(id) on delete set null,
+  add column if not exists verified_at timestamptz,
+  add column if not exists verified_by text check (verified_by in ('manual', 'instagram'));
+create index if not exists park_social_entries_campaign_idx on public.park_social_entries (campaign_id);
+```
+
+Function `operator-social-campaigns` (shared, Betreiber):
+- `GET ?park_id=` → `{ data: { campaigns: [… + entries_total, entries_verified], active_id } }`
+- `GET ?park_id=&campaign_id=` → Kampagne + `entries` (id, name, handle, platform, post_url,
+  giveaway_opt_in, verified_at, created_at; E-Mail/Telefon nur maskiert `a***@x.de`)
+- `POST { park_id, action: 'save', campaign: {…} }` (anlegen/ändern; `status` nur draft/active/ended)
+- `POST { park_id, action: 'verify', entry_id, verified: boolean }` → setzt `verified_at`, `verified_by='manual'`
+- `POST { park_id, action: 'draw', campaign_id }` → zufällig **serverseitig** aus Einträgen mit
+  `giveaway_opt_in = true` und `verified_at is not null`; schreibt `winner_entry_id`, `drawn_at`;
+  zweiter Aufruf liefert denselben Gewinner (nicht neu ziehen), außer `redraw: true`.
+- Aktivieren einer Kampagne beendet die bisher aktive (`status='ended'`).
+
+Abholseiten (Repo `imst`, Functions `*-social-submit`): beim Eintrag die aktive Kampagne des Parks
+suchen (`status='active'` und innerhalb `starts_at/ends_at`) und `campaign_id` setzen; Hashtag,
+Erwähnung, Preis und Teilnahmebedingungen aus der Kampagne statt aus `park_survey_settings.social`
+anzeigen (ohne aktive Kampagne: wie heute). Kampagnentyp `record` zeigt zusätzlich den Tagesrekord
+aus der Rangliste.
+
+Plan-Zuordnung: Typ `share_unlock` = `crm_social` (Starter), `giveaway`/`record`/Ziehung =
+`social_campaigns` (Pro).
+
+### E3 – Prüfung über Instagram (später, braucht Meta-Freigabe)
+
+Voraussetzung außerhalb des Codes: Meta-App mit „Instagram Graph API“, Rechte
+`instagram_basic`, `instagram_manage_comments`, `pages_show_list`; App Review durch Meta (Wochen).
+Entwurf: Tabelle `park_instagram_connections (park_id pk, ig_user_id, username, access_token,
+token_expires_at)` (nur service_role); Function `social-instagram-sync` (stündlich per pg_cron):
+`GET /{ig_user_id}/tags?fields=id,username,permalink,timestamp` → für jeden Beitrag den
+`park_social_entries`-Eintrag mit gleichem `handle` (klein, ohne @) im Kampagnenzeitraum suchen →
+`verified_at`, `verified_by='instagram'`, `post_url=permalink`. Erst beginnen, wenn John die
+Meta-App freigegeben bekommen hat.
+
+### F1 – E-Mail-Marketing: Datenmodell und Versand (shared)
+
+Versanddienst hinter einer Schnittstelle, damit die Wahl (Brevo/Resend) nur eine Datei betrifft:
+`supabase/functions/_shared/emailProvider.ts` mit
+`sendEmail({ from, replyTo, to, subject, html, headers }): Promise<{ id: string }>` und Auswahl über
+Secret `EMAIL_PROVIDER` (`brevo` | `resend`) + `EMAIL_API_KEY`.
+
+```sql
+create table public.park_email_settings (
+  park_id uuid primary key references public.parks(id) on delete cascade,
+  sender_name text not null,
+  reply_to text not null,
+  footer_address text not null,          -- Pflichtangabe im Fuß jeder Mail (Anbieterkennzeichnung)
+  updated_at timestamptz not null default now()
+);
+
+create table public.email_campaigns (
+  id uuid primary key default gen_random_uuid(),
+  park_id uuid not null references public.parks(id) on delete cascade,
+  name text not null,
+  subject text not null default '',
+  preheader text not null default '',
+  language text,                          -- null = alle Sprachen
+  body_json jsonb not null default '[]'::jsonb,
+  html text not null default '',          -- vom Editor fertig erzeugt
+  segment jsonb not null default '{}'::jsonb,  -- {"countries": [...], "since": "2026-05-01"}
+  status text not null default 'draft' check (status in ('draft', 'scheduled', 'sending', 'sent', 'failed')),
+  scheduled_at timestamptz,
+  sent_at timestamptz,
+  recipients integer not null default 0,
+  delivered integer not null default 0,
+  opened integer not null default 0,
+  clicked integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index email_campaigns_park_idx on public.email_campaigns (park_id, created_at desc);
+
+create table public.email_sends (
+  id uuid primary key default gen_random_uuid(),
+  campaign_id uuid not null references public.email_campaigns(id) on delete cascade,
+  park_id uuid not null,
+  claim_id uuid,
+  email text not null,
+  status text not null default 'queued' check (status in ('queued', 'sent', 'failed', 'skipped')),
+  send_after timestamptz not null default now(),
+  sent_at timestamptz,
+  opened_at timestamptz,
+  clicked_at timestamptz,
+  error text,
+  unique (campaign_id, email)
+);
+create index email_sends_queue_idx on public.email_sends (status, send_after) where status = 'queued';
+
+create table public.email_usage (
+  park_id uuid not null references public.parks(id) on delete cascade,
+  month date not null,                    -- erster Tag des Monats
+  sent integer not null default 0,
+  primary key (park_id, month)
+);
+
+alter table public.park_entitlements add column if not exists email_extra_quota integer not null default 0;
+
+alter table public.park_email_settings enable row level security;
+alter table public.email_campaigns enable row level security;
+alter table public.email_sends enable row level security;
+alter table public.email_usage enable row level security;
+revoke all on table public.park_email_settings, public.email_campaigns, public.email_sends, public.email_usage
+  from public, anon, authenticated;
+```
+
+Empfänger: `photo_claims` mit `park_id`, `marketing_opt_in = true`, `email is not null`, je
+`lower(email)` nur einmal (neuester Eintrag), optional `locale = language` und Segmentfilter.
+**Nie** an Kontakte ohne Einwilligung.
+
+Kontingent je Monat: Starter 2.000, Pro 10.000, plus `email_extra_quota`. Konstanten in
+`_shared/emailQuota.ts` und gespiegelt in `src/lib/plans.ts` (`EMAIL_QUOTA`).
+
+Functions:
+- `operator-email-campaigns` (Betreiber): `GET ?park_id=` (Liste + `usage: { sent, quota }` +
+  `settings`), `GET ?park_id=&id=`, `POST action: 'save' | 'delete' | 'save_settings' |
+  'preview_audience'` (liefert nur die Anzahl) `| 'test'` (eine Mail an die E-Mail des angemeldeten
+  Betreibers, zählt nicht aufs Kontingent) `| 'send'` (prüft Einstellungen vollständig, Kontingent
+  ausreichend, Betreff nicht leer → schreibt `email_sends`-Zeilen, `status='sending'`).
+- `email-dispatch` (per pg_cron jede Minute, `verify_jwt=false`, eigenes Secret im Header): nimmt bis
+  zu 50 `queued` mit `send_after <= now()`, sendet, setzt Status, erhöht `email_usage.sent` und die
+  Zähler der Kampagne; alle erledigt → `status='sent'`, `sent_at`.
+- `email-guest-unsubscribe` (öffentlich): Link `…?c=<claim_id>&t=<HMAC>` (HMAC-SHA256 über claim_id mit
+  Secret `EMAIL_LINK_SECRET`) → `photo_claims.marketing_opt_in = false` für alle Einträge dieser
+  E-Mail im Park; zeigt eine schlichte Bestätigungsseite. Jede Mail trägt den Link im Fuß und als
+  Kopfzeile `List-Unsubscribe` (+ `List-Unsubscribe-Post: List-Unsubscribe=One-Click`).
+- `email-open` (öffentlich): 1×1-Bild `…?s=<send_id>` setzt `opened_at` einmalig, erhöht `opened`.
+
+Platzhalter, die der Server je Empfänger ersetzt: `{{name}}`, `{{park}}`, `{{unsubscribe_url}}`,
+`{{open_pixel}}`. Der Editor (F2) erzeugt aus `body_json` das fertige `html` (Tabellenlayout, 600 px,
+Inline-Stile) – der Server setzt nur ein. Blocktypen in `body_json`:
+`{type:'heading',text}`, `{type:'text',text}`, `{type:'image',url,alt}`,
+`{type:'button',label,url}`, `{type:'divider'}`. Der Fuß (Absender, Adresse, Abmeldelink) wird vom
+Server immer angehängt und ist nicht abschaltbar.
+
+Frontend F2: Seite `/marketing/email` (Liste, Editor, Einstellungen), Navigation als Unterseite von
+Marketing-CRM (`crmTabs.ts`), `ROUTE_FEATURE` enthält den Pfad schon.
+
+### F3 – Automationen (Pro)
+
+```sql
+create table public.email_automations (
+  id uuid primary key default gen_random_uuid(),
+  park_id uuid not null references public.parks(id) on delete cascade,
+  type text not null check (type in ('welcome', 'season_start', 'photo_reminder')),
+  enabled boolean not null default false,
+  campaign_id uuid references public.email_campaigns(id) on delete set null,  -- dient als Vorlage
+  delay_hours integer not null default 0,
+  unique (park_id, type)
+);
+alter table public.email_automations enable row level security;
+revoke all on table public.email_automations from public, anon, authenticated;
+```
+`welcome`: die `*-claim-submit`-Functions legen nach erfolgreicher Freischaltung mit Einwilligung eine
+`email_sends`-Zeile an (`send_after = now() + delay`). `season_start`: Betreiber löst sie in der
+Oberfläche aus (ein Klick = Kampagne an alle Opt-ins). `photo_reminder`: erst mit Online-Shop sinnvoll.
+
+### G1 – Ratgeber: Datenmodell (shared)
+
+```sql
+create table public.articles (
+  id uuid primary key default gen_random_uuid(),
+  slug text not null,
+  language text not null default 'de',
+  title text not null,
+  excerpt text not null default '',
+  body_md text not null default '',
+  cover_url text,
+  category text not null default 'tipps' check (category in ('tipps', 'marketing', 'technik', 'neu')),
+  status text not null default 'draft' check (status in ('draft', 'published')),
+  published_at timestamptz,
+  author text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (slug, language)
+);
+create index articles_published_idx on public.articles (status, published_at desc);
+alter table public.articles enable row level security;
+revoke all on table public.articles from public, anon, authenticated;
+
+insert into storage.buckets (id, name, public) values ('article-images', 'article-images', true)
+on conflict (id) do nothing;
+```
+Functions: `public-articles` (`verify_jwt=false`, nur `status='published'`): `GET ?lang=de&category=`
+→ Liste ohne `body_md`; `GET ?slug=&lang=` → ein Artikel, fehlt die Sprache → Fassung `de`.
+`admin-articles` (Staff): `GET` (alle), `POST action: 'save' | 'publish' | 'unpublish' | 'delete'`,
+Bild-Upload als multipart in den Bucket (Vorlage `admin-park-equipment`).
+Darstellung im Dashboard: Markdown mit den Paketen `marked` + `dompurify` (neu installieren),
+Textbreite max. 720 px.
+
+### H1 – Mitarbeiter & Rechte: Datenmodell (operator)
+
+```sql
+alter table public.organization_memberships
+  add column if not exists allowed_pages text[],        -- null = Standard der Rolle
+  add column if not exists role_label text,             -- Anzeigename der Vorlage, z. B. 'Buchhaltung'
+  add column if not exists disabled_at timestamptz;
+```
+Neu `src/lib/permissions.ts`:
+- `PAGE_KEYS`: `overview '/'`, `revenue`, `purchases`, `photos`, `personalization`, `health`,
+  `kamera`, `marketing '/leads'`, `shop`, `speed '/users'`, `configuration`, `tickets`, `team`,
+  `settings` (Schlüssel = erster Pfadteil; `marketing` deckt alle `/leads/*` und `/marketing/*`).
+- `ROLE_PRESETS`: Betriebsleitung (alles außer team, settings) · Buchhaltung (overview, revenue,
+  purchases) · Marketing (marketing, photos, personalization) · Technik (health, kamera, photos,
+  personalization, tickets) · Team (photos, health).
+- `canSee(pageKey, { isOwner, role, allowedPages })`: Inhaber alles; `allowed_pages` gesetzt → nur
+  diese; sonst wie heute (`staffAllowed`).
+`AuthContext` liefert `allowedPages` aus der Mitgliedschaft. `Sidebar.tsx` und ein neuer `PageGuard`
+(ersetzt `OwnerOnly` in `App.tsx`; ohne Recht → Weiterleitung zur ersten erlaubten Seite) nutzen `canSee`.
+
+`manage-staff` (operator) erweitern, weiterhin nur `org_owner`:
+`list` (+ `allowed_pages`, `role_label`, `disabled_at`, `last_sign_in_at`), `create { email,
+password, full_name, role_label, allowed_pages }`, `update { user_id, role_label, allowed_pages }`,
+`deactivate` / `reactivate` (setzt `disabled_at`; `AuthContext` meldet deaktivierte Nutzer ab),
+`delete`. Limit je Plan (Basis 3, Starter 10, Pro unbegrenzt) serverseitig prüfen.
+
+H3 serverseitig: `_shared/operatorAuth.ts` → `requireOperatorForPark` liefert zusätzlich `role` und
+`allowedPages`; neue Hilfsfunktion `requirePage(auth, 'revenue')` → 403. Einbauen in
+`operator-machine-revenue`, `operator-kiosk-purchases` (revenue/purchases), `operator-survey`,
+`external-leads` (marketing), `manage-staff` (team). Inhaber und Staff-Admins immer erlaubt.
+
+### S1 – Stripe-Abrechnung (später)
+
+Stripe-Produkte: „Marketing Starter“, „Marketing Pro“ (je monatlich + jährlich), „Zusatz-E-Mails
+10.000“. Preis-IDs als Secrets `STRIPE_PRICE_STARTER_MONTH` usw. (shared).
+
+```sql
+create table public.park_billing (
+  park_id uuid primary key references public.parks(id) on delete cascade,
+  stripe_customer_id text unique,
+  updated_at timestamptz not null default now()
+);
+alter table public.park_billing enable row level security;
+revoke all on table public.park_billing from public, anon, authenticated;
+```
+Functions (shared): `billing-checkout` (Betreiber, nur Inhaber; `POST { park_id, plan, interval }` →
+Checkout-Session `mode: 'subscription'`, `metadata: { park_id, plan }`, 90 Tage Test über
+`subscription_data.trial_period_days` für das Einstiegsangebot) · `billing-portal` (Link ins
+Kundenportal: Zahlungsart, Rechnungen, kündigen, pausieren) · `billing-webhook`
+(`verify_jwt=false`, Signatur prüfen): `checkout.session.completed`,
+`customer.subscription.updated|deleted`, `invoice.payment_failed` → `park_entitlements` schreiben
+mit `source='stripe'`, `stripe_subscription_id`, Status-Zuordnung `trialing→trial`,
+`active→active`, `paused→paused`, `canceled|unpaid→cancelled`.
+`admin-park-entitlements` darf Zeilen mit `source='stripe'` dann nicht mehr überschreiben (Fehler 409
+mit Hinweis „über Stripe verwaltet“), außer `force: true`.
+Saisonpause: `pause_collection` am Abo, im Portal aktivierbar.
 
 ## 7. Offene Entscheidungen für John
 
@@ -382,6 +716,7 @@ Leiste oben rechts. CRM-Gestaltung steckt in Phase C/D, Käufe/Kamera/Support in
 3. E-Mail-Versanddienst (Brevo/Resend) und Absenderdomain je Park.
 4. Instagram-Prüfung angehen (Meta App Review) oder vorerst manuell?
 5. Wer schreibt Ratgeber-Artikel, in welchen Sprachen?
+6. Google-Bewertungslink nach der Umfrage: bleibt das in Starter (wie heute für alle) oder wird es Pro?
 
 ## 8. Was bewusst NICHT gemacht wird
 
@@ -416,3 +751,4 @@ keine Vertriebs-Pipeline für Parks. Keine Preise ändern ohne John.
   Deployment nach Anmeldung: `npx supabase functions deploy operator-entitlements admin-park-entitlements
   --project-ref kvpcwlcfgmsmarjtwpsx --use-api`. Kein SQL ausgeführt, keine Pläne geändert.
 - 10.10.2026: B2 von Codex gebaut (Migration, zwei Functions, `useEntitlements()` liest echt, Tests). Opus hat das Fehlerverhalten geändert: Abruffehler sperren nicht mehr (vorher Fehleransicht statt CRM, auch bei kurzem Netzaussetzer oder Token-Erneuerung), Abfrage alle 5 statt 1 Minute. Aktivierung wartet auf Supabase-Anmeldung mit dem Liftpictures-Konto.
+- 10.10.2026: Abschnitt 6a ergänzt: Entwürfe (SQL, Functions, Seitenaufbau) für C2, D3, E1, E3, F1, F3, G1, H1/H3, S1. Alle Aufgaben sind damit für Sonnet/Codex umsetzbar.
