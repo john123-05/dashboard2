@@ -169,6 +169,20 @@ nimmt den Katalog nur, wenn er da ist, sonst die jetzigen festen Werte.
 - [ ] **PK8 (später)** Stripe-Anbindung des Katalogs: aus einem Paket automatisch Stripe-Preis anlegen, Rabatt als
   Stripe-Gutschein, Aktionscode im Checkout.
 
+### Phase OB – Onboarding („Erste Schritte“, HubSpot-Stil)
+
+- [~] **OB1 Seite „Erste Schritte“ (`/start`)** – Kopf mit Fortschrittsring, fünf Abschnitte (Los geht’s · Dein Park im Blick ·
+  Dein Automat · Mehr Gäste, mehr Umsatz · Team, Plan und Hilfe), je Seite des Dashboards eine Zeile zum Abhaken mit
+  „Wofür?“, drei Punkten „Das kannst du hier tun“, Dauer, „Seite öffnen“. Rechts „Als Nächstes“ und Hilfe.
+- [~] **OB2 Automatisch abhaken** – ein Seitenbesuch hakt ab (`useOnboardingTracker` im Layout), von Hand geht es auch.
+  Stand je Nutzer und Park im Browser (`localStorage`), sichtbar ist nur, was die Person sehen darf.
+- [~] **OB3 Überall sichtbar** – fester Eintrag „Erste Schritte“ oben in der Navigation mit Ring und Zähler, Karte oben
+  auf der Übersicht (ausblendbar), Schnellzugriff im Hilfe-Center.
+- [~] **OB4 Begrüßung und Rundgang neu** – beim ersten Anmelden Begrüßung mit „Rundgang“, „Erste Schritte“, „Später“.
+  Rundgang als Karte unten rechts: öffnet Seite für Seite, die Seite bleibt sichtbar. Ersetzt den alten Rundgang.
+- [ ] **OB5 (später)** Stand serverseitig speichern (gleich auf allen Geräten), echte Aufgaben erkennen (z. B. „erstes
+  Overlay angelegt“, „erste E-Mail gesendet“) statt nur Seitenbesuch, kurze Videos je Seite, „Was ist neu?“.
+
 ### Phase MB – Mobil
 
 - [~] **MB1 Plan** – siehe Abschnitt 6. Umsetzung je Seite beim Bau gleich mit (kein eigener Durchgang).
@@ -339,6 +353,13 @@ Je Seite:
 6. Öffentliche Seiten bleiben auf Deutsch (wie bisher); Sprüche sind freie Texte des Betreibers.
 
 ## 8. Protokoll
+
+11.10.2026, Claude (Opus 5.5) – OB1–OB4 gebaut, `[~]` bis John es gesehen hat:
+- `src/lib/onboarding.ts` (Liste der 22 Schritte, Speicher, `useOnboarding`, `useOnboardingTracker`), `src/pages/GetStarted.tsx`,
+  `src/components/onboarding/{SetupCard,ProgressRing}.tsx`, `src/components/WelcomeTour.tsx` neu, Eintrag in `Sidebar.tsx`,
+  Karte in `Overview.tsx`, Schnellzugriff in `TopBar.tsx`. Texte `ob.*` in 7 Sprachen (162 Schlüssel).
+- Die alten Texte `tour.*` werden nicht mehr benutzt (stehen noch in `i18n.tsx`). Der Einrichtungsassistent auf der
+  Marketing-CRM-Startseite bleibt daneben bestehen.
 
 11.10.2026, Claude (Sonnet 5.5) – PK1–PK3 gebaut, `[~]` bis John es gesehen hat:
 - PK1: Migration `20261011100000_catalog.sql` (erzeugt von `scripts/catalog_seed.py`, nochmal ausführen ändert nichts am Bearbeiteten).

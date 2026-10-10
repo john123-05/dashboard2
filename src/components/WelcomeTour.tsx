@@ -1,333 +1,166 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Sparkles, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Sparkles, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../lib/i18n';
 import { hasAccountSeenTour, isTourDisabled, markAccountSeenTour, setTourDisabled } from '../lib/dashboardTourSettings';
+import { setOnboardingTrackingSuppressed, useOnboarding } from '../lib/onboarding';
+import Modal from './ui/Modal';
 
-type TourStep = {
-  id: string;
-  route: string;
-  title: string;
-  benefit: string;
-  actions: string;
-  kpis: string;
-};
-
-type TourMode = 'prompt' | 'tour';
-
-const PROMPT_DURATION_MS = 4000;
-
-const ownerSteps: TourStep[] = [
-  {
-    id: 'overview',
-    route: '/',
-    title: 'tour.overview.title',
-    benefit: 'tour.overview.benefit',
-    actions: 'tour.overview.actions',
-    kpis: 'tour.overview.kpis',
-  },
-  {
-    id: 'revenue',
-    route: '/revenue',
-    title: 'tour.revenue.title',
-    benefit: 'tour.revenue.benefit',
-    actions: 'tour.revenue.actions',
-    kpis: 'tour.revenue.kpis',
-  },
-  {
-    id: 'purchases',
-    route: '/purchases',
-    title: 'tour.purchases.title',
-    benefit: 'tour.purchases.benefit',
-    actions: 'tour.purchases.actions',
-    kpis: 'tour.purchases.kpis',
-  },
-  {
-    id: 'photos',
-    route: '/photos',
-    title: 'tour.photos.title',
-    benefit: 'tour.photos.benefit',
-    actions: 'tour.photos.actions',
-    kpis: 'tour.photos.kpis',
-  },
-  {
-    id: 'leads',
-    route: '/leads',
-    title: 'tour.leads.title',
-    benefit: 'tour.leads.benefit',
-    actions: 'tour.leads.actions',
-    kpis: 'tour.leads.kpis',
-  },
-  {
-    id: 'personalization',
-    route: '/personalization',
-    title: 'tour.personalization.title',
-    benefit: 'tour.personalization.benefit',
-    actions: 'tour.personalization.actions',
-    kpis: 'tour.personalization.kpis',
-  },
-  {
-    id: 'support',
-    route: '/tickets',
-    title: 'tour.support.title',
-    benefit: 'tour.support.benefit',
-    actions: 'tour.support.actions',
-    kpis: 'tour.support.kpis',
-  },
-  {
-    id: 'health',
-    route: '/health',
-    title: 'tour.health.title',
-    benefit: 'tour.health.benefit',
-    actions: 'tour.health.actions',
-    kpis: 'tour.health.kpis',
-  },
-  {
-    id: 'settings',
-    route: '/settings',
-    title: 'tour.settings.title',
-    benefit: 'tour.settings.benefit',
-    actions: 'tour.settings.actions',
-    kpis: 'tour.settings.kpis',
-  },
-];
-
-const staffSteps: TourStep[] = [
-  ownerSteps[3],
-  ownerSteps[5],
-  ownerSteps[6],
-  ownerSteps[7],
-];
-
-function PromptCloseButton({
-  remainingMs,
-  onClose,
-}: {
-  remainingMs: number;
-  onClose: () => void;
-}) {
-  const { t } = useI18n();
-  const radius = 18;
-  const circumference = 2 * Math.PI * radius;
-  const progress = Math.max(0, Math.min(1, remainingMs / PROMPT_DURATION_MS));
-  const dashOffset = circumference * (1 - progress);
-
-  return (
-    <button
-      type="button"
-      onClick={onClose}
-      className="relative flex h-11 w-11 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
-      aria-label={t('tour.close_label')}
-     title={t('tour.close_label')}>
-      <svg className="absolute inset-0 h-11 w-11 -rotate-90" viewBox="0 0 44 44" aria-hidden="true">
-        <circle cx="22" cy="22" r={radius} fill="none" stroke="rgba(148,163,184,0.2)" strokeWidth="2.5" />
-        <circle
-          cx="22"
-          cy="22"
-          r={radius}
-          fill="none"
-          stroke="rgb(14 165 233)"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={dashOffset}
-        />
-      </svg>
-      <X className="relative z-10 h-4 w-4" />
-    </button>
-  );
-}
-
+// Begrüßung und Rundgang (Teil von „Erste Schritte“, siehe src/lib/onboarding.ts).
+// - Beim ersten Anmelden: Begrüßung mit Auswahl „Rundgang“, „Erste Schritte“ oder „Später“.
+// - Rundgang: eine Karte unten rechts, die Seite für Seite öffnet und erklärt, was man dort tun kann.
+//   Die Seite bleibt dabei sichtbar und bedienbar. Start auch über das Hilfe-Center (`lp:start-tour`).
 export default function WelcomeTour() {
   const { t } = useI18n();
-  const { user, isOwner } = useAuth();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [visible, setVisible] = useState(false);
-  const [mode, setMode] = useState<TourMode>('prompt');
+  const { items, markDone } = useOnboarding();
+  const steps = items.filter((item) => !item.action);
+  const [mode, setMode] = useState<'off' | 'welcome' | 'tour'>('off');
   const [index, setIndex] = useState(0);
-  const [remainingMs, setRemainingMs] = useState(PROMPT_DURATION_MS);
-
-  const steps = useMemo(() => (isOwner ? ownerSteps : staffSteps), [isOwner]);
   const step = steps[index];
-  const isLast = index === steps.length - 1;
+  const firstName = (profile?.full_name ?? '').trim().split(/\s+/)[0] ?? '';
 
   useEffect(() => {
-    if (!user) return;
-    if (isTourDisabled() || hasAccountSeenTour(user.id) || steps.length === 0) return;
-
-    setVisible(true);
-    setMode('prompt');
-    setIndex(0);
-    setRemainingMs(PROMPT_DURATION_MS);
+    if (!user || steps.length === 0) return;
+    if (isTourDisabled() || hasAccountSeenTour(user.id)) return;
     markAccountSeenTour(user.id);
-  }, [steps.length, user]);
+    setMode('welcome');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, steps.length > 0]);
 
-  // „Rundgang starten“ aus dem Hilfe-Center / Profilmenü (TopBar).
   useEffect(() => {
     function start() {
-      setVisible(true);
-      setMode('tour');
       setIndex(0);
+      setMode('tour');
     }
     window.addEventListener('lp:start-tour', start);
     return () => window.removeEventListener('lp:start-tour', start);
   }, []);
 
+  // Im Rundgang zählen Seitenbesuche nicht als „erledigt“ – man hat die Seite ja nur kurz gezeigt bekommen.
   useEffect(() => {
-    if (!visible || mode !== 'prompt') return;
-    if (location.pathname !== '/') {
-      navigate('/', { replace: true });
-    }
-  }, [location.pathname, mode, navigate, visible]);
-
-  useEffect(() => {
-    if (!visible || mode !== 'tour' || !step) return;
-    if (location.pathname !== step.route) {
-      navigate(step.route, { replace: true });
-    }
-  }, [location.pathname, mode, navigate, step, visible]);
+    setOnboardingTrackingSuppressed(mode === 'tour');
+    return () => setOnboardingTrackingSuppressed(false);
+  }, [mode]);
 
   useEffect(() => {
-    if (!visible || mode !== 'prompt') return;
+    if (mode !== 'tour' || !step) return;
+    if (location.pathname !== step.path) navigate(step.path);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, step?.path]);
 
-    const startedAt = Date.now();
-    const timer = window.setInterval(() => {
-      const elapsed = Date.now() - startedAt;
-      const nextRemaining = Math.max(0, PROMPT_DURATION_MS - elapsed);
-      setRemainingMs(nextRemaining);
+  useEffect(() => {
+    if (mode !== 'tour') return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMode('off');
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [mode]);
 
-      if (nextRemaining <= 0) {
-        window.clearInterval(timer);
-        setVisible(false);
-      }
-    }, 100);
+  function finish() {
+    markDone('tour');
+    setMode('off');
+    // Erst nach dem Ende des Rundgangs wieder mitzählen, dann zur Liste.
+    window.setTimeout(() => navigate('/start'), 0);
+  }
 
-    return () => window.clearInterval(timer);
-  }, [mode, visible]);
-
-  if (!visible || !step) return null;
-
-  const closeTour = () => setVisible(false);
-
-  if (mode === 'prompt') {
+  if (mode === 'welcome') {
     return (
-      <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/20 p-4 backdrop-blur-[2px] sm:items-center">
-        <div className="glass-panel-strong w-full max-w-lg rounded-[32px] p-6 shadow-2xl sm:p-7">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-100 text-brand-600">
-                <Sparkles className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-brand-500">{t('tour.welcome')}</p>
-                <h3 className="mt-1 text-xl font-bold text-slate-800">{t('tour.prompt_title')}</h3>
-              </div>
-            </div>
-            <PromptCloseButton remainingMs={remainingMs} onClose={closeTour} />
-          </div>
-
-          <p className="mt-5 text-sm leading-7 text-slate-600">
-            {t('tour.prompt_text')}
-          </p>
-
-          <div className="mt-6 flex items-center justify-between gap-3">
-            <button
-              type="button"
-              onClick={closeTour}
-              className="inline-flex items-center gap-2 rounded-full px-1 py-2 text-sm font-medium text-slate-500 transition hover:text-slate-700"
-            >
-              <X className="h-4 w-4" />
-              {t('tour.close')}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setMode('tour');
-                setIndex(0);
-              }}
-              className="glass-button-primary text-sm"
-            >
-              {t('tour.yes_show')}
-            </button>
-          </div>
+      <Modal onClose={() => setMode('off')} labelledBy="ob-welcome" panelClassName="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl sm:p-8">
+        <span className="flex h-11 w-11 items-center justify-center rounded-full bg-brand-50 text-brand-700">
+          <Sparkles className="h-5 w-5" />
+        </span>
+        <h2 id="ob-welcome" className="mt-4 text-[26px] font-light leading-tight tracking-tight text-[color:var(--ink)]">
+          {firstName ? t('ob.modal_title', { name: firstName }) : t('ob.welcome_plain')}
+        </h2>
+        <p className="mt-2 text-sm leading-relaxed text-[color:var(--ink-2)]">{t('ob.modal_text')}</p>
+        <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+          <button type="button" onClick={() => { setIndex(0); setMode('tour'); }} className="glass-button-primary justify-center">
+            {t('ob.modal_tour')} <ArrowRight className="h-4 w-4" />
+          </button>
+          <button type="button" onClick={() => { setMode('off'); navigate('/start'); }} className="glass-button-secondary justify-center">
+            {t('ob.modal_steps')}
+          </button>
+          <button type="button" onClick={() => setMode('off')} className="rounded-full px-4 py-2 text-sm font-medium text-[color:var(--ink-3)] hover:text-[color:var(--ink)]">
+            {t('ob.modal_later')}
+          </button>
         </div>
-      </div>
+        <button
+          type="button"
+          onClick={() => { setTourDisabled(true); setMode('off'); }}
+          className="mt-5 text-xs text-[color:var(--ink-3)] hover:underline"
+        >
+          {t('ob.modal_never')}
+        </button>
+      </Modal>
     );
   }
 
+  if (mode !== 'tour' || !step) return null;
+  const Icon = step.icon;
+  const isLast = index === steps.length - 1;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/30 p-4 backdrop-blur-[2px] sm:items-center">
-      <div className="glass-panel-strong w-full max-w-xl rounded-[32px] p-6 shadow-2xl sm:p-7">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-brand-500">
-              {t('tour.step_of', { index: index + 1, total: steps.length })}
-            </p>
-            <h3 className="mt-2 text-xl font-bold text-slate-800">{t(step.title)}</h3>
+    <div
+      role="dialog"
+      aria-label={t('ob.start_tour')}
+      className="fixed bottom-4 right-4 z-[95] w-[min(400px,calc(100vw-2rem))] overflow-hidden rounded-xl border border-[color:var(--line-strong)] bg-white shadow-[0_16px_48px_rgba(16,24,40,0.22)] max-[900px]:bottom-[calc(84px+env(safe-area-inset-bottom,0px))] max-[900px]:left-4 max-[900px]:w-auto"
+    >
+      <div className="h-1 bg-slate-100">
+        <div className="h-full bg-brand-600 transition-[width] duration-300" style={{ width: `${((index + 1) / steps.length) * 100}%` }} />
+      </div>
+      <div className="p-5">
+        <div className="flex items-start gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-[color:var(--ink-2)]">
+            <Icon className="h-[18px] w-[18px]" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-medium text-[color:var(--ink-3)]">{t('ob.tour_step', { index: index + 1, total: steps.length })}</p>
+            <h3 className="text-base font-semibold text-[color:var(--ink)]">{t(`ob.${step.id}.title`)}</h3>
           </div>
           <button
             type="button"
-            onClick={closeTour}
-            className="rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
-            aria-label={t('tour.close_label')}
-           title={t('tour.close_label')}>
+            onClick={() => setMode('off')}
+            aria-label={t('ob.tour_close')}
+            title={t('ob.tour_close')}
+            className="rounded-md p-1.5 text-[color:var(--ink-3)] hover:bg-slate-100 hover:text-[color:var(--ink)]"
+          >
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        <div className="space-y-4 text-sm leading-7 text-slate-600">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">{t('tour.benefit_label')}</p>
-            <p className="mt-1">{t(step.benefit)}</p>
-          </div>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">{t('tour.actions_label')}</p>
-            <p className="mt-1">{t(step.actions)}</p>
-          </div>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">{t('tour.kpis_label')}</p>
-            <p className="mt-1">{t(step.kpis)}</p>
-          </div>
-        </div>
+        <p className="mt-3 text-sm leading-relaxed text-[color:var(--ink-2)]">{t(`ob.${step.id}.purpose`)}</p>
+        <p className="mt-3 text-xs font-semibold text-[color:var(--ink-3)]">{t('ob.can_title')}</p>
+        <ul className="mt-1.5 space-y-1.5">
+          {[1, 2, 3].map((n) => (
+            <li key={n} className="flex gap-2 text-sm leading-snug text-[color:var(--ink-2)]">
+              <Check className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" />
+              {t(`ob.${step.id}.can${n}`)}
+            </li>
+          ))}
+        </ul>
+        {step.locked && <p className="mt-3 rounded-md bg-slate-50 px-3 py-2 text-xs text-[color:var(--ink-3)]">{t('ob.locked_hint')}</p>}
 
-        <div className="mt-7 flex items-center justify-between gap-3">
-          {index > 0 ? (
-            <button
-              type="button"
-              onClick={() => setIndex((current) => Math.max(0, current - 1))}
-              className="glass-button-secondary flex items-center gap-1.5 text-sm"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              {t('tour.back')}
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => {
-                setTourDisabled(true);
-                closeTour();
-              }}
-              className="text-sm font-medium text-slate-500 transition hover:text-slate-700"
-            >
-              {t('tour.never_again')}
-            </button>
-          )}
-
+        <div className="mt-5 flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={() => setIndex((i) => Math.max(0, i - 1))}
+            disabled={index === 0}
+            className="glass-button-secondary disabled:opacity-40"
+          >
+            <ArrowLeft className="h-4 w-4" /> {t('ob.tour_back')}
+          </button>
           {isLast ? (
-            <button type="button" onClick={closeTour} className="glass-button-primary text-sm">
-              {t('tour.done')}
+            <button type="button" onClick={finish} className="glass-button-primary">
+              <Check className="h-4 w-4" /> {t('ob.tour_finish')}
             </button>
           ) : (
-            <button
-              type="button"
-              onClick={() => setIndex((current) => Math.min(steps.length - 1, current + 1))}
-              className="glass-button-primary flex items-center gap-1.5 text-sm"
-            >
-              {t('tour.next')}
-              <ArrowRight className="h-4 w-4" />
+            <button type="button" onClick={() => setIndex((i) => Math.min(steps.length - 1, i + 1))} className="glass-button-primary">
+              {t('ob.tour_next')} <ArrowRight className="h-4 w-4" />
             </button>
           )}
         </div>

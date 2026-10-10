@@ -32,7 +32,7 @@ import {
   X,
   AlertTriangle,
   Package,
-  MessageSquare,
+  MessageSquare, ListChecks,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePark } from '../../contexts/ParkContext';
@@ -591,6 +591,7 @@ function HelpCenter({ onClose }: { onClose: () => void }) {
 
         <div className="mt-4 grid gap-2 sm:grid-cols-2">
           <QuickLink icon={Play} label={t('top.start_tour')} onClick={() => { startTour(); setMinimized(true); }} />
+          <QuickLink icon={ListChecks} label={t('ob.nav')} onClick={() => go('/start')} />
           <QuickLink icon={FileQuestion} label={t('top.faq')} onClick={() => go('/configuration/faq')} />
         </div>
       </div>

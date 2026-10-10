@@ -38,6 +38,8 @@ import ProfileParkSwitcher from './ProfileParkSwitcher';
 import { CRM_TABS } from '../../lib/crmTabs';
 import { canSee, pageKeyForPath } from '../../lib/permissions';
 import { featureForPath, useEntitlements, PLAN_LABEL_KEY } from '../../lib/plans';
+import { useOnboarding } from '../../lib/onboarding';
+import ProgressRing from '../onboarding/ProgressRing';
 
 type NavItem = {
   to: string;
@@ -192,6 +194,7 @@ export default function Sidebar({
   const { parkName, setPark, isKioskPark, parkId, cameraControlAvailable } = usePark();
   const isMobile = useIsMobile();
   const entitlements = useEntitlements();
+  const onboarding = useOnboarding();
   // Light/dark switch: tags <html data-operator-theme>, the dark styles live in
   // src/styles/operator-dark.css. index.html sets the attribute before the first
   // paint so a reload in dark mode doesn't flash white.
@@ -611,6 +614,27 @@ export default function Sidebar({
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-4 scrollbar-thin" onScroll={() => setTip(null)}>
+        {/* Erste Schritte: fester Eintrag über den Gruppen, mit Fortschritt. */}
+        {onboarding.total > 0 && (
+          <NavLink
+            to="/start"
+            onClick={onCloseMobile}
+            title={showFull ? undefined : t('ob.nav')}
+            className={({ isActive }) =>
+              `mb-3 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
+                isActive ? 'bg-white/[0.12] font-medium text-white' : 'text-slate-200 hover:bg-white/[0.06] hover:text-white'
+              } ${showFull ? '' : 'justify-center px-0'}`
+            }
+          >
+            <ProgressRing percent={onboarding.percent} size={22} stroke={3} trackClassName="text-white/20" className={onboarding.complete ? 'text-emerald-400' : 'text-brand-400'} />
+            {showFull && (
+              <>
+                <span className="min-w-0 flex-1 truncate">{t('ob.nav')}</span>
+                {!onboarding.complete && <span className="text-[11px] text-slate-400">{onboarding.doneCount}/{onboarding.total}</span>}
+              </>
+            )}
+          </NavLink>
+        )}
         <div className={`space-y-0.5 ${drag ? 'select-none' : ''}`}>
           {pinnedItems.map((item, index) => {
             const startsGroup = index === 0 || pinnedItems[index - 1].group !== item.group;

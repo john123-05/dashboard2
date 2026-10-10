@@ -77,6 +77,7 @@ import {
 } from '../lib/utils';
 import KPICard from '../components/ui/KPICard';
 import GlassCard from '../components/ui/GlassCard';
+import SetupCard from '../components/onboarding/SetupCard';
 
 interface StripeRevenuePoint {
   date: string;
@@ -917,6 +918,7 @@ export default function Overview() {
 
   return (
     <div className="space-y-6 overflow-x-clip">
+      <SetupCard />
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-xs font-medium text-slate-400">

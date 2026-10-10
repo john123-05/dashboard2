@@ -7,6 +7,7 @@ import Login from './pages/Login';
 const Register = seiteNachladen(() => import('./pages/Register'));
 const Overview = seiteNachladen(() => import('./pages/Overview'));
 const Ratgeber = seiteNachladen(() => import('./pages/Ratgeber'));
+const GetStarted = seiteNachladen(() => import('./pages/GetStarted'));
 const RatgeberArticle = seiteNachladen(() => import('./pages/RatgeberArticle'));
 const Revenue = seiteNachladen(() => import('./pages/Revenue'));
 const Purchases = seiteNachladen(() => import('./pages/Purchases'));
@@ -137,6 +138,7 @@ export default function App() {
                 <Route path="/tickets" element={<Support />} />
                 <Route path="/health" element={<SystemHealth />} />
                 <Route path="/kamera" element={<CameraAvailableOnly><Kamera /></CameraAvailableOnly>} />
+                <Route path="/start" element={<GetStarted />} />
                 <Route path="/ratgeber" element={<Ratgeber />} />
                 <Route path="/ratgeber/:slug" element={<RatgeberArticle />} />
                 <Route path="/team" element={<OwnerOnly><Team /></OwnerOnly>} />

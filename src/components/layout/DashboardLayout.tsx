@@ -5,6 +5,7 @@ import AnnouncementHost from './AnnouncementHost';
 import { useAuth } from '../../contexts/AuthContext';
 import Sidebar from './Sidebar';
 import WelcomeTour from '../WelcomeTour';
+import { useOnboardingTracker } from '../../lib/onboarding';
 import TopBar from './TopBar';
 import { NotificationsProvider } from '../../contexts/NotificationsContext';
 import { Loader2, Mountain, ArrowRight } from 'lucide-react';
@@ -20,6 +21,8 @@ export default function DashboardLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const location = useLocation();
+  // „Erste Schritte“: besuchte Seiten automatisch abhaken.
+  useOnboardingTracker(location.pathname);
 
   useEffect(() => {
     setMobileNavOpen(false);
