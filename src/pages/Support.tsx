@@ -4,6 +4,7 @@ import { invokeEdgeFunction } from '../lib/edgeFunctions';
 import { useAuth } from '../contexts/AuthContext';
 import { usePark } from '../contexts/ParkContext';
 import { formatRelative, formatDateTime, statusColor } from '../lib/utils';
+import Modal from '../components/ui/Modal';
 import GlassCard from '../components/ui/GlassCard';
 import type { SupportTicket, SupportTicketMessage } from '../lib/types';
 import { useI18n } from '../lib/i18n';
@@ -530,8 +531,8 @@ export default function Support() {
       </div>
 
       {showCreate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
-          <div className="glass-panel-strong animate-slide-up w-full max-w-lg rounded-3xl p-6">
+        <Modal onClose={() => setShowCreate(false)} panelClassName="glass-panel-strong animate-slide-up w-full max-w-lg rounded-3xl p-6">
+          <div className="contents">
             <div className="mb-6 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-slate-800">{t('support.form.title')}</h3>
               <button
@@ -599,12 +600,12 @@ export default function Support() {
               </div>
             </form>
           </div>
-        </div>
+</Modal>
       )}
 
       {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
-          <div className="glass-panel-strong animate-slide-up w-full max-w-sm rounded-3xl p-6">
+        <Modal onClose={() => setDeleteTarget(null)} locked={deleting} panelClassName="glass-panel-strong animate-slide-up w-full max-w-sm rounded-3xl p-6">
+          <div className="contents">
             <h3 className="mb-2 text-lg font-semibold text-slate-800">{t('support.delete.confirm_title')}</h3>
             <p className="mb-6 text-sm text-slate-500">{t('support.delete.confirm_body')}</p>
             <div className="flex gap-3">
@@ -626,7 +627,7 @@ export default function Support() {
               </button>
             </div>
           </div>
-        </div>
+</Modal>
       )}
     </div>
   );

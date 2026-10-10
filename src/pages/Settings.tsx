@@ -6,6 +6,7 @@ import { getOptionalSourceWarning, invokeEdgeFunction, isEdgeSourceUnavailable }
 import { useAuth } from '../contexts/AuthContext';
 import { usePark } from '../contexts/ParkContext';
 import GlassCard from '../components/ui/GlassCard';
+import Modal from '../components/ui/Modal';
 import { useI18n } from '../lib/i18n';
 import {
   createDefaultOpeningHoursConfig,
@@ -1471,8 +1472,12 @@ export default function Settings() {
       </div>
 
       {showProductModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm">
-          <div className="relative mx-4 max-h-[90vh] w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+        <Modal
+          onClose={() => setShowProductModal(false)}
+          closeOnBackdrop={false}
+          panelClassName="relative max-h-[90vh] w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl"
+        >
+          <div className="contents">
             <div className="border-b border-slate-200 p-6">
               <h3 className="text-xl font-semibold text-slate-800">{t('settings.product_modal.title')}</h3>
               <p className="mt-1 text-sm text-slate-500">
@@ -1612,7 +1617,7 @@ export default function Settings() {
               </div>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   );
