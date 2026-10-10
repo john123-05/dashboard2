@@ -335,6 +335,23 @@ Legende Modell: **S** = Sonnet/Codex medium reicht · **O** = Opus empfohlen (Ar
 - [ ] **M3 Prüfliste** – jede Seite bei 375/390/430 px: kein seitliches Scrollen, Buttons ≥ 40 px hoch,
   Text ≥ 13 px.
 
+### Phase R – Rest aus dem Redesign-Plan (Gestaltung, keine neuen Funktionen)
+
+Herkunft: `docs/REDESIGN_PLAN.md` Phasen 4–9. Dort erledigt: Phase 1–3, Personalisierung, Systemzustand,
+Leiste oben rechts. CRM-Gestaltung steckt in Phase C/D, Käufe/Kamera/Support in Phase I, Handy in Phase M.
+
+- [ ] **R1 Übersicht + Umsatz** (S) – `Overview.tsx`, `Revenue.tsx`, `ZahlungsUebersicht.tsx`,
+  `AutomatenUebersicht.tsx`, `KPICard.tsx`: KPI-Karten im Stil der Kennzahl (Abschnitt 4), Diagramm-Karten
+  mit Kopfzeile, Zeitraum-Schalter als Segment-Schalter. Diagramm-Animationen behalten. Keine Texte ändern.
+- [ ] **R2 Einstellungen** (S) – `Settings.tsx`: links Unternavigation (Sprache, Profil, Organisation,
+  Bildpreis, Öffnungszeiten, Benachrichtigungen, Stripe), rechts Formulare in Karten, Speichern-Leiste
+  unten fixiert. Alle Felder und Funktionen bleiben; Sprungmarke `#benachrichtigungen` muss weiter gehen.
+- [ ] **R3 Online-Shop, Speedmessung, Konfiguration, Fotos, Mitarbeiter-Liste, Login** (S) – an die
+  Bausteine aus Abschnitt 4 angleichen (Seitenkopf, Karten, Buttons, Chips). Nur Gestaltung.
+- [ ] **R4 Feinschliff** (S) – Leerzustände wie `EmptyNotifications`, Skeletons statt Spinner beim
+  ersten Laden, EINE `Modal`-Komponente (`src/components/ui/Modal.tsx`) für alle Dialoge, Fokus-Ringe
+  sichtbar, Tooltips einheitlich.
+
 ### Phase S – Stripe & Liftpictures-CRM (später)
 
 - [ ] **S1 Stripe Billing** (O) – Produkte/Preise je Plan + Add-on, Checkout-Session aus `/plaene`,
@@ -357,6 +374,7 @@ keine Vertriebs-Pipeline für Parks. Keine Preise ändern ohne John.
 
 ## 9. Protokoll
 
+- 10.10.2026: Offene Redesign-Phasen 4–9 als Phase R übernommen; `REDESIGN_PLAN.md` ist ab jetzt nur Protokoll.
 - 10.10.2026: Plan erstellt. A1 (Marketing-CRM) und A2 (Benachrichtigungen auf der Übersicht) umgesetzt.
   Dabei behoben: eine laufende Automaten-Störung erschien jeden Tag als neue Meldung (Kennung mit Datum).
   Jetzt eine Meldung je Störung, solange sie andauert (`active` in `notificationFeed.ts`); Schweregrad

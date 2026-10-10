@@ -95,6 +95,8 @@ Jede Phase: nur Gestaltung, keine Funktionsänderung. Prüfen mit `npm run typec
       optional Karten darunter). Einsetzen bei: Speedmessung (nicht freigeschaltet), Online-Shop
       (Kopfbereich, Preisseite verlinken), CRM-Preise, Shop-Preise. Inhalte/Texte bleiben, nur in der
       Vorlage angeordnet.
+> Offene Phasen 4–9 sind seit 10.10.2026 in `docs/PRODUKT_PLAN.md` (Phase R, C, D, I, M) – dort weiterarbeiten.
+
 - [ ] **Phase 4 – Übersicht (`Overview.tsx`) und Umsatz (`Revenue.tsx`, `ZahlungsUebersicht.tsx`,
       `AutomatenUebersicht.tsx`):** KPI-Karten (`KPICard.tsx`) im neuen Stil, Diagramm-Karten,
       Zeitraum-Schalter als Tabs/Chips. Animationen der Diagramme behalten.
