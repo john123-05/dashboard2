@@ -27,15 +27,15 @@ export default function KPICard({
 
   return (
     <GlassCard className="relative h-full min-h-[148px] overflow-hidden p-4 sm:min-h-[132px] sm:p-6">
-      <div className={`absolute right-4 top-4 shrink-0 rounded-xl p-2 sm:right-6 sm:top-6 sm:p-3 ${iconBg}`}>
+      <div className={`absolute right-4 top-4 shrink-0 rounded-lg p-2 sm:right-6 sm:top-6 sm:p-2.5 ${iconBg}`}>
         <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${iconColor}`} />
       </div>
       <div className="flex h-full flex-col">
         <div className="min-w-0 space-y-2 sm:space-y-3">
-          <p className="max-w-[9rem] pr-12 text-[11px] font-medium leading-[1.2] text-slate-500 sm:max-w-none sm:pr-14 sm:text-sm">
+          <p className="max-w-[9rem] pr-12 text-[11px] font-normal leading-[1.2] text-[color:var(--ink-3)] sm:max-w-none sm:pr-14 sm:text-sm">
             {title}
           </p>
-          <p className="text-[clamp(1.35rem,5.8vw,1.9rem)] font-bold leading-[0.95] tracking-[-0.03em] text-slate-800 sm:text-2xl">
+          <p className="text-[clamp(1.4rem,5.8vw,1.9rem)] font-light leading-[0.95] tracking-[-0.02em] text-[color:var(--ink)] sm:text-[28px]">
             {value}
           </p>
           {subtitle && (

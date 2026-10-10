@@ -453,10 +453,10 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
   if (loading) {
     return (
       <div className={embedded ? 'space-y-4 customer-embedded-root preview-revenue' : 'space-y-6'}>
-        <div className="h-8 w-32 animate-pulse rounded-lg bg-white/40" />
+        <div className="h-8 w-32 animate-pulse rounded-lg bg-slate-100" />
         <div className="grid grid-cols-2 gap-4 sm:gap-6 sm:grid-cols-4">
           {[...Array(4)].map((_, index) => (
-            <div key={index} className="h-32 animate-pulse rounded-2xl bg-white/30" />
+            <div key={index} className="h-32 animate-pulse rounded-2xl bg-slate-100" />
           ))}
         </div>
       </div>
@@ -466,7 +466,7 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
   if (error || !parkData) {
     return (
       <div className={embedded ? 'space-y-4 customer-embedded-root preview-revenue' : 'space-y-6'}>
-        <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('revenue.title')}</h2>
+        <h2 className="text-[28px] font-light tracking-tight text-[color:var(--ink)] sm:text-[32px]">{t('revenue.title')}</h2>
         <div className="rounded-2xl border border-red-200 bg-red-50 p-6">
           <h3 className="mb-2 text-lg font-semibold text-red-800">{t('overview.error_title')}</h3>
           <p className="mb-4 text-sm text-red-600">{error || 'Unknown error'}</p>
@@ -482,14 +482,14 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
     <div className={embedded ? 'space-y-4 customer-embedded-root preview-revenue' : 'space-y-6'}>
       <div className="customer-operator-pagehead flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('revenue.title')}</h2>
+          <h2 className="text-[28px] font-light tracking-tight text-[color:var(--ink)] sm:text-[32px]">{t('revenue.title')}</h2>
           <p className="mt-1 text-sm text-slate-500">
             {t('revenue.overview_desc')}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           {isKioskPark && (
-            <div className="flex items-center gap-2 rounded-xl border border-slate-200/70 bg-white/60 px-3 py-1.5 text-xs">
+            <div className="flex items-center gap-2 rounded-xl border border-slate-200/70 bg-slate-50 px-3 py-1.5 text-xs">
               <div>
                 <p className="text-slate-400">{t('revenue.current_price')}</p>
                 <p className="font-semibold text-slate-800">{formatCurrency(kioskPriceCents ?? 0, 'eur')}</p>
@@ -586,14 +586,14 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
             />
             {machineRevenue.length >= 2 && (
               <div className="col-span-2 hidden items-end justify-end sm:flex">
-                <div className="inline-flex rounded-xl bg-white/50 p-1">
+                <div className="inline-flex rounded-md border border-[color:var(--line-strong)] p-0.5">
                   {AUTOMATEN_ZEITRAEUME.map((z) => (
                     <button
                       key={z.key}
                       type="button"
                       onClick={() => setAutomatZeitraum(z.key)}
                       className={`whitespace-nowrap rounded-lg px-2.5 py-1.5 text-xs font-medium transition sm:px-3 sm:text-sm ${
-                        automatZeitraum === z.key ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                        automatZeitraum === z.key ? 'bg-[color:var(--ink)] text-white' : 'text-[color:var(--ink-2)] hover:bg-slate-100'
                       }`}
                     >
                       {t(`revenue.period.${z.key}`)}
@@ -616,12 +616,12 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
                   {chartMode === 'trend' ? t('overview.kiosk_daily_revenue') : t('revenue.hourly_revenue')}
                 </p>
               </div>
-              <div className="customer-operator-segment flex flex-wrap rounded-xl bg-white/40 p-1">
+              <div className="customer-operator-segment flex flex-wrap rounded-md border border-[color:var(--line-strong)] p-0.5">
                 <button
                   type="button"
                   onClick={() => setChartMode('trend')}
                   className={`customer-operator-segment-btn rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-                    chartMode === 'trend' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                    chartMode === 'trend' ? 'bg-[color:var(--ink)] text-white' : 'text-[color:var(--ink-2)] hover:bg-slate-100'
                   }`}
                 >
                   {t('revenue.total_tab')}
@@ -634,8 +634,8 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
                   }}
                   className={`customer-operator-segment-btn rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
                     chartMode === 'day' && dayTab === 'heute'
-                      ? 'bg-white text-slate-800 shadow-sm'
-                      : 'text-slate-500 hover:text-slate-700'
+                      ? 'bg-[color:var(--ink)] text-white'
+                      : 'text-[color:var(--ink-2)] hover:bg-slate-100'
                   }`}
                 >
                   {t('overview.today')}
@@ -648,8 +648,8 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
                   }}
                   className={`customer-operator-segment-btn rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
                     chartMode === 'day' && dayTab === 'gestern'
-                      ? 'bg-white text-slate-800 shadow-sm'
-                      : 'text-slate-500 hover:text-slate-700'
+                      ? 'bg-[color:var(--ink)] text-white'
+                      : 'text-[color:var(--ink-2)] hover:bg-slate-100'
                   }`}
                 >
                   {t('overview.yesterday')}
@@ -662,8 +662,8 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
                   }}
                   className={`customer-operator-segment-btn rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
                     chartMode === 'day' && dayTab === 'other'
-                      ? 'bg-white text-slate-800 shadow-sm'
-                      : 'text-slate-500 hover:text-slate-700'
+                      ? 'bg-[color:var(--ink)] text-white'
+                      : 'text-[color:var(--ink-2)] hover:bg-slate-100'
                   }`}
                 >
                   {t('overview.other_day')}
@@ -741,7 +741,7 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
             ) : (
               <>
                 <div
-                  className={`mb-4 flex flex-wrap items-center gap-4 rounded-2xl bg-white/30 p-4 ${
+                  className={`mb-4 flex flex-wrap items-center gap-4 rounded-xl bg-slate-50 p-4 ${
                     dayTab === 'other' ? 'justify-between' : 'justify-end'
                   }`}
                 >
@@ -751,13 +751,13 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
                         type="button"
                         onClick={() => stepDay(-1)}
                         disabled={selectedDate <= minSelectableDate}
-                        className="customer-operator-icon-btn rounded-lg p-2 text-slate-500 transition-colors hover:bg-white/60 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
+                        className="customer-operator-icon-btn rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
                         aria-label={t('revenue.previous_day')}
                       >
                         <ChevronLeft className="h-4 w-4" />
                       </button>
                       <div>
-                        <label className="mb-1 block text-xs uppercase tracking-wide text-slate-400">
+                        <label className="mb-1 block text-xs text-slate-400">
                           {t('revenue.select_day')}
                         </label>
                         <input
@@ -774,7 +774,7 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
                         type="button"
                         onClick={() => stepDay(1)}
                         disabled={selectedDate >= maxSelectableDate}
-                        className="customer-operator-icon-btn rounded-lg p-2 text-slate-500 transition-colors hover:bg-white/60 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
+                        className="customer-operator-icon-btn rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
                         aria-label={t('revenue.next_day')}
                       >
                         <ChevronRight className="h-4 w-4" />
@@ -782,10 +782,10 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
                     </div>
                   )}
                   <div className="text-right">
-                    <p className="text-xs uppercase tracking-wide text-slate-400">
+                    <p className="text-xs text-slate-400">
                       {t('revenue.earned_on', { date: selectedDateLabel })}
                     </p>
-                    <p className="text-2xl font-bold text-slate-800">
+                    <p className="text-2xl font-light text-[color:var(--ink)]">
                       {formatCurrency(dayTotalRevenueCents, 'eur')}
                     </p>
                     <p className="text-xs text-slate-500">{t('revenue.photos_sold', { count: dayPurchases.length })}</p>
@@ -882,7 +882,7 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
                   <thead>
-                    <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-400">
+                    <tr className="border-b border-slate-200 text-xs text-slate-400">
                       <th className="py-2 pr-4">{t('revenue.day')}</th>
                       <th className="py-2 pr-4">{t('revenue.sold')}</th>
                       <th className="py-2 pr-4">{t('overview.rides')}</th>
@@ -898,7 +898,7 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
                           selectDay(day.businessDate);
                           setChartMode('day');
                         }}
-                        className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-white/40"
+                        className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-100"
                       >
                         <td className="py-2 pr-4 text-slate-700">{formatDateLabel(day.businessDate, locale)}</td>
                         <td className="py-2 pr-4 text-slate-700">{formatNumber(day.soldCount)}</td>
@@ -980,7 +980,7 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
             <p className="mt-2 text-sm text-slate-500">
               {t('revenue.online_sales_desc')}
             </p>
-            <div className="mt-4 space-y-2 rounded-2xl bg-white/30 p-4 text-sm text-slate-600">
+            <div className="mt-4 space-y-2 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
               <p>{t('revenue.online_confirmed', { amount: formatCurrency(Math.round(totals.online * 100)) })}</p>
               <p>{t('revenue.online_payments', { count: formatNumber(onlinePaymentCount) })}</p>
             </div>
@@ -990,7 +990,7 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
             <p className="mt-2 text-sm text-slate-500">
               {t('revenue.local_sales_desc')}
             </p>
-            <div className="mt-4 space-y-2 rounded-2xl bg-white/30 p-4 text-sm text-slate-600">
+            <div className="mt-4 space-y-2 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
               <p>{t('revenue.local_confirmed', { amount: formatCurrency(parkData.summary.local_sales_cents) })}</p>
               <p>
                 {t('revenue.local_detected')}{' '}
@@ -1103,48 +1103,48 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
         <GlassCard className="p-5 sm:p-6">
           <h3 className="mb-4 text-base font-semibold text-slate-800">{t('revenue.sales_signals')}</h3>
           <div className="space-y-3">
-            <div className="rounded-xl bg-white/30 p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-400">{t('revenue.payment_attempts')}</p>
+            <div className="rounded-xl bg-slate-50 p-4">
+              <p className="text-xs text-slate-400">{t('revenue.payment_attempts')}</p>
               <p className="mt-1 text-sm font-semibold text-slate-800">
                 {formatNumber(parkData.summary.payment_attempt_count)}
               </p>
             </div>
-            <div className="rounded-xl bg-white/30 p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-400">{t('revenue.success_rate')}</p>
+            <div className="rounded-xl bg-slate-50 p-4">
+              <p className="text-xs text-slate-400">{t('revenue.success_rate')}</p>
               <p className="mt-1 text-sm font-semibold text-slate-800">
                 {parkData.summary.success_rate !== null
                   ? formatPercent(parkData.summary.success_rate)
                   : '-'}
               </p>
             </div>
-            <div className="rounded-xl bg-white/30 p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-400">{t('revenue.cancel_rate')}</p>
+            <div className="rounded-xl bg-slate-50 p-4">
+              <p className="text-xs text-slate-400">{t('revenue.cancel_rate')}</p>
               <p className="mt-1 text-sm font-semibold text-slate-800">
                 {parkData.summary.cancel_rate !== null
                   ? formatPercent(parkData.summary.cancel_rate)
                   : '-'}
               </p>
             </div>
-            <div className="rounded-xl bg-white/30 p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-400">{t('revenue.cash_transactions')}</p>
+            <div className="rounded-xl bg-slate-50 p-4">
+              <p className="text-xs text-slate-400">{t('revenue.cash_transactions')}</p>
               <p className="mt-1 text-sm font-semibold text-slate-800">
                 {formatNumber(parkData.summary.cash_transaction_count)}
               </p>
             </div>
-            <div className="rounded-xl bg-white/30 p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-400">{t('revenue.terminal_transactions')}</p>
+            <div className="rounded-xl bg-slate-50 p-4">
+              <p className="text-xs text-slate-400">{t('revenue.terminal_transactions')}</p>
               <p className="mt-1 text-sm font-semibold text-slate-800">
                 {formatNumber(parkData.summary.terminal_transaction_count)}
               </p>
             </div>
-            <div className="rounded-xl bg-white/30 p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-400">{t('revenue.unconfirmed_sales')}</p>
+            <div className="rounded-xl bg-slate-50 p-4">
+              <p className="text-xs text-slate-400">{t('revenue.unconfirmed_sales')}</p>
               <p className="mt-1 text-sm font-semibold text-slate-800">
                 {formatNumber(parkData.summary.local_unconfirmed_transaction_count)}
               </p>
             </div>
-            <div className="rounded-xl bg-white/30 p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-400">{t('revenue.unknown_amounts')}</p>
+            <div className="rounded-xl bg-slate-50 p-4">
+              <p className="text-xs text-slate-400">{t('revenue.unknown_amounts')}</p>
               <p className="mt-1 text-sm font-semibold text-slate-800">
                 {formatNumber(parkData.summary.local_unknown_amount_transaction_count)}
               </p>

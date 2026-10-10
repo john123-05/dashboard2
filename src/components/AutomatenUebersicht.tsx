@@ -130,7 +130,7 @@ export default function AutomatenUebersicht({
 
                 <dl className="mt-4 grid grid-cols-3 gap-2 text-xs">
                   {([['heute', t('revenue.period.heute')], ['woche', t('revenue.period.woche')], ['gesamt', t('revenue.period.gesamt')]] as const).map(([key, label]) => (
-                    <div key={key} className="rounded-lg bg-white/60 px-2.5 py-2">
+                    <div key={key} className="rounded-lg bg-slate-50 px-2.5 py-2">
                       <dt className="text-slate-400">{label}</dt>
                       <dd className="mt-0.5 font-medium tabular-nums text-slate-700">{formatCurrency(m[key].cent, 'eur')}</dd>
                       <dd className="tabular-nums text-slate-400">{t('machines.purchases', { count: formatNumber(m[key].anzahl) })}</dd>

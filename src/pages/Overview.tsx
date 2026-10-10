@@ -755,13 +755,13 @@ export default function Overview() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="h-8 w-56 animate-pulse rounded-lg bg-white/40" />
+        <div className="h-8 w-56 animate-pulse rounded-lg bg-slate-100" />
         <div className="grid grid-cols-2 gap-4 sm:gap-6 xl:grid-cols-4">
           {[...Array(4)].map((_, index) => (
-            <div key={index} className="h-32 animate-pulse rounded-2xl bg-white/30" />
+            <div key={index} className="h-32 animate-pulse rounded-2xl bg-slate-100" />
           ))}
         </div>
-        <div className="h-80 animate-pulse rounded-2xl bg-white/30" />
+        <div className="h-80 animate-pulse rounded-2xl bg-slate-100" />
       </div>
     );
   }
@@ -769,7 +769,7 @@ export default function Overview() {
   if (error || !parkData) {
     return (
       <div className="space-y-6">
-        <h2 className="text-2xl font-bold tracking-tight text-slate-800">
+        <h2 className="text-[28px] font-light tracking-tight text-[color:var(--ink)] sm:text-[32px]">
           {t('overview.title')}
         </h2>
         <div className="rounded-2xl border border-red-200 bg-red-50 p-6">
@@ -919,11 +919,11 @@ export default function Overview() {
     <div className="space-y-6 overflow-x-clip">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+          <p className="text-xs font-medium text-slate-400">
             {t('overview.title')} · {parkName || parkData.park_name}
           </p>
           <div className="mt-1 flex flex-wrap items-center gap-3">
-            <h2 className="text-2xl font-bold tracking-tight text-slate-800">
+            <h2 className="text-[28px] font-light tracking-tight text-[color:var(--ink)] sm:text-[32px]">
               {greeting}{firstName ? `, ${firstName}` : ''}
             </h2>
             {!isKioskPark && <span className={`status-badge ${statusTone}`}>{systemStatusLabel}</span>}
@@ -1025,7 +1025,7 @@ export default function Overview() {
           <GlassCard className="p-5 sm:p-6">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 className="text-base font-semibold text-slate-800">{t('overview.peak_hours')}</h3>
-              <div className="inline-flex rounded-xl bg-white/50 p-1">
+              <div className="inline-flex rounded-md border border-[color:var(--line-strong)] p-0.5">
                 {([
                   { key: 'today', label: t('overview.today') },
                   { key: 'yesterday', label: t('overview.yesterday') },
@@ -1036,7 +1036,7 @@ export default function Overview() {
                     type="button"
                     onClick={() => setPeakDayFilter(opt.key)}
                     className={`rounded-lg px-2.5 py-1 text-xs font-medium transition ${
-                      peakDayFilter === opt.key ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                      peakDayFilter === opt.key ? 'bg-[color:var(--ink)] text-white' : 'text-[color:var(--ink-2)] hover:bg-slate-100'
                     }`}
                   >
                     {opt.label}
@@ -1084,7 +1084,7 @@ export default function Overview() {
             {unlockMode === 'email' && (
               <>
                 <p className="mt-4 text-sm text-slate-500">{t('overview.contacts_today')}</p>
-                <p className="text-2xl font-bold text-slate-800">{formatNumber(emailLeadsToday)}</p>
+                <p className="text-2xl font-light text-[color:var(--ink)]">{formatNumber(emailLeadsToday)}</p>
                 {userDataStats.total > 0 && (
                   <div className="relative mx-auto mt-3 h-32 w-32">
                     <ResponsiveContainer width="100%" height="100%">
@@ -1106,7 +1106,7 @@ export default function Overview() {
                       </PieChart>
                     </ResponsiveContainer>
                     <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="text-sm font-bold text-slate-800">
+                      <span className="text-sm font-semibold text-[color:var(--ink)]">
                         {Math.round((userDataStats.optedIn / userDataStats.total) * 100)}%
                       </span>
                       <span className="text-[10px] text-slate-400">{t('overview.consent')}</span>
@@ -1120,7 +1120,7 @@ export default function Overview() {
               <dl className="mt-4 space-y-3 text-sm">
                 <div className="flex items-center justify-between">
                   <dt className="text-slate-500">{t('overview.answers_today')}</dt>
-                  <dd className="text-lg font-bold text-slate-800">{formatNumber(surveyToday?.total ?? 0)}</dd>
+                  <dd className="text-lg font-semibold text-[color:var(--ink)]">{formatNumber(surveyToday?.total ?? 0)}</dd>
                 </div>
                 <div className="flex items-center justify-between">
                   <dt className="text-slate-500">{t('overview.avg_rating')}</dt>
@@ -1139,7 +1139,7 @@ export default function Overview() {
               <dl className="mt-4 space-y-3 text-sm">
                 <div className="flex items-center justify-between">
                   <dt className="text-slate-500">{t('overview.unlocks_today')}</dt>
-                  <dd className="text-lg font-bold text-slate-800">{formatNumber(socialToday?.unlocked ?? 0)}</dd>
+                  <dd className="text-lg font-semibold text-[color:var(--ink)]">{formatNumber(socialToday?.unlocked ?? 0)}</dd>
                 </div>
                 <div className="flex items-center justify-between">
                   <dt className="text-slate-500">{t('overview.shared')}</dt>
@@ -1162,7 +1162,7 @@ export default function Overview() {
                 </p>
               ) : (
                 visibleActivityItems.map((item) => (
-                  <div key={item.id} className="overflow-hidden rounded-xl bg-white/30 p-4">
+                  <div key={item.id} className="overflow-hidden rounded-xl bg-slate-50 p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <div className="mb-1 flex items-center gap-2">
@@ -1187,7 +1187,7 @@ export default function Overview() {
                         <button
                           type="button"
                           onClick={() => dismissActivityItem(item.id)}
-                          className="rounded-lg p-1 text-slate-300 transition-colors hover:bg-white/60 hover:text-slate-500"
+                          className="rounded-lg p-1 text-slate-300 transition-colors hover:bg-slate-100 hover:text-slate-500"
                           aria-label={t('overview.dismiss_item', { title: item.title })}
                           title={t('overview.dismiss')}
                         >
@@ -1269,7 +1269,7 @@ export default function Overview() {
             key={widget.id}
             type="button"
             onClick={() => handleWidgetNavigation(widget.route)}
-            className="group rounded-2xl border border-white/40 bg-white/50 p-4 text-left shadow-[0_12px_32px_rgba(15,23,42,0.06)] backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/70 sm:p-4"
+            className="group rounded-xl border border-[color:var(--line)] bg-white p-4 text-left transition-colors duration-150 hover:border-brand-300 sm:p-4"
           >
             <div className="flex items-start justify-between gap-3">
               <div className={`rounded-xl p-2.5 ${widget.iconBg}`}>
@@ -1277,7 +1277,7 @@ export default function Overview() {
               </div>
               <ArrowUpRight className="h-4 w-4 text-slate-300 transition-colors group-hover:text-slate-500" />
             </div>
-            <p className="mt-3 text-[11px] uppercase tracking-wide text-slate-400 sm:mt-4 sm:text-xs">
+            <p className="mt-3 text-[11px] text-slate-400 sm:mt-4 sm:text-xs">
               {widget.label}
             </p>
             <p className="mt-1 text-base font-semibold text-slate-800 sm:text-lg">{widget.value}</p>
@@ -1377,7 +1377,7 @@ export default function Overview() {
             </div>
             {(parkData.summary.success_rate ?? null) !== null && (
               <div className="shrink-0 text-right">
-                <p className="text-xs uppercase tracking-wide text-slate-400">{t('overview.payment_success')}</p>
+                <p className="text-xs text-slate-400">{t('overview.payment_success')}</p>
                 <p className="text-sm font-semibold text-slate-800">
                   {formatPercent(parkData.summary.success_rate ?? 0)}
                 </p>
@@ -1451,7 +1451,7 @@ export default function Overview() {
               </p>
             ) : (
               visibleActivityItems.map((item) => (
-                <div key={item.id} className="overflow-hidden rounded-xl bg-white/30 p-4">
+                <div key={item.id} className="overflow-hidden rounded-xl bg-slate-50 p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="mb-1 flex items-center gap-2">
@@ -1476,7 +1476,7 @@ export default function Overview() {
                       <button
                         type="button"
                         onClick={() => dismissActivityItem(item.id)}
-                        className="rounded-lg p-1 text-slate-300 transition-colors hover:bg-white/60 hover:text-slate-500"
+                        className="rounded-lg p-1 text-slate-300 transition-colors hover:bg-slate-100 hover:text-slate-500"
                         aria-label={t('overview.dismiss_item', { title: item.title })}
                         title={t('overview.dismiss')}
                       >
@@ -1499,7 +1499,7 @@ export default function Overview() {
             <p className="text-sm text-slate-500">{t('overview.no_transactions')}</p>
           ) : (
             (showAllTransactions ? recentTransactions : recentTransactions.slice(0, 3)).map((item) => (
-              <div key={item.id} className="rounded-xl bg-white/30 p-4">
+              <div key={item.id} className="rounded-xl bg-slate-50 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <div className="mb-1 flex items-center gap-2">
@@ -1533,7 +1533,7 @@ export default function Overview() {
           <button
             type="button"
             onClick={() => setShowAllTransactions((current) => !current)}
-            className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-xl py-2 text-sm font-medium text-slate-500 transition-colors hover:bg-white/40 hover:text-slate-700"
+            className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-xl py-2 text-sm font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
           >
             {showAllTransactions ? (
               <>

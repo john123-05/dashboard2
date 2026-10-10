@@ -144,7 +144,7 @@ export default function ZahlungsUebersicht() {
         <select
           value={zeitraumTage}
           onChange={(e) => setZeitraumTage(Number(e.target.value))}
-          className="rounded-lg border border-slate-200/70 bg-white/70 px-2.5 py-1 text-sm text-slate-700"
+          className="rounded-lg border border-slate-200/70 bg-slate-50 px-2.5 py-1 text-sm text-slate-700"
         >
           {ZEITRAeUME.map((z) => (
             <option key={z.tage} value={z.tage}>{t(z.label)}</option>
@@ -268,7 +268,7 @@ function AutomatBlock({ a }: { a: Automat }) {
       )}
 
       {a.coin_inventory && !nurKarte && (
-        <div className="mt-4 rounded-xl bg-white/40 px-4 py-3">
+        <div className="mt-4 rounded-xl bg-slate-50 px-4 py-3">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <span className="text-sm font-medium text-slate-700">{t('pay.change_in_machine')}</span>
             <span className={`text-lg font-semibold tabular-nums ${
@@ -335,10 +335,10 @@ function AutomatBlock({ a }: { a: Automat }) {
       {z?.letzte && z.letzte.length > 0 && (
         <div className="mt-4">
           <p className="mb-1.5 text-sm font-medium text-slate-700">{t('pay.latest_purchases')}</p>
-          <div className="overflow-x-auto rounded-xl border border-white/50 bg-white/40">
+          <div className="overflow-x-auto rounded-xl border border-[color:var(--line)] bg-slate-50">
             <table className="w-full text-xs">
               <thead className="text-left text-slate-500">
-                <tr className="border-b border-white/60">
+                <tr className="border-b border-[color:var(--line)]">
                   <th className="px-3 py-2 font-medium">{t('pay.col_time')}</th>
                   <th className="px-3 py-2 font-medium">{t('pay.col_photo')}</th>
                   <th className="px-3 py-2 font-medium">{t('pay.col_paid_with')}</th>
@@ -349,7 +349,7 @@ function AutomatBlock({ a }: { a: Automat }) {
               </thead>
               <tbody className="text-slate-700">
                 {z.letzte.slice(0, 15).map((b, i) => (
-                  <tr key={i} className="border-t border-white/50">
+                  <tr key={i} className="border-t border-[color:var(--line)]">
                     <td className="whitespace-nowrap px-3 py-1.5 tabular-nums">
                       {new Date(b.zeit).toLocaleString(loc)}
                     </td>
