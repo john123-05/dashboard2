@@ -206,7 +206,7 @@
   }
 
   .operator-app main.operator-main > div {
-    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
   }
 
   .operator-app .mobile-nav-backdrop {
@@ -270,5 +270,32 @@
   .lp-flow-line,
   .lp-red-glow {
     animation: none;
+  }
+}
+
+/* Handy-Prüfliste (docs/PRODUKT_PLAN.md, M3): Tippflächen >= 40 px, Eingaben 16 px (kein iOS-Zoom),
+   kleine Texte etwas größer. Gilt nur unter 640 px. */
+@media (max-width: 640px) {
+  .operator-app .glass-button,
+  .operator-app .glass-button-primary,
+  .operator-app .glass-button-secondary {
+    min-height: 40px;
+  }
+  .operator-app .glass-input,
+  .operator-app input:not([type='checkbox']):not([type='radio']),
+  .operator-app select,
+  .operator-app textarea {
+    font-size: 16px;
+  }
+  .operator-app .glass-input {
+    min-height: 40px;
+  }
+  .operator-app .text-xs {
+    font-size: 13px;
+    line-height: 1.4;
+  }
+  .operator-app .text-\[11px\],
+  .operator-app .text-\[10px\] {
+    font-size: 12px;
   }
 }

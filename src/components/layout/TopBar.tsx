@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
+  Activity,
   Bell,
+  DollarSign,
+  LayoutDashboard,
+  Menu,
   BookOpen,
   ChevronDown,
   ChevronRight,
@@ -70,12 +74,13 @@ function startTour() {
   window.dispatchEvent(new Event('lp:start-tour'));
 }
 
-export default function TopBar() {
+export default function TopBar({ onOpenNav }: { onOpenNav?: () => void }) {
   const { t } = useI18n();
   const { profile, isOwner, isStaff } = useAuth();
   const location = useLocation();
   const [panel, setPanel] = useState<Panel>(null);
   const feed = useNotifications();
+  const { parkName } = usePark();
 
   // Seitenwechsel schliesst Menü und Schublade (das Hilfe-Center darf offen bleiben).
   useEffect(() => {
@@ -126,10 +131,103 @@ export default function TopBar() {
         </button>
       </div>
 
+      {/* Handy (< 901 px): schmale Leiste oben und feste Tab-Leiste unten; dieselben Fenster wie am Desktop. */}
+      <div className="operator-topbar-mobile fixed inset-x-0 top-0 z-[70] flex h-12 items-center gap-1 bg-[var(--sidebar-bg)] pl-4 pr-2 shadow-[0_2px_10px_rgba(0,0,0,0.12)] min-[901px]:hidden">
+        <p className="min-w-0 flex-1 truncate text-sm font-medium text-white/90">{parkName ?? ''}</p>
+        <BarButton label={t('top.help')} active={panel === 'help'} onClick={() => toggle('help')}>
+          <HelpCircle className="h-[18px] w-[18px]" />
+        </BarButton>
+        <BarButton label={t('top.notifications')} active={panel === 'notifications'} onClick={() => toggle('notifications')}>
+          <Bell className="h-[18px] w-[18px]" />
+          {unread > 0 && (
+            <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-600 px-1 text-[10px] font-semibold leading-none text-white ring-2 ring-[var(--sidebar-bg)]">
+              {unread > 9 ? '9+' : unread}
+            </span>
+          )}
+        </BarButton>
+        <button
+          type="button"
+          onClick={() => toggle('profile')}
+          aria-label={t('top.account')}
+          aria-expanded={panel === 'profile'}
+          className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-white/10"
+        >
+          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15 text-[11px] font-semibold text-white">{initials(name)}</span>
+        </button>
+      </div>
+      <MobileTabBar
+        unread={unread}
+        notificationsOpen={panel === 'notifications'}
+        onNotifications={() => toggle('notifications')}
+        onMore={() => {
+          setPanel(null);
+          onOpenNav?.();
+        }}
+      />
+
       <NotificationsDrawer open={panel === 'notifications'} onClose={() => setPanel(null)} feed={feed} />
       {panel === 'help' && <HelpCenter onClose={() => setPanel(null)} />}
       {panel === 'profile' && <ProfileMenu onClose={() => setPanel(null)} />}
     </>
+  );
+}
+
+function MobileTabBar({
+  unread,
+  notificationsOpen,
+  onNotifications,
+  onMore,
+}: {
+  unread: number;
+  notificationsOpen: boolean;
+  onNotifications: () => void;
+  onMore: () => void;
+}) {
+  const { t } = useI18n();
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const link = (to: string, label: string, Icon: typeof Bell) => {
+    const active = !notificationsOpen && (to === '/' ? pathname === '/' : pathname.startsWith(to));
+    return (
+      <button
+        key={to}
+        type="button"
+        onClick={() => navigate(to)}
+        aria-current={active ? 'page' : undefined}
+        className={`flex min-h-[52px] flex-col items-center justify-center gap-0.5 text-[11px] ${active ? 'text-white' : 'text-white/60'}`}
+      >
+        <Icon className="h-5 w-5" />
+        <span className="max-w-full truncate px-1">{label}</span>
+      </button>
+    );
+  };
+  return (
+    <nav
+      aria-label={t('nav.more')}
+      className="operator-tabbar-mobile fixed inset-x-0 bottom-0 z-[70] grid grid-cols-5 border-t border-white/10 bg-[var(--sidebar-bg)] pb-[env(safe-area-inset-bottom,0px)] min-[901px]:hidden"
+    >
+      {link('/', t('nav.overview'), LayoutDashboard)}
+      {link('/revenue', t('nav.revenue'), DollarSign)}
+      {link('/health', t('nav.system_health'), Activity)}
+      <button
+        type="button"
+        onClick={onNotifications}
+        aria-pressed={notificationsOpen}
+        className={`relative flex min-h-[52px] flex-col items-center justify-center gap-0.5 text-[11px] ${notificationsOpen ? 'text-white' : 'text-white/60'}`}
+      >
+        <Bell className="h-5 w-5" />
+        {unread > 0 && (
+          <span className="absolute left-1/2 top-1.5 ml-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-600 px-1 text-[10px] font-semibold leading-none text-white">
+            {unread > 9 ? '9+' : unread}
+          </span>
+        )}
+        <span className="max-w-full truncate px-1">{t('top.notifications')}</span>
+      </button>
+      <button type="button" onClick={onMore} className="flex min-h-[52px] flex-col items-center justify-center gap-0.5 text-[11px] text-white/60">
+        <Menu className="h-5 w-5" />
+        <span className="max-w-full truncate px-1">{t('nav.more')}</span>
+      </button>
+    </nav>
   );
 }
 

@@ -5,7 +5,7 @@ import { useI18n } from '../../lib/i18n';
 
 interface Column<T> {
   key: string;
-  label: string;
+  label: React.ReactNode;
   render?: (item: T) => React.ReactNode;
   className?: string;
 }
@@ -75,14 +75,14 @@ export default function DataTable<T extends object>({
         </div>
       )}
 
-      <div className="overflow-x-auto">
+      <div className="hidden overflow-x-auto sm:block">
         <table className="w-full">
           <thead>
             <tr className="border-b border-slate-100/80">
               {columns.map((col) => (
                 <th
                   key={col.key}
-                  className={`px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400 ${col.className || ''}`}
+                  className={`px-6 py-3 text-left text-xs font-medium text-slate-500 ${col.className || ''}`}
                 >
                   {col.label}
                 </th>
@@ -100,7 +100,7 @@ export default function DataTable<T extends object>({
               paginated.map((item, i) => (
                 <tr
                   key={i}
-                  className="transition-colors hover:bg-white/40"
+                  className="transition-colors hover:bg-slate-50"
                 >
                   {columns.map((col) => (
                     <td key={col.key} className={`px-6 py-3.5 text-sm text-slate-700 ${col.className || ''}`}>
@@ -112,6 +112,44 @@ export default function DataTable<T extends object>({
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Handy (< 640 px): jede Zeile als Karte – Hauptspalte fett, Nebenwerte darunter. */}
+      <div className="sm:hidden">
+        {paginated.length === 0 ? (
+          <p className="px-4 py-10 text-center text-sm text-slate-400">{t('table.no_data')}</p>
+        ) : (
+          <ul className="divide-y divide-slate-100">
+            {paginated.map((item, i) => {
+              const cell = (col: Column<T>) => (col.render ? col.render(item) : String(item[col.key as keyof T] ?? ''));
+              const selectCol = columns.find((col) => col.key === 'select');
+              const actionCol = columns.find((col) => col.key === 'actions');
+              const dataCols = columns.filter((col) => col.key !== 'select' && col.key !== 'actions');
+              const [main, ...rest] = dataCols;
+              return (
+                <li key={i} className="space-y-2 px-4 py-3.5">
+                  <div className="flex items-start gap-3">
+                    {selectCol && <div className="pt-0.5">{cell(selectCol)}</div>}
+                    <div className="min-w-0 flex-1 text-sm font-semibold text-slate-800">{main && cell(main)}</div>
+                    {actionCol && <div className="shrink-0">{cell(actionCol)}</div>}
+                  </div>
+                  {rest.length > 0 && (
+                    <dl className="grid grid-cols-2 gap-x-4 gap-y-2">
+                      {rest.map((col) => (
+                        <div key={col.key} className="min-w-0">
+                          {typeof col.label === 'string' && col.label && (
+                            <dt className="text-[11px] text-slate-400">{col.label}</dt>
+                          )}
+                          <dd className="break-words text-sm text-slate-700">{cell(col)}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </div>
 
       {totalPages > 1 && (
@@ -127,7 +165,7 @@ export default function DataTable<T extends object>({
               className={
                 embeddedOperator
                   ? 'customer-operator-table-nav'
-                  : 'rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-white/60 hover:text-slate-700 disabled:opacity-30'
+                  : 'rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:opacity-30'
               }
             >
               <ChevronLeft className="h-4 w-4" />
@@ -141,7 +179,7 @@ export default function DataTable<T extends object>({
               className={
                 embeddedOperator
                   ? 'customer-operator-table-nav'
-                  : 'rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-white/60 hover:text-slate-700 disabled:opacity-30'
+                  : 'rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:opacity-30'
               }
             >
               <ChevronRight className="h-4 w-4" />

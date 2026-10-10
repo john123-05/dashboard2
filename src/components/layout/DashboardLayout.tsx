@@ -5,7 +5,7 @@ import Sidebar from './Sidebar';
 import WelcomeTour from '../WelcomeTour';
 import TopBar from './TopBar';
 import { NotificationsProvider } from '../../contexts/NotificationsContext';
-import { Loader2, Mountain, ArrowRight, Menu } from 'lucide-react';
+import { Loader2, Mountain, ArrowRight } from 'lucide-react';
 import { useI18n } from '../../lib/i18n';
 import { usePark } from '../../contexts/ParkContext';
 
@@ -112,26 +112,16 @@ export default function DashboardLayout() {
         mobileOpen={mobileNavOpen}
         onCloseMobile={() => setMobileNavOpen(false)}
       />
-      {!mobileNavOpen && (
-        <button
-          type="button"
-          className="mobile-nav-toggle"
-          aria-label={t('layout.open_nav')}
-          onClick={() => setMobileNavOpen(true)}
-        >
-          <Menu className="h-5 w-5" />
-        </button>
-      )}
       <main
         className="operator-main flex-1 min-w-0 transition-all duration-300 overflow-x-clip"
         style={{ paddingLeft: collapsed ? 72 : 256 }}
       >
-        <div className="min-h-screen w-full min-w-0 p-4 sm:p-6 lg:p-8 min-[901px]:pt-16 lg:pt-16">
+        <div className="min-h-screen w-full min-w-0 p-4 pt-16 sm:p-6 sm:pt-16 lg:p-8 min-[901px]:pt-16 lg:pt-16">
           {/* Remount the page on a park switch so nothing from the previous park lingers. */}
           <Outlet key={parkId ?? 'none'} />
         </div>
       </main>
-      <TopBar />
+      <TopBar onOpenNav={() => setMobileNavOpen(true)} />
       <WelcomeTour />
     </div>
     </NotificationsProvider>
