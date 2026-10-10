@@ -193,7 +193,7 @@ früheren (O)-Aufgaben in Abschnitt 6a ausgeschrieben und damit (S). Opus nur no
     für alle Parks (kein Bruch!), Add-ons wie bisher (`hasGuestActivity`; Online-Shop überall noch Upgrade).
     Zusätzlich: `featureForPath(pathname)`, `planIncludes(plan, feature)`, `PLAN_LABEL_KEY` (Texte `plans.*` mit B3).
   - Fertig, wenn: tsc grün, noch keine sichtbare Änderung.
-- [ ] **B2 Tabelle `park_entitlements`** (O) – Voraussetzung B1.
+- [x] **B2 Tabelle `park_entitlements`** (O) – erledigt 10.10.2026 – Voraussetzung B1.
   **Code fertig 10.10.2026 (Codex, von Opus geprüft und angepasst); Aktivierung offen.**
   Die Supabase-CLI auf Johns Mac ist mit einem anderen Konto angemeldet (sieht nur „CRM“ und
   „Kirmes Kompass“) → 403. John meldet sich mit dem Liftpictures-Konto an (`npx supabase login`), dann:
@@ -830,3 +830,4 @@ keine Vertriebs-Pipeline für Parks. Keine Preise ändern ohne John.
 - 10.10.2026: B2-Aktivierung ohne CLI (Supabase-CLI-Kontingent aufgebraucht, falsches Konto): beide Functions liegen als je EINE Datei in `supabase/dashboard-paste/` (zum Einfügen im Supabase-Editor, Import-frei bis auf supabase-js), dazu `B2_pruefen.sql`. Die Tabelle `park_entitlements` existierte beim Einspielen schon (Fehler 42P07) - erst mit `B2_pruefen.sql` den Stand ansehen, nicht erneut anlegen. WICHTIG im Editor: nach dem Deploy „Enforce JWT verification“ der Function AUSSCHALTEN (die Betreiber-Tokens kommen aus dem anderen Projekt).
 - 10.10.2026: Entscheidungen von John eingetragen (Pro 149 €, Versand über Make, Teilen-Link statt Instagram, Bewertungslink in Pro, Artikel später). Tabellennamen für Parks mit `park_`-Präfix, weil `email_campaigns`/`email_sends` schon dem Liftpictures-CRM gehören.
 - 10.10.2026: `operator-entitlements` wurde im Supabase-Editor angelegt; die Adresse ist `hyper-processor` (Editor vergibt Zufallsadressen, nicht änderbar). `src/lib/plans.ts` nutzt deshalb `ENTITLEMENTS_FUNCTION = 'hyper-processor'`. Beim Anlegen weiterer Functions im Editor immer die Adresse prüfen (Zeile unter dem Titel); per CLI gilt der gewählte Name.
+- 10.10.2026: B2 aktiv. Tabelle `park_entitlements` im shared-Projekt (hat eine zusätzliche Spalte `notiz`, harmlos), beide Functions im Supabase-Editor angelegt, JWT-Prüfung aus. Adressen: `hyper-processor` (= operator-entitlements), `admin-park-entitlements`. Per curl geprüft: beide antworten 401 „Missing bearer token“ aus unserem Code. Noch offen: Sichtprüfung im Dashboard (Profilmenü „Plan: …“), sobald die Chrome-Erweiterung wieder verbunden ist; Pläne je Park setzt später das Staff-Dashboard.
