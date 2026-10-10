@@ -58,7 +58,7 @@ Einrichtungsassistent, Marketing-Startseite).
 | Marketing-Startseite mit Kennzahlen, Trichter, „Nächste Schritte“-Assistent | neue Startseite „Marketing-CRM“ |
 | E-Mail-Marketing mit Monatskontingent, Vorlagen, Versand nach Sprache/Segment | „E-Mail-Marketing“ mit Kontingent je Plan, Zusatzpakete |
 | Feedback-Umfragen mit NPS-Verlauf, Antwortquote, Detail je Frage | Umfrage-Auswertung neu |
-| Social-Tool: Beiträge planen, Kampagnen, Auswertung | **auf uns zugeschnitten**: Foto-Teilen-Kampagnen, Gewinnspiele, Prüfung über Instagram |
+| Social-Tool: Beiträge planen, Kampagnen, Auswertung | **auf uns zugeschnitten**: Foto-Teilen-Kampagnen, Gewinnspiele, Teilen-Link mit Besucherzähler |
 | Teams & Rechte: Rollen-Vorlagen + Häkchen je Bereich | Mitarbeiter & Rechte neu |
 | Academy / Wissensdatenbank | „Ratgeber“-Artikel, von uns geschrieben, im Dashboard und Hilfe-Center |
 | „Account & Abrechnung“, Plan-Vergleich, Self-Service-Upgrade | Seite „Pläne“ + später Stripe |
@@ -75,14 +75,14 @@ oder 15 % Revenue Share, Speedmessung 149/249/99 €). Die Pläne bündeln sie n
 
 | | **Basis** (kostenlos) | **Marketing Starter** | **Marketing Pro** |
 |---|---|---|---|
-| Preis | 0 € (im Automaten-Service enthalten) | **49 €/Monat** (= heutiger CRM-Preis) | **149 €/Monat** (Vorschlag) |
+| Preis | 0 € (im Automaten-Service enthalten) | **49 €/Monat** (= heutiger CRM-Preis) | **149 €/Monat** (von John bestätigt) |
 | Übersicht, Umsatz, Käufe, Fotos, Systemzustand, Kamera, Personalisierung/Overlays, Support, Ratgeber, Benachrichtigungen | ✓ | ✓ | ✓ |
 | Mitarbeiter-Zugänge | 3, feste Rollen | 10, Rollen-Vorlagen | unbegrenzt, Rechte je Seite |
 | Digitales Foto gegen Kontakt (Freischaltung), Kontakte, CSV-Export | – | ✓ | ✓ |
 | Umfrage + NPS-Auswertung | – | ✓ | ✓ inkl. Bewertungs-Weiterleitung (Google) |
 | Werbe-Pixel (Meta/Google) | – | ✓ | ✓ |
 | E-Mail-Marketing (Monatskontingent) | – | 2.000 E-Mails | 10.000 E-Mails, mehrsprachig, Automationen |
-| Social-Media-Kampagnen & Gewinnspiele | – | Teilen-Freischaltung (Selbstmeldung) | Kampagnen, Gewinnspiel-Ziehung, Instagram-Prüfung |
+| Social-Media-Kampagnen & Gewinnspiele | – | Teilen-Freischaltung (Selbstmeldung) | Kampagnen, Gewinnspiel-Ziehung, Teilen-Link mit Zähler |
 | Berichte & Export | – | Basis | Vergleich Vorjahr/Saison, PDF-Bericht |
 
 ### 3.2 Add-ons (unabhängig vom Plan, wie heute)
@@ -264,7 +264,7 @@ früheren (O)-Aufgaben in Abschnitt 6a ausgeschrieben und damit (S). Opus nur no
 - [ ] **D2 Fragen-Editor** (S) – `SurveyManager.tsx`: Vorlagen (NPS, Zufriedenheit 1–5, „Wie hast du
   von uns erfahren?“, „Was können wir besser machen?“), Fragetypen-Auswahl als Karten, Reihenfolge per
   Drag & Drop (Muster Ebenen-Liste `OverlayBuilder.tsx`), Vorschau rechts.
-- [ ] **D3 Bewertungs-Weiterleitung (Pro)** (S – Entwurf in 6a, wartet auf Johns Entscheidung) – nach NPS ≥ 9 zeigt die Abholseite „Bewerte uns auf
+- [ ] **D3 Bewertungs-Weiterleitung (Pro)** (S – Entwurf in 6a, entschieden: Pro) – nach NPS ≥ 9 zeigt die Abholseite „Bewerte uns auf
   Google“ (Link aus Einstellungen). Feld `review_url` existiert schon (`review_*` in
   `park_survey_settings`) → prüfen und nutzen; Claim-Seite im Repo `imst`.
 
@@ -279,21 +279,19 @@ früheren (O)-Aufgaben in Abschnitt 6a ausgeschrieben und damit (S). Opus nur no
 - [ ] **E2 Kampagnen-Seite** (S) – Liste der Kampagnen (Status-Chips), „Neue Kampagne“ als
   3-Schritt-Assistent (Typ → Details → Vorschau Abholseite), Detailseite mit Teilnehmern, Filter
   „geprüft/ungeprüft“, Ziehung („Gewinner ziehen“ → zufällig aus geprüften, protokolliert).
-- [ ] **E3 Prüfung über Instagram (Pro)** (später – Entwurf in 6a, braucht Meta-Freigabe) – Park verbindet sein Instagram-Business-Konto
-  (Meta App, Graph API). Abruf `/{ig-user-id}/tags` (Beiträge, in denen der Park markiert ist) und
-  Hashtag-Suche → Abgleich mit Teilnehmer-Benutzernamen → Eintrag „geprüft“. Hinweis für John: Meta
-  App Review nötig, dauert Wochen; bis dahin manuelle Prüfung (Link öffnen, Haken setzen).
+- [ ] **E3 Teilen-Link mit Zähler + Moderation (Pro)** (S – Entwurf in 6a, „E3“) – persönlicher Link
+  je Gast mit Besucherzähler und Vorschaubild (Open Graph), Rechte-Häkchen, Moderationsgalerie,
+  Rangliste „meiste Freunde“. Instagram-Abgleich ist gestrichen. Voraussetzung E1/E2. Teil der
+  Änderungen liegt im Repo `imst` (Claim-Seiten: Link anzeigen + Häkchen).
 
 ### Phase F – E-Mail-Marketing
 
-- [ ] **F0 Entscheidung John** – Versanddienst: Vorschlag **Brevo** (EU, günstig, DSGVO) oder Resend.
-  „Make“ nur für Automationen, nicht für Massenversand. Absender-Domain je Park (SPF/DKIM).
-- [ ] **F1 Datenmodell + Versand** (S – Entwurf in 6a; Voraussetzung F0) – Tabellen `email_campaigns` (id, park_id, subject, preheader,
-  body_json, language, segment_json, status draft/scheduled/sent, scheduled_at, sent_count,
-  open_count, click_count), `email_usage` (park_id, month, sent). Edge Function
-  `operator-email-campaigns` (CRUD, Testversand, Versand in Stapeln, Kontingent prüfen),
-  Abmeldelink Pflicht (`unsubscribe`-Function, `photo_claims.marketing_opt_in` → false).
-  Nur an Kontakte mit Opt-in!
+- [ ] **F0 Make-Szenario (John)** – Szenario „Park-E-Mails (Liftpictures)“ in Make anlegen (Webhook →
+  Iterator über `recipients` → SMTP) und Secrets setzen, Beschreibung siehe 6a „F1“. Entschieden:
+  Versand über Make wie im Liftpictures-CRM, kein Brevo/Resend. Offen: Vorgänge im Make-Tarif.
+- [ ] **F1 Tabellen, Make-Versand, Abmeldung, Öffnungszähler** (S – Entwurf in 6a; Voraussetzung F0).
+  **Namen mit `park_`**, weil `email_campaigns`/`email_sends` im shared-Projekt dem Liftpictures-CRM gehören.
+  Nur an Kontakte mit Einwilligung, `crm_marketing_opt_outs` beachten.
 - [ ] **F2 Editor** (S) – Seite `/marketing/email`: Liste (Entwurf/Geplant/Gesendet, Öffnungsrate) ·
   Editor mit Blöcken (Überschrift, Text, Bild, Button, Foto-des-Gastes-Platzhalter) · Sprache wählen
   (je Sprache eigene Fassung, Versand an Kontakte mit dieser Sprache) · Kontingent-Anzeige
@@ -429,9 +427,9 @@ Texte: Schlüssel `mk.*` in 7 Sprachen. Keine neuen Abrufe, keine Datenbankände
 ### D3 – Bewertungs-Weiterleitung
 
 Gibt es technisch schon: `park_survey_settings.review_url`, `review_min_score`, `review_text` und die
-Abholseiten zeigen den Link ab dem Mindestwert. Offen ist nur die Produktfrage (Abschnitt 7, Punkt 6):
-bleibt das in Starter oder wird es Pro? **Bis John entscheidet: nichts sperren.** Umsetzung danach:
-im `SurveyManager` den Bewertungs-Block in `PlanGate feature="review_routing"` legen.
+Abholseiten zeigen den Link ab dem Mindestwert. **Entschieden: Pro** (Abschnitt 7, Punkt 4) mit
+Bestandsschutz. Umsetzung: im `SurveyManager` den Bewertungs-Block in `PlanGate feature="review_routing"`
+legen; Parks mit vorhandenem `review_url` erhalten die Zusatzfunktion (siehe Abschnitt 7).
 
 ### E1 – Social-Media-Kampagnen: Datenmodell und Schnittstelle (shared)
 
@@ -486,23 +484,95 @@ aus der Rangliste.
 Plan-Zuordnung: Typ `share_unlock` = `crm_social` (Starter), `giveaway`/`record`/Ziehung =
 `social_campaigns` (Pro).
 
-### E3 – Prüfung über Instagram (später, braucht Meta-Freigabe)
+### E3 – Teilen-Link mit Zähler statt Instagram-Anbindung
 
-Voraussetzung außerhalb des Codes: Meta-App mit „Instagram Graph API“, Rechte
-`instagram_basic`, `instagram_manage_comments`, `pages_show_list`; App Review durch Meta (Wochen).
-Entwurf: Tabelle `park_instagram_connections (park_id pk, ig_user_id, username, access_token,
-token_expires_at)` (nur service_role); Function `social-instagram-sync` (stündlich per pg_cron):
-`GET /{ig_user_id}/tags?fields=id,username,permalink,timestamp` → für jeden Beitrag den
-`park_social_entries`-Eintrag mit gleichem `handle` (klein, ohne @) im Kampagnenzeitraum suchen →
-`verified_at`, `verified_by='instagram'`, `post_url=permalink`. Erst beginnen, wenn John die
-Meta-App freigegeben bekommen hat.
+**Entscheidung John 10.10.2026:** Keine Meta-App-Freigabe abwarten, sondern etwas, das andere Tools
+(Gleam, Viral Loops, Wyng, Woobox) ebenfalls tun und das wir selbst nachprüfen können:
 
-### F1 – E-Mail-Marketing: Datenmodell und Versand (shared)
+1. **Persönlicher Teilen-Link mit Zähler** (Empfehlungs-Mechanik, „Viral-Loop“): Jeder Gast bekommt
+   nach der Freischaltung einen eigenen Link zu seinem Foto. Wer ihn teilt und Freunde draufklicken,
+   sammelt Besucher. Das ist **echt messbar** (anders als „hat jemand gepostet?“): Kampagnenregel z. B.
+   „Wer die meisten Freunde auf sein Foto bringt, gewinnt“ oder „ab 5 Besuchern gibt es einen Rabatt-
+   Code“. Auf der Abholseite zeigt ein Zähler „3 Freunde haben dein Foto gesehen“.
+2. **Moderationsliste mit Rechte-Einwilligung** (Wyng/Tagger-Prinzip): Beim Teilen setzt der Gast ein
+   Häkchen „Der Park darf mein Foto veröffentlichen“. Der Betreiber sieht die Einträge als Galerie,
+   gibt die besten frei (`approved_at`) und darf sie dann auf der Website/Bildschirm zeigen. Das ist für
+   Parks oft wertvoller als jede Prüfung auf Instagram.
+3. **Gäste-Abstimmung „Foto des Tages“** (später): Freigegebene Bilder zeigt die Abholseite zur Wahl;
+   Stimmen pro Gerät einmal. Gewinner = Tagessieger der Kampagne.
+Instagram-/Meta-Abgleich bleibt als späte Option, nicht Teil der ersten Fassung.
 
-Versanddienst hinter einer Schnittstelle, damit die Wahl (Brevo/Resend) nur eine Datei betrifft:
-`supabase/functions/_shared/emailProvider.ts` mit
-`sendEmail({ from, replyTo, to, subject, html, headers }): Promise<{ id: string }>` und Auswahl über
-Secret `EMAIL_PROVIDER` (`brevo` | `resend`) + `EMAIL_API_KEY`.
+Datenmodell (shared):
+```sql
+create table public.park_share_links (
+  token text primary key,                       -- 10 Zeichen, zufällig (base32)
+  park_id uuid not null references public.parks(id) on delete cascade,
+  claim_id uuid not null,                       -- photo_claims.id des Gastes
+  campaign_id uuid references public.park_social_campaigns(id) on delete set null,
+  visits integer not null default 0,
+  unique_visitors integer not null default 0,
+  created_at timestamptz not null default now(),
+  unique (claim_id)
+);
+create table public.park_share_visits (
+  token text not null references public.park_share_links(token) on delete cascade,
+  visitor_hash text not null,                   -- SHA-256(IP + User-Agent + Tag + Secret), keine Rohdaten
+  day date not null default current_date,
+  created_at timestamptz not null default now(),
+  primary key (token, visitor_hash, day)
+);
+alter table public.park_share_links enable row level security;
+alter table public.park_share_visits enable row level security;
+revoke all on table public.park_share_links, public.park_share_visits from public, anon, authenticated;
+
+alter table public.park_social_entries
+  add column if not exists photo_rights boolean not null default false,
+  add column if not exists approved_at timestamptz;
+```
+Functions:
+- `park-share-link` (öffentlich, vom Claim-Seiten-Code aufgerufen; Schutz: nur mit gültigem
+  `claim_id` + Abholcode): legt den Link an oder liefert den bestehenden, antwortet mit
+  `{ url, visits }`. `url` = `<SUPABASE_URL>/functions/v1/park-share-visit?t=<token>`.
+- `park-share-visit` (öffentlich, `verify_jwt=false`): zählt den Aufruf (ein Besucher je Tag nur
+  einmal, eigene Besuche des Gastes nicht: Cookie/Parameter `own=1` auslassen), liefert eine kleine
+  **HTML-Seite mit Open-Graph-Angaben** (`og:image` = verkleinertes Vorschaubild mit Wasserzeichen,
+  `og:title` = Park + Kampagne) und leitet Menschen sofort auf die Abholseite des Parks weiter. Nur so
+  zeigen WhatsApp/Instagram/Facebook beim Teilen ein Vorschaubild – die Abholseiten selbst sind
+  Single-Page-Apps ohne Vorschau für Crawler.
+- `operator-social-campaigns`: Aktion `leaderboard` (Top 20 nach `unique_visitors`), Aktion `approve`
+  (setzt `approved_at`, nur bei `photo_rights = true`); `draw` kann zusätzlich „nach Besuchern
+  gewichten“ (Lose = 1 + unique_visitors, Obergrenze 10).
+- Pro-Funktion `social_campaigns`; der einfache Link im Starter-Plan bleibt die heutige Teilen-Freischaltung.
+
+### F1 – E-Mail-Marketing: Datenmodell und Versand über Make (shared)
+
+**Entscheidung John 10.10.2026:** Versand selbst über **Make.com**, wie im Liftpictures-CRM
+(`liftpictures-crm/supabase/functions/_shared/sendCampaignCore.ts`). Kein Brevo/Resend.
+
+**ACHTUNG Namen:** Im shared-Projekt gibt es schon `email_campaigns`, `email_campaign_recipients`,
+`email_sends` und `crm_marketing_opt_outs` (Liftpictures-CRM) sowie die Functions `send-campaign`,
+`dispatch-scheduled-campaigns`, `track-open`, `email-unsubscribe`, `preview-email-audience`.
+Alles für die Parks heißt deshalb `park_email_*` bzw. `park-email-*`. Bestehende Tabellen/Functions
+nicht anfassen.
+
+Wie der Versand läuft (nach dem Vorbild des CRM): Die Function baut je Empfänger das fertige HTML
+(Platzhalter ersetzt, Öffnungs-Pixel, Abmeldelink, Pflicht-Fuß) und schickt **Blöcke zu je 100
+Empfängern** als ein Aufruf an den Make-Webhook:
+`POST $MAKE_PARK_EMAIL_WEBHOOK_URL` mit `{ recipients: [{ to, subject, html }], fromName, fromEmail,
+replyTo }`. Das Make-Szenario („Park-E-Mails (Liftpictures)“) durchläuft die Liste per Iterator und
+sendet über die SMTP-Verbindung. `fromEmail` ist die Liftpictures-Adresse (Secret
+`PARK_EMAIL_FROM_ADDRESS`), `fromName` = Parkname, `replyTo` = die Adresse des Parks – so braucht kein
+Park eine eigene Domain. (Später je Park eigene Absenderdomain möglich.) Make-Webhooks antworten sofort
+mit „Accepted“, das Szenario läuft im Hintergrund.
+
+Make-Kosten: je E-Mail zählt mindestens ein Vorgang (Iterator + SMTP ≈ 2). 2.000 Mails ≈ 4.000
+Vorgänge/Monat je Park – vor dem Start mit Johns Make-Tarif abgleichen und Kontingente je Plan
+danach festlegen. Die Zahlen unten (2.000/10.000) sind Vorschläge.
+
+Johns Aufgaben außerhalb des Codes: Make-Szenario anlegen (Webhook → Iterator über `recipients` →
+SMTP „E-Mail senden“ mit `fromName`, `fromEmail`, `replyTo`, `to`, `subject`, `html`), die
+Webhook-URL als Secret `MAKE_PARK_EMAIL_WEBHOOK_URL` hinterlegen, `PARK_EMAIL_FROM_ADDRESS`,
+`EMAIL_LINK_SECRET` setzen.
 
 ```sql
 create table public.park_email_settings (
@@ -513,7 +583,7 @@ create table public.park_email_settings (
   updated_at timestamptz not null default now()
 );
 
-create table public.email_campaigns (
+create table public.park_email_campaigns (
   id uuid primary key default gen_random_uuid(),
   park_id uuid not null references public.parks(id) on delete cascade,
   name text not null,
@@ -527,31 +597,29 @@ create table public.email_campaigns (
   scheduled_at timestamptz,
   sent_at timestamptz,
   recipients integer not null default 0,
-  delivered integer not null default 0,
   opened integer not null default 0,
   clicked integer not null default 0,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
-create index email_campaigns_park_idx on public.email_campaigns (park_id, created_at desc);
+create index park_email_campaigns_park_idx on public.park_email_campaigns (park_id, created_at desc);
 
-create table public.email_sends (
+create table public.park_email_sends (
   id uuid primary key default gen_random_uuid(),
-  campaign_id uuid not null references public.email_campaigns(id) on delete cascade,
+  campaign_id uuid not null references public.park_email_campaigns(id) on delete cascade,
   park_id uuid not null,
   claim_id uuid,
   email text not null,
-  status text not null default 'queued' check (status in ('queued', 'sent', 'failed', 'skipped')),
+  status text not null default 'queued' check (status in ('queued', 'handed_over', 'failed', 'skipped')),
   send_after timestamptz not null default now(),
-  sent_at timestamptz,
+  handed_over_at timestamptz,             -- an Make übergeben (Make meldet nichts zurück)
   opened_at timestamptz,
-  clicked_at timestamptz,
   error text,
   unique (campaign_id, email)
 );
-create index email_sends_queue_idx on public.email_sends (status, send_after) where status = 'queued';
+create index park_email_sends_queue_idx on public.park_email_sends (status, send_after) where status = 'queued';
 
-create table public.email_usage (
+create table public.park_email_usage (
   park_id uuid not null references public.parks(id) on delete cascade,
   month date not null,                    -- erster Tag des Monats
   sent integer not null default 0,
@@ -561,39 +629,40 @@ create table public.email_usage (
 alter table public.park_entitlements add column if not exists email_extra_quota integer not null default 0;
 
 alter table public.park_email_settings enable row level security;
-alter table public.email_campaigns enable row level security;
-alter table public.email_sends enable row level security;
-alter table public.email_usage enable row level security;
-revoke all on table public.park_email_settings, public.email_campaigns, public.email_sends, public.email_usage
+alter table public.park_email_campaigns enable row level security;
+alter table public.park_email_sends enable row level security;
+alter table public.park_email_usage enable row level security;
+revoke all on table public.park_email_settings, public.park_email_campaigns, public.park_email_sends, public.park_email_usage
   from public, anon, authenticated;
 ```
 
 Empfänger: `photo_claims` mit `park_id`, `marketing_opt_in = true`, `email is not null`, je
 `lower(email)` nur einmal (neuester Eintrag), optional `locale = language` und Segmentfilter.
-**Nie** an Kontakte ohne Einwilligung.
+**Nie** an Kontakte ohne Einwilligung. Zusätzlich E-Mails aus `crm_marketing_opt_outs` ausschließen
+(gemeinsame Abmeldeliste), und jede Abmeldung über unseren Link trägt dort ebenfalls ein.
 
-Kontingent je Monat: Starter 2.000, Pro 10.000, plus `email_extra_quota`. Konstanten in
+Kontingent je Monat (Vorschlag): Starter 2.000, Pro 10.000, plus `email_extra_quota`. Konstanten in
 `_shared/emailQuota.ts` und gespiegelt in `src/lib/plans.ts` (`EMAIL_QUOTA`).
 
-Functions:
+Functions (alle neu, Namen mit `park-`):
 - `operator-email-campaigns` (Betreiber): `GET ?park_id=` (Liste + `usage: { sent, quota }` +
   `settings`), `GET ?park_id=&id=`, `POST action: 'save' | 'delete' | 'save_settings' |
-  'preview_audience'` (liefert nur die Anzahl) `| 'test'` (eine Mail an die E-Mail des angemeldeten
-  Betreibers, zählt nicht aufs Kontingent) `| 'send'` (prüft Einstellungen vollständig, Kontingent
-  ausreichend, Betreff nicht leer → schreibt `email_sends`-Zeilen, `status='sending'`).
-- `email-dispatch` (per pg_cron jede Minute, `verify_jwt=false`, eigenes Secret im Header): nimmt bis
-  zu 50 `queued` mit `send_after <= now()`, sendet, setzt Status, erhöht `email_usage.sent` und die
-  Zähler der Kampagne; alle erledigt → `status='sent'`, `sent_at`.
-- `email-guest-unsubscribe` (öffentlich): Link `…?c=<claim_id>&t=<HMAC>` (HMAC-SHA256 über claim_id mit
-  Secret `EMAIL_LINK_SECRET`) → `photo_claims.marketing_opt_in = false` für alle Einträge dieser
-  E-Mail im Park; zeigt eine schlichte Bestätigungsseite. Jede Mail trägt den Link im Fuß und als
-  Kopfzeile `List-Unsubscribe` (+ `List-Unsubscribe-Post: List-Unsubscribe=One-Click`).
-- `email-open` (öffentlich): 1×1-Bild `…?s=<send_id>` setzt `opened_at` einmalig, erhöht `opened`.
+  'preview_audience'` (nur die Anzahl) `| 'test'` (eine Mail an den angemeldeten Betreiber, zählt nicht
+  aufs Kontingent) `| 'send'` (prüft Einstellungen vollständig, Kontingent, Betreff → schreibt
+  `park_email_sends`, `status='sending'`).
+- `park-email-dispatch` (pg_cron jede Minute, `verify_jwt=false`, geheimer Header): nimmt bis zu 3 Blöcke
+  à 100 `queued` mit `send_after <= now()`, baut HTML je Empfänger, ruft den Make-Webhook, setzt
+  `handed_over`/`failed`, erhöht `park_email_usage.sent`; alle erledigt → `status='sent'`, `sent_at`.
+- `park-email-unsubscribe` (öffentlich): Link `…?c=<claim_id>&t=<HMAC>` (HMAC-SHA256 über claim_id mit
+  `EMAIL_LINK_SECRET`) → `photo_claims.marketing_opt_in = false` für alle Einträge dieser E-Mail im
+  Park + Eintrag in `crm_marketing_opt_outs`; schlichte Bestätigungsseite. Jede Mail trägt den Link
+  im Fuß (Make kann die Kopfzeile `List-Unsubscribe` je nach SMTP-Modul mitgeben – wenn möglich setzen).
+- `park-email-open` (öffentlich): 1×1-Bild `…?s=<send_id>` setzt `opened_at` einmalig, erhöht `opened`.
+  Klicks werden nicht gezählt (kein Link-Umbau in der ersten Fassung).
 
 Platzhalter, die der Server je Empfänger ersetzt: `{{name}}`, `{{park}}`, `{{unsubscribe_url}}`,
 `{{open_pixel}}`. Der Editor (F2) erzeugt aus `body_json` das fertige `html` (Tabellenlayout, 600 px,
-Inline-Stile) – der Server setzt nur ein. Blocktypen in `body_json`:
-`{type:'heading',text}`, `{type:'text',text}`, `{type:'image',url,alt}`,
+Inline-Stile). Blocktypen: `{type:'heading',text}`, `{type:'text',text}`, `{type:'image',url,alt}`,
 `{type:'button',label,url}`, `{type:'divider'}`. Der Fuß (Absender, Adresse, Abmeldelink) wird vom
 Server immer angehängt und ist nicht abschaltbar.
 
@@ -603,26 +672,26 @@ Marketing-CRM (`crmTabs.ts`), `ROUTE_FEATURE` enthält den Pfad schon.
 ### F3 – Automationen (Pro)
 
 ```sql
-create table public.email_automations (
+create table public.park_email_automations (
   id uuid primary key default gen_random_uuid(),
   park_id uuid not null references public.parks(id) on delete cascade,
   type text not null check (type in ('welcome', 'season_start', 'photo_reminder')),
   enabled boolean not null default false,
-  campaign_id uuid references public.email_campaigns(id) on delete set null,  -- dient als Vorlage
+  campaign_id uuid references public.park_email_campaigns(id) on delete set null,  -- dient als Vorlage
   delay_hours integer not null default 0,
   unique (park_id, type)
 );
-alter table public.email_automations enable row level security;
-revoke all on table public.email_automations from public, anon, authenticated;
+alter table public.park_email_automations enable row level security;
+revoke all on table public.park_email_automations from public, anon, authenticated;
 ```
 `welcome`: die `*-claim-submit`-Functions legen nach erfolgreicher Freischaltung mit Einwilligung eine
-`email_sends`-Zeile an (`send_after = now() + delay`). `season_start`: Betreiber löst sie in der
+`park_email_sends`-Zeile an (`send_after = now() + delay`). `season_start`: Betreiber löst sie in der
 Oberfläche aus (ein Klick = Kampagne an alle Opt-ins). `photo_reminder`: erst mit Online-Shop sinnvoll.
 
 ### G1 – Ratgeber: Datenmodell (shared)
 
 ```sql
-create table public.articles (
+create table public.ratgeber_articles (
   id uuid primary key default gen_random_uuid(),
   slug text not null,
   language text not null default 'de',
@@ -638,9 +707,9 @@ create table public.articles (
   updated_at timestamptz not null default now(),
   unique (slug, language)
 );
-create index articles_published_idx on public.articles (status, published_at desc);
-alter table public.articles enable row level security;
-revoke all on table public.articles from public, anon, authenticated;
+create index ratgeber_articles_published_idx on public.ratgeber_articles (status, published_at desc);
+alter table public.ratgeber_articles enable row level security;
+revoke all on table public.ratgeber_articles from public, anon, authenticated;
 
 insert into storage.buckets (id, name, public) values ('article-images', 'article-images', true)
 on conflict (id) do nothing;
@@ -709,14 +778,20 @@ mit `source='stripe'`, `stripe_subscription_id`, Status-Zuordnung `trialing→tr
 mit Hinweis „über Stripe verwaltet“), außer `force: true`.
 Saisonpause: `pause_collection` am Abo, im Portal aktivierbar.
 
-## 7. Offene Entscheidungen für John
+## 7. Entscheidungen von John
 
-1. Preise Marketing Pro (Vorschlag 149 €/Monat) und Zusatz-E-Mails (19 € / 10.000).
-2. Bleibt CRM für bestehende Kunden ohne Aufpreis (Übergang „Starter“ für alle, die es heute nutzen)?
-3. E-Mail-Versanddienst (Brevo/Resend) und Absenderdomain je Park.
-4. Instagram-Prüfung angehen (Meta App Review) oder vorerst manuell?
-5. Wer schreibt Ratgeber-Artikel, in welchen Sprachen?
-6. Google-Bewertungslink nach der Umfrage: bleibt das in Starter (wie heute für alle) oder wird es Pro?
+**Entschieden am 10.10.2026:**
+1. Marketing Pro kostet **149 €/Monat** (Starter 49 €). Preise stehen als Konstanten in `src/lib/plans.ts`
+   bzw. `Plans.tsx`; „von John bestätigen“-Kommentar dort kann weg.
+2. E-Mail-Versand **selbst über Make.com**, wie im Liftpictures-CRM (siehe F1). Kein Brevo/Resend.
+3. Kein Instagram-Abgleich; stattdessen Teilen-Link mit Zähler + Moderationsliste (siehe E3).
+4. Google-Bewertungs-Weiterleitung (`review_routing`) gehört in **Pro**. Bestandsschutz: Parks, die
+   heute schon einen `review_url` eingetragen haben, bekommen `review_routing` als Zusatzfunktion in
+   `park_entitlements.features`, sobald ihre Zeile angelegt wird; Abholseiten bleiben unverändert, nur
+   die Einstellung im Dashboard (SurveyManager) liegt hinter `PlanGate feature="review_routing"`.
+5. Ratgeber-Artikel: liegen auf LinkedIn, John liefert sie später (Sprache Deutsch zuerst).
+
+**Noch offen:** Make-Tarif/Vorgänge für F1 (bestimmt die E-Mail-Kontingente je Plan).
 
 ## 8. Was bewusst NICHT gemacht wird
 
@@ -753,3 +828,4 @@ keine Vertriebs-Pipeline für Parks. Keine Preise ändern ohne John.
 - 10.10.2026: B2 von Codex gebaut (Migration, zwei Functions, `useEntitlements()` liest echt, Tests). Opus hat das Fehlerverhalten geändert: Abruffehler sperren nicht mehr (vorher Fehleransicht statt CRM, auch bei kurzem Netzaussetzer oder Token-Erneuerung), Abfrage alle 5 statt 1 Minute. Aktivierung wartet auf Supabase-Anmeldung mit dem Liftpictures-Konto.
 - 10.10.2026: Abschnitt 6a ergänzt: Entwürfe (SQL, Functions, Seitenaufbau) für C2, D3, E1, E3, F1, F3, G1, H1/H3, S1. Alle Aufgaben sind damit für Sonnet/Codex umsetzbar.
 - 10.10.2026: B2-Aktivierung ohne CLI (Supabase-CLI-Kontingent aufgebraucht, falsches Konto): beide Functions liegen als je EINE Datei in `supabase/dashboard-paste/` (zum Einfügen im Supabase-Editor, Import-frei bis auf supabase-js), dazu `B2_pruefen.sql`. Die Tabelle `park_entitlements` existierte beim Einspielen schon (Fehler 42P07) - erst mit `B2_pruefen.sql` den Stand ansehen, nicht erneut anlegen. WICHTIG im Editor: nach dem Deploy „Enforce JWT verification“ der Function AUSSCHALTEN (die Betreiber-Tokens kommen aus dem anderen Projekt).
+- 10.10.2026: Entscheidungen von John eingetragen (Pro 149 €, Versand über Make, Teilen-Link statt Instagram, Bewertungslink in Pro, Artikel später). Tabellennamen für Parks mit `park_`-Präfix, weil `email_campaigns`/`email_sends` schon dem Liftpictures-CRM gehören.
