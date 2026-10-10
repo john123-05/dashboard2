@@ -69,72 +69,72 @@ Legende: `[x]` erledigt · `[~]` gebaut, Sichtprüfung/Feinschliff offen · `[ ]
 
 ### Phase SP – Speedmessung
 
-- [ ] **SP1 Daten dauerhaft** – Tabelle `park_speed_results` (jede freigeschaltete Fahrt mit km/h, Tag in
+- [~] **SP1 Daten dauerhaft** – Tabelle `park_speed_results` (jede freigeschaltete Fahrt mit km/h, Tag in
   Park-Zeit, ausblendbar), Trigger an `photo_claims`, Nachtrag aus den vorhandenen Fotos. Grund: `photos`
   wird nach ca. 30 Tagen gelöscht, Woche/Monat/Allzeit brauchen eigene Daten. Tabelle `park_speed_settings`.
-- [ ] **SP2 Öffentliche Schnittstelle `park-leaderboard`** – eine Function für alle Parks: Zeitraum
+- [~] **SP2 Öffentliche Schnittstelle `park-leaderboard`** – eine Function für alle Parks: Zeitraum
   (`day`, `week`, `month`, `all`), Datum, liefert Rangliste (beste Fahrt je Gast), Tagesschnellste/n,
   öffentliche Einstellungen. Ersetzt für die neue Seite die drei `*-leaderboard`-Functions (die bleiben).
-- [ ] **SP3 Betreiber-Schnittstelle `operator-speed`** – Rangliste mit Verwaltung (Fahrt ausblenden),
+- [~] **SP3 Betreiber-Schnittstelle `operator-speed`** – Rangliste mit Verwaltung (Fahrt ausblenden),
   Tageswerte, Einstellungen speichern.
-- [ ] **SP4 Dashboard-Seite Speedmessung** – Tag blättern (runde Pfeile + Datum), Zeitraum-Schalter,
+- [~] **SP4 Dashboard-Seite Speedmessung** – Tag blättern (runde Pfeile + Datum), Zeitraum-Schalter,
   Kennzahlen des gewählten Tags, Rangliste mit „ausblenden“, „Top 10 als Segment“ + „E-Mail schreiben“,
   aufklappbarer Bereich **Bestenliste bearbeiten** (Texte, Instagram, Gewinnspiel, QR, Durchlauf,
   Höchstwert), Vorschau rechts, registrierte Gäste wie bisher.
-- [ ] **SP5 Öffentliche Seite neu** (Repo `imst`, eine gemeinsame Komponente für Imst/Tarzans/Plose/
+- [~] **SP5 Öffentliche Seite neu** (Repo `imst`, eine gemeinsame Komponente für Imst/Tarzans/Plose/
   Grünberg): Tagesschnellste/r groß, Podium, Liste, Zeitraum-Reiter und Tag blättern, automatischer
   Durchlauf auf großen Bildschirmen, QR-Code, Sprüche aus den Einstellungen, Beispieldaten mit `?demo=1`.
-- [ ] **SP6 Paket-Beschreibung** – in Preise & Pakete und im Angebot: „Bearbeiten & Auswerten“, Gewinnspiel
+- [~] **SP6 Paket-Beschreibung** – in Preise & Pakete und im Angebot: „Bearbeiten & Auswerten“, Gewinnspiel
   für die Tagesbesten, Verbindung zum E-Mail-Marketing.
 - [ ] **SP7 (später)** Gewinnspiel-Automatik: Tagessieger automatisch anschreiben (E-Mail-Automation
   `speed_winner`), Urkunde als Bild zum Teilen, Rekord-Benachrichtigung an den Betreiber.
 
 ### Phase OS – Online-Shop
 
-- [ ] **OS1 Seite aufräumen** – `/shop` = Übersicht (Potenzial, Status, Vorschau, Auswertung);
+- [~] **OS1 Seite aufräumen** – `/shop` = Übersicht (Potenzial, Status, Vorschau, Auswertung);
   **Shop bearbeiten** als eigener Editor `/shop/bearbeiten` mit aufklappbaren Abschnitten links
   (Design · Texte · Produkte & Preise · Anordnung · Zahlungen) und Vorschau rechts.
-- [ ] **OS2 Shop-Vorschau professioneller** – `DemoShop` in beiden Repos im Stil der Claim-Seiten:
+- [~] **OS2 Shop-Vorschau professioneller** – `DemoShop` in beiden Repos im Stil der Claim-Seiten:
   Kopf wie die Park-Seite, Foto-Raster ohne bunte Fläche, klare Produktzeilen, Vertrauenszeile, fester
   Warenkorb-Balken auf dem Handy, Fußzeile mit Rechtstexten.
-- [ ] **OS3 Mehr Produkte** – Katalog erweitern (Poster, Leinwand/Wandbild, Fotobuch-Seite, Schlüsselanhänger,
+- [~] **OS3 Mehr Produkte** – Katalog erweitern (Poster, Leinwand/Wandbild, Fotobuch-Seite, Schlüsselanhänger,
   Puzzle) in `_shared/shopCatalog.ts` + Mockups; Standard „aus“, damit bestehende Shops unverändert bleiben.
-- [ ] **OS4 Auswertung (Vorschau)** – Kacheln Bestellungen, Umsatz, Kaufquote, beliebtestes Produkt; echte
+- [~] **OS4 Auswertung (Vorschau)** – Kacheln Bestellungen, Umsatz, Kaufquote, beliebtestes Produkt; echte
   Zahlen aus den Test-Käufen, sonst als „kommt mit der Freischaltung“ gekennzeichnet.
 - [ ] **OS5 (später)** Anordnung per Ziehen, Kollektionen (z. B. „Erinnerungen“, „Geschenke“), Rabattcodes,
   Versand-/Druckpartner-Anbindung, Bestellverwaltung. Entwurf in Abschnitt 5.
 
 ### Phase FS – Dein Fotosystem, Preise & Pakete
 
-- [ ] **FS1 Umbenennen** – Navigation „Konfiguration“ → „Dein Fotosystem“ (7 Sprachen).
-- [ ] **FS2 Seite** – oben „Deine Ausstattung“, darunter „Dein Plan“ (drei Pläne kompakt, aktueller markiert,
+- [~] **FS1 Umbenennen** – Navigation „Konfiguration“ → „Dein Fotosystem“ (7 Sprachen).
+- [~] **FS2 Seite** – oben „Deine Ausstattung“, darunter „Dein Plan“ (drei Pläne kompakt, aktueller markiert,
   Link zu Preise & Pakete), darunter „Mehr aus deinem Fotosystem“ (bestehende Produktkacheln).
-- [ ] **FS3 Preise & Pakete `/plaene`** – Filter-Reiter Alle · Marketing · Online-Shop · Speedmessung ·
+- [~] **FS3 Preise & Pakete `/plaene`** – Filter-Reiter Alle · Marketing · Online-Shop · Speedmessung ·
   Fotosystem; Pläne; „Zusätzlich buchbar“ (Online-Shop, Speedmessung, Zusatz-E-Mails, Hardware) mit Preisen
   und Link zur Detailseite; Vergleichstabelle unten.
 
 ### Phase HW – Hinweise aus dem CRM
 
-- [ ] **HW1 Datenmodell + Functions** – `park_announcements`, `park_announcement_events`;
+- [~] **HW1 Datenmodell + Functions** – `park_announcements`, `park_announcement_events`;
   `operator-announcements` (aktive Hinweise für Park/Seite, Ereignisse), `admin-park-announcements`
   (anlegen, ändern, löschen, Push senden).
-- [ ] **HW2 Dashboard** – `AnnouncementHost` im Layout: Karte in der gewählten Ecke, optional QR-Code und
+- [~] **HW2 Dashboard** – `AnnouncementHost` im Layout: Karte in der gewählten Ecke, optional QR-Code und
   Knopf, einmal geschlossen = weg, höchstens eine zugleich.
-- [ ] **HW3 CRM-Seite „Hinweise“** – Liste, Formular (Kunde oder alle, Seiten, Position, Zeitraum, Text,
+- [~] **HW3 CRM-Seite „Hinweise“** – Liste, Formular (Kunde oder alle, Seiten, Position, Zeitraum, Text,
   Knopf, QR), Zahlen (gesehen/geklickt/geschlossen), „Als Push senden“.
 
 ### Phase KA / MI / CR
 
-- [ ] **KA1 Kamera-Seite** – Kopf mit Status, Bild links (klebt), Einstellungen rechts in vier Gruppen
+- [~] **KA1 Kamera-Seite** – Kopf mit Status, Bild links (klebt), Einstellungen rechts in vier Gruppen
   (Belichtung · Farbe · Kontrast & Dynamik · Schärfe & Rauschen) mit Erklärung zum Aufklappen und
   „Zurücksetzen“ je Regler, feste Änderungsleiste unten, technische Werte eingeklappt.
-- [ ] **MI1 Mitarbeiter-Seite** – Kopf mit Zähler und Limit, „Mitarbeiter einladen“ als Dialog, Tabelle mit
+- [~] **MI1 Mitarbeiter-Seite** – Kopf mit Zähler und Limit, „Mitarbeiter einladen“ als Dialog, Tabelle mit
   Initialen, Rolle, Seiten als Chips, zuletzt aktiv, Status; Aktionen im Zeilenmenü.
-- [ ] **CR1 Marketing-CRM Start** – Karte immer offen; Live-Vorschau mit fester Höhe, klebt beim Scrollen.
+- [~] **CR1 Marketing-CRM Start** – Karte immer offen; Live-Vorschau mit fester Höhe, klebt beim Scrollen.
 
 ### Phase MB – Mobil
 
-- [ ] **MB1 Plan** – siehe Abschnitt 6. Umsetzung je Seite beim Bau gleich mit (kein eigener Durchgang).
+- [~] **MB1 Plan** – siehe Abschnitt 6. Umsetzung je Seite beim Bau gleich mit (kein eigener Durchgang).
 
 ---
 
@@ -257,7 +257,23 @@ Je Seite:
 
 ## 8. Protokoll
 
-(wird beim Bauen ergänzt)
+10.10.2026, Claude (Opus 5.5 / Sonnet 5.5), alles lokal geprüft mit tsc, check:i18n, build – **Sichtprüfung durch John steht aus** (Chrome-Erweiterung getrennt), deshalb `[~]`:
+
+- SP1–SP3: Migration `20261010230000_park_speed`, Functions `park-leaderboard`, `operator-speed` live (shared-Projekt).
+- SP4: `src/pages/Users.tsx` + `src/lib/speed.ts` (Zeitraum, Blättern, Rangliste verwalten, Bearbeiten-Bereich, Segment).
+- SP5: Repo `imst`, `src/shared/Leaderboard.tsx` (eine Seite für alle Parks, TV-Durchlauf, QR, `?demo=1`); Bolt-Veröffentlichung nötig.
+- SP6: Beschreibung in Preise & Pakete (`pp.addon_speed_text`) und im Angebot (`speed.offer.*`).
+- OS1/OS4: `src/pages/Shop.tsx` (Übersicht) + Route `/shop/bearbeiten` (Editor mit Abschnitten, feste Speichern-Leiste, Handy/Desktop-Vorschau); Auswertung zeigt echte Test-Zahlen, Kaufquote/Top-Produkt als „kommt später“.
+- OS2: `DemoShop` im Stil der Claim-Seiten, in beiden Repos (dashboard `src/pages/DemoShop.tsx`, imst `src/demo-shop/DemoShop.tsx`).
+- OS3: Poster, Leinwand, Schlüsselanhänger, Puzzle in `_shared/shopCatalog.ts` (Standard aus) + Mockups; Functions neu deployt.
+- FS1–FS3: „Dein Fotosystem“, Plan-Streifen, Preise & Pakete mit Filter, Zusatzleistungen, Vergleich.
+- HW1–HW3: Tabellen + Functions `operator-announcements`, `admin-park-announcements`; `AnnouncementHost` im Dashboard; CRM-Seite „Hinweise & Push“ (Repo `liftpictures-crm`).
+- KA1: `src/pages/Kamera.tsx` neu (vier Gruppen, Original/Vorschau, Änderungsleiste, Dialoge). Alle Funktionen unverändert.
+- MI1: `src/pages/Team.tsx` neu (Zähler, Einladen-Dialog, Tabelle, Zeilenmenü).
+- CR1: Karte immer offen (lädt beim Hinscrollen), Vorschau mit fester Höhe.
+- MB1: je Seite gleich mitgebaut (Tabellen werden zu Karten, feste Leisten über der Tab-Leiste); keine eigene Runde.
+
+Noch offen: SP7 und OS5 (bewusst später), Sichtprüfung aller `[~]`.
 
 ---
 

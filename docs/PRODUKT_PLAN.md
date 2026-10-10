@@ -4,6 +4,8 @@ Stand: 10.10.2026 · Autor: Claude (Opus) mit John · Repo: `john123-05/dashboar
 
 ---
 
+> **Stufe 2 (Speedmessung, Online-Shop, Dein Fotosystem, Hinweise, Kamera, Mitarbeiter, Mobil) steht in `docs/AUSBAU_PLAN.md`** – dort ist auch der aktuelle Übergabe-Prompt (Abschnitt 9).
+
 ## 0. ÜBERGABE-PROMPT (zum Kopieren in Claude Sonnet / Codex / ein neues Chatfenster)
 
 ```text

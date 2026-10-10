@@ -8,7 +8,8 @@ first, regardless of which LLM you are). The ecosystem-wide map is in
 
 Nach `CLAUDE.md` außerdem lesen:
 
-1. `docs/PRODUKT_PLAN.md` – **aktueller Hauptplan** (Pläne/Preise, Marketing-CRM, Rechte, Mobil).
+1. `docs/PRODUKT_PLAN.md` – Hauptplan Stufe 1 (Pläne/Preise, Marketing-CRM, Rechte, Mobil).
+1a. `docs/AUSBAU_PLAN.md` – **Stufe 2, hier geht es weiter** (Speedmessung, Online-Shop, Dein Fotosystem, Hinweise, Kamera, Mitarbeiter, Mobil).
    Oben steht ein Übergabe-Prompt; bei der ersten offenen Aufgabe in Abschnitt 6 weitermachen.
 2. `docs/I18N.md` – wie Übersetzungen funktionieren und wie man neue Texte einträgt.
 3. `docs/REDESIGN_PLAN.md` – Designentscheidungen und Protokoll des Redesigns.
