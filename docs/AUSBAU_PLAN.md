@@ -155,13 +155,13 @@ nimmt den Katalog nur, wenn er da ist, sonst die jetzigen festen Werte.
   Aktionen, Kundenpreise). Hook `useCatalog()`; `Plans`, `ShopPackages`, `SpeedPackages`, `SoftwarePackages`,
   `CompareTable` zeichnen aus dem Katalog; fehlt er, gelten die festen Werte. Die Vergleichstabelle wird aus den
   „enthalten“-Häkchen erzeugt, also nie mehr von Hand gepflegt.
-- [ ] **PK4 Rabatte je Kunde** – Tabelle `park_price_overrides` (Park, Paket, Rabatt in % oder Festpreis, extra
+- [~] **PK4 Rabatte je Kunde** – Tabelle `park_price_overrides` (Park, Paket, Rabatt in % oder Festpreis, extra
   geschenkte Monate, Notiz, gültig bis, wer). Im Dashboard sieht der Kunde den alten Preis durchgestrichen und
   „Dein Preis“. Im CRM: auf der Seite **Plan** (pro Kunde) unten der Abschnitt „Preise & Rabatte“.
-- [ ] **PK5 Aktionen** – Tabelle `catalog_promotions` (Name, Banner-Text, Rabatt % oder geschenkte Monate, welche
+- [~] **PK5 Aktionen** – Tabelle `catalog_promotions` (Name, Banner-Text, Rabatt % oder geschenkte Monate, welche
   Pakete, für wen: alle / bestimmter Plan / Liste von Parks, optional Code, von–bis, an/aus). Dashboard: Banner
   oben in „Preise & Pakete“ und Abzeichen auf den Karten. CRM: Zähler gesehen · angefragt · gebucht je Aktion.
-- [ ] **PK6 Plan-Seite je Kunde ausbauen** – Beim Runterscrollen weitere Abschnitte: Preise & Rabatte (PK4),
+- [~] **PK6 Plan-Seite je Kunde ausbauen** – Beim Runterscrollen weitere Abschnitte: Preise & Rabatte (PK4),
   Aktion zuweisen (PK5), Anfragen dieses Kunden (aus „Plan/Paket anfragen“), Änderungsverlauf, Notizen.
 - [ ] **PK7 Anfragen-Eingang** – Alle Anfragen aus dem Dashboard (Plan, Shop, Speedmessung, Software, Zusatz-E-Mails)
   als Liste im CRM mit Knopf „Freischalten“ (setzt Plan/Zusatzfunktionen, legt Angebot an) und Status
@@ -348,7 +348,15 @@ Je Seite:
 - PK3: Dashboard liest den Katalog (`src/lib/catalog.ts`, `useCatalog`), mit Rückfall auf die eingebauten Werte. Geändert: `Plans`, `ShopPackages`,
   `SpeedPackages`, `SoftwarePackages`, `PackageCompare`, `CompareTable`, `PlanCard` (zeigt Nicht-Enthaltenes durchgestrichen).
 - Regel beim Speichern: Ändert sich der deutsche Text und die Übersetzung wurde nicht angefasst, wird die alte Übersetzung gelöscht (zeigt dann Deutsch).
-- Nächster Schritt: PK4 (Rabatte je Kunde), dann PK5 (Aktionen).
+- Nächster Schritt: PK7 (Anfragen-Eingang), dann PK8 (Stripe).
+
+11.10.2026, Claude (Sonnet 5.5) – PK4–PK6 gebaut, `[~]` bis John es gesehen hat:
+- Migration `20261011110000_catalog_deals.sql`: `park_price_overrides`, `catalog_promotions`, `catalog_promotion_events`.
+- Preise werden **serverseitig** angepasst (`_shared/catalogDeals.ts`, `operator-catalog`): Kundenpreis vor Aktion, bei mehreren Aktionen
+  die mit dem höchsten Rabatt; geschenkte Monate nur bei Paketen mit Laufzeit. Der Listenpreis steht in `deal`. Dashboard: `DealNote` auf den Karten,
+  Banner oben in „Preise & Pakete“, Anfragen zählen zur Aktion (`reportDealRequest`).
+- CRM: Reiter „Aktionen“ in Pakete & Preise (mit Zählern gesehen/angefragt/gebucht), Abschnitte „Preise & Rabatte“ und „Aktionen, die gelten“ auf der Plan-Seite des Kunden.
+- Offen: „gebucht“ wird noch nicht gezählt (kommt mit PK7); Aktionscode im Checkout gehört zu PK8; „Anfragen dieses Kunden“ auf der Plan-Seite kommt mit PK7.
 
 10.10.2026, Claude (Opus 5.5 / Sonnet 5.5), alles lokal geprüft mit tsc, check:i18n, build – **Sichtprüfung durch John steht aus** (Chrome-Erweiterung getrennt), deshalb `[~]`:
 
