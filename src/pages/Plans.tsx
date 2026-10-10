@@ -1,14 +1,17 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Check, Minus, ChevronRight, Gauge, Mail, Package, ShoppingBag, type LucideIcon } from 'lucide-react';
+import { Check, ChevronRight, Gauge, Mail, Package, ShoppingBag, type LucideIcon } from 'lucide-react';
 import { usePark } from '../contexts/ParkContext';
 import { meldeAusstattungsInteresse } from '../lib/equipment';
 import { BillingDisabledError, openBillingPortal, startCheckout } from '../lib/billing';
 import { useI18n, useLocaleTag } from '../lib/i18n';
 import { PLAN_LABEL_KEY, useEntitlements, type PlanKey } from '../lib/plans';
-import GlassCard from '../components/ui/GlassCard';
 import { UpgradePageHeader } from '../components/upgrade/UpgradeHero';
 import PlanCard, { PlanAction, PriceFigure } from '../components/upgrade/PlanCard';
+import CompareTable, { type CompareRow } from '../components/upgrade/CompareTable';
+import { ShopCompare, SpeedCompare } from '../components/upgrade/PackageCompare';
+import ShopPackages from '../components/upgrade/ShopPackages';
+import SpeedPackages from '../components/upgrade/SpeedPackages';
 
 // Seite „Pläne und Preise“ (docs/PRODUKT_PLAN.md, B4). Preise von John bestätigt
 // am 10.10.2026. Anfragen laufen wie bei CRM/Shop über `meldeAusstattungsInteresse`,
@@ -40,9 +43,8 @@ const CARDS: {
   },
 ];
 
-type Cell = boolean | string;
 // `soon`: Funktion ist im Plan vorgesehen, aber noch in Arbeit (ehrlich kennzeichnen).
-const ROWS: { labelKey: string; cells: [Cell, Cell, Cell]; soon?: boolean }[] = [
+const ROWS: CompareRow[] = [
   { labelKey: 'plans.row_operations', cells: [true, true, true] },
   { labelKey: 'plans.row_team', cells: ['3', '10', 'plans.unlimited'] },
   { labelKey: 'plans.row_contacts', cells: [false, true, true] },
@@ -137,14 +139,15 @@ export default function Plans() {
     }
   }
 
-  const showCell = (cell: Cell) => {
-    if (cell === true) return <Check className="mx-auto h-4 w-4 text-brand-600" aria-label="✓" />;
-    if (cell === false) return <Minus className="mx-auto h-4 w-4 text-slate-300" aria-label="–" />;
-    return <span className="text-sm text-[color:var(--ink)]">{cell.startsWith('plans.') || cell.startsWith('pp.') ? t(cell) : cell}</span>;
-  };
-
   const showPlans = filter === 'all' || filter === 'marketing';
-  const addons = ADDONS.filter((addon) => filter === 'all' || addon.group === filter);
+  // Shop und Speedmessung zeigen unter ihrem Reiter die ganzen Pakete, nicht nur die Kurzkarte.
+  const addons = ADDONS.filter((addon) =>
+    filter === 'all' ? true : addon.group === filter && addon.group !== 'shop' && addon.group !== 'speed',
+  );
+  const goToGroup = (group: Filter) => {
+    setFilter(group);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   async function requestExtraMails() {
     if (!parkId) return;
@@ -238,6 +241,36 @@ export default function Plans() {
         </section>
       )}
 
+      {filter === 'shop' && (
+        <section className="space-y-4">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h3 className="text-base font-semibold text-[color:var(--ink)]">{t('pp.shop_packages_title')}</h3>
+              <p className="mt-0.5 text-sm text-[color:var(--ink-3)]">{t('shop_pricing.subtitle')}</p>
+            </div>
+            <Link to="/shop" className="inline-flex items-center gap-1 text-sm font-semibold text-brand-700 hover:underline">
+              {t('pp.go_to_page', { page: t('nav.shop') })} <ChevronRight className="h-4 w-4" />
+            </Link>
+          </div>
+          <ShopPackages />
+        </section>
+      )}
+
+      {filter === 'speed' && (
+        <section className="space-y-4">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h3 className="text-base font-semibold text-[color:var(--ink)]">{t('pp.speed_packages_title')}</h3>
+              <p className="mt-0.5 text-sm text-[color:var(--ink-3)]">{t('speed.offer.intro')}</p>
+            </div>
+            <Link to="/users" className="inline-flex items-center gap-1 text-sm font-semibold text-brand-700 hover:underline">
+              {t('pp.go_to_page', { page: t('nav.speed') })} <ChevronRight className="h-4 w-4" />
+            </Link>
+          </div>
+          <SpeedPackages />
+        </section>
+      )}
+
       {addons.length > 0 && (
         <section>
           <h3 className="text-base font-semibold text-[color:var(--ink)]">{t('pp.addons_title')}</h3>
@@ -266,7 +299,12 @@ export default function Plans() {
                   </div>
                   <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[color:var(--line)] pt-4">
                     <p className="text-sm font-medium text-[color:var(--ink)]">{t(addon.priceKey)}</p>
-                    {addon.to ? (
+                    {filter === 'all' && (addon.group === 'shop' || addon.group === 'speed') ? (
+                      <button type="button" onClick={() => goToGroup(addon.group)} className="inline-flex items-center gap-1 text-sm font-semibold text-brand-700 hover:underline">
+                        {t('pp.see_prices')}
+                        <ChevronRight className="h-4 w-4" />
+                      </button>
+                    ) : addon.to ? (
                       <Link to={addon.to} className="inline-flex items-center gap-1 text-sm font-semibold text-brand-700 hover:underline">
                         {t(addon.linkKey ?? 'pp.details')}
                         <ChevronRight className="h-4 w-4" />
@@ -288,49 +326,19 @@ export default function Plans() {
         </section>
       )}
 
-      {showPlans && (
-        <GlassCard className="overflow-hidden p-0">
-          <div className="border-b border-[color:var(--line)] px-5 py-4">
-            <h3 className="text-base font-semibold text-[color:var(--ink)]">{t('plans.compare_title')}</h3>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] text-left">
-              <thead>
-                <tr className="border-b border-[color:var(--line)] text-xs text-[color:var(--ink-3)]">
-                  <th className="sticky left-0 bg-white px-5 py-3 font-medium" />
-                  {CARDS.map((card) => (
-                    <th key={card.plan} className={`w-32 px-3 py-3 text-center font-semibold ${card.highlight ? 'text-brand-700' : 'text-[color:var(--ink-2)]'}`}>
-                      {t(PLAN_LABEL_KEY[card.plan])}
-                      <span className="block text-[11px] font-normal text-[color:var(--ink-3)]">
-                        {card.plan === 'basis' ? t('fs.free') : `${money(PRICE[card.plan])} ${t('crm_pricing.per_month')}`}
-                      </span>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[color:var(--line)]">
-                {ROWS.map((row) => (
-                  <tr key={row.labelKey}>
-                    <td className="sticky left-0 bg-white px-5 py-3 text-sm text-[color:var(--ink-2)]">
-                      {t(row.labelKey)}
-                      {row.soon && (
-                        <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">
-                          {t('plans.soon')}
-                        </span>
-                      )}
-                    </td>
-                    {row.cells.map((cell, index) => (
-                      <td key={index} className="px-3 py-3 text-center">
-                        {showCell(cell)}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </GlassCard>
+      {(filter === 'all' || filter === 'marketing' || filter === 'system') && (
+        <CompareTable
+          title={t(filter === 'system' ? 'pp.compare_system_title' : 'plans.compare_title')}
+          columns={CARDS.map((card) => ({
+            label: t(PLAN_LABEL_KEY[card.plan]),
+            sub: card.plan === 'basis' ? t('fs.free') : `${money(PRICE[card.plan])} ${t('crm_pricing.per_month')}`,
+            highlight: card.highlight,
+          }))}
+          rows={ROWS}
+        />
       )}
+      {filter === 'shop' && <ShopCompare />}
+      {filter === 'speed' && <SpeedCompare />}
     </div>
   );
 }
