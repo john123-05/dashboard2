@@ -1,7 +1,7 @@
 import { useI18n, useLocaleTag } from '../../lib/i18n';
 import CompareTable, { type CompareRow } from './CompareTable';
 import { MONTHLY_PRICE, REVENUE_SHARE_PERCENT, SETUP_PRICE } from './ShopPackages';
-import { PLANS } from './SpeedPackages';
+import { PLANS, SOFTWARE_MONTHLY } from './SpeedPackages';
 
 const eur = (value: number, locale: string) =>
   value.toLocaleString(locale, { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
@@ -39,28 +39,30 @@ export function ShopCompare() {
   );
 }
 
-/** Vergleich der drei Speedmessung-Pakete. */
+/** Vergleich der Speedmessung-Pakete (drei mit Hardware, eines nur Software für Parks mit Hardware). */
 export function SpeedCompare() {
   const { t } = useI18n();
   const locale = useLocaleTag();
   const [basis, display, long] = PLANS;
+  const all4 = (labelKey: string): CompareRow => ({ labelKey, cells: [true, true, true, true] });
   const rows: CompareRow[] = [
-    yes3('speed.offer.free_hardware'),
-    yes3('speed.offer.setup'),
-    yes3('speed.offer.photo_speed'),
-    yes3('speed.offer.photo_code'),
-    yes3('speed.offer.daily_stats'),
-    yes3('speed.offer.ranking'),
-    yes3('speed.offer.guest_page'),
-    yes3('speed.offer.benefit_edit'),
-    yes3('speed.offer.benefit_analyse'),
-    yes3('speed.offer.hosting'),
-    yes3('speed.offer.database'),
-    yes3('speed.offer.maintenance'),
-    { labelKey: 'speed.offer.display_large', cells: [false, true, false] },
-    { labelKey: 'pp.row_monthly', cells: [basis, display, long].map((p) => eur(p.monthly, locale)) },
-    { labelKey: 'pp.row_year2', cells: [eur(basis.monthly, locale), eur(display.fromYear2 ?? display.monthly, locale), eur(long.monthly, locale)] },
-    { labelKey: 'pp.row_term', cells: [basis, display, long].map((p) => (p.months === 48 ? 'pp.cell_48m' : 'pp.cell_12m')) },
+    { labelKey: 'speed.offer.hardware', cells: [true, true, true, 'pp.cell_have'] },
+    { labelKey: 'speed.offer.free_hardware', cells: [true, true, true, false] },
+    all4('speed.offer.setup'),
+    all4('speed.offer.photo_speed'),
+    all4('speed.offer.photo_code'),
+    all4('speed.offer.daily_stats'),
+    all4('speed.offer.ranking'),
+    all4('speed.offer.guest_page'),
+    all4('speed.offer.benefit_edit'),
+    all4('speed.offer.benefit_analyse'),
+    all4('speed.offer.hosting'),
+    all4('speed.offer.database'),
+    all4('speed.offer.maintenance'),
+    { labelKey: 'speed.offer.display_large', cells: [false, true, false, false] },
+    { labelKey: 'pp.row_monthly', cells: [...[basis, display, long].map((p) => eur(p.monthly, locale)), eur(SOFTWARE_MONTHLY, locale)] },
+    { labelKey: 'pp.row_year2', cells: [eur(basis.monthly, locale), eur(display.fromYear2 ?? display.monthly, locale), eur(long.monthly, locale), eur(SOFTWARE_MONTHLY, locale)] },
+    { labelKey: 'pp.row_term', cells: [...[basis, display, long].map((p) => (p.months === 48 ? 'pp.cell_48m' : 'pp.cell_12m')), 'pp.cell_12m'] },
   ];
   return (
     <CompareTable
@@ -70,6 +72,7 @@ export function SpeedCompare() {
         { label: t(basis.name) },
         { label: t(display.name), highlight: true },
         { label: t(long.name) },
+        { label: t('speed.offer.sw_name'), sub: t('speed.offer.sw_badge') },
       ]}
       rows={rows}
     />
