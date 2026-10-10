@@ -6,6 +6,8 @@ import DashboardLayout from './components/layout/DashboardLayout';
 import Login from './pages/Login';
 const Register = seiteNachladen(() => import('./pages/Register'));
 const Overview = seiteNachladen(() => import('./pages/Overview'));
+const Ratgeber = seiteNachladen(() => import('./pages/Ratgeber'));
+const RatgeberArticle = seiteNachladen(() => import('./pages/RatgeberArticle'));
 const Revenue = seiteNachladen(() => import('./pages/Revenue'));
 const Purchases = seiteNachladen(() => import('./pages/Purchases'));
 const Users = seiteNachladen(() => import('./pages/Users'));
@@ -134,6 +136,8 @@ export default function App() {
                 <Route path="/tickets" element={<Support />} />
                 <Route path="/health" element={<SystemHealth />} />
                 <Route path="/kamera" element={<CameraAvailableOnly><Kamera /></CameraAvailableOnly>} />
+                <Route path="/ratgeber" element={<Ratgeber />} />
+                <Route path="/ratgeber/:slug" element={<RatgeberArticle />} />
                 <Route path="/team" element={<OwnerOnly><Team /></OwnerOnly>} />
                 <Route path="/settings" element={<OwnerOnly><Settings /></OwnerOnly>} />
               </Route>

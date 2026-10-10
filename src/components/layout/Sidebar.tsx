@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 're
 import { createPortal } from 'react-dom';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
+  BookOpen,
   LayoutDashboard,
   DollarSign,
   ShoppingCart,
@@ -86,6 +87,7 @@ const navItems: NavItem[] = [
   { to: '/kamera', icon: Camera, labelKey: 'nav.camera', staffAllowed: true, group: 'betrieb' },
   { to: '/configuration', icon: Package, labelKey: 'nav.configuration', group: 'verwaltung' },
   { to: '/shop', icon: Store, labelKey: 'nav.shop', upgrade: true, group: 'marketing' },
+  { to: '/ratgeber', icon: BookOpen, labelKey: 'nav.guide', group: 'verwaltung' },
   { to: '/team', icon: UserCog, labelKey: 'nav.team', ownerOnly: true, group: 'verwaltung' },
   { to: '/settings', icon: Settings, labelKey: 'nav.settings', group: 'verwaltung' },
 ];
