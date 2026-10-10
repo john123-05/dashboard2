@@ -4,6 +4,7 @@ import { Loader2 } from 'lucide-react';
 import SurveyManager from './SurveyManager';
 import SocialManager from './SocialManager';
 import TrackingManager from './TrackingManager';
+import CampaignsManager from './CampaignsManager';
 import { fetchSurveyConfig, setUnlockMode, type SurveyConfig, type UnlockMode } from '../../lib/surveyApi';
 import { CRM_TABS, crmTabForPath, type TabKey } from '../../lib/crmTabs';
 import { PlanBadge } from '../upgrade/PlanGate';
@@ -124,7 +125,10 @@ export default function UnlockCenter({
       {tab === 'allContacts' && <div className="space-y-5">{children('list')}</div>}
       {tab === 'survey' && <SurveyManager parkId={parkId} />}
       {tab === 'social' && config && (
-        <SocialManager parkId={parkId} initial={config.settings.social ?? {}} onSaved={() => void load()} />
+        <div className="space-y-8">
+          <CampaignsManager parkId={parkId} />
+          <SocialManager parkId={parkId} initial={config.settings.social ?? {}} onSaved={() => void load()} />
+        </div>
       )}
       {tab === 'tracking' && <TrackingManager parkId={parkId} />}
     </div>
