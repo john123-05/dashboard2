@@ -2,6 +2,11 @@
 // die Artikel bleiben in der Sprache, in der sie geschrieben wurden. Später soll ein Editor im
 // Liftpictures-CRM (Aufgabe G2, Tabelle `articles`) diese Liste ersetzen.
 
+import { useEffect, useState } from 'react';
+import { usePark } from '../contexts/ParkContext';
+import { EXTERNAL_SUPABASE_URL, EXTERNAL_SUPABASE_ANON_KEY } from './supabase';
+import { getFunctionSession } from './functionAuth';
+
 export type RatgeberArticle = {
   slug: string;
   title: string;
@@ -52,6 +57,67 @@ export const RATGEBER_ARTICLES: RatgeberArticle[] = [
   },
 ];
 
-export function articleBySlug(slug: string | undefined): RatgeberArticle | undefined {
-  return RATGEBER_ARTICLES.find((article) => article.slug === slug);
+export function articleBySlug(slug: string | undefined, list: RatgeberArticle[] = RATGEBER_ARTICLES): RatgeberArticle | undefined {
+  return list.find((article) => article.slug === slug);
+}
+
+type ArticleRow = {
+  slug: string;
+  title: string;
+  excerpt: string;
+  body: string;
+  lang: string;
+  cover_url: string | null;
+  cover_alt: string;
+  published_at: string | null;
+};
+
+/**
+ * Artikel aus der Tabelle `articles` (im Liftpictures-CRM gepflegt). Solange die Abfrage nichts liefert
+ * (oder fehlschlägt), zeigt die Seite die fest eingebauten Artikel oben.
+ */
+export function useArticles(): { articles: RatgeberArticle[]; loading: boolean } {
+  const { parkId } = usePark();
+  const [state, setState] = useState<{ articles: RatgeberArticle[]; loading: boolean }>({ articles: RATGEBER_ARTICLES, loading: true });
+  useEffect(() => {
+    let active = true;
+    if (!parkId) return;
+    (async () => {
+      try {
+        const {
+          data: { session },
+        } = await getFunctionSession();
+        if (!session?.access_token) throw new Error('no session');
+        const res = await fetch(`${EXTERNAL_SUPABASE_URL}/functions/v1/operator-articles?park_id=${encodeURIComponent(parkId)}`, {
+          headers: { Authorization: `Bearer ${session.access_token}`, apikey: EXTERNAL_SUPABASE_ANON_KEY },
+        });
+        const body = await res.json().catch(() => null);
+        const rows = (body?.data?.articles ?? []) as ArticleRow[];
+        if (!active) return;
+        if (res.ok && rows.length > 0) {
+          setState({
+            loading: false,
+            articles: rows.map((row) => ({
+              slug: row.slug,
+              title: row.title,
+              lang: row.lang as 'de' | 'en',
+              date: (row.published_at ?? '').slice(0, 10) || '2026-01-01',
+              excerpt: row.excerpt,
+              image: row.cover_url ?? '',
+              imageAlt: row.cover_alt,
+              body: row.body,
+            })),
+          });
+          return;
+        }
+      } catch {
+        // Rückfall auf die fest eingebauten Artikel
+      }
+      if (active) setState({ articles: RATGEBER_ARTICLES, loading: false });
+    })();
+    return () => {
+      active = false;
+    };
+  }, [parkId]);
+  return state;
 }

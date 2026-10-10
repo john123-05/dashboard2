@@ -2,13 +2,14 @@ import { Link } from 'react-router-dom';
 import GlassCard from '../components/ui/GlassCard';
 import ContactCard from '../components/ratgeber/ContactCard';
 import { useI18n, useLocaleTag } from '../lib/i18n';
-import { RATGEBER_ARTICLES } from '../lib/ratgeber';
+import { useArticles } from '../lib/ratgeber';
 
 // Ratgeber: Artikelraster (Titelbild + Überschrift), Klick öffnet den Artikel (docs/PRODUKT_PLAN.md, G3).
 export default function Ratgeber() {
   const { t } = useI18n();
   const locale = useLocaleTag();
-  const articles = [...RATGEBER_ARTICLES].sort((a, b) => b.date.localeCompare(a.date));
+  const { articles: list } = useArticles();
+  const articles = [...list].sort((a, b) => b.date.localeCompare(a.date));
   return (
     <div className="space-y-8">
       <div>
@@ -20,12 +21,14 @@ export default function Ratgeber() {
         {articles.map((article) => (
           <Link key={article.slug} to={`/ratgeber/${article.slug}`} className="group block">
             <GlassCard className="h-full overflow-hidden p-0 transition group-hover:border-brand-300">
-              <img
-                src={article.image}
-                alt={article.imageAlt}
-                loading="lazy"
-                className="aspect-video w-full object-cover"
-              />
+              {article.image && (
+                <img
+                  src={article.image}
+                  alt={article.imageAlt}
+                  loading="lazy"
+                  className="aspect-video w-full object-cover"
+                />
+              )}
               <div className="space-y-2 p-5">
                 <p className="text-xs text-[color:var(--ink-3)]">
                   {new Date(article.date).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' })}

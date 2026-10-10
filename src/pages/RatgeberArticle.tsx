@@ -4,7 +4,7 @@ import { ArrowLeft } from 'lucide-react';
 import GlassCard from '../components/ui/GlassCard';
 import ContactCard from '../components/ratgeber/ContactCard';
 import { useI18n, useLocaleTag } from '../lib/i18n';
-import { articleBySlug } from '../lib/ratgeber';
+import { articleBySlug, useArticles } from '../lib/ratgeber';
 
 const URL_PATTERN = /(https?:\/\/[^\s]+)/g;
 
@@ -28,8 +28,9 @@ export default function RatgeberArticle() {
   const { slug } = useParams();
   const { t, language } = useI18n();
   const locale = useLocaleTag();
-  const article = articleBySlug(slug);
-  if (!article) return <Navigate to="/ratgeber" replace />;
+  const { articles, loading } = useArticles();
+  const article = articleBySlug(slug, articles);
+  if (!article) return loading ? null : <Navigate to="/ratgeber" replace />;
   const paragraphs = article.body.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
 
   return (
@@ -38,7 +39,7 @@ export default function RatgeberArticle() {
         <ArrowLeft className="h-4 w-4" /> {t('ratgeber.back')}
       </Link>
 
-      <img src={article.image} alt={article.imageAlt} className="aspect-video w-full rounded-xl object-cover" />
+      {article.image && <img src={article.image} alt={article.imageAlt} className="aspect-video w-full rounded-xl object-cover" />}
 
       <div>
         <h1 className="text-[28px] font-light leading-tight tracking-tight text-[color:var(--ink)] sm:text-[32px]">{article.title}</h1>
