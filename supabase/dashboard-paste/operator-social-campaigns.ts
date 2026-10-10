@@ -1,5 +1,5 @@
 // Eine Datei für den Supabase-Editor (Dashboard → Edge Functions). Inhalt = _shared + index.ts.
-// Quelle im Repo: supabase/functions/operator-social-campaigns/index.ts
+// Quelle im Repo: supabase/functions/operator-social-campaigns/index.ts (erzeugt mit scripts/build-paste.py)
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4';
 
@@ -153,7 +153,7 @@ async function fetchAccessiblePark(
     : null;
 }
 
-export async function requireOperatorForPark(
+async function requireOperatorForParkBase(
   req: Request,
   parkId: string,
 ): Promise<OperatorAuthResult> {
@@ -202,6 +202,48 @@ export async function requireOperatorForPark(
     parkId: park.id,
     organizationId: park.organization_id,
   };
+}
+
+/**
+ * Prüft zusätzlich die Seitenrechte eines Mitarbeiters (docs/PRODUKT_PLAN.md, H3).
+ * `pages`: Seiten-Schlüssel (wie src/lib/permissions.ts), von denen eine reichen muss.
+ * Nur Mitarbeiter mit eigener Seitenauswahl (`allowed_pages` gesetzt) oder deaktiviertem Zugang
+ * werden abgewiesen; Inhaber, Staff-Admins und Mitarbeiter ohne Auswahl bleiben wie bisher.
+ * Schlägt die Abfrage fehl, wird NICHT gesperrt (kein Aussperren durch einen Ausfall).
+ */
+export async function requireOperatorForPark(
+  req: Request,
+  parkId: string,
+  pages?: string[],
+): Promise<OperatorAuthResult> {
+  const auth = await requireOperatorForParkBase(req, parkId);
+  if (!auth.ok || !pages || pages.length === 0) return auth;
+
+  const authHeader = req.headers.get("authorization") || "";
+  const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  if (!token) return auth;
+  try {
+    const response = await fetch(
+      `${OPERATOR_SUPABASE_URL}/rest/v1/organization_memberships?select=role,allowed_pages,disabled_at&user_id=eq.${
+        encodeURIComponent(auth.userId)
+      }`,
+      { headers: { apikey: OPERATOR_SUPABASE_ANON_KEY, Authorization: `Bearer ${token}` } },
+    );
+    if (!response.ok) return auth; // Staff-Admin (anderes Projekt) oder Ausfall
+    const rows = await response.json().catch(() => []);
+    const row = Array.isArray(rows) ? rows[0] : null;
+    if (!row) return auth;
+    if (row.disabled_at) return { ok: false, status: 403, message: "Access disabled" };
+    if (row.role === "staff" && Array.isArray(row.allowed_pages)) {
+      const allowed = row.allowed_pages as string[];
+      if (!pages.some((page) => allowed.includes(page))) {
+        return { ok: false, status: 403, message: "No permission for this page" };
+      }
+    }
+  } catch {
+    // bewusst offen: ein Ausfall darf niemanden aussperren
+  }
+  return auth;
 }
 
 
@@ -404,7 +446,7 @@ export async function handler(req: Request): Promise<Response> {
       const url = new URL(req.url);
       const parkId = text(url.searchParams.get('park_id'), 40);
       if (!UUID.test(parkId)) return json({ error: 'Invalid park_id' }, 400);
-      const auth = await requireOperatorForPark(req, parkId);
+      const auth = await requireOperatorForPark(req, parkId, ['marketing']);
       if (!auth.ok) return json({ error: auth.message }, auth.status);
       const campaignId = text(url.searchParams.get('campaign_id'), 40);
       if (campaignId) {
@@ -419,7 +461,7 @@ export async function handler(req: Request): Promise<Response> {
       const body = await req.json().catch(() => null) as Row | null;
       const parkId = text(body?.park_id, 40);
       if (!body || !UUID.test(parkId)) return json({ error: 'Invalid park_id' }, 400);
-      const auth = await requireOperatorForPark(req, parkId);
+      const auth = await requireOperatorForPark(req, parkId, ['marketing']);
       if (!auth.ok) return json({ error: auth.message }, auth.status);
       const action = text(body.action, 20);
 

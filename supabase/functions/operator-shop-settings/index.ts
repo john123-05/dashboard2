@@ -162,7 +162,7 @@ Deno.serve(async (req) => {
     if (req.method === 'GET') {
       const parkId = (new URL(req.url).searchParams.get('park_id') || '').trim();
       if (!parkId) return json({ error: 'park_id fehlt' }, 400);
-      const auth = await requireOperatorForPark(req, parkId);
+      const auth = await requireOperatorForPark(req, parkId, ['shop']);
       if (!auth.ok) return json({ error: auth.message }, auth.status);
 
       const [settings, revenue, redemptions] = await Promise.all([
@@ -181,7 +181,7 @@ Deno.serve(async (req) => {
       if (!form) return json({ error: 'Invalid form data' }, 400);
       const parkId = String(form.get('park_id') || '').trim();
       if (!parkId) return json({ error: 'park_id fehlt' }, 400);
-      const auth = await requireOperatorForPark(req, parkId);
+      const auth = await requireOperatorForPark(req, parkId, ['shop']);
       if (!auth.ok) return json({ error: auth.message }, auth.status);
 
       const logo = form.get('logo');
@@ -204,7 +204,7 @@ Deno.serve(async (req) => {
     const payload = (await req.json().catch(() => null)) as Record<string, unknown> | null;
     const parkId = typeof payload?.park_id === 'string' ? payload.park_id.trim() : '';
     if (!parkId) return json({ error: 'park_id fehlt' }, 400);
-    const auth = await requireOperatorForPark(req, parkId);
+    const auth = await requireOperatorForPark(req, parkId, ['shop']);
     if (!auth.ok) return json({ error: auth.message }, auth.status);
 
     if (payload?.action === 'request_activation') {

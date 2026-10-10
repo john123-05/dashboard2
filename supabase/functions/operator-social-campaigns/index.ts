@@ -200,7 +200,7 @@ export async function handler(req: Request): Promise<Response> {
       const url = new URL(req.url);
       const parkId = text(url.searchParams.get('park_id'), 40);
       if (!UUID.test(parkId)) return json({ error: 'Invalid park_id' }, 400);
-      const auth = await requireOperatorForPark(req, parkId);
+      const auth = await requireOperatorForPark(req, parkId, ['marketing']);
       if (!auth.ok) return json({ error: auth.message }, auth.status);
       const campaignId = text(url.searchParams.get('campaign_id'), 40);
       if (campaignId) {
@@ -215,7 +215,7 @@ export async function handler(req: Request): Promise<Response> {
       const body = await req.json().catch(() => null) as Row | null;
       const parkId = text(body?.park_id, 40);
       if (!body || !UUID.test(parkId)) return json({ error: 'Invalid park_id' }, 400);
-      const auth = await requireOperatorForPark(req, parkId);
+      const auth = await requireOperatorForPark(req, parkId, ['marketing']);
       if (!auth.ok) return json({ error: auth.message }, auth.status);
       const action = text(body.action, 20);
 

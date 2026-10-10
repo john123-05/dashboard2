@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
   const parkId = text(url.searchParams.get('park_id'));
   if (!parkId) return json({ error: 'park_id fehlt' }, 400);
 
-  const auth = await requireOperatorForPark(req, parkId);
+  const auth = await requireOperatorForPark(req, parkId, ['revenue', 'purchases', 'overview', 'marketing', 'speed']);
   if (!auth.ok) return json({ error: auth.message }, auth.status);
 
   const [{ data: rev, error: revError }, { data: splitRows }, { data: configs }] = await Promise.all([
