@@ -341,8 +341,12 @@ export default function Users() {
             {t('users.subtitle')}
           </p>
         </div>
-        {publicUrl && (
-          <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Link to="/plaene?gruppe=speed" className="glass-button-secondary">
+            {t('shop.view_plans')}
+          </Link>
+          {publicUrl && (
+            <>
             <a
               href={`${publicUrl}${locked ? '?demo=1&tv=1' : '?tv=1'}`}
               target="_blank"
@@ -361,8 +365,9 @@ export default function Users() {
               <ExternalLink className="h-4 w-4" />
               {t('users.open_browser')}
             </a>
-          </div>
-        )}
+            </>
+          )}
+        </div>
       </div>
 
       {notice && (
@@ -784,13 +789,6 @@ export default function Users() {
               )}
             </div>
           </GlassCard>
-          <Link
-            to="/plaene?gruppe=speed"
-            className="flex items-center justify-between gap-3 rounded-lg border border-[color:var(--line)] bg-white px-5 py-4 text-sm font-semibold text-brand-700 hover:bg-slate-50"
-          >
-            {t('pp.speed_have_hw_link')}
-            <span aria-hidden>→</span>
-          </Link>
             </>
           )}
         </div>
