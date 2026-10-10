@@ -7,6 +7,12 @@ can continue where the last one stopped. Last updated 2026-09-25.
 Supabase projects, customers, photo pipeline, incident history) lives in
 `john123-05/testsoftware` -> `docs/ECOSYSTEM.md`. Read that too.**
 
+> **Stand 10.10.2026:** Der Staff-/Super-Admin-Bereich (`src/staff`, Routen `/staff/*`) wurde aus diesem
+> Repo entfernt. Er lebt vollständig im Repo `liftpictures-crm` (Vercel, Kundenmanagement, Angebote,
+> Support, Ausstattung, Pläne …). Die Beschreibungen „Staff Dashboard“ weiter unten sind Geschichte
+> und gelten nur noch dort. Sicherungsmarke mit dem alten Stand: Git-Tag `staff-vor-entfernung-2026-10-10`.
+> Alte `/staff/...`-Adressen leiten auf `LIFTPICTURES_CRM_URL` (`src/lib/crmLink.ts`) weiter.
+
 ## What this repo is
 
 Two apps in one Vite+React+TS codebase, live at

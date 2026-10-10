@@ -305,9 +305,9 @@ früheren (O)-Aufgaben in Abschnitt 6a ausgeschrieben und damit (S). Opus nur no
   body_md, cover_url, category ('tipps'|'marketing'|'technik'|'neu'), language, status
   ('draft'|'published'), published_at, author`. Bucket `article-images` (public).
   Lesen: Edge Function `public-articles` (nur published). Schreiben: `admin-articles` (Staff).
-- [ ] **G2 Editor im Staff-Dashboard** (S) – neue Seite `/staff/ratgeber` (Staff-Stil, `src/staff`):
+- [ ] **G2 Editor im Liftpictures-CRM (CRM-Repo)** (S) – neue Seite `/ratgeber` im Repo `liftpictures-crm` (Stil `src/staff`/`src/crm` dort):
   Liste, Editor (Titel, Kategorie, Sprache, Titelbild, Markdown mit Vorschau), Veröffentlichen.
-  (John hat das Staff-Dashboard hierfür freigegeben, sonst nicht anfassen.)
+  (Function `admin-articles` liegt im geteilten Projekt und wird von dort aufgerufen.)
 - [ ] **G3 Ratgeber im Betreiber-Dashboard** (S) – `/ratgeber` (Kartenraster, Kategorien-Filter),
   `/ratgeber/:slug` (Lesansicht, max. 720 px Textbreite, Titelbild, „Weitere Artikel“).
   Übersicht: Karte „Tipps für deinen Park“ (3 neueste). Hilfe-Center: Suche findet auch Artikel.
@@ -371,7 +371,7 @@ Leiste oben rechts. CRM-Gestaltung steckt in Phase C/D, Käufe/Kamera/Support in
 
 - [ ] **S1 Stripe Billing** (S – Entwurf in 6a) – Produkte/Preise je Plan + Add-on, Checkout-Session aus `/plaene`,
   Kundenportal-Link im Profilmenü, Webhook → `park_entitlements` (`source='stripe'`).
-- [ ] **S2 Staff-CRM: Kunden-Freischaltungen** (S) – im Staff-Dashboard „Kunden Management“ ein Reiter
+- [ ] **S2 Liftpictures-CRM: Kunden-Freischaltungen (CRM-Repo)** (S) – im Repo `liftpictures-crm` unter „Kundenmanagement“ ein Reiter
   „Plan & Add-ons“: Plan setzen, Testzeitraum, Pausieren, Verlauf.
 
 ## 6a. Entwürfe für die (O)-Aufgaben (fertig ausgeschrieben – damit sind sie (S))
@@ -832,3 +832,4 @@ keine Vertriebs-Pipeline für Parks. Keine Preise ändern ohne John.
 - 10.10.2026: `operator-entitlements` wurde im Supabase-Editor angelegt; die Adresse ist `hyper-processor` (Editor vergibt Zufallsadressen, nicht änderbar). `src/lib/plans.ts` nutzt deshalb `ENTITLEMENTS_FUNCTION = 'hyper-processor'`. Beim Anlegen weiterer Functions im Editor immer die Adresse prüfen (Zeile unter dem Titel); per CLI gilt der gewählte Name.
 - 10.10.2026: B2 aktiv. Tabelle `park_entitlements` im shared-Projekt (hat eine zusätzliche Spalte `notiz`, harmlos), beide Functions im Supabase-Editor angelegt, JWT-Prüfung aus. Adressen: `hyper-processor` (= operator-entitlements), `admin-park-entitlements`. Per curl geprüft: beide antworten 401 „Missing bearer token“ aus unserem Code. Noch offen: Sichtprüfung im Dashboard (Profilmenü „Plan: …“), sobald die Chrome-Erweiterung wieder verbunden ist; Pläne je Park setzt später das Staff-Dashboard.
 - 10.10.2026: B4 umgesetzt: `src/pages/Plans.tsx`, Route `/plaene` (nur Inhaber). Drei Karten (Basis 0 €, Starter 49 €, Pro 149 € hervorgehoben, aktueller Plan markiert), Vergleichstabelle mit „In Entwicklung“-Marke für noch nicht gebaute Funktionen (E-Mail, Kampagnen, Berichte, Rechte je Seite), Add-ons als Links, Anfragen über `meldeAusstattungsInteresse`. Links: PlanGate und Profilmenü zeigen auf `/plaene`. Das Einstiegsangebot („3 Monate gratis bei zu wenig Kontakten“) ist NICHT auf der Seite – war nur ein Vorschlag, braucht Johns Freigabe. Sichtprüfung im Browser steht aus (Chrome-Verbindung getrennt).
+- 10.10.2026: **Staff-/Super-Admin-Bereich aus diesem Repo entfernt** (John). `src/staff` (48 Dateien, ca. 23.600 Zeilen), `public/manifest-staff.webmanifest` und alle `/staff`-Routen sind weg; Repo von 66.154 auf 42.523 Zeilen in `src/`. Grund: `liftpictures-crm` hat alles schon (Kundenmanagement, Kameras, Liftpic-Setup, Support, Health, Kosten, Passwörter, Medien, Angebote …) und ist weiter (zusätzlich Ausstattung, Push-Einstellungen). Geprüft: einzige Kopplung war `getFunctionSession` (jetzt nur noch Betreiber-Sitzung). Sicherung: Git-Tag `staff-vor-entfernung-2026-10-10`. Offen: `LIFTPICTURES_CRM_URL` in `src/lib/crmLink.ts` setzen (Fußzeilen-Link + Weiterleitung alter /staff-Adressen). Aufgaben G2 und S2 gehören jetzt ins CRM-Repo. Mögliche spätere Aufräumarbeit: `embedded`-Zweige und `customer-embedded-*`-CSS in den Betreiber-Seiten (früher für die Einbettung im Staff-Kundenmanagement) – nur mit Sichtprüfung entfernen.

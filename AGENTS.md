@@ -14,6 +14,6 @@ Nach `CLAUDE.md` außerdem lesen:
 3. `docs/REDESIGN_PLAN.md` – Designentscheidungen und Protokoll des Redesigns.
 
 Kurzregeln: auf Deutsch mit John kommunizieren; nur benannte Dateien stagen; nicht pushen ohne
-Johns Okay; kein SQL direkt ausführen; Staff-Dashboard (`src/staff`) nicht anfassen;
+Johns Okay; kein SQL direkt ausführen; Der frühere Staff-/Super-Admin-Bereich ist seit 10.10.2026 NICHT mehr in diesem Repo (lebt im Repo `liftpictures-crm`);
 neue Texte nur über `t('…')` in allen 7 Sprachen; vor dem Fertigmelden `npm run check:i18n`,
 `npm run typecheck`, `npm run build` und Sichtprüfung auf `http://localhost:5180`.

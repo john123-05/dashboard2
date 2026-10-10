@@ -1,15 +1,10 @@
 import { supabase } from './supabase';
-import { supabaseBrowser } from '../staff/lib/supabase';
 
 /**
- * Die Sitzung, mit der Aufrufe an die operator-*-Functions gehen.
- *
- * Im Staff-CRM (/staff/...) laufen dieselben Seiten wie beim Betreiber, aber der
- * angemeldete Nutzer ist ein Staff-Nutzer. Das Token des Betreiber-Projekts ist
- * dort leer oder abgelaufen ("Invalid operator auth token"); die Functions
- * akzeptieren für Staff das Token des gemeinsamen Projekts (admin_users).
+ * Die Sitzung, mit der Aufrufe an die operator-*-Functions gehen: die des
+ * angemeldeten Betreibers (Betreiber-Projekt). Früher gab es hier einen Zweig für
+ * den Staff-Bereich (/staff); der lebt jetzt im Liftpictures-CRM.
  */
 export function getFunctionSession() {
-  const staff = typeof window !== 'undefined' && window.location.pathname.startsWith('/staff');
-  return (staff ? supabaseBrowser : supabase).auth.getSession();
+  return supabase.auth.getSession();
 }

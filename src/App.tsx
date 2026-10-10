@@ -32,73 +32,34 @@ import { ParkProvider } from './contexts/ParkContext';
 import KioskAwareOverlay from './components/KioskAwareOverlay';
 import GuestActivityAwareOverlay from './components/GuestActivityAwareOverlay';
 import OwnerOnly from './components/OwnerOnly';
+import { LIFTPICTURES_CRM_URL } from './lib/crmLink';
 import PlanGate from './components/upgrade/PlanGate';
 import CameraAvailableOnly from './components/CameraAvailableOnly';
 const Team = seiteNachladen(() => import('./pages/Team'));
-const StaffAdminLayout = seiteNachladen(() => import('./staff/components/AdminLayout'));
-const StaffLoginPage = seiteNachladen(() => import('./staff/pages/StaffLoginPage'));
-const StaffSupportTicketKundenPage = seiteNachladen(() => import('./staff/pages/SupportTicketKundenPage'));
-const StaffSystemHealthPage = seiteNachladen(() => import('./staff/pages/StaffSystemHealthPage'));
-const StaffSettingsPage = seiteNachladen(() => import('./staff/pages/StaffSettingsPage'));
-const StaffHelpPage = seiteNachladen(() => import('./staff/pages/HelpPage'));
-const StaffMarketingMaterialsPage = seiteNachladen(() => import('./staff/pages/MarketingMaterialsPage'));
-const StaffUploaderInstallPage = seiteNachladen(() => import('./staff/pages/UploaderInstallPage'));
-const StaffPasswordsPage = seiteNachladen(() => import('./staff/pages/PasswordsPage'));
-const StaffMediaLibraryPage = seiteNachladen(() => import('./staff/pages/MediaLibraryPage'));
-const StaffCostsPage = seiteNachladen(() => import('./staff/pages/CostsPage'));
-const StaffCustomerManagementPage = seiteNachladen(() => import('./staff/pages/CustomerManagementPage'));
-const StaffOverviewPage = seiteNachladen(() => import('./staff/pages/OverviewPage'));
-const StaffOfferBuilderPage = seiteNachladen(() => import('./staff/pages/OfferBuilderPage'));
-const StaffWebsiteAnfragenPage = seiteNachladen(() => import('./staff/pages/WebsiteAnfragenPage'));
 
 function AppShellMetaController() {
   const location = useLocation();
 
   useEffect(() => {
-    const isStaffRoute = location.pathname.startsWith('/staff');
-    const manifestHref = isStaffRoute ? '/manifest-staff.webmanifest' : '/manifest-operator.webmanifest';
-    const staffTitle = (() => {
-      if (location.pathname === '/staff/kunden-management') {
-        return 'Kunden Management';
-      }
-
-      if (location.pathname === '/staff/website-anfragen') return 'Interessenten & Anfragen';
-      if (location.pathname === '/staff/angebot-erstellen') return 'Angebot erstellen';
-      if (location.pathname === '/staff/uebersicht') return 'Übersicht';
-      if (location.pathname === '/staff/werbematerialien') return 'Werbematerialien';
-      if (location.pathname === '/staff/kosten') return 'Kosten';
-      if (location.pathname === '/staff/passwoerter') return 'Passwörter';
-      if (location.pathname === '/staff/medien') return 'Medien';
-      if (location.pathname === '/staff/support-ticket-kunden') return 'Support';
-      if (location.pathname === '/staff/system-health') return 'Health';
-      if (location.pathname === '/staff/hilfe') return 'Hilfe';
-      if (location.pathname === '/staff/einstellungen') return 'Einstellungen';
-      if (location.pathname === '/staff/login') return 'Staff Login';
-
-      return 'Liftpictures Super Admin';
-    })();
-    const title = isStaffRoute ? `${staffTitle} - Liftpictures Super Admin` : 'Liftpictures Operator Dashboard';
-    const appTitle = isStaffRoute ? 'Liftpictures Super Admin' : 'Liftpictures Operator';
-
-    document.title = title;
-
-    const manifestLink = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
-    if (manifestLink && manifestLink.getAttribute('href') !== manifestHref) {
-      manifestLink.setAttribute('href', manifestHref);
-    }
-
-    const appleTitleMeta = document.querySelector<HTMLMetaElement>('meta[name="apple-mobile-web-app-title"]');
-    if (appleTitleMeta) {
-      appleTitleMeta.setAttribute('content', appTitle);
-    }
-
-    const applicationNameMeta = document.querySelector<HTMLMetaElement>('meta[name="application-name"]');
-    if (applicationNameMeta) {
-      applicationNameMeta.setAttribute('content', appTitle);
-    }
+    document.title = 'Liftpictures Operator Dashboard';
   }, [location.pathname, location.search]);
 
   return null;
+}
+
+/**
+ * Alte Adressen des früheren Staff-Bereichs (/staff/...). Der Bereich lebt jetzt
+ * im Liftpictures-CRM (eigenes Repo `liftpictures-crm`, eigene Adresse, siehe
+ * src/lib/crmLink.ts). Mit gesetzter Adresse geht es dorthin, sonst zur Anmeldung.
+ */
+function StaffMoved() {
+  const location = useLocation();
+  useEffect(() => {
+    if (LIFTPICTURES_CRM_URL) {
+      window.location.replace(`${LIFTPICTURES_CRM_URL}${location.pathname.replace(/^\/staff/, '')}${location.search}`);
+    }
+  }, [location.pathname, location.search]);
+  return LIFTPICTURES_CRM_URL ? null : <Navigate to="/login" replace />;
 }
 
 /**
@@ -193,29 +154,8 @@ export default function App() {
                 <Route path="/settings" element={<OwnerOnly><Settings /></OwnerOnly>} />
               </Route>
 
-              {/* Internal LiftPictures staff tool — reached via the "Liftpictures Mitarbeiter?"
-                  link in the footer, entirely separate auth (admin_users on the shared
-                  production project) from the customer-facing dashboard above. */}
-              <Route path="/staff/login" element={<StaffLoginPage />} />
-              <Route element={<StaffAdminLayout />}>
-                <Route path="/staff" element={<Navigate to="/staff/uebersicht" replace />} />
-                <Route path="/staff/uebersicht" element={<StaffOverviewPage />} />
-                <Route path="/staff/kunden-management" element={<StaffCustomerManagementPage />} />
-                <Route path="/staff/parks" element={<Navigate to="/staff/kunden-management?tab=parks" replace />} />
-                <Route path="/staff/cameras" element={<Navigate to="/staff/kunden-management?tab=cameras" replace />} />
-                <Route path="/staff/liftpic-setup" element={<Navigate to="/staff/kunden-management?tab=liftpic" replace />} />
-                <Route path="/staff/support-ticket-kunden" element={<StaffSupportTicketKundenPage />} />
-                <Route path="/staff/website-anfragen" element={<StaffWebsiteAnfragenPage />} />
-                <Route path="/staff/angebot-erstellen" element={<StaffOfferBuilderPage />} />
-                <Route path="/staff/system-health" element={<StaffSystemHealthPage />} />
-                <Route path="/staff/einstellungen" element={<StaffSettingsPage />} />
-                <Route path="/staff/hilfe" element={<StaffHelpPage />} />
-                <Route path="/staff/werbematerialien" element={<StaffMarketingMaterialsPage />} />
-                <Route path="/staff/werbematerialien/uploader-installation" element={<StaffUploaderInstallPage />} />
-                <Route path="/staff/passwoerter" element={<StaffPasswordsPage />} />
-                <Route path="/staff/medien" element={<StaffMediaLibraryPage />} />
-                <Route path="/staff/kosten" element={<StaffCostsPage />} />
-              </Route>
+              {/* Früherer Staff-Bereich: wohnt jetzt im Liftpictures-CRM. */}
+              <Route path="/staff/*" element={<StaffMoved />} />
             </Routes>
             </Suspense>
             </NachladeGrenze>
