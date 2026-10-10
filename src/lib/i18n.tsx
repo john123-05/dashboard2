@@ -1918,6 +1918,7 @@ const translations: Record<Language, Record<string, string>> = {
     'plans.manage_billing': "Abo und Rechnungen verwalten",
     'plans.book_now': "Jetzt buchen",
     'survey.all_countries': "Alle Länder",
+    'camera.test_history': "Letzte Testfotos",
   },
   en: {
     'app.loading': 'Loading…',
@@ -3819,6 +3820,7 @@ const translations: Record<Language, Record<string, string>> = {
     'plans.manage_billing': "Manage subscription and invoices",
     'plans.book_now': "Book now",
     'survey.all_countries': "All countries",
+    'camera.test_history': "Recent test photos",
   },
   es: {
     'app.loading': 'Cargando…',
@@ -5720,6 +5722,7 @@ const translations: Record<Language, Record<string, string>> = {
     'plans.manage_billing': "Gestionar suscripción y facturas",
     'plans.book_now': "Reservar ahora",
     'survey.all_countries': "Todos los países",
+    'camera.test_history': "Últimas fotos de prueba",
   },
   fr: {
     'app.loading': 'Chargement…',
@@ -7621,6 +7624,7 @@ const translations: Record<Language, Record<string, string>> = {
     'plans.manage_billing': "Gérer l’abonnement et les factures",
     'plans.book_now': "Réserver maintenant",
     'survey.all_countries': "Tous les pays",
+    'camera.test_history': "Dernières photos de test",
   },
   it: {
     'app.loading': 'Caricamento…',
@@ -9522,6 +9526,7 @@ const translations: Record<Language, Record<string, string>> = {
     'plans.manage_billing': "Gestisci abbonamento e fatture",
     'plans.book_now': "Prenota ora",
     'survey.all_countries': "Tutti i paesi",
+    'camera.test_history': "Ultime foto di prova",
   },
   nl: {
     'app.loading': 'Laden…',
@@ -11423,6 +11428,7 @@ const translations: Record<Language, Record<string, string>> = {
     'plans.manage_billing': "Abonnement en facturen beheren",
     'plans.book_now': "Nu boeken",
     'survey.all_countries': "Alle landen",
+    'camera.test_history': "Recente testfoto’s",
   },
   lv: {
     'app.loading': 'Ielādē…',
@@ -13324,6 +13330,7 @@ const translations: Record<Language, Record<string, string>> = {
     'plans.manage_billing': "Pārvaldīt abonementu un rēķinus",
     'plans.book_now': "Rezervēt tagad",
     'survey.all_countries': "Visas valstis",
+    'camera.test_history': "Pēdējās testa fotogrāfijas",
   },
 };
 

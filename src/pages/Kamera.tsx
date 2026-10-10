@@ -200,6 +200,7 @@ export default function Kamera() {
   const [beschaeftigt, setBeschaeftigt] = useState<string | null>(null);
 
   const [bild, setBild] = useState<{ url: string; wann: string; test: boolean } | null>(null);
+  const [verlauf, setVerlauf] = useState<{ url: string; wann: string }[]>([]);
   const [entwurf, setEntwurf] = useState<Record<string, number>>({});
 
   const kopfzeilen = useCallback(async () => {
@@ -237,7 +238,14 @@ export default function Kamera() {
   const letztesBildHolen = useCallback(async () => {
     if (!parkId) return;
     try {
-      const fotos = await fetchRecentPhotos(parkId, 1);
+      const fotos = await fetchRecentPhotos(parkId, 60);
+      // Verlauf der letzten Testfotos (neueste zuerst), damit man Einstellungen vor/nach vergleichen kann.
+      setVerlauf(
+        fotos
+          .filter((f) => f.isTest && f.imageUrl)
+          .slice(0, 8)
+          .map((f) => ({ url: f.imageUrl as string, wann: new Date(f.capturedAt).toLocaleString(locale) })),
+      );
       const foto = fotos[0];
       if (!foto?.imageUrl) { setBild(null); return; }
       setBild({ url: foto.imageUrl, wann: new Date(foto.capturedAt).toLocaleString(locale), test: foto.isTest });
@@ -454,6 +462,25 @@ export default function Kamera() {
             ) : (
               <div className="flex min-h-[260px] items-center justify-center rounded-xl bg-slate-50 p-6 text-center text-sm text-slate-500">
                 {t('camera.no_photo_yet')}
+              </div>
+            )}
+
+            {verlauf.length > 1 && (
+              <div className="mt-4">
+                <p className="mb-2 text-xs font-medium text-[color:var(--ink-3)]">{t('camera.test_history')}</p>
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {verlauf.map((v) => (
+                    <button
+                      key={v.url}
+                      type="button"
+                      onClick={() => setBild({ url: v.url, wann: v.wann, test: true })}
+                      title={v.wann}
+                      className={`h-16 w-24 shrink-0 overflow-hidden rounded-lg border ${bild?.url === v.url ? 'border-brand-500 ring-2 ring-brand-200' : 'border-[color:var(--line)]'}`}
+                    >
+                      <img src={v.url} alt={v.wann} loading="lazy" className="h-full w-full object-cover" />
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
 
