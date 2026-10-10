@@ -7,10 +7,10 @@ import PlanCard, { PlanAction, PriceFigure } from './PlanCard';
 // Speedmessung nur als Software, für Parks die die Messhardware schon haben.
 export const SOFTWARE_MONTHLY = 49;
 export const SOFTWARE_MONTHLY_DISPLAY = 99;
-const FREE_MONTHS_YEAR = 3;
-const FREE_MONTHS_TWO_YEARS = 6;
+export const FREE_MONTHS_YEAR = 3;
+export const FREE_MONTHS_TWO_YEARS = 6;
 
-const POINTS = [
+export const POINTS = [
   'speed.offer.setup', 'speed.offer.photo_speed', 'speed.offer.photo_code', 'speed.offer.daily_stats',
   'speed.offer.ranking', 'speed.offer.guest_page', 'speed.offer.benefit_edit', 'speed.offer.benefit_analyse',
   'speed.offer.hosting', 'speed.offer.database', 'speed.offer.maintenance',

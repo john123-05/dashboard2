@@ -9,7 +9,8 @@ import { PLAN_LABEL_KEY, useEntitlements, type PlanKey } from '../lib/plans';
 import { UpgradePageHeader } from '../components/upgrade/UpgradeHero';
 import PlanCard, { PlanAction, PriceFigure } from '../components/upgrade/PlanCard';
 import CompareTable, { type CompareRow } from '../components/upgrade/CompareTable';
-import { ShopCompare, SpeedCompare } from '../components/upgrade/PackageCompare';
+import { hasGuestActivity } from '../components/GuestActivityAwareOverlay';
+import { ShopCompare, SoftwareCompare, SpeedCompare } from '../components/upgrade/PackageCompare';
 import ShopPackages from '../components/upgrade/ShopPackages';
 import SpeedPackages from '../components/upgrade/SpeedPackages';
 
@@ -142,6 +143,8 @@ export default function Plans() {
     }
   }
 
+  // Parks mit laufender Speedmessung (Hardware vorhanden) sehen nur die Software-Pakete.
+  const hasHardware = hasGuestActivity(parkId);
   const showPlans = filter === 'all' || filter === 'marketing';
   // Shop und Speedmessung zeigen unter ihrem Reiter die ganzen Pakete, nicht nur die Kurzkarte.
   const addons = ADDONS.filter((addon) =>
@@ -270,7 +273,7 @@ export default function Plans() {
               {t('pp.go_to_page', { page: t('nav.speed') })} <ChevronRight className="h-4 w-4" />
             </Link>
           </div>
-          <SpeedPackages />
+          <SpeedPackages softwareOnly={hasHardware} />
         </section>
       )}
 
@@ -341,7 +344,7 @@ export default function Plans() {
         />
       )}
       {filter === 'shop' && <ShopCompare />}
-      {filter === 'speed' && <SpeedCompare />}
+      {filter === 'speed' && (hasHardware ? <SoftwareCompare /> : <SpeedCompare />)}
     </div>
   );
 }

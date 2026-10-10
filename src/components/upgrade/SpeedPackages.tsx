@@ -63,7 +63,7 @@ export const PLANS: {
 
 // Die drei Speedmessung-Pakete (Karten mit allem, was enthalten ist). Wird in der gesperrten
 // Speedmessung-Seite und in „Preise & Pakete“ verwendet.
-export default function SpeedPackages() {
+export default function SpeedPackages({ softwareOnly = false }: { softwareOnly?: boolean }) {
   const { t } = useI18n();
   const locale = useLocaleTag();
   const { parkId } = usePark();
@@ -87,6 +87,8 @@ export default function SpeedPackages() {
       setBusy(null);
     }
   }
+
+  if (softwareOnly) return <SoftwarePackages />;
 
   return (
     <>

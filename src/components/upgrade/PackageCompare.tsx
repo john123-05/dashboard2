@@ -2,7 +2,7 @@ import { useI18n, useLocaleTag } from '../../lib/i18n';
 import CompareTable, { type CompareRow } from './CompareTable';
 import { MONTHLY_PRICE, REVENUE_SHARE_PERCENT, SETUP_PRICE } from './ShopPackages';
 import { PLANS } from './SpeedPackages';
-import { SOFTWARE_MONTHLY } from './SoftwarePackages';
+import { FREE_MONTHS_TWO_YEARS, FREE_MONTHS_YEAR, POINTS, SOFTWARE_MONTHLY, SOFTWARE_MONTHLY_DISPLAY } from './SoftwarePackages';
 
 const eur = (value: number, locale: string) =>
   value.toLocaleString(locale, { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
@@ -74,6 +74,33 @@ export function SpeedCompare() {
         { label: t(display.name), highlight: true },
         { label: t(long.name) },
         { label: t('speed.offer.sw_name'), sub: t('speed.offer.sw_badge') },
+      ]}
+      rows={rows}
+    />
+  );
+}
+
+/** Vergleich der drei Software-Pakete (für Parks, die die Messhardware schon haben). */
+export function SoftwareCompare() {
+  const { t } = useI18n();
+  const locale = useLocaleTag();
+  const prepay = (months: number, free: number) => eur((months - free) * SOFTWARE_MONTHLY, locale);
+  const rows: CompareRow[] = [
+    ...POINTS.map((key) => yes3(key)),
+    { labelKey: 'pp.row_monthly', cells: [eur(SOFTWARE_MONTHLY, locale), eur(SOFTWARE_MONTHLY, locale), eur(SOFTWARE_MONTHLY, locale)] },
+    { labelKey: 'pp.row_display_monthly', cells: [eur(SOFTWARE_MONTHLY_DISPLAY, locale), eur(SOFTWARE_MONTHLY_DISPLAY, locale), eur(SOFTWARE_MONTHLY_DISPLAY, locale)] },
+    { labelKey: 'pp.row_term', cells: ['pp.cell_12m', 'pp.cell_12m', 'pp.cell_24m'] },
+    { labelKey: 'pp.row_free_months', cells: ['0', String(FREE_MONTHS_YEAR), String(FREE_MONTHS_TWO_YEARS)] },
+    { labelKey: 'pp.row_prepay', cells: ['—', prepay(12, FREE_MONTHS_YEAR), prepay(24, FREE_MONTHS_TWO_YEARS)] },
+  ];
+  return (
+    <CompareTable
+      title={t('pp.compare_software_title')}
+      note={t('pp.compare_note')}
+      columns={[
+        { label: t('speed.offer.sw_plan_monthly') },
+        { label: t('speed.offer.sw_plan_year'), highlight: true },
+        { label: t('speed.offer.sw_plan_two_years') },
       ]}
       rows={rows}
     />
