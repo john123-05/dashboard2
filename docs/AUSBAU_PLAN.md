@@ -132,6 +132,43 @@ Legende: `[x]` erledigt · `[~]` gebaut, Sichtprüfung/Feinschliff offen · `[ ]
   Initialen, Rolle, Seiten als Chips, zuletzt aktiv, Status; Aktionen im Zeilenmenü.
 - [~] **CR1 Marketing-CRM Start** – Karte immer offen; Live-Vorschau mit fester Höhe, klebt beim Scrollen.
 
+### Phase PK – Pakete, Preise und Aktionen im CRM steuern (Wunsch von John, 10.10.2026)
+
+John will im Liftpictures-CRM (Repo `liftpictures-crm`) alle Pakete und Preise **selbst pflegen**: Beschreibung auf den
+Karten ändern, sehen was enthalten und was nicht enthalten ist, Preise ändern, Rabatte je Kunde geben, Aktionen
+starten. Heute stehen alle Preise und Texte fest im Dashboard-Code (`Plans.tsx`, `ShopPackages.tsx`,
+`SpeedPackages.tsx`, `SoftwarePackages.tsx`, Texte in `i18n.tsx`) – jede Änderung braucht einen Entwickler.
+
+Reihenfolge so gewählt, dass nach jedem Schritt etwas Sichtbares da ist und nichts kaputtgehen kann: das Dashboard
+nimmt den Katalog nur, wenn er da ist, sonst die jetzigen festen Werte.
+
+- [ ] **PK1 Katalog-Tabellen + Befüllung** – Tabellen `catalog_packages`, `catalog_points`, `catalog_package_points`
+  (Entwurf unten). Einmalig befüllt aus den heutigen Werten (Basis 0 €, Starter 49 €, Pro 149 €, Shop drei Wege,
+  Speedmessung drei Hardware-Pakete, Software drei Pakete, Zusatzleistungen). Danach zeigt das CRM exakt das,
+  was Kunden heute sehen.
+- [ ] **PK2 CRM-Seite „Pakete & Preise“ (`/pakete`)** – Filter wie im Dashboard (Alle · Marketing · Online-Shop ·
+  Speedmessung · Software · Fotosystem). Je Paket eine Karte mit Preis, Laufzeit, Abzeichen, **Enthalten** und
+  **Nicht enthalten**; Bearbeiten im Seitenfenster (Name, Kurztext, Preis, Laufzeit, geschenkte Monate, Hervorhebung,
+  an/aus, Reihenfolge, Punkte hinzufügen/entfernen/umsortieren, „enthalten“ ja/nein je Punkt). Rechts Vorschau der
+  Karte wie im Dashboard. Änderungsverlauf (wer, wann, vorher → nachher). Nur Mitarbeiter mit `admin_users`.
+- [ ] **PK3 Dashboard liest den Katalog** – Function `operator-catalog` (liefert aktive Pakete, Punkte,
+  Aktionen, Kundenpreise). Hook `useCatalog()`; `Plans`, `ShopPackages`, `SpeedPackages`, `SoftwarePackages`,
+  `CompareTable` zeichnen aus dem Katalog; fehlt er, gelten die festen Werte. Die Vergleichstabelle wird aus den
+  „enthalten“-Häkchen erzeugt, also nie mehr von Hand gepflegt.
+- [ ] **PK4 Rabatte je Kunde** – Tabelle `park_price_overrides` (Park, Paket, Rabatt in % oder Festpreis, extra
+  geschenkte Monate, Notiz, gültig bis, wer). Im Dashboard sieht der Kunde den alten Preis durchgestrichen und
+  „Dein Preis“. Im CRM: auf der Seite **Plan** (pro Kunde) unten der Abschnitt „Preise & Rabatte“.
+- [ ] **PK5 Aktionen** – Tabelle `catalog_promotions` (Name, Banner-Text, Rabatt % oder geschenkte Monate, welche
+  Pakete, für wen: alle / bestimmter Plan / Liste von Parks, optional Code, von–bis, an/aus). Dashboard: Banner
+  oben in „Preise & Pakete“ und Abzeichen auf den Karten. CRM: Zähler gesehen · angefragt · gebucht je Aktion.
+- [ ] **PK6 Plan-Seite je Kunde ausbauen** – Beim Runterscrollen weitere Abschnitte: Preise & Rabatte (PK4),
+  Aktion zuweisen (PK5), Anfragen dieses Kunden (aus „Plan/Paket anfragen“), Änderungsverlauf, Notizen.
+- [ ] **PK7 Anfragen-Eingang** – Alle Anfragen aus dem Dashboard (Plan, Shop, Speedmessung, Software, Zusatz-E-Mails)
+  als Liste im CRM mit Knopf „Freischalten“ (setzt Plan/Zusatzfunktionen, legt Angebot an) und Status
+  neu · in Arbeit · erledigt.
+- [ ] **PK8 (später)** Stripe-Anbindung des Katalogs: aus einem Paket automatisch Stripe-Preis anlegen, Rabatt als
+  Stripe-Gutschein, Aktionscode im Checkout.
+
 ### Phase MB – Mobil
 
 - [~] **MB1 Plan** – siehe Abschnitt 6. Umsetzung je Seite beim Bau gleich mit (kein eigener Durchgang).
@@ -217,6 +254,50 @@ Push nutzt `operator_push_subscriptions` + `_shared/webpush.ts`.
 - Druckpartner: eine Function `shop-fulfilment` je Anbieter (Auftrag übergeben, Status abholen).
 - Rabattcodes: Stripe-Gutscheine, im Editor als Liste.
 - Live-Schalten je Park: `park_shop_settings.live = true` + Stripe-Live-Schlüssel; bis dahin Testmodus.
+
+### PK – Pakete, Preise, Aktionen (Entwurf)
+
+```sql
+catalog_packages(
+  key text primary key,                 -- z. B. 'marketing_starter', 'shop_monthly', 'speed_display', 'software_year'
+  grp text not null,                    -- 'plan' | 'shop' | 'speed' | 'software' | 'system' | 'addon'
+  sort int not null default 0,
+  active boolean not null default true,
+  highlight boolean not null default false,
+  price_cents int,                      -- null = auf Anfrage
+  price_unit text,                      -- 'month' | 'once' | 'period'
+  term_months int, free_months int default 0, setup_cents int,
+  texts jsonb not null default '{}',    -- { de:{name,tagline,badge,price_note}, en:{…}, … } (de Pflicht)
+  updated_at timestamptz, updated_by text
+)
+catalog_points(                         -- ein Punkt = eine Zeile der Vergleichstabelle, gilt für mehrere Pakete
+  key text primary key, grp text, sort int, texts jsonb      -- { de:'…', en:'…' }
+)
+catalog_package_points(package_key text, point_key text, included boolean, note jsonb,
+  primary key (package_key, point_key))
+catalog_history(id, package_key, changed_by, changed_at, before jsonb, after jsonb)
+park_price_overrides(park_id uuid, package_key text, discount_percent int, fixed_price_cents int,
+  extra_free_months int, note text, valid_until date, created_by text, created_at timestamptz)
+catalog_promotions(id, name, banner jsonb, discount_percent int, free_months int, package_keys text[],
+  audience jsonb,                       -- { all:true } | { plans:[…] } | { park_ids:[…] }
+  code text, starts_on date, ends_on date, active boolean)
+catalog_promotion_events(promotion_id, park_id, event text, at timestamptz)   -- seen | requested | booked
+```
+
+Funktionen (shared-Projekt): `admin-catalog` (nur `admin_users`: lesen/speichern/Verlauf), `operator-catalog`
+(`GET ?park_id=` → aktive Pakete mit Punkten, gültiger Aktion und Kundenpreis; `POST` Ereignis für Zähler).
+
+Regeln:
+1. **Rückfall:** Ist der Katalog leer oder die Function nicht erreichbar, nutzt das Dashboard die festen Werte aus dem
+   Code. Nie eine leere Preisseite.
+2. **Sprachen:** Deutsch ist Pflicht und Quelle. Andere Sprachen sind optional; fehlt eine, zeigt das Dashboard den
+   bisherigen übersetzten Text (solange das Paket unverändert ist) sonst den deutschen. Im CRM je Feld ein Reiter
+   „Übersetzungen“ (später: Vorschlag per Knopf).
+3. **Preisrang:** Kundenpreis (Override) vor Aktion vor Listenpreis. Es gilt der günstigere nur, wenn John es so
+   einstellt – Standard: Kundenpreis überschreibt alles.
+4. **Nichts Laufendes ändern:** Bestehende Abos (Stripe) behalten ihren Preis; Änderungen im Katalog wirken auf neue
+   Anfragen. Das wird im CRM beim Speichern angezeigt.
+5. **Rechte:** Katalog ändern dürfen nur Mitarbeiter in `admin_users`; Änderungen werden immer im Verlauf festgehalten.
 
 ## 6. Mobil-Plan (Handy, 360–430 px)
 
