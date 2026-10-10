@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Check, Sparkles, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, ChevronDown, Sparkles, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../lib/i18n';
 import { hasAccountSeenTour, isTourDisabled, markAccountSeenTour, setTourDisabled } from '../lib/dashboardTourSettings';
@@ -20,6 +20,8 @@ export default function WelcomeTour() {
   const steps = items.filter((item) => !item.action);
   const [mode, setMode] = useState<'off' | 'welcome' | 'tour'>('off');
   const [index, setIndex] = useState(0);
+  // Auf dem Handy startet die Karte klein, damit die Seite dahinter zu sehen ist.
+  const [details, setDetails] = useState(() => typeof window === 'undefined' || window.innerWidth > 900);
   const step = steps[index];
   const firstName = (profile?.full_name ?? '').trim().split(/\s+/)[0] ?? '';
 
@@ -113,7 +115,7 @@ export default function WelcomeTour() {
       <div className="h-1 bg-slate-100">
         <div className="h-full bg-brand-600 transition-[width] duration-300" style={{ width: `${((index + 1) / steps.length) * 100}%` }} />
       </div>
-      <div className="p-5">
+      <div className="max-h-[55vh] overflow-y-auto p-4 sm:p-5">
         <div className="flex items-start gap-3">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-[color:var(--ink-2)]">
             <Icon className="h-[18px] w-[18px]" />
@@ -134,18 +136,30 @@ export default function WelcomeTour() {
         </div>
 
         <p className="mt-3 text-sm leading-relaxed text-[color:var(--ink-2)]">{t(`ob.${step.id}.purpose`)}</p>
-        <p className="mt-3 text-xs font-semibold text-[color:var(--ink-3)]">{t('ob.can_title')}</p>
-        <ul className="mt-1.5 space-y-1.5">
-          {[1, 2, 3].map((n) => (
-            <li key={n} className="flex gap-2 text-sm leading-snug text-[color:var(--ink-2)]">
-              <Check className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" />
-              {t(`ob.${step.id}.can${n}`)}
-            </li>
-          ))}
-        </ul>
-        {step.locked && <p className="mt-3 rounded-md bg-slate-50 px-3 py-2 text-xs text-[color:var(--ink-3)]">{t('ob.locked_hint')}</p>}
+        <button
+          type="button"
+          onClick={() => setDetails((v) => !v)}
+          aria-expanded={details}
+          className="mt-3 flex min-h-[36px] w-full items-center justify-between gap-2 text-left text-xs font-semibold text-[color:var(--ink-3)]"
+        >
+          {t('ob.can_title')}
+          <ChevronDown className={`h-4 w-4 transition-transform ${details ? 'rotate-180' : ''}`} />
+        </button>
+        {details && (
+          <>
+            <ul className="mt-1 space-y-1.5">
+              {[1, 2, 3].map((n) => (
+                <li key={n} className="flex gap-2 text-sm leading-snug text-[color:var(--ink-2)]">
+                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" />
+                  {t(`ob.${step.id}.can${n}`)}
+                </li>
+              ))}
+            </ul>
+            {step.locked && <p className="mt-3 rounded-md bg-slate-50 px-3 py-2 text-xs text-[color:var(--ink-3)]">{t('ob.locked_hint')}</p>}
+          </>
+        )}
 
-        <div className="mt-5 flex items-center justify-between gap-2">
+        <div className="mt-4 flex items-center justify-between gap-2">
           <button
             type="button"
             onClick={() => setIndex((i) => Math.max(0, i - 1))}

@@ -12,11 +12,11 @@ export default function SetupCard() {
   if (hidden || complete || !next || total === 0) return null;
   const NextIcon = next.icon;
   return (
-    <section className="flex flex-wrap items-center gap-4 rounded-xl border border-[color:var(--line)] bg-white p-4 sm:p-5" aria-label={t('ob.card_title')}>
+    <section className="relative flex flex-wrap items-center gap-4 rounded-xl border border-[color:var(--line)] bg-white p-4 sm:p-5" aria-label={t('ob.card_title')}>
       <ProgressRing percent={percent} size={52}>
         <span className="text-[11px] font-semibold text-[color:var(--ink)]">{percent}%</span>
       </ProgressRing>
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 max-sm:pr-8">
         <p className="text-sm font-semibold text-[color:var(--ink)]">
           {t('ob.card_title')} <span className="ml-1 font-normal text-[color:var(--ink-3)]">{t('ob.progress', { done: doneCount, total })}</span>
         </p>
@@ -25,9 +25,9 @@ export default function SetupCard() {
           <span className="truncate">{t('ob.card_next', { title: t(`ob.${next.id}.title`) })}</span>
         </p>
       </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <Link to="/start" className="glass-button-secondary">{t('ob.card_all')}</Link>
-        <Link to={next.action ? '/start' : next.path} className="glass-button-primary">
+      <div className="flex w-full items-center gap-2 sm:w-auto">
+        <Link to="/start" className="glass-button-secondary flex-1 justify-center sm:flex-none">{t('ob.card_all')}</Link>
+        <Link to={next.action ? '/start' : next.path} className="glass-button-primary flex-1 justify-center sm:flex-none">
           {t('ob.continue')} <ArrowRight className="h-4 w-4" />
         </Link>
         <button
@@ -35,7 +35,7 @@ export default function SetupCard() {
           onClick={() => setHidden(true)}
           aria-label={t('ob.dismiss')}
           title={t('ob.dismiss')}
-          className="rounded-md p-1.5 text-[color:var(--ink-3)] hover:bg-slate-100 hover:text-[color:var(--ink)]"
+          className="rounded-md p-2 text-[color:var(--ink-3)] hover:bg-slate-100 hover:text-[color:var(--ink)] max-sm:absolute max-sm:right-2 max-sm:top-2"
         >
           <X className="h-4 w-4" />
         </button>

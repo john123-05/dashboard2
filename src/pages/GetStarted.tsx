@@ -40,26 +40,30 @@ export default function GetStarted() {
             aria-label={`${item.done ? t('ob.mark_undone') : t('ob.mark_done')}: ${t(`ob.${item.id}.title`)}`}
             title={item.done ? t('ob.mark_undone') : t('ob.mark_done')}
             onClick={() => toggle(item.id)}
-            className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
-              item.done ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300 bg-white text-transparent hover:border-brand-600'
-            }`}
+            className="-m-2.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
           >
-            <Check className="h-3.5 w-3.5" strokeWidth={3} />
+            <span
+              className={`flex h-6 w-6 items-center justify-center rounded-full border-2 transition-colors ${
+                item.done ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300 bg-white text-transparent hover:border-brand-600'
+              }`}
+            >
+              <Check className="h-3.5 w-3.5" strokeWidth={3} />
+            </span>
           </button>
           <button
             type="button"
             onClick={() => setOpenItem(expanded ? '' : item.id)}
             aria-expanded={expanded}
-            className="flex min-w-0 flex-1 items-center gap-3 text-left"
+            className="flex min-h-[44px] min-w-0 flex-1 items-center gap-3 text-left"
           >
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-[color:var(--ink-2)]">
+            <span className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-[color:var(--ink-2)] sm:flex">
               <Icon className="h-4 w-4" />
             </span>
             <span className="min-w-0 flex-1">
-              <span className={`block truncate text-sm font-semibold ${item.done ? 'text-[color:var(--ink-3)] line-through decoration-slate-300' : 'text-[color:var(--ink)]'}`}>
+              <span className={`block text-sm font-semibold sm:truncate ${item.done ? 'text-[color:var(--ink-3)] line-through decoration-slate-300' : 'text-[color:var(--ink)]'}`}>
                 {t(`ob.${item.id}.title`)}
               </span>
-              <span className="block truncate text-xs text-[color:var(--ink-3)]">{t(`ob.${item.id}.purpose`)}</span>
+              <span className="hidden truncate text-xs text-[color:var(--ink-3)] sm:block">{t(`ob.${item.id}.purpose`)}</span>
             </span>
             {item.locked && (
               <span className="hidden shrink-0 rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-medium text-brand-700 ring-1 ring-inset ring-brand-200 sm:inline">
@@ -76,6 +80,12 @@ export default function GetStarted() {
         {expanded && (
           <div className="px-4 pb-5 sm:pl-[68px] sm:pr-5">
             <p className="text-sm leading-relaxed text-[color:var(--ink-2)]">{t(`ob.${item.id}.purpose`)}</p>
+            <p className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[color:var(--ink-3)] sm:hidden">
+              <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {t('ob.min', { minutes: item.minutes })}</span>
+              {item.locked && (
+                <span className="rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-medium text-brand-700 ring-1 ring-inset ring-brand-200">{t('ob.locked')}</span>
+              )}
+            </p>
             <p className="mt-3 text-xs font-semibold text-[color:var(--ink-3)]">{t('ob.can_title')}</p>
             <ul className="mt-1.5 space-y-1.5">
               {[1, 2, 3].map((n) => (
@@ -86,7 +96,7 @@ export default function GetStarted() {
               ))}
             </ul>
             {item.locked && <p className="mt-3 rounded-md bg-slate-50 px-3 py-2 text-xs text-[color:var(--ink-3)]">{t('ob.locked_hint')}</p>}
-            <div className="mt-4 flex flex-wrap items-center gap-2">
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center [&>*]:justify-center">
               {item.action === 'tour' ? (
                 <button type="button" onClick={startTour} className="glass-button-primary">
                   <PlayCircle className="h-4 w-4" /> {t('ob.start_tour')}
@@ -110,11 +120,13 @@ export default function GetStarted() {
     <div className="space-y-6">
       {/* Kopf mit Fortschritt */}
       <div className="flex flex-wrap items-center gap-5 rounded-xl border border-[color:var(--line)] bg-white p-5 sm:p-7">
-        <ProgressRing percent={percent} size={84} stroke={7}>
-          <span className="text-lg font-semibold text-[color:var(--ink)]">{percent}%</span>
-        </ProgressRing>
+        <span className="hidden sm:inline-flex">
+          <ProgressRing percent={percent} size={84} stroke={7}>
+            <span className="text-lg font-semibold text-[color:var(--ink)]">{percent}%</span>
+          </ProgressRing>
+        </span>
         <div className="min-w-0 flex-1">
-          <h1 className="text-[28px] font-light leading-tight tracking-tight text-[color:var(--ink)] sm:text-[32px]">
+          <h1 className="text-[24px] font-light leading-tight tracking-tight text-[color:var(--ink)] sm:text-[32px]">
             {complete ? t('ob.all_done_title') : firstName ? t('ob.welcome', { name: firstName }) : t('ob.welcome_plain')}
           </h1>
           <p className="mt-1.5 max-w-2xl text-sm text-[color:var(--ink-3)]">{complete ? t('ob.all_done_text') : t('ob.hero_text')}</p>
@@ -125,7 +137,7 @@ export default function GetStarted() {
             <span className="shrink-0 text-xs font-medium text-[color:var(--ink-2)]">{t('ob.progress', { done: doneCount, total })}</span>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap [&>*]:justify-center">
           <button type="button" onClick={startTour} className="glass-button-secondary">
             <PlayCircle className="h-4 w-4" /> {t('ob.start_tour')}
           </button>
