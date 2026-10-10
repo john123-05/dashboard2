@@ -128,7 +128,7 @@ function mapLegacySystemHealth(
   };
 }
 
-export default function SystemHealth({ embedded = false }: { embedded?: boolean } = {}) {
+export default function SystemHealth() {
   const { t } = useI18n();
   const locale = useLocaleTag();
   const { parkId } = usePark();
@@ -211,7 +211,7 @@ export default function SystemHealth({ embedded = false }: { embedded?: boolean 
 
   if (loading) {
     return (
-      <div className={embedded ? 'space-y-4 customer-embedded-root preview-health' : 'space-y-6'}>
+      <div className="space-y-6">
         <div className="h-8 w-32 animate-pulse rounded-lg bg-white/40" />
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 sm:gap-6 xl:grid-cols-3">
           {[...Array(6)].map((_, index) => (
@@ -224,14 +224,14 @@ export default function SystemHealth({ embedded = false }: { embedded?: boolean 
 
   if (error || !data) {
     return (
-      <div className={embedded ? 'space-y-4 customer-embedded-root preview-health' : 'space-y-6'}>
+      <div className="space-y-6">
         <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('health.title')}</h2>
         <div className="rounded-2xl border border-red-200 bg-red-50 p-6">
           <h3 className="mb-2 text-lg font-semibold text-red-800">{t('overview.error_title')}</h3>
           <p className="mb-4 text-sm text-red-600">{error || t('app.unknown_error')}</p>
           <button
             onClick={() => loadHealth(true)}
-            className={embedded ? 'glass-button-secondary customer-operator-btn' : 'glass-button-secondary'}
+            className="glass-button-secondary"
           >
             {t('app.retry')}
           </button>
@@ -364,7 +364,7 @@ export default function SystemHealth({ embedded = false }: { embedded?: boolean 
   const diensteOk = serverDienste.filter(({ service }) => service.status === 'operational').length;
 
   return (
-    <div className={embedded ? 'space-y-4 customer-embedded-root preview-health' : 'space-y-6'}>
+    <div className="space-y-6">
       <div className="customer-operator-pagehead">
         <UpgradePageHeader
           title={t('health.title')}
@@ -535,11 +535,10 @@ export default function SystemHealth({ embedded = false }: { embedded?: boolean 
               searchable
               searchKeys={['category', 'device', 'description', 'source_file', 'severity']}
               pageSize={14}
-              embeddedOperator={embedded}
               actions={
                 <button
                   onClick={handleExport}
-                  className={embedded ? 'glass-button-secondary customer-operator-btn' : 'glass-button-secondary'}
+                  className="glass-button-secondary"
                 >
                   <Download className="h-4 w-4" />
                   {t('health.save_csv')}

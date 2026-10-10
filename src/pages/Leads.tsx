@@ -541,25 +541,19 @@ function leadLocaleBadge(item: Record<string, unknown>): string | null {
  * CRM: oben der Umschalter (E-Mail / Umfrage / Social Media), darunter je Weg ein
  * Reiter. Die Kontaktliste steckt im Reiter „Kontakte“.
  */
-export default function Leads({ embedded = false }: { embedded?: boolean } = {}) {
+export default function Leads() {
   const { parkId } = usePark();
-  if (!parkId) return <LeadsContacts embedded={embedded} view="overview" />;
+  if (!parkId) return <LeadsContacts view="overview" />;
   return (
-    <div className={embedded ? 'space-y-5' : 'space-y-6'}>
-      <UnlockCenter parkId={parkId} routed={!embedded}>
-        {(view) => <LeadsContacts embedded={embedded} view={view} />}
+    <div className="space-y-6">
+      <UnlockCenter parkId={parkId}>
+        {(view) => <LeadsContacts view={view} />}
       </UnlockCenter>
     </div>
   );
 }
 
-function LeadsContacts({
-  embedded = false,
-  view,
-}: {
-  embedded?: boolean;
-  view: 'overview' | 'list';
-}) {
+function LeadsContacts({ view }: { view: 'overview' | 'list' }) {
   const { t } = useI18n();
   const locale = useLocaleTag();
   const {
@@ -1377,9 +1371,9 @@ function LeadsContacts({
   ];
 
   return (
-    <div className={embedded ? 'customer-embedded-root preview-leads space-y-5' : 'space-y-6'}>
+    <div className="space-y-6">
       {view === 'list' && (
-        <div className={`flex flex-wrap items-start justify-between gap-3 ${embedded ? 'customer-operator-pagehead' : ''}`}>
+        <div className="flex flex-wrap items-start justify-between gap-3">
           {contactConfig && (
             <ContactSettings
               parkId={parkId ?? ''}
@@ -1687,8 +1681,7 @@ function LeadsContacts({
         title={t('leads.title')}
         searchable
         searchKeys={['email', 'phone', 'full_name', 'source', 'park_name', 'country_code', 'locale']}
-        pageSize={embedded ? 8 : 10}
-        embeddedOperator={embedded}
+        pageSize={10}
         actions={
           <div className="flex items-center gap-2">
             <div className="relative">
@@ -1728,15 +1721,11 @@ function LeadsContacts({
             <button
               type="button"
               onClick={toggleSelectionMode}
-              className={
-                embedded
-                  ? `customer-operator-btn ${selectionMode ? 'active' : ''}`
-                  : `rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
-                      selectionMode
-                        ? 'border-sky-200 bg-sky-50 text-sky-700'
-                        : 'border-slate-200/60 bg-white/60 text-slate-600 hover:bg-white/80'
-                    }`
-              }
+              className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
+                selectionMode
+                  ? 'border-sky-200 bg-sky-50 text-sky-700'
+                  : 'border-[color:var(--line-strong)] bg-white text-slate-600 hover:bg-slate-100'
+              }`}
             >
               {selectionMode ? t('leads.select_done') : t('leads.select')}
             </button>

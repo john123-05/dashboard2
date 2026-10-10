@@ -20,7 +20,6 @@ interface DataTableProps<T extends object> {
   searchKeys?: string[];
   pageSize?: number;
   actions?: React.ReactNode;
-  embeddedOperator?: boolean;
   /** Zwischenzeilen: Zeilen mit gleichem Schlüssel (z. B. Tag) stehen unter einer gemeinsamen Überschrift. */
   groupBy?: (item: T) => string;
   renderGroup?: (key: string, items: T[]) => React.ReactNode;
@@ -34,7 +33,6 @@ export default function DataTable<T extends object>({
   searchKeys = [],
   pageSize = 10,
   actions,
-  embeddedOperator = false,
   groupBy,
   renderGroup,
 }: DataTableProps<T>) {
@@ -186,11 +184,7 @@ export default function DataTable<T extends object>({
             <button
               onClick={() => setPage(Math.max(0, page - 1))}
               disabled={page === 0}
-              className={
-                embeddedOperator
-                  ? 'customer-operator-table-nav'
-                  : 'rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:opacity-30'
-              }
+              className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:opacity-30"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
@@ -200,11 +194,7 @@ export default function DataTable<T extends object>({
             <button
               onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
               disabled={page >= totalPages - 1}
-              className={
-                embeddedOperator
-                  ? 'customer-operator-table-nav'
-                  : 'rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:opacity-30'
-              }
+              className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:opacity-30"
             >
               <ChevronRight className="h-4 w-4" />
             </button>

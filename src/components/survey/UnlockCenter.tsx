@@ -17,26 +17,18 @@ const TABS = CRM_TABS;
 
 export default function UnlockCenter({
   parkId,
-  routed = true,
   children,
 }: {
   parkId: string;
-  /** false: Reiter nur als Zustand (eingebettete Ansicht im Staff-Dashboard). */
-  routed?: boolean;
   children: (view: 'overview' | 'list') => ReactNode;
 }) {
   const { t } = useI18n();
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [config, setConfig] = useState<SurveyConfig | null>(null);
-  const [localTab, setLocalTab] = useState<TabKey>('overview');
-  const tab = routed ? crmTabForPath(pathname) : localTab;
+  const tab = crmTabForPath(pathname);
 
   function openTab(next: TabKey) {
-    if (!routed) {
-      setLocalTab(next);
-      return;
-    }
     navigate(CRM_TABS.find((x) => x.key === next)?.path ?? '/leads');
   }
   const [busy, setBusy] = useState<UnlockMode | null>(null);

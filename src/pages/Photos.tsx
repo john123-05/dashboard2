@@ -53,7 +53,7 @@ function qrImageUrlFor(value: string): string {
   return `https://api.qrserver.com/v1/create-qr-code/?size=168x168&margin=12&data=${encodeURIComponent(value)}`;
 }
 
-export default function Photos({ embedded = false }: { embedded?: boolean } = {}) {
+export default function Photos() {
   const { t } = useI18n();
   const { parkId, isKioskPark, parkName, kioskTimezone } = usePark();
   // Staff must not see purchase/conversion numbers (sales data).
@@ -535,7 +535,7 @@ export default function Photos({ embedded = false }: { embedded?: boolean } = {}
 
   if (loading) {
     return (
-      <div className={embedded ? 'space-y-4 customer-embedded-root preview-photos' : 'space-y-6'}>
+      <div className="space-y-6">
         <div className="h-8 w-32 animate-pulse rounded-lg bg-slate-100" />
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 sm:gap-6">
           {[...Array(4)].map((_, i) => (
@@ -548,7 +548,7 @@ export default function Photos({ embedded = false }: { embedded?: boolean } = {}
 
   if (error) {
     return (
-      <div className={embedded ? 'space-y-4 customer-embedded-root preview-photos' : 'space-y-6'}>
+      <div className="space-y-6">
         <h2 className="text-[28px] font-light tracking-tight text-[color:var(--ink)] sm:text-[32px]">{t('photos.title')}</h2>
         <div className="rounded-2xl bg-red-50 border border-red-200 p-6">
           <h3 className="text-lg font-semibold text-red-800 mb-2">{t('photos.load_error')}</h3>
@@ -562,7 +562,7 @@ export default function Photos({ embedded = false }: { embedded?: boolean } = {}
   }
 
   return (
-    <div className={embedded ? 'space-y-4 customer-embedded-root preview-photos' : 'space-y-6'}>
+    <div className="space-y-6">
       <div className="customer-operator-pagehead">
         <h2 className="text-[28px] font-light tracking-tight text-[color:var(--ink)] sm:text-[32px]">{t('photos.title')}</h2>
         <p className="mt-1 text-sm text-slate-500">{t('photos.subtitle')}</p>
@@ -1005,10 +1005,8 @@ export default function Photos({ embedded = false }: { embedded?: boolean } = {}
           </div>
         )}
 
-        {embedded && selectedPhoto && <div className="customer-embedded-selected-card">{renderSelectedPhotoCard()}</div>}
-
-        <div className={embedded ? 'space-y-4' : 'grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]'}>
-          <div className={`grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4 ${embedded ? '2xl:grid-cols-5' : 'order-2 lg:order-1'}`}>
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+          <div className="order-2 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:order-1 xl:grid-cols-4">
             {!browseLoading && browsePhotos.length === 0 && (
               <div className="col-span-full rounded-xl bg-slate-50 p-6 text-center text-sm text-slate-500">
                 Keine Fotos gefunden.
@@ -1018,7 +1016,7 @@ export default function Photos({ embedded = false }: { embedded?: boolean } = {}
               <button
                 key={p.id}
                 onClick={() => setSelectedPhoto(p)}
-                className={`embedded-photo-tile group overflow-hidden rounded-xl bg-slate-50 text-left transition-all hover:bg-slate-50 hover:shadow-md ${
+                className={`group overflow-hidden rounded-xl bg-slate-50 text-left transition-all hover:bg-slate-50 hover:shadow-md ${
                   selectedPhoto?.id === p.id ? 'ring-2 ring-brand-500' : ''
                 }`}
               >
@@ -1061,11 +1059,9 @@ export default function Photos({ embedded = false }: { embedded?: boolean } = {}
             ))}
           </div>
 
-          {!embedded && (
-            <div className="order-1 lg:order-2 lg:sticky lg:top-6 lg:self-start">
-              {renderSelectedPhotoCard()}
-            </div>
-          )}
+          <div className="order-1 lg:order-2 lg:sticky lg:top-6 lg:self-start">
+            {renderSelectedPhotoCard()}
+          </div>
         </div>
       </GlassCard>
     </div>

@@ -67,7 +67,7 @@ interface RevenueSeriesRow {
   terminal: number;
 }
 
-export default function Revenue({ embedded = false }: { embedded?: boolean } = {}) {
+export default function Revenue() {
   const { t } = useI18n();
   const locale = useLocaleTag();
   const formatCurrency = (cents: number, currency = 'usd') => baseFormatCurrency(cents, currency, locale);
@@ -452,7 +452,7 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
 
   if (loading) {
     return (
-      <div className={embedded ? 'space-y-4 customer-embedded-root preview-revenue' : 'space-y-6'}>
+      <div className="space-y-6">
         <div className="h-8 w-32 animate-pulse rounded-lg bg-slate-100" />
         <div className="grid grid-cols-2 gap-4 sm:gap-6 sm:grid-cols-4">
           {[...Array(4)].map((_, index) => (
@@ -465,7 +465,7 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
 
   if (error || !parkData) {
     return (
-      <div className={embedded ? 'space-y-4 customer-embedded-root preview-revenue' : 'space-y-6'}>
+      <div className="space-y-6">
         <h2 className="text-[28px] font-light tracking-tight text-[color:var(--ink)] sm:text-[32px]">{t('revenue.title')}</h2>
         <div className="rounded-2xl border border-red-200 bg-red-50 p-6">
           <h3 className="mb-2 text-lg font-semibold text-red-800">{t('overview.error_title')}</h3>
@@ -479,7 +479,7 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
   }
 
   return (
-    <div className={embedded ? 'space-y-4 customer-embedded-root preview-revenue' : 'space-y-6'}>
+    <div className="space-y-6">
       <div className="customer-operator-pagehead flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-[28px] font-light tracking-tight text-[color:var(--ink)] sm:text-[32px]">{t('revenue.title')}</h2>
@@ -891,7 +891,7 @@ export default function Revenue({ embedded = false }: { embedded?: boolean } = {
                     </tr>
                   </thead>
                   <tbody>
-                    {(embedded ? kioskDays.slice(0, 3) : kioskDays).map((day) => (
+                    {kioskDays.map((day) => (
                       <tr
                         key={day.businessDate}
                         onClick={() => {
