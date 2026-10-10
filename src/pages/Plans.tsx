@@ -5,6 +5,7 @@ import { usePark } from '../contexts/ParkContext';
 import { meldeAusstattungsInteresse } from '../lib/equipment';
 import { BillingDisabledError, openBillingPortal, startCheckout } from '../lib/billing';
 import { useI18n, useLocaleTag } from '../lib/i18n';
+import { bulletList, catalogCompare, catalogGroup, catalogPackage, packageText, useCatalog } from '../lib/catalog';
 import { PLAN_LABEL_KEY, useEntitlements, type PlanKey } from '../lib/plans';
 import { UpgradePageHeader } from '../components/upgrade/UpgradeHero';
 import PlanCard, { PlanAction, PriceFigure } from '../components/upgrade/PlanCard';
@@ -91,9 +92,16 @@ const ADDONS: {
 ];
 
 export default function Plans() {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const locale = useLocaleTag();
   const { parkId } = usePark();
+  // Preise und Texte kommen aus dem Katalog (CRM → Pakete & Preise); ohne Katalog gelten die eingebauten Werte.
+  const catalog = useCatalog();
+  const plansFromCatalog = catalogGroup(catalog, 'plan').length > 0;
+  const price = (plan: PlanKey) => {
+    const cents = catalogPackage(catalog, plan)?.price_cents;
+    return cents != null ? cents / 100 : PRICE[plan];
+  };
   const { plan: currentPlan, has } = useEntitlements();
   const [filter, setFilter] = useState<Filter>(() => {
     const wanted = new URLSearchParams(window.location.search).get('gruppe');
@@ -122,7 +130,7 @@ export default function Plans() {
         }
       }
       const name = plan === 'marketing_pro' ? 'Marketing Pro' : 'Marketing Starter';
-      await meldeAusstattungsInteresse(parkId, { label: `Plan anfragen: ${name} (${PRICE[plan]} €/Monat)` });
+      await meldeAusstattungsInteresse(parkId, { label: `Plan anfragen: ${name} (${price(plan)} €/Monat)` });
       setRequested((prev) => [...prev, plan]);
     } catch (e) {
       setError(e instanceof Error ? e.message : t('crm_pricing.request_failed'));
@@ -147,9 +155,12 @@ export default function Plans() {
   const hasHardware = hasGuestActivity(parkId);
   const showPlans = filter === 'all' || filter === 'marketing';
   // Shop und Speedmessung zeigen unter ihrem Reiter die ganzen Pakete, nicht nur die Kurzkarte.
+  const addonsFromCatalog = catalogGroup(catalog, 'addon').length > 0;
   const addons = ADDONS.filter((addon) =>
     filter === 'all' ? true : addon.group === filter && addon.group !== 'shop' && addon.group !== 'speed',
-  );
+  )
+    .filter((addon) => !addonsFromCatalog || catalogPackage(catalog, `addon_${addon.key}`))
+    .sort((a, b) => (catalogPackage(catalog, `addon_${a.key}`)?.sort ?? 0) - (catalogPackage(catalog, `addon_${b.key}`)?.sort ?? 0));
   const goToGroup = (group: Filter) => {
     setFilter(group);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -202,7 +213,11 @@ export default function Plans() {
           <h3 className="text-base font-semibold text-[color:var(--ink)]">{t('pp.plans_title')}</h3>
           <p className="mt-0.5 text-sm text-[color:var(--ink-3)]">{t('pp.plans_sub')}</p>
           <div className="mt-4 grid items-stretch gap-5 pt-3 lg:grid-cols-3">
-            {CARDS.map((card) => {
+            {CARDS.filter((card) => !plansFromCatalog || catalogPackage(catalog, card.plan))
+              .sort((a, b) => (catalogPackage(catalog, a.plan)?.sort ?? 0) - (catalogPackage(catalog, b.plan)?.sort ?? 0))
+              .map((card) => {
+              const cp = catalogPackage(catalog, card.plan);
+              const highlight = cp ? cp.highlight : card.highlight;
               const isCurrent = currentPlan === card.plan;
               // Niedrigere Pläne als der aktuelle werden nicht mehr zum Anfragen angeboten.
               const lower = ['basis', 'marketing_starter', 'marketing_pro'].indexOf(card.plan) <
@@ -210,25 +225,26 @@ export default function Plans() {
               return (
                 <PlanCard
                   key={card.plan}
-                  highlight={card.highlight}
-                  badge={card.highlight ? t('plans.badge_popular') : undefined}
+                  highlight={highlight}
+                  badge={highlight ? packageText(cp, 'badge', language) ?? t('plans.badge_popular') : undefined}
                   badgeTone="brand"
-                  name={t(PLAN_LABEL_KEY[card.plan])}
+                  name={packageText(cp, 'name', language) ?? t(PLAN_LABEL_KEY[card.plan])}
                   price={
                     <PriceFigure
-                      value={money(PRICE[card.plan])}
-                      suffix={card.plan === 'basis' ? undefined : t('crm_pricing.per_month')}
+                      value={money(price(card.plan))}
+                      suffix={price(card.plan) === 0 ? undefined : t('crm_pricing.per_month')}
                     />
                   }
-                  priceNote={t(card.noteKey)}
+                  priceNote={packageText(cp, 'tagline', language) ?? t(card.noteKey)}
                   includedLabel={t('crm_pricing.included')}
-                  points={card.points.map((key) => t(key))}
+                  points={bulletList(cp, language, true) ?? card.points.map((key) => t(key))}
+                  excluded={bulletList(cp, language, false)}
                   action={
                     card.plan === 'basis' || lower ? (
                       <div className="mt-5 min-h-[2.5rem]" />
                     ) : (
                       <PlanAction
-                        highlight={card.highlight}
+                        highlight={highlight}
                         done={isCurrent || requested.includes(card.plan)}
                         doneLabel={isCurrent ? t('plans.current') : t('crm_pricing.requested')}
                         busy={busy === card.plan}
@@ -285,6 +301,7 @@ export default function Plans() {
             {addons.map((addon) => {
               const Icon = addon.icon;
               const active = addon.feature ? has(addon.feature) : false;
+              const ca = catalogPackage(catalog, `addon_${addon.key}`);
               return (
                 <div key={addon.key} className="flex flex-col rounded-xl border border-[color:var(--line)] bg-white p-5">
                   <div className="flex items-start gap-3">
@@ -293,18 +310,18 @@ export default function Plans() {
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-base font-semibold text-[color:var(--ink)]">{t(addon.titleKey)}</p>
+                        <p className="text-base font-semibold text-[color:var(--ink)]">{packageText(ca, 'name', language) ?? t(addon.titleKey)}</p>
                         {active && (
                           <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-200">
                             {t('pp.active')}
                           </span>
                         )}
                       </div>
-                      <p className="mt-1 text-sm leading-relaxed text-[color:var(--ink-2)]">{t(addon.textKey)}</p>
+                      <p className="mt-1 text-sm leading-relaxed text-[color:var(--ink-2)]">{packageText(ca, 'tagline', language) ?? t(addon.textKey)}</p>
                     </div>
                   </div>
                   <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[color:var(--line)] pt-4">
-                    <p className="text-sm font-medium text-[color:var(--ink)]">{t(addon.priceKey)}</p>
+                    <p className="text-sm font-medium text-[color:var(--ink)]">{packageText(ca, 'price_note', language) ?? t(addon.priceKey)}</p>
                     {filter === 'all' && (addon.group === 'shop' || addon.group === 'speed') ? (
                       <button type="button" onClick={() => goToGroup(addon.group)} className="inline-flex items-center gap-1 text-sm font-semibold text-brand-700 hover:underline">
                         {t('pp.see_prices')}
@@ -332,19 +349,27 @@ export default function Plans() {
         </section>
       )}
 
-      {(filter === 'all' || filter === 'marketing' || filter === 'system') && (
-        <CompareTable
-          title={t(filter === 'system' ? 'pp.compare_system_title' : 'plans.compare_title')}
-          columns={CARDS.map((card) => ({
-            label: t(PLAN_LABEL_KEY[card.plan]),
-            sub: card.plan === 'basis' ? t('fs.free') : `${money(PRICE[card.plan])} ${t('crm_pricing.per_month')}`,
-            highlight: card.highlight,
-          }))}
-          rows={ROWS}
-        />
-      )}
+      {(filter === 'all' || filter === 'marketing' || filter === 'system') && (() => {
+        const fromCatalog = catalogCompare(catalog, 'plan', { language, locale, t });
+        return (
+          <CompareTable
+            title={t(filter === 'system' ? 'pp.compare_system_title' : 'plans.compare_title')}
+            columns={fromCatalog?.columns ?? CARDS.map((card) => ({
+              label: t(PLAN_LABEL_KEY[card.plan]),
+              sub: card.plan === 'basis' ? t('fs.free') : `${money(PRICE[card.plan])} ${t('crm_pricing.per_month')}`,
+              highlight: card.highlight,
+            }))}
+            rows={fromCatalog?.rows ?? ROWS}
+          />
+        );
+      })()}
       {filter === 'shop' && <ShopCompare />}
-      {filter === 'speed' && (hasHardware ? <SoftwareCompare /> : <SpeedCompare />)}
+      {filter === 'speed' && (
+        <>
+          {!hasHardware && <SpeedCompare />}
+          <SoftwareCompare />
+        </>
+      )}
     </div>
   );
 }

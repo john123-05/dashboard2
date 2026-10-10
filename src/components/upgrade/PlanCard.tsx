@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Check, Send } from 'lucide-react';
+import { Check, Minus, Send } from 'lucide-react';
 
 // Price card for the upgrade pages (Speedmessung, Online-Shop, CRM). One look
 // everywhere: white card, thin border, the recommended plan raised with a dark
@@ -68,6 +68,7 @@ export default function PlanCard({
   priceNote,
   includedLabel,
   points,
+  excluded,
   compact,
   action,
 }: {
@@ -80,6 +81,8 @@ export default function PlanCard({
   priceNote?: ReactNode;
   includedLabel: ReactNode;
   points: ReactNode[];
+  /** Nicht enthalten (grau, mit Strich). */
+  excluded?: ReactNode[];
   compact?: boolean;
   action: ReactNode;
 }) {
@@ -123,6 +126,15 @@ export default function PlanCard({
               >
                 <Check className={`mt-0.5 shrink-0 text-brand-600 ${compact ? 'h-3 w-3' : 'h-4 w-4'}`} />
                 {point}
+              </li>
+            ))}
+            {excluded?.map((point, index) => (
+              <li
+                key={`x${index}`}
+                className={`flex items-start gap-2 leading-snug text-[color:var(--ink-3)] ${compact ? 'text-xs' : 'text-sm'}`}
+              >
+                <Minus className={`mt-0.5 shrink-0 text-slate-300 ${compact ? 'h-3 w-3' : 'h-4 w-4'}`} />
+                <span className="line-through decoration-slate-300">{point}</span>
               </li>
             ))}
           </ul>

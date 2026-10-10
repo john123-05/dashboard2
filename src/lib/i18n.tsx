@@ -2157,6 +2157,8 @@ const translations: Record<Language, Record<string, string>> = {
     'pp.row_prepay': "Im Voraus zu zahlen",
     'pp.row_display_monthly': "Mit Display, pro Monat",
     'pp.cell_24m': "24 Monate",
+    'pp.cell_months': "{months} Monate",
+    'pp.not_included': "Nicht enthalten",
   },
   en: {
     'app.loading': 'Loading…',
@@ -4297,6 +4299,8 @@ const translations: Record<Language, Record<string, string>> = {
     'pp.row_prepay': "Paid upfront",
     'pp.row_display_monthly': "With display, per month",
     'pp.cell_24m': "24 months",
+    'pp.cell_months': "{months} months",
+    'pp.not_included': "Not included",
   },
   es: {
     'app.loading': 'Cargando…',
@@ -6437,6 +6441,8 @@ const translations: Record<Language, Record<string, string>> = {
     'pp.row_prepay': "Pago por adelantado",
     'pp.row_display_monthly': "Con pantalla, por mes",
     'pp.cell_24m': "24 meses",
+    'pp.cell_months': "{months} meses",
+    'pp.not_included': "No incluido",
   },
   fr: {
     'app.loading': 'Chargement…',
@@ -8577,6 +8583,8 @@ const translations: Record<Language, Record<string, string>> = {
     'pp.row_prepay': "Payé à l’avance",
     'pp.row_display_monthly': "Avec écran, par mois",
     'pp.cell_24m': "24 mois",
+    'pp.cell_months': "{months} mois",
+    'pp.not_included': "Non inclus",
   },
   it: {
     'app.loading': 'Caricamento…',
@@ -10717,6 +10725,8 @@ const translations: Record<Language, Record<string, string>> = {
     'pp.row_prepay': "Pagato in anticipo",
     'pp.row_display_monthly': "Con display, al mese",
     'pp.cell_24m': "24 mesi",
+    'pp.cell_months': "{months} mesi",
+    'pp.not_included': "Non incluso",
   },
   nl: {
     'app.loading': 'Laden…',
@@ -12857,6 +12867,8 @@ const translations: Record<Language, Record<string, string>> = {
     'pp.row_prepay': "Vooruit te betalen",
     'pp.row_display_monthly': "Met display, per maand",
     'pp.cell_24m': "24 maanden",
+    'pp.cell_months': "{months} maanden",
+    'pp.not_included': "Niet inbegrepen",
   },
   lv: {
     'app.loading': 'Ielādē…',
@@ -14997,6 +15009,8 @@ const translations: Record<Language, Record<string, string>> = {
     'pp.row_prepay': "Maksājums uz priekšu",
     'pp.row_display_monthly': "Ar displeju, mēnesī",
     'pp.cell_24m': "24 mēneši",
+    'pp.cell_months': "{months} mēneši",
+    'pp.not_included': "Nav iekļauts",
   },
 };
 

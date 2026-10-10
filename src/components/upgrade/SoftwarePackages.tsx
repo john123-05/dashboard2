@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { usePark } from '../../contexts/ParkContext';
 import { meldeAusstattungsInteresse } from '../../lib/equipment';
 import { useI18n, useLocaleTag } from '../../lib/i18n';
+import { bulletList, catalogGroup, catalogPackage, fillText, packageText, useCatalog } from '../../lib/catalog';
 import PlanCard, { PlanAction, PriceFigure } from './PlanCard';
 
 // Speedmessung nur als Software, für Parks die die Messhardware schon haben.
@@ -22,22 +23,43 @@ const eur = (value: number, locale: string) =>
   value.toLocaleString(locale, { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
 
 export default function SoftwarePackages() {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const locale = useLocaleTag();
+  const catalog = useCatalog();
+  const fromCatalog = catalogGroup(catalog, 'software').length > 0;
   const { parkId } = usePark();
   const [display, setDisplay] = useState(false);
   const [busy, setBusy] = useState<Key | null>(null);
   const [requested, setRequested] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const monthly = display ? SOFTWARE_MONTHLY_DISPLAY : SOFTWARE_MONTHLY;
-  const plans: { key: Key; name: string; months: number; free: number; highlight?: boolean }[] = [
-    { key: 'monthly', name: 'speed.offer.sw_plan_monthly', months: 12, free: 0 },
-    { key: 'year', name: 'speed.offer.sw_plan_year', months: 12, free: FREE_MONTHS_YEAR, highlight: true },
-    { key: 'two_years', name: 'speed.offer.sw_plan_two_years', months: 24, free: FREE_MONTHS_TWO_YEARS },
+  // Preise und Texte kommen aus dem Katalog (CRM → Pakete & Preise); ohne Katalog gelten die eingebauten Werte.
+  const builtIn: { key: Key; pkg: string; name: string; months: number; free: number; highlight?: boolean }[] = [
+    { key: 'monthly', pkg: 'software_monthly', name: 'speed.offer.sw_plan_monthly', months: 12, free: 0 },
+    { key: 'year', pkg: 'software_year', name: 'speed.offer.sw_plan_year', months: 12, free: FREE_MONTHS_YEAR, highlight: true },
+    { key: 'two_years', pkg: 'software_two_years', name: 'speed.offer.sw_plan_two_years', months: 24, free: FREE_MONTHS_TWO_YEARS },
   ];
+  const plans = builtIn
+    .map((plan) => {
+      const cp = catalogPackage(catalog, plan.pkg);
+      const base = cp?.price_cents != null ? cp.price_cents / 100 : SOFTWARE_MONTHLY;
+      const withDisplay = cp?.meta.display_cents != null ? cp.meta.display_cents / 100 : SOFTWARE_MONTHLY_DISPLAY;
+      return {
+        ...plan,
+        cp,
+        months: cp?.term_months ?? plan.months,
+        free: cp ? cp.free_months : plan.free,
+        highlight: cp ? cp.highlight : plan.highlight,
+        monthly: display ? withDisplay : base,
+        withDisplay,
+        base,
+      };
+    })
+    .filter((plan) => !fromCatalog || plan.cp)
+    .sort((a, b) => (a.cp?.sort ?? 0) - (b.cp?.sort ?? 0));
 
   async function request(plan: (typeof plans)[number]) {
+    const monthly = plan.monthly;
     if (!parkId) return;
     setBusy(plan.key);
     setError(null);
@@ -73,7 +95,7 @@ export default function SoftwarePackages() {
           <span>
             <span className="block text-sm font-medium text-[color:var(--ink)]">{t('speed.offer.sw_display_label')}</span>
             <span className="mt-0.5 block text-xs text-[color:var(--ink-3)]">
-              {t('speed.offer.sw_display_text', { with: eur(SOFTWARE_MONTHLY_DISPLAY, locale), without: eur(SOFTWARE_MONTHLY, locale) })}
+              {t('speed.offer.sw_display_text', { with: eur(plans[0]?.withDisplay ?? SOFTWARE_MONTHLY_DISPLAY, locale), without: eur(plans[0]?.base ?? SOFTWARE_MONTHLY, locale) })}
             </span>
           </span>
         </label>
@@ -84,6 +106,7 @@ export default function SoftwarePackages() {
       <div className="grid items-stretch gap-4 pt-3 sm:grid-cols-3">
         {plans.map((plan) => {
           const paid = plan.months - plan.free;
+          const monthly = plan.monthly;
           const total = paid * monthly;
           const full = plan.months * monthly;
           const done = requested.includes(`${plan.key}-${display}`);
@@ -92,9 +115,9 @@ export default function SoftwarePackages() {
               key={plan.key}
               compact
               highlight={plan.highlight}
-              badge={plan.free ? t('speed.offer.sw_free_months', { months: plan.free }) : undefined}
+              badge={packageText(plan.cp, 'badge', language) ? fillText(packageText(plan.cp, 'badge', language)!, { months: plan.free }) : plan.free ? t('speed.offer.sw_free_months', { months: plan.free }) : undefined}
               badgeTone={plan.highlight ? 'brand' : 'positive'}
-              name={t(plan.name)}
+              name={packageText(plan.cp, 'name', language) ?? t(plan.name)}
               price={
                 plan.free ? (
                   <PriceFigure compact value={eur(total, locale)} suffix={t('crm_pricing.for_months', { months: plan.months })} />
@@ -116,7 +139,8 @@ export default function SoftwarePackages() {
                 )
               }
               includedLabel={t('crm_pricing.included')}
-              points={[...POINTS, ...(display ? ['speed.offer.display_large'] : [])].map((key) => t(key))}
+              points={[...(bulletList(plan.cp, language, true) ?? POINTS.map((key) => t(key))), ...(display ? [t('speed.offer.display_large')] : [])]}
+              excluded={display ? bulletList(plan.cp, language, false)?.filter((text) => text !== t('speed.offer.display_large')) : bulletList(plan.cp, language, false)}
               action={
                 <PlanAction
                   compact

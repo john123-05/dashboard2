@@ -1,4 +1,5 @@
 import { useI18n, useLocaleTag } from '../../lib/i18n';
+import { catalogCompare, useCatalog } from '../../lib/catalog';
 import CompareTable, { type CompareRow } from './CompareTable';
 import { MONTHLY_PRICE, REVENUE_SHARE_PERCENT, SETUP_PRICE } from './ShopPackages';
 import { PLANS } from './SpeedPackages';
@@ -11,8 +12,13 @@ const yes3 = (labelKey: string): CompareRow => ({ labelKey, cells: [true, true, 
 
 /** Vergleich der drei Wege zum Online-Shop (Spalten wie die Karten darüber). */
 export function ShopCompare() {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const locale = useLocaleTag();
+  const catalog = useCatalog();
+  const fromCatalog = catalogCompare(catalog, 'shop', { language, locale, t });
+  if (fromCatalog) {
+    return <CompareTable title={t('pp.compare_shop_title')} note={t('pp.compare_note')} columns={fromCatalog.columns} rows={fromCatalog.rows} />;
+  }
   const rows: CompareRow[] = [
     yes3('shop_pricing.point_design'),
     yes3('shop_pricing.point_setup'),
@@ -42,39 +48,28 @@ export function ShopCompare() {
 
 /** Vergleich der Speedmessung-Pakete (drei mit Hardware, eines nur Software für Parks mit Hardware). */
 export function SpeedCompare() {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const locale = useLocaleTag();
+  const catalog = useCatalog();
+  const fromCatalog = catalogCompare(catalog, 'speed', { language, locale, t });
+  if (fromCatalog) {
+    return <CompareTable title={t('pp.compare_speed_title')} note={t('pp.compare_note')} columns={fromCatalog.columns} rows={fromCatalog.rows} />;
+  }
   const [basis, display, long] = PLANS;
-  const all4 = (labelKey: string): CompareRow => ({ labelKey, cells: [true, true, true, true] });
   const rows: CompareRow[] = [
-    { labelKey: 'speed.offer.hardware', cells: [true, true, true, 'pp.cell_have'] },
-    { labelKey: 'speed.offer.free_hardware', cells: [true, true, true, false] },
-    all4('speed.offer.setup'),
-    all4('speed.offer.photo_speed'),
-    all4('speed.offer.photo_code'),
-    all4('speed.offer.daily_stats'),
-    all4('speed.offer.ranking'),
-    all4('speed.offer.guest_page'),
-    all4('speed.offer.benefit_edit'),
-    all4('speed.offer.benefit_analyse'),
-    all4('speed.offer.hosting'),
-    all4('speed.offer.database'),
-    all4('speed.offer.maintenance'),
-    { labelKey: 'speed.offer.display_large', cells: [false, true, false, 'pp.cell_optional'] },
-    { labelKey: 'pp.row_monthly', cells: [...[basis, display, long].map((p) => eur(p.monthly, locale)), 'pp.cell_sw_monthly'] },
-    { labelKey: 'pp.row_year2', cells: [eur(basis.monthly, locale), eur(display.fromYear2 ?? display.monthly, locale), eur(long.monthly, locale), eur(SOFTWARE_MONTHLY, locale)] },
-    { labelKey: 'pp.row_term', cells: [...[basis, display, long].map((p) => (p.months === 48 ? 'pp.cell_48m' : 'pp.cell_12m')), 'pp.cell_12m'] },
+    ...['speed.offer.free_hardware', 'speed.offer.setup', 'speed.offer.photo_speed', 'speed.offer.photo_code', 'speed.offer.daily_stats',
+      'speed.offer.ranking', 'speed.offer.guest_page', 'speed.offer.benefit_edit', 'speed.offer.benefit_analyse',
+      'speed.offer.hosting', 'speed.offer.database', 'speed.offer.maintenance'].map((key) => yes3(key)),
+    { labelKey: 'speed.offer.display_large', cells: [false, true, false] },
+    { labelKey: 'pp.row_monthly', cells: [basis, display, long].map((p) => eur(p.monthly, locale)) },
+    { labelKey: 'pp.row_year2', cells: [eur(basis.monthly, locale), eur(display.fromYear2 ?? display.monthly, locale), eur(long.monthly, locale)] },
+    { labelKey: 'pp.row_term', cells: [basis, display, long].map((p) => (p.months === 48 ? 'pp.cell_48m' : 'pp.cell_12m')) },
   ];
   return (
     <CompareTable
       title={t('pp.compare_speed_title')}
       note={t('pp.compare_note')}
-      columns={[
-        { label: t(basis.name) },
-        { label: t(display.name), highlight: true },
-        { label: t(long.name) },
-        { label: t('speed.offer.sw_name'), sub: t('speed.offer.sw_badge') },
-      ]}
+      columns={[{ label: t(basis.name) }, { label: t(display.name), highlight: true }, { label: t(long.name) }]}
       rows={rows}
     />
   );
@@ -82,8 +77,13 @@ export function SpeedCompare() {
 
 /** Vergleich der drei Software-Pakete (für Parks, die die Messhardware schon haben). */
 export function SoftwareCompare() {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const locale = useLocaleTag();
+  const catalog = useCatalog();
+  const fromCatalog = catalogCompare(catalog, 'software', { language, locale, t });
+  if (fromCatalog) {
+    return <CompareTable title={t('pp.compare_software_title')} note={t('pp.compare_note')} columns={fromCatalog.columns} rows={fromCatalog.rows} />;
+  }
   const prepay = (months: number, free: number) => eur((months - free) * SOFTWARE_MONTHLY, locale);
   const rows: CompareRow[] = [
     ...POINTS.map((key) => yes3(key)),

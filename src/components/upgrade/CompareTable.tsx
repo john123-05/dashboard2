@@ -4,7 +4,7 @@ import GlassCard from '../ui/GlassCard';
 
 export type CompareCell = boolean | string;
 export type CompareColumn = { label: string; sub?: string; highlight?: boolean };
-export type CompareRow = { labelKey: string; cells: CompareCell[]; soon?: boolean };
+export type CompareRow = { labelKey?: string; label?: string; cells: CompareCell[]; soon?: boolean };
 
 // Eine Vergleichstabelle für alle Gruppen in „Preise & Pakete“ (Marketing, Shop, Speedmessung, Fotosystem).
 // Zellen: true/false = Haken/Strich, sonst Text; Text der wie ein Übersetzungsschlüssel aussieht wird übersetzt.
@@ -49,9 +49,9 @@ export default function CompareTable({
           </thead>
           <tbody className="divide-y divide-[color:var(--line)]">
             {rows.map((row) => (
-              <tr key={row.labelKey}>
+              <tr key={row.label ?? row.labelKey}>
                 <td className="sticky left-0 bg-white px-5 py-3 text-sm text-[color:var(--ink-2)]">
-                  {t(row.labelKey)}
+                  {row.label ?? (row.labelKey ? t(row.labelKey) : '')}
                   {row.soon && (
                     <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">{t('plans.soon')}</span>
                   )}

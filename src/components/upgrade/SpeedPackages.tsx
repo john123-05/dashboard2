@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { usePark } from '../../contexts/ParkContext';
 import { meldeAusstattungsInteresse } from '../../lib/equipment';
 import { useI18n, useLocaleTag } from '../../lib/i18n';
+import { bulletList, catalogGroup, catalogPackage, fillText, packageText, useCatalog } from '../../lib/catalog';
 import PlanCard, { PlanAction, PriceFigure } from './PlanCard';
 import SoftwarePackages from './SoftwarePackages';
 
@@ -64,15 +65,34 @@ export const PLANS: {
 // Die drei Speedmessung-Pakete (Karten mit allem, was enthalten ist). Wird in der gesperrten
 // Speedmessung-Seite und in „Preise & Pakete“ verwendet.
 export default function SpeedPackages({ softwareOnly = false }: { softwareOnly?: boolean }) {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const locale = useLocaleTag();
   const { parkId } = usePark();
+  // Preise und Texte kommen aus dem Katalog (CRM → Pakete & Preise); ohne Katalog gelten die eingebauten Werte.
+  const catalog = useCatalog();
+  const fromCatalog = catalogGroup(catalog, 'speed').length > 0;
+  const catalogKey: Record<PlanKey, string> = { basis: 'speed_basis', display: 'speed_display', long: 'speed_long' };
+  const plans = PLANS.map((plan) => {
+    const cp = catalogPackage(catalog, catalogKey[plan.key]);
+    return {
+      plan: {
+        ...plan,
+        monthly: cp?.price_cents != null ? cp.price_cents / 100 : plan.monthly,
+        months: cp?.term_months ?? plan.months,
+        fromYear2: cp?.meta.year2_cents != null ? cp.meta.year2_cents / 100 : plan.fromYear2,
+        highlight: cp ? cp.highlight : plan.highlight,
+      },
+      cp,
+    };
+  })
+    .filter(({ cp }) => !fromCatalog || cp)
+    .sort((a, b) => (a.cp?.sort ?? 0) - (b.cp?.sort ?? 0));
   const [busy, setBusy] = useState<PlanKey | null>(null);
   const [requested, setRequested] = useState<PlanKey[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   async function request(planKey: PlanKey) {
-    const plan = PLANS.find((p) => p.key === planKey);
+    const plan = plans.find((p) => p.plan.key === planKey)?.plan;
     if (!parkId || !plan) return;
     setBusy(planKey);
     setError(null);
@@ -95,23 +115,25 @@ export default function SpeedPackages({ softwareOnly = false }: { softwareOnly?:
       {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-center text-sm text-rose-700">{error}</p>}
 
       <div className="grid items-stretch gap-4 pt-4 sm:grid-cols-3">
-        {PLANS.map((plan) => (
+        {plans.map(({ plan, cp }) => (
           <PlanCard
             key={plan.key}
             compact
             highlight={plan.highlight}
             image={plan.image}
-            badge={plan.badge ? t(plan.badge) : undefined}
+            badge={packageText(cp, 'badge', language) ? fillText(packageText(cp, 'badge', language)!, { months: cp?.free_months ?? 0 }) : plan.badge ? t(plan.badge) : undefined}
             badgeTone={plan.highlight ? 'brand' : 'positive'}
-            name={t(plan.name)}
+            name={packageText(cp, 'name', language) ?? t(plan.name)}
             price={<PriceFigure compact value={eur(plan.monthly, locale)} suffix={t('crm_pricing.per_month')} />}
             priceNote={
               <>
                 {t('speed.offer.term', { months: plan.months })} · {plan.fromYear2 ? t('speed.offer.year2', { amount: eur(plan.fromYear2, locale) }) : t('speed.offer.hardware_zero')} · {t('speed.offer.excl_vat')}
+                {packageText(cp, 'tagline', language) && <> · {packageText(cp, 'tagline', language)}</>}
               </>
             }
             includedLabel={t('crm_pricing.included')}
-            points={[...INCLUDED, ...plan.extras].map((p) => t(p))}
+            points={bulletList(cp, language, true) ?? [...INCLUDED, ...plan.extras].map((p) => t(p))}
+            excluded={bulletList(cp, language, false)}
             action={
               <PlanAction
                 compact
