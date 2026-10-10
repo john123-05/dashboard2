@@ -529,7 +529,7 @@ export default function Leads({ embedded = false }: { embedded?: boolean } = {})
   if (!parkId) return <LeadsContacts embedded={embedded} view="overview" />;
   return (
     <div className={embedded ? 'space-y-5' : 'space-y-6'}>
-      <UnlockCenter parkId={parkId}>
+      <UnlockCenter parkId={parkId} routed={!embedded}>
         {(view) => <LeadsContacts embedded={embedded} view={view} />}
       </UnlockCenter>
     </div>

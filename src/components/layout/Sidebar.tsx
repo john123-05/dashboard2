@@ -33,6 +33,7 @@ import { useI18n } from '../../lib/i18n';
 import { usePark } from '../../contexts/ParkContext';
 import { supabase } from '../../lib/supabase';
 import ProfileParkSwitcher from './ProfileParkSwitcher';
+import { CRM_TABS } from '../../lib/crmTabs';
 
 type NavItem = {
   to: string;
@@ -46,6 +47,8 @@ type NavItem = {
   // Visible to the restricted "staff" role. Everything else is owner-only.
   staffAllowed?: boolean;
   ownerOnly?: boolean;
+  /** Unterseiten, die sich unter dem Eintrag aufklappen lassen. */
+  children?: { to: string; labelKey: string }[];
 };
 
 const navItems: NavItem[] = [
@@ -54,7 +57,13 @@ const navItems: NavItem[] = [
   { to: '/purchases', icon: ShoppingCart, labelKey: 'nav.purchases', comingSoon: true, kioskUnlocks: true },
   { to: '/users', icon: Users, labelKey: 'nav.speed', comingSoon: true, guestActivityUnlocks: true },
   { to: '/photos', icon: Camera, labelKey: 'nav.photos', staffAllowed: true },
-  { to: '/leads', icon: Mail, labelKey: 'nav.leads' },
+  {
+    to: '/leads',
+    icon: Mail,
+    labelKey: 'nav.leads',
+    // Die CRM-Reiter sind eigene Seiten (CRM_TABS in survey/UnlockCenter.tsx).
+    children: CRM_TABS.filter((tab) => tab.key !== 'overview').map((tab) => ({ to: tab.path, labelKey: tab.labelKey })),
+  },
   { to: '/personalization', icon: Wand2, labelKey: 'nav.personalization', staffAllowed: true },
   { to: '/tickets', icon: LifeBuoy, labelKey: 'nav.support', staffAllowed: true },
   { to: '/health', icon: Activity, labelKey: 'nav.system_health', staffAllowed: true },
@@ -304,6 +313,33 @@ export default function Sidebar({
     return to === '/' ? location.pathname === '/' : location.pathname.startsWith(to);
   }
 
+  /** Genau diese Seite - nicht eine ihrer Unterseiten. */
+  function isExactPath(to: string) {
+    return location.pathname === to;
+  }
+
+  // Aufgeklappte Einträge mit Unterseiten. Standard: zu; wer auf einer
+  // Unterseite ist, sieht sie offen. Die Wahl bleibt in diesem Browser.
+  const [expanded, setExpanded] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem('lp-nav-expanded');
+      return raw ? (JSON.parse(raw) as string[]) : [];
+    } catch {
+      return [];
+    }
+  });
+  function toggleExpanded(to: string) {
+    setExpanded((prev) => {
+      const next = prev.includes(to) ? prev.filter((x) => x !== to) : [...prev, to];
+      try {
+        localStorage.setItem('lp-nav-expanded', JSON.stringify(next));
+      } catch {
+        // Speicher gesperrt - gilt dann nur für diese Sitzung
+      }
+      return next;
+    });
+  }
+
   function dropLine() {
     return (
       <div className="relative h-0" aria-hidden>
@@ -313,7 +349,12 @@ export default function Sidebar({
   }
 
   function renderNavRow(item: NavItem, index: number) {
-    const isActive = isActivePath(item.to);
+    const hasChildren = showFull && !!item.children?.length;
+    const childActive = Boolean(item.children?.some((c) => isExactPath(c.to)));
+    const open = hasChildren && (expanded.includes(item.to) || childActive);
+    // Mit aufgeklappten Unterseiten markiert der Haupteintrag nur noch seine
+    // eigene Seite - sonst wären zwei Zeilen gleichzeitig hervorgehoben.
+    const isActive = hasChildren ? isExactPath(item.to) : isActivePath(item.to);
     const badge = badgeFor(item);
     const label = t(item.labelKey);
     const canDrag = showFull && pinnedItems.length > 1;
@@ -369,7 +410,7 @@ export default function Sidebar({
               isActive
                 ? 'bg-white/[0.1] font-medium text-white'
                 : 'text-slate-300 hover:bg-white/[0.05] hover:text-white'
-            } ${showFull ? 'pr-8' : 'justify-center'}`}
+            } ${showFull ? (hasChildren ? 'pr-14' : 'pr-8') : 'justify-center'}`}
           >
             {isActive && (
               <span className="absolute inset-y-1.5 left-0 w-[3px] rounded-r-full bg-brand-500" aria-hidden />
@@ -386,6 +427,22 @@ export default function Sidebar({
               </span>
             )}
           </NavLink>
+
+          {hasChildren && (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.preventDefault();
+                toggleExpanded(item.to);
+              }}
+              aria-expanded={open}
+              title={open ? t('nav.hide_pages') : t('nav.show_pages')}
+              aria-label={open ? t('nav.hide_pages') : t('nav.show_pages')}
+              className="absolute right-7 rounded p-1 text-slate-400 transition hover:bg-white/[0.08] hover:text-white"
+            >
+              <ChevronDown className={`h-3.5 w-3.5 transition-transform ${open ? '' : '-rotate-90'}`} />
+            </button>
+          )}
 
           {showFull && (
             <button
@@ -404,6 +461,22 @@ export default function Sidebar({
             </button>
           )}
         </div>
+
+        {open && (
+          <div className="relative ml-[22px] mt-0.5 space-y-0.5 border-l border-white/10 pl-3">
+            {item.children?.map((child) => (
+              <NavLink
+                key={child.to}
+                to={child.to}
+                className={`block truncate rounded-md px-2.5 py-1.5 text-[13px] transition-colors ${
+                  isExactPath(child.to) ? 'bg-white/[0.1] font-medium text-white' : 'text-slate-400 hover:bg-white/[0.05] hover:text-white'
+                }`}
+              >
+                {t(child.labelKey)}
+              </NavLink>
+            ))}
+          </div>
+        )}
         {drag && index === pinnedItems.length - 1 && drag.insertAt === pinnedItems.length && dropLine()}
       </div>
     );

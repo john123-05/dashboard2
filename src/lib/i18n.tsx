@@ -1653,6 +1653,8 @@ const translations: Record<Language, Record<string, string>> = {
     'help.upgrades.body': "Unter „Konfiguration“ siehst du, was dein Automat schon hat, und kannst weitere Produkte wie PrintBox, Cashbox, Online-Shop oder Speedmessung anfragen. Wir melden uns nach jeder Anfrage persönlich.",
     'help.support.title': "So erreichst du den Support",
     'help.support.body': "Unter „Support“ schreibst du uns ein Ticket – die Antwort erscheint dort und als Benachrichtigung oben rechts. In dringenden Fällen erreichst du uns auch telefonisch.",
+    'nav.show_pages': "Unterseiten einblenden",
+    'nav.hide_pages': "Unterseiten ausblenden",
   },
   en: {
     'app.loading': 'Loading…',
@@ -3289,6 +3291,8 @@ const translations: Record<Language, Record<string, string>> = {
     'help.upgrades.body': "Under “Configuration” you see what your kiosk already has and can request more products such as PrintBox, Cashbox, online shop or speed measurement. We get back to you personally after every request.",
     'help.support.title': "How to reach support",
     'help.support.body': "Under “Support” you write us a ticket – the reply appears there and as a notification at the top right. In urgent cases you can also reach us by phone.",
+    'nav.show_pages': "Show pages",
+    'nav.hide_pages': "Hide pages",
   },
   es: {
     'app.loading': 'Cargando…',
@@ -4925,6 +4929,8 @@ const translations: Record<Language, Record<string, string>> = {
     'help.upgrades.body': "En “Configuración” ves lo que ya tiene tu quiosco y puedes solicitar más productos como PrintBox, Cashbox, tienda online o medición de velocidad. Te contactamos personalmente tras cada solicitud.",
     'help.support.title': "Cómo contactar con el soporte",
     'help.support.body': "En “Soporte” nos escribes un ticket; la respuesta aparece allí y como notificación arriba a la derecha. En casos urgentes también puedes llamarnos.",
+    'nav.show_pages': "Mostrar subpáginas",
+    'nav.hide_pages': "Ocultar subpáginas",
   },
   fr: {
     'app.loading': 'Chargement…',
@@ -6561,6 +6567,8 @@ const translations: Record<Language, Record<string, string>> = {
     'help.upgrades.body': "Sous « Configuration », vous voyez l’équipement actuel de votre borne et pouvez demander d’autres produits comme PrintBox, Cashbox, boutique en ligne ou mesure de vitesse. Nous vous recontactons personnellement après chaque demande.",
     'help.support.title': "Comment joindre le support",
     'help.support.body': "Sous « Support », écrivez-nous un ticket – la réponse apparaît là et en notification en haut à droite. En cas d’urgence, vous pouvez aussi nous appeler.",
+    'nav.show_pages': "Afficher les sous-pages",
+    'nav.hide_pages': "Masquer les sous-pages",
   },
   it: {
     'app.loading': 'Caricamento…',
@@ -8197,6 +8205,8 @@ const translations: Record<Language, Record<string, string>> = {
     'help.upgrades.body': "In “Configurazione” vedi cosa ha già il tuo chiosco e puoi richiedere altri prodotti come PrintBox, Cashbox, negozio online o misurazione della velocità. Ti ricontattiamo personalmente dopo ogni richiesta.",
     'help.support.title': "Come contattare il supporto",
     'help.support.body': "In “Supporto” ci scrivi un ticket: la risposta appare lì e come notifica in alto a destra. Nei casi urgenti puoi anche chiamarci.",
+    'nav.show_pages': "Mostra sottopagine",
+    'nav.hide_pages': "Nascondi sottopagine",
   },
   nl: {
     'app.loading': 'Laden…',
@@ -9833,6 +9843,8 @@ const translations: Record<Language, Record<string, string>> = {
     'help.upgrades.body': "Onder ‘Configuratie’ zie je wat je automaat al heeft en vraag je extra producten aan, zoals PrintBox, Cashbox, webshop of snelheidsmeting. Na elke aanvraag nemen we persoonlijk contact op.",
     'help.support.title': "Zo bereik je support",
     'help.support.body': "Onder ‘Support’ stuur je ons een ticket – het antwoord verschijnt daar en als melding rechtsboven. In dringende gevallen kun je ons ook bellen.",
+    'nav.show_pages': "Subpagina’s tonen",
+    'nav.hide_pages': "Subpagina’s verbergen",
   },
   lv: {
     'app.loading': 'Ielādē…',
@@ -11469,6 +11481,8 @@ const translations: Record<Language, Record<string, string>> = {
     'help.upgrades.body': "Sadaļā “Konfigurācija” redzi, kas automātam jau ir, un vari pieprasīt citus produktus, piem., PrintBox, Cashbox, interneta veikalu vai ātruma mērīšanu. Pēc katra pieprasījuma ar tevi sazināsimies personīgi.",
     'help.support.title': "Kā sazināties ar atbalstu",
     'help.support.body': "Sadaļā “Atbalsts” uzraksti mums pieteikumu – atbilde parādīsies tur un kā paziņojums augšā pa labi. Steidzamos gadījumos vari arī zvanīt.",
+    'nav.show_pages': "Rādīt apakšlapas",
+    'nav.hide_pages': "Paslēpt apakšlapas",
   },
 };
 

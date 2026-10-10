@@ -1,40 +1,41 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import SurveyManager from './SurveyManager';
 import SocialManager from './SocialManager';
 import TrackingManager from './TrackingManager';
 import { fetchSurveyConfig, setUnlockMode, type SurveyConfig, type UnlockMode } from '../../lib/surveyApi';
+import { CRM_TABS, crmTabForPath, type TabKey } from '../../lib/crmTabs';
 import { useI18n } from '../../lib/i18n';
 
-export type TabKey = 'overview' | 'allContacts' | 'survey' | 'social' | 'tracking';
+export type { TabKey };
 
-const TABS: { key: TabKey; mode?: UnlockMode; labelKey: string }[] = [
-  { key: 'overview', labelKey: 'nav.overview' },
-  { key: 'allContacts', mode: 'email', labelKey: 'leads.title' },
-  { key: 'survey', mode: 'survey', labelKey: 'crm.tab_survey' },
-  { key: 'social', mode: 'social', labelKey: 'crm.tab_social' },
-  { key: 'tracking', labelKey: 'crm.tab_tracking' },
-];
+const TABS = CRM_TABS;
 
-/**
- * CRM-Kopf: eine Leiste mit den drei Wegen zum Freischalten (E-Mail / Telefon,
- * Umfrage, Social Media). Ein Punkt markiert den Weg, den Gäste gerade sehen;
- * „Aktivieren“ stellt den angezeigten Weg live. E-Mail/Telefon hat keinen
- * eigenen Reiter mehr - die Kontaktfeld-Einstellungen leben jetzt direkt im
- * "Kontakte"-Reiter (children), der auch den E-Mail-Modus aktiviert. Pixel
- * ist ein eigener Reiter ohne Freischaltmodus.
- */
 export default function UnlockCenter({
   parkId,
+  routed = true,
   children,
 }: {
   parkId: string;
+  /** false: Reiter nur als Zustand (eingebettete Ansicht im Staff-Dashboard). */
+  routed?: boolean;
   children: (view: 'overview' | 'list') => ReactNode;
 }) {
   const { t } = useI18n();
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [config, setConfig] = useState<SurveyConfig | null>(null);
-  const [tab, setTab] = useState<TabKey>('overview');
+  const [localTab, setLocalTab] = useState<TabKey>('overview');
+  const tab = routed ? crmTabForPath(pathname) : localTab;
+
+  function openTab(next: TabKey) {
+    if (!routed) {
+      setLocalTab(next);
+      return;
+    }
+    navigate(CRM_TABS.find((x) => x.key === next)?.path ?? '/leads');
+  }
   const [busy, setBusy] = useState<UnlockMode | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -84,7 +85,7 @@ export default function UnlockCenter({
               <button
                 key={tabItem.key}
                 type="button"
-                onClick={() => setTab(tabItem.key)}
+                onClick={() => openTab(tabItem.key)}
                 className={`inline-flex items-center gap-2 rounded-lg px-4 py-1.5 text-sm font-medium transition ${
                   tab === tabItem.key ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
                 }`}

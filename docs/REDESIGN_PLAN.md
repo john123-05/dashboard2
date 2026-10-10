@@ -197,3 +197,9 @@ Jede Phase: nur Gestaltung, keine Funktionsänderung. Prüfen mit `npm run typec
   Einstellungen, Benachrichtigungen (Schublade von rechts: Ungelesen/Alle/Papierkorb; Quellen und
   Speicherung in `src/lib/notificationFeed.ts`), Profilmenü. Seiten haben oben 64 px Platz dafür.
   Plan und Ideen für Inhalte: `docs/HILFE_CENTER.md`. Rundgang lässt sich per Event `lp:start-tour` starten.
+- 10.10.2026: CRM-Reiter sind eigene Seiten: `/leads/kontakte`, `/leads/umfrage`, `/leads/social`,
+  `/leads/pixel` (Liste in `src/lib/crmTabs.ts`, eine Route `/leads/*` in `App.tsx`, damit die Seite
+  beim Reiterwechsel geladen bleibt; `/leads/preise` steht davor und gewinnt). In der Seitenleiste
+  klappt CRM die vier Unterseiten auf (Pfeil rechts, Wahl bleibt im Browser unter `lp-nav-expanded`,
+  automatisch offen auf einer Unterseite). Eingebettet im Staff-Dashboard bleibt der Reiter reiner
+  Zustand (`routed={false}`), sonst würde die Staff-Adresse wechseln.

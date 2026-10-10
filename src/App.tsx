@@ -176,8 +176,12 @@ export default function App() {
                 <Route path="/shop/preise" element={<ShopPricing />} />
                 <Route path="/configuration/bestellungen" element={<ConfigurationOrders />} />
                 <Route path="/configuration/faq" element={<ConfigurationFaq />} />
-                <Route path="/leads" element={<OwnerOnly><Leads /></OwnerOnly>} />
                 <Route path="/leads/preise" element={<OwnerOnly><CrmPricing /></OwnerOnly>} />
+                {/* Die CRM-Reiter sind eigene Seiten (CRM_TABS in survey/UnlockCenter.tsx).
+                    Bewusst EINE Route mit `*` statt je Reiter eine: so bleibt die Seite
+                    beim Wechsel geladen und holt die Kontakte nicht jedes Mal neu.
+                    `/leads/preise` steht darüber und gewinnt als genauerer Pfad. */}
+                <Route path="/leads/*" element={<OwnerOnly><Leads /></OwnerOnly>} />
                 <Route path="/personalization" element={<Personalization />} />
                 <Route path="/tickets" element={<Support />} />
                 <Route path="/health" element={<SystemHealth />} />
