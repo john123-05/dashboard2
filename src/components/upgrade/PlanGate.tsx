@@ -21,17 +21,11 @@ export default function PlanGate({ feature, children }: { feature?: FeatureKey; 
   if (!key) return <>{children}</>;
   const required = entitlements.requiredPlan(key);
   if (required === 'addon') return <>{children}</>;
-  if (entitlements.loading || entitlements.error) {
+  // Nur beim allerersten Abruf kurz warten; Fehler sperren nicht (siehe plans.ts).
+  if (entitlements.loading) {
     return (
       <GlassCard className="p-5 sm:p-6">
-        <p role="status" className="text-sm text-[color:var(--ink-3)]">
-          {t(entitlements.loading ? 'app.loading' : 'app.loading_error')}
-        </p>
-        {entitlements.error && (
-          <button type="button" onClick={entitlements.refresh} className="glass-button-secondary mt-4">
-            {t('app.retry')}
-          </button>
-        )}
+        <p role="status" className="text-sm text-[color:var(--ink-3)]">{t('app.loading')}</p>
       </GlassCard>
     );
   }

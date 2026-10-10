@@ -593,8 +593,7 @@ function ProfileMenu({ onClose }: { onClose: () => void }) {
         <p className="mt-0.5 text-sm font-semibold text-[color:var(--ink)]">{parkName || '—'}</p>
         {currentOrg?.name && currentOrg.name !== parkName && <p className="text-xs text-[color:var(--ink-3)]">{currentOrg.name}</p>}
         <p className="mt-2 text-xs text-[color:var(--ink-3)]">
-          {entitlements.loading ? t('app.loading') : entitlements.error ? t('app.loading_error')
-            : t('plans.your_plan', { plan: t(PLAN_LABEL_KEY[entitlements.plan]) })}
+          {entitlements.loading ? t('app.loading') : t('plans.your_plan', { plan: t(PLAN_LABEL_KEY[entitlements.plan]) })}
           {' · '}
           <button type="button" onClick={() => go('/leads/preise')} className="font-medium text-brand-700 hover:underline">
             {t('shop.view_plans')}

@@ -15,7 +15,7 @@ const react = {
   useContext: () => ({ session: { access_token: sessionKey } }),
   useState(initial) {
     const i = cursor++;
-    if (!(i in slots)) slots[i] = initial;
+    if (!(i in slots)) slots[i] = typeof initial === 'function' ? initial() : initial;
     return [slots[i], (value) => { slots[i] = typeof value === 'function' ? value(slots[i]) : value; }];
   },
   useCallback: (fn) => fn,
@@ -68,7 +68,7 @@ function respond(request, data, ok = true) { request.resolve({ ok, status: ok ? 
 assert.equal(render().loading, true);
 await tick();
 parkId = 'park-b';
-assert.equal(render().has('crm_contacts'), false);
+assert.equal(render().has('crm_contacts'), false, 'While loading nothing is unlocked');
 await tick();
 respond(requests[0], row({ park_id: 'park-a' }));
 await tick();
@@ -78,15 +78,35 @@ await tick();
 assert.equal(render().plan, 'basis');
 assert.equal(render().has('speed'), true);
 assert.equal(render().has('crm_contacts'), false);
+
+// Fehler beim Nachladen: letzter bekannter Stand bleibt, nichts wird gesperrt oder freigeschaltet.
 render().refresh(); render(); await tick();
 respond(requests[2], null, false); await tick();
 assert.equal(render().error, true);
-assert.equal(render().has('speed'), false, 'Failure must not activate fallback');
+assert.equal(render().loading, false, 'A failed refresh must not show the loading state');
+assert.equal(render().plan, 'basis', 'Failure keeps the last known plan');
+assert.equal(render().has('speed'), true, 'Failure keeps the last known add-ons');
+assert.equal(render().has('crm_contacts'), false, 'Failure must not unlock more than last known');
+
+// Bestätigt fehlende Zeile: Übergangsregel.
 render().refresh(); render(); await tick();
 respond(requests[3], null); await tick();
 assert.equal(render().plan, 'marketing_starter');
+assert.equal(render().error, false);
+
+// Neues Token (z. B. stündliche Erneuerung): im Hintergrund neu laden, Seite bleibt offen.
 sessionKey = 'session-b';
-assert.equal(render().loading, true, 'Another session must not inherit plan');
+assert.equal(render().loading, false, 'A new token must not lock the page');
+assert.equal(render().has('crm_contacts'), true);
 await tick(); respond(requests[4], row({ park_id: 'park-a' })); await tick();
 assert.equal(render().error, true, 'Foreign response must be rejected');
-console.log('Planlogik, Testablauf, Park-/Sitzungswechsel, Netzfehler und Wiederholen: OK');
+assert.equal(render().plan, 'marketing_starter', 'Rejected response keeps the last known plan');
+
+// Park ohne bekannten Stand und Abruf scheitert: Übergangsregel statt Sperre.
+parkId = 'park-c';
+assert.equal(render().loading, true);
+await tick(); respond(requests[5], null, false); await tick();
+assert.equal(render().loading, false);
+assert.equal(render().plan, 'marketing_starter', 'Unknown park + failure falls back to the transition rule');
+assert.equal(render().has('crm_contacts'), true);
+console.log('Planlogik, Testablauf, Parkwechsel, Netzfehler (nicht sperren) und Wiederholen: OK');

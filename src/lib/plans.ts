@@ -140,7 +140,14 @@ function isEntitlement(value: unknown, parkId: string): value is ParkEntitlement
 }
 
 // Sidebar, Profilmenü und PlanGate teilen gleichzeitige Anfragen. Keine Daten
-// in localStorage; Schlüssel enthält Park UND Sitzung. Fehler sind nie „Starter“.
+// in localStorage.
+//
+// Verhalten bei Fehlern (Entscheidung 10.10.2026): NICHT sperren. Scheitert der
+// Abruf (Function nicht erreichbar, Netz weg, Zeitlimit), gilt der zuletzt
+// bekannte Stand dieses Parks, sonst die Übergangsregel. Grund: die Sperre ist
+// eine Anzeige-Regel, kein Schutz der Daten - ein Aussetzer darf zahlende
+// Kunden nicht aus ihrem CRM werfen und keine offenen Formulare schließen.
+const lastKnown = new Map<string, ParkEntitlement | null>();
 const pending = new Map<string, Promise<ParkEntitlement | null>>();
 async function fetchEntitlements(parkId: string): Promise<ParkEntitlement | null> {
   const { data: { session } } = await getFunctionSession();
@@ -172,27 +179,32 @@ export function useEntitlements(): Entitlements {
   const sessionKey = auth?.session?.access_token ?? '';
   const [refreshId, setRefreshId] = useState(0);
   const refresh = useCallback(() => setRefreshId((n) => n + 1), []);
-  const [state, setState] = useState<{
-    parkId: string; sessionKey: string; row: ParkEntitlement | null; error: boolean;
-  } | null>(null);
+  const [state, setState] = useState<{ parkId: string; row: ParkEntitlement | null; error: boolean } | null>(
+    () => (parkId && lastKnown.has(parkId) ? { parkId, row: lastKnown.get(parkId) ?? null, error: false } : null),
+  );
 
   useEffect(() => {
     if (!parkId) return;
     let cancelled = false;
-    // Nach Ablauf des Zeitlimits oder bei Netzfehlern gesperrt lassen. Nur eine
-    // ausdrücklich bestätigte fehlende Zeile aktiviert die Übergangsregel.
     void fetchEntitlements(parkId).then(
-      (row) => { if (!cancelled) setState({ parkId, sessionKey, row, error: false }); },
-      () => { if (!cancelled) setState({ parkId, sessionKey, row: null, error: true }); },
+      (row) => {
+        lastKnown.set(parkId, row);
+        if (!cancelled) setState({ parkId, row, error: false });
+      },
+      () => {
+        // Fehler: letzten bekannten Stand behalten, sonst Übergangsregel (row = null).
+        if (!cancelled) setState({ parkId, row: lastKnown.get(parkId) ?? null, error: true });
+      },
     );
     return () => { cancelled = true; };
+    // sessionKey: nach An-/Ummeldung im Hintergrund neu laden, ohne die Seite zu sperren.
   }, [parkId, sessionKey, refreshId]);
 
   useEffect(() => {
     const onVisible = () => { if (document.visibilityState === 'visible') refresh(); };
     document.addEventListener('visibilitychange', onVisible);
-    // Änderungen durch Staff und das Ende eines Testtages zeitnah übernehmen.
-    const timer = window.setInterval(onVisible, 60_000);
+    // Änderungen durch Staff und das Ende eines Testtages übernehmen.
+    const timer = window.setInterval(onVisible, 5 * 60_000);
     return () => {
       document.removeEventListener('visibilitychange', onVisible);
       window.clearInterval(timer);
@@ -200,20 +212,23 @@ export function useEntitlements(): Entitlements {
   }, [refresh]);
 
   return useMemo(() => {
-    const current = state?.parkId === parkId && state?.sessionKey === sessionKey ? state : null;
+    const current = state?.parkId === parkId ? state : null;
+    // Nur der allererste Abruf für einen Park heisst „lädt“. Spätere Abrufe
+    // (Zeitgeber, Tab-Wechsel, neues Token) laufen im Hintergrund.
     const loading = !!parkId && !current;
     const error = current?.error ?? false;
-    const { plan, features } = current && !error
+    const { plan, features } = current
       ? resolveEntitlements(current.row, parkId)
       : { plan: 'basis' as PlanKey, features: [] as FeatureKey[] };
     return {
       plan,
       addons: features.filter((feature) => FEATURE_PLAN[feature] === 'addon'),
-      has: (feature: FeatureKey) => !loading && !error && (planIncludes(plan, feature) || features.includes(feature)),
+      has: (feature: FeatureKey) => !loading && (planIncludes(plan, feature) || features.includes(feature)),
       requiredPlan: (feature: FeatureKey) => FEATURE_PLAN[feature],
       loading,
+      /** Letzter Abruf gescheitert - nur zur Information, sperrt nichts. */
       error,
       refresh,
     };
-  }, [parkId, sessionKey, state, refresh]);
+  }, [parkId, state, refresh]);
 }

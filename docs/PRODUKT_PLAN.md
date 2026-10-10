@@ -189,10 +189,17 @@ Legende Modell: **S** = Sonnet/Codex medium reicht · **O** = Opus empfohlen (Ar
     Zusätzlich: `featureForPath(pathname)`, `planIncludes(plan, feature)`, `PLAN_LABEL_KEY` (Texte `plans.*` mit B3).
   - Fertig, wenn: tsc grün, noch keine sichtbare Änderung.
 - [ ] **B2 Tabelle `park_entitlements`** (O) – Voraussetzung B1.
-  **Code vorbereitet 10.10.2026; Aktivierung offen:** CLI und Connector verweigern Zugriff auf shared
-  (403); auch der Browser hat keinen Projektzugriff. Erst mit dem richtigen Supabase-Konto die zwei
-  Functions bereitstellen, SQL von John einspielen lassen und den vollständigen Browser-Test abschließen.
-  Bis dahin B2 nicht als erledigt markieren und den neuen Frontend-Stand nicht veröffentlichen.
+  **Code fertig 10.10.2026 (Codex, von Opus geprüft und angepasst); Aktivierung offen.**
+  Die Supabase-CLI auf Johns Mac ist mit einem anderen Konto angemeldet (sieht nur „CRM“ und
+  „Kirmes Kompass“) → 403. John meldet sich mit dem Liftpictures-Konto an (`npx supabase login`), dann:
+  1. `npx supabase functions deploy operator-entitlements admin-park-entitlements --project-ref kvpcwlcfgmsmarjtwpsx`
+  2. John spielt `supabase/migrations/20261010120000_park_entitlements.sql` im SQL-Editor (shared) ein.
+  3. Im Browser prüfen: Profilmenü zeigt „Plan: Marketing Starter“, CRM offen.
+  **Fehlerverhalten (verbindlich):** Scheitert der Abruf, wird NICHT gesperrt – letzter bekannter Stand des
+  Parks, sonst Übergangsregel (Starter). Nur der allererste Abruf zeigt kurz „Lädt“. Deshalb darf der
+  Frontend-Stand auch vor Schritt 1–2 veröffentlicht werden. Nicht wieder auf „bei Fehler sperren“ umbauen.
+  Für S1 merken: `admin-park-entitlements` setzt beim Speichern immer `source='manual'` – sobald Stripe
+  Zeilen schreibt, dort Überschreiben von `source='stripe'` verhindern.
   - Migration (shared, `supabase/migrations/2026101012…_park_entitlements.sql`):
     `park_id uuid references parks, plan text check in (...), features text[] default '{}',
     status text check in ('active','trial','paused','cancelled'), trial_until date, source text
@@ -404,3 +411,4 @@ keine Vertriebs-Pipeline für Parks. Keine Preise ändern ohne John.
   Zugriff), John spielt SQL ein, dann normale Plananzeige live prüfen. Neuer Code nur lokal committet.
   Deployment nach Anmeldung: `npx supabase functions deploy operator-entitlements admin-park-entitlements
   --project-ref kvpcwlcfgmsmarjtwpsx --use-api`. Kein SQL ausgeführt, keine Pläne geändert.
+- 10.10.2026: B2 von Codex gebaut (Migration, zwei Functions, `useEntitlements()` liest echt, Tests). Opus hat das Fehlerverhalten geändert: Abruffehler sperren nicht mehr (vorher Fehleransicht statt CRM, auch bei kurzem Netzaussetzer oder Token-Erneuerung), Abfrage alle 5 statt 1 Minute. Aktivierung wartet auf Supabase-Anmeldung mit dem Liftpictures-Konto.
