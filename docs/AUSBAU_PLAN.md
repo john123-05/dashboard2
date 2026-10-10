@@ -142,16 +142,16 @@ starten. Heute stehen alle Preise und Texte fest im Dashboard-Code (`Plans.tsx`,
 Reihenfolge so gewählt, dass nach jedem Schritt etwas Sichtbares da ist und nichts kaputtgehen kann: das Dashboard
 nimmt den Katalog nur, wenn er da ist, sonst die jetzigen festen Werte.
 
-- [ ] **PK1 Katalog-Tabellen + Befüllung** – Tabellen `catalog_packages`, `catalog_points`, `catalog_package_points`
+- [~] **PK1 Katalog-Tabellen + Befüllung** – Tabellen `catalog_packages`, `catalog_points`, `catalog_package_points`
   (Entwurf unten). Einmalig befüllt aus den heutigen Werten (Basis 0 €, Starter 49 €, Pro 149 €, Shop drei Wege,
   Speedmessung drei Hardware-Pakete, Software drei Pakete, Zusatzleistungen). Danach zeigt das CRM exakt das,
   was Kunden heute sehen.
-- [ ] **PK2 CRM-Seite „Pakete & Preise“ (`/pakete`)** – Filter wie im Dashboard (Alle · Marketing · Online-Shop ·
+- [~] **PK2 CRM-Seite „Pakete & Preise“ (`/pakete`)** – Filter wie im Dashboard (Alle · Marketing · Online-Shop ·
   Speedmessung · Software · Fotosystem). Je Paket eine Karte mit Preis, Laufzeit, Abzeichen, **Enthalten** und
   **Nicht enthalten**; Bearbeiten im Seitenfenster (Name, Kurztext, Preis, Laufzeit, geschenkte Monate, Hervorhebung,
   an/aus, Reihenfolge, Punkte hinzufügen/entfernen/umsortieren, „enthalten“ ja/nein je Punkt). Rechts Vorschau der
   Karte wie im Dashboard. Änderungsverlauf (wer, wann, vorher → nachher). Nur Mitarbeiter mit `admin_users`.
-- [ ] **PK3 Dashboard liest den Katalog** – Function `operator-catalog` (liefert aktive Pakete, Punkte,
+- [~] **PK3 Dashboard liest den Katalog** – Function `operator-catalog` (liefert aktive Pakete, Punkte,
   Aktionen, Kundenpreise). Hook `useCatalog()`; `Plans`, `ShopPackages`, `SpeedPackages`, `SoftwarePackages`,
   `CompareTable` zeichnen aus dem Katalog; fehlt er, gelten die festen Werte. Die Vergleichstabelle wird aus den
   „enthalten“-Häkchen erzeugt, also nie mehr von Hand gepflegt.
@@ -259,6 +259,8 @@ Push nutzt `operator_push_subscriptions` + `_shared/webpush.ts`.
 
 ```sql
 catalog_packages(
+  -- (gebaut: siehe supabase/migrations/20261011100000_catalog.sql; Texte der Karten stehen in `texts`, die
+  --  „Das ist dabei / nicht dabei“-Liste in `bullets`, Sonderwerte in `meta`, Vergleichszeilen mit `kind`)
   key text primary key,                 -- z. B. 'marketing_starter', 'shop_monthly', 'speed_display', 'software_year'
   grp text not null,                    -- 'plan' | 'shop' | 'speed' | 'software' | 'system' | 'addon'
   sort int not null default 0,
@@ -337,6 +339,16 @@ Je Seite:
 6. Öffentliche Seiten bleiben auf Deutsch (wie bisher); Sprüche sind freie Texte des Betreibers.
 
 ## 8. Protokoll
+
+11.10.2026, Claude (Sonnet 5.5) – PK1–PK3 gebaut, `[~]` bis John es gesehen hat:
+- PK1: Migration `20261011100000_catalog.sql` (erzeugt von `scripts/catalog_seed.py`, nochmal ausführen ändert nichts am Bearbeiteten).
+  16 Pakete, 59 Vergleichszeilen, alle 7 Sprachen aus `i18n.tsx`. Functions `admin-catalog` (Staff) und `operator-catalog` live.
+- PK2: CRM `/pakete` (Repo liftpictures-crm, `PackagesPage.tsx`): Pakete bearbeiten, Vergleichszeilen, Verlauf. Neue **Pakete** anlegen ist
+  bewusst nicht dabei – das Dashboard zeigt nur bekannte Pakete; neue Vergleichszeilen gehen.
+- PK3: Dashboard liest den Katalog (`src/lib/catalog.ts`, `useCatalog`), mit Rückfall auf die eingebauten Werte. Geändert: `Plans`, `ShopPackages`,
+  `SpeedPackages`, `SoftwarePackages`, `PackageCompare`, `CompareTable`, `PlanCard` (zeigt Nicht-Enthaltenes durchgestrichen).
+- Regel beim Speichern: Ändert sich der deutsche Text und die Übersetzung wurde nicht angefasst, wird die alte Übersetzung gelöscht (zeigt dann Deutsch).
+- Nächster Schritt: PK4 (Rabatte je Kunde), dann PK5 (Aktionen).
 
 10.10.2026, Claude (Opus 5.5 / Sonnet 5.5), alles lokal geprüft mit tsc, check:i18n, build – **Sichtprüfung durch John steht aus** (Chrome-Erweiterung getrennt), deshalb `[~]`:
 
