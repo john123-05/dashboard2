@@ -123,6 +123,7 @@ export default function App() {
                 <Route path="/configuration/produkt/:id" element={<ConfigurationProduct />} />
                 <Route path="/shop" element={<Shop />} />
                 <Route path="/shop/preise" element={<ShopPricing />} />
+                <Route path="/shop/bearbeiten" element={<Shop />} />
                 <Route path="/configuration/bestellungen" element={<ConfigurationOrders />} />
                 <Route path="/configuration/faq" element={<ConfigurationFaq />} />
                 <Route path="/plaene" element={<OwnerOnly><Plans /></OwnerOnly>} />

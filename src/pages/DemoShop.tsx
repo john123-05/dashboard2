@@ -4,11 +4,14 @@ import {
   ArrowLeft,
   Camera,
   CheckCircle2,
+  Download,
   Loader2,
+  Lock,
   Minus,
   Plus,
   ShoppingBag,
   Trash2,
+  Truck,
   X,
 } from 'lucide-react';
 import ProductMockup from '../components/shop/ProductMockup';
@@ -194,38 +197,42 @@ export default function DemoShop() {
   }
 
   const heroPhoto = photos[0]?.thumb ?? null;
+  const collage = photos.slice(0, 3);
+  const heading = 'font-black uppercase italic tracking-tight';
+  const primaryButton = 'inline-flex items-center justify-center gap-2 rounded-sm px-5 py-3 text-sm font-black uppercase italic tracking-wide transition hover:brightness-95 disabled:opacity-50';
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-slate-50 text-slate-800" style={{ fontFamily: font.family }}>
-      <div className="bg-amber-100 px-4 py-2 text-center text-xs font-medium text-amber-900">
-        Vorschau – keine echten Bestellungen. Testkarte: 4242 4242 4242 4242, beliebiges Datum &amp; Prüfnummer.
+    <div className="min-h-screen overflow-x-hidden bg-[#faf9f6] text-[#1a1a1a]" style={{ fontFamily: font.family }}>
+      <div className="bg-[#1a1a1a] px-4 py-1.5 text-center text-[11px] text-white/75">
+        Vorschau im Testmodus – keine echten Bestellungen. Testkarte: 4242 4242 4242 4242, beliebiges Datum &amp; Prüfnummer.
       </div>
 
-      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur">
+      <header className="sticky top-0 z-30 border-b border-black/10 bg-white">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4">
           <button type="button" onClick={() => setSelected(null)} className="flex min-w-0 items-center gap-3 text-left">
             {shop.logoUrl ? (
               <img src={shop.logoUrl} alt="" className="h-9 w-auto max-w-[120px] object-contain" />
             ) : (
               <span
-                className="flex h-9 w-9 items-center justify-center rounded-xl"
-                style={{ backgroundColor: accent, color: onAccent }}
-              >
-                <Camera className="h-5 w-5" />
-              </span>
+                className="h-9 w-3.5 shrink-0"
+                style={{ backgroundColor: accent, clipPath: 'polygon(65% 0%, 100% 0%, 35% 100%, 0% 100%)' }}
+                aria-hidden="true"
+              />
             )}
-            <span className="truncate text-base font-bold">{title}</span>
+            <span className="min-w-0">
+              <span className="block truncate text-sm font-black uppercase leading-tight tracking-tight">{title}</span>
+              <span className="block text-[11px] uppercase tracking-widest text-[#6b6a63]">Foto-Shop</span>
+            </span>
           </button>
           <button
             type="button"
             onClick={() => setCartOpen(true)}
-            className="relative flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold"
-            style={{ backgroundColor: accent, color: onAccent }}
+            className="relative flex items-center gap-2 rounded-sm border border-black/20 bg-white px-3.5 py-2 text-sm font-bold uppercase tracking-wide hover:bg-black/5"
           >
             <ShoppingBag className="h-4 w-4" />
             <span className="hidden sm:inline">Warenkorb</span>
             {cartCount > 0 && (
-              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-white px-1.5 text-xs font-bold text-slate-900">
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-bold" style={{ backgroundColor: accent, color: onAccent }}>
                 {cartCount}
               </span>
             )}
@@ -235,7 +242,7 @@ export default function DemoShop() {
 
       {checkoutResult === 'success' && (
         <div className="mx-auto mt-6 max-w-6xl px-4">
-          <div className="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+          <div className="flex items-start gap-3 rounded-md border border-emerald-200 bg-emerald-50 p-4">
             <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
             <div className="flex-1 text-sm">
               <p className="font-semibold text-emerald-900">Danke für deine Bestellung!</p>
@@ -252,9 +259,9 @@ export default function DemoShop() {
       )}
       {checkoutResult === 'cancel' && (
         <div className="mx-auto mt-6 max-w-6xl px-4">
-          <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-sm">
+          <div className="flex items-center justify-between gap-3 rounded-md border border-black/10 bg-white p-4 text-sm">
             <span>Zahlung abgebrochen – dein Warenkorb ist noch da.</span>
-            <button type="button" onClick={dismissResult} className="text-slate-500" aria-label="Schließen" title="Schließen">
+            <button type="button" onClick={dismissResult} className="text-[#6b6a63]" aria-label="Schließen" title="Schließen">
               <X className="h-4 w-4" />
             </button>
           </div>
@@ -262,82 +269,130 @@ export default function DemoShop() {
       )}
 
       {selected ? (
-        <main className="mx-auto max-w-6xl px-4 py-6">
+        <main className="mx-auto max-w-6xl px-4 py-6 pb-28 sm:pb-10">
           <button
             type="button"
             onClick={() => setSelected(null)}
-            className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-slate-900"
+            className="mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-[#6b6a63] hover:text-[#1a1a1a]"
           >
             <ArrowLeft className="h-4 w-4" /> Alle Fotos
           </button>
-          <div className="grid gap-6 lg:grid-cols-[1.1fr_1fr]">
+          <div className="grid gap-8 lg:grid-cols-[1.1fr_1fr]">
             <div className="min-w-0">
-              <div className="relative overflow-hidden rounded-3xl bg-slate-200 shadow-sm">
-                <img src={selected.thumb} alt="" className={`${tileAspect} w-full scale-[1.02] object-cover blur-[1.5px]`} />
-                <span className="absolute inset-0" style={WATERMARK_STYLE} />
+              <div className="relative overflow-hidden rounded-md border border-black/10 bg-white p-2 shadow-sm">
+                <div className="relative overflow-hidden rounded-sm">
+                  <img src={selected.thumb} alt="" className={`${tileAspect} w-full scale-[1.02] object-cover blur-[1.5px]`} />
+                  <span className="absolute inset-0" style={WATERMARK_STYLE} />
+                </div>
               </div>
-              <p className="mt-2 text-xs text-slate-500">
+              <p className="mt-2 text-xs text-[#6b6a63]">
                 Foto #{selected.id.slice(0, 6).toUpperCase()} · {photoTime(selected.capturedAt)} Uhr · nach dem Kauf
                 in voller Auflösung, ohne Wasserzeichen
               </p>
             </div>
-            <div className="min-w-0 space-y-3">
-              <h1 className="text-xl font-bold sm:text-2xl">Was möchtest du mit diesem Foto?</h1>
-              {perPhotoProducts.map((product) => (
-                <div key={product.key} className="flex items-center gap-2.5 rounded-2xl border border-slate-200 bg-white p-2.5 sm:gap-3 sm:p-3">
-                  <ProductMockup
-                    productKey={product.key}
-                    photo={selected.thumb}
-                    accent={accent}
-                    parkName={brandName}
-                    className="h-14 w-16 shrink-0 sm:h-16 sm:w-20"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold leading-tight">{product.label}</p>
-                    <p className="mt-0.5 line-clamp-2 text-xs leading-snug text-slate-500">{product.description}</p>
+            <div className="min-w-0">
+              <p className="text-xs font-black uppercase tracking-widest" style={{ color: accent }}>{brandName}</p>
+              <h1 className={`mt-1 text-2xl sm:text-3xl ${heading}`}>Was möchtest du mit diesem Foto?</h1>
+              <div className="mt-4 divide-y divide-black/10 border-y border-black/10">
+                {perPhotoProducts.map((product) => (
+                  <div key={product.key} className="flex items-center gap-3 py-3">
+                    <ProductMockup
+                      productKey={product.key}
+                      photo={selected.thumb}
+                      accent={accent}
+                      parkName={brandName}
+                      className="h-14 w-16 shrink-0 sm:h-16 sm:w-20"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold leading-tight">{product.label}</p>
+                      <p className="mt-0.5 line-clamp-2 text-xs leading-snug text-[#6b6a63]">{product.description}</p>
+                    </div>
+                    <div className="flex shrink-0 flex-col items-end gap-1.5">
+                      <span className="text-sm font-black tabular-nums">{formatEuro(product.price_cents)}</span>
+                      <button
+                        type="button"
+                        onClick={() => addToCart(product, selected.id)}
+                        className="whitespace-nowrap rounded-sm px-3 py-1.5 text-[11px] font-black uppercase italic tracking-wide sm:text-xs"
+                        style={{ backgroundColor: accent, color: onAccent }}
+                      >
+                        In den Warenkorb
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex shrink-0 flex-col items-end gap-1.5">
-                    <span className="text-sm font-bold">{formatEuro(product.price_cents)}</span>
-                    <button
-                      type="button"
-                      onClick={() => addToCart(product, selected.id)}
-                      className="whitespace-nowrap rounded-full px-2.5 py-1.5 text-[11px] font-semibold sm:px-3 sm:text-xs"
-                      style={{ backgroundColor: accent, color: onAccent }}
-                    >
-                      In den Warenkorb
-                    </button>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
+              <ul className="mt-4 space-y-1.5 text-xs text-[#6b6a63]">
+                <li className="flex items-center gap-2"><Download className="h-3.5 w-3.5" /> Download sofort nach dem Kauf</li>
+                <li className="flex items-center gap-2"><Truck className="h-3.5 w-3.5" /> Gedrucktes kommt per Post zu dir nach Hause</li>
+                <li className="flex items-center gap-2"><Lock className="h-3.5 w-3.5" /> Sichere Zahlung über Stripe</li>
+              </ul>
             </div>
           </div>
         </main>
       ) : (
-        <main>
-          <section style={{ backgroundColor: accent, color: onAccent }}>
-            <div className="mx-auto grid max-w-6xl items-center gap-6 px-4 py-10 md:grid-cols-2">
+        <main className="pb-24 sm:pb-0">
+          <section className="border-b border-black/10 bg-white">
+            <div className="mx-auto grid max-w-6xl items-center gap-8 px-4 py-10 md:grid-cols-[1.05fr_1fr] md:py-14">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-widest opacity-80">{brandName}</p>
-                <h1 className="mt-2 text-3xl font-black leading-tight sm:text-4xl">Deine Fahrt. Dein Foto.</h1>
-                <p className="mt-3 max-w-md text-sm opacity-90">
+                <p className="text-xs font-black uppercase tracking-widest" style={{ color: accent }}>{brandName}</p>
+                <h1 className={`mt-2 text-4xl leading-[0.95] sm:text-5xl ${heading}`}>Deine Fahrt.<br />Dein Foto.</h1>
+                <p className="mt-4 max-w-md text-base text-[#6b6a63]">
                   {shop.welcomeText ||
                     'Hol dir dein Foto von heute – als Download, Abzug oder auf Tasse, T-Shirt und mehr.'}
                 </p>
+                <div className="mt-6 flex flex-wrap items-center gap-3">
+                  <a href="#fotos" className={primaryButton} style={{ backgroundColor: accent, color: onAccent }}>
+                    Fotos von heute ansehen
+                  </a>
+                  {minPhotoPrice !== null && <span className="text-sm text-[#6b6a63]">ab {formatEuro(minPhotoPrice)}</span>}
+                </div>
+                <ul className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-xs text-[#6b6a63]">
+                  <li className="flex items-center gap-1.5"><Download className="h-3.5 w-3.5" /> Sofort-Download</li>
+                  <li className="flex items-center gap-1.5"><Truck className="h-3.5 w-3.5" /> Versand nach Hause</li>
+                  <li className="flex items-center gap-1.5"><Lock className="h-3.5 w-3.5" /> Sichere Zahlung</li>
+                </ul>
               </div>
-              <div className="hidden justify-center md:flex">
-                <ProductMockup productKey="mug" photo={heroPhoto} accent={accent} parkName={brandName} className="h-48 w-60" />
-                <ProductMockup productKey="tshirt" photo={heroPhoto} accent={accent} parkName={brandName} className="h-48 w-60" />
+              <div className="relative hidden h-64 md:block">
+                {collage.length >= 3 ? (
+                  collage.map((photo, index) => (
+                    <div
+                      key={photo.id}
+                      className="absolute w-[52%] bg-white p-2 pb-6 shadow-lg ring-1 ring-black/10"
+                      style={{
+                        left: `${index * 24}%`,
+                        top: `${index === 1 ? 0 : 12}%`,
+                        transform: `rotate(${[-5, 2, 6][index]}deg)`,
+                        zIndex: index === 1 ? 3 : 1,
+                      }}
+                    >
+                      <div className="relative overflow-hidden">
+                        <img src={photo.thumb} alt="" className="aspect-[4/3] w-full scale-[1.02] object-cover blur-[1px]" />
+                        <span className="absolute inset-0" style={WATERMARK_STYLE} />
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="flex h-full items-center justify-center gap-2">
+                    <ProductMockup productKey="print" photo={heroPhoto} accent={accent} parkName={brandName} className="h-48 w-56" />
+                    <ProductMockup productKey="mug" photo={heroPhoto} accent={accent} parkName={brandName} className="h-44 w-52" />
+                  </div>
+                )}
               </div>
             </div>
           </section>
 
-          <section className="mx-auto max-w-6xl px-4 py-8">
-            <h2 className="text-lg font-bold">Fotos von heute</h2>
-            <p className="text-sm text-slate-500">Tippe auf dein Foto, um es zu kaufen oder auf ein Produkt zu drucken.</p>
-            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          <section id="fotos" className="mx-auto max-w-6xl scroll-mt-20 px-4 py-10">
+            <div className="flex flex-wrap items-end justify-between gap-2">
+              <div>
+                <h2 className={`text-2xl ${heading}`}>Fotos von heute</h2>
+                <p className="mt-1 text-sm text-[#6b6a63]">Tippe auf dein Foto, um es zu kaufen oder auf ein Produkt zu drucken.</p>
+              </div>
+              {photos.length > 0 && <p className="text-xs uppercase tracking-widest text-[#6b6a63]">{photos.length} Fotos</p>}
+            </div>
+            <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
               {photos.length === 0
                 ? Array.from({ length: 8 }).map((_, i) => (
-                    <div key={i} className="flex aspect-[4/3] items-center justify-center rounded-2xl bg-slate-200 text-slate-400">
+                    <div key={i} className="flex aspect-[4/3] items-center justify-center rounded-md border border-black/10 bg-white text-black/20">
                       <Camera className="h-6 w-6" />
                     </div>
                   ))
@@ -346,19 +401,15 @@ export default function DemoShop() {
                       key={photo.id}
                       type="button"
                       onClick={() => setSelected(photo)}
-                      className={`group overflow-hidden rounded-2xl bg-white text-left shadow-sm ring-1 ring-slate-200 transition hover:shadow-md ${index >= 6 && !showAllPhotos ? 'hidden sm:block' : ''}`}
+                      className={`group overflow-hidden rounded-md border border-black/10 bg-white text-left transition hover:border-black/30 hover:shadow-md ${index >= 6 && !showAllPhotos ? 'hidden sm:block' : ''}`}
                     >
                       <div className="relative overflow-hidden">
-                        <img src={photo.thumb} alt="" className={`${tileAspect} w-full scale-[1.02] object-cover blur-[1px]`} />
+                        <img src={photo.thumb} alt="" className={`${tileAspect} w-full scale-[1.02] object-cover blur-[1px] transition duration-300 group-hover:scale-105`} />
                         <span className="absolute inset-0" style={WATERMARK_STYLE} />
                       </div>
                       <div className="flex items-center justify-between px-3 py-2 text-xs">
-                        <span className="text-slate-500">{photoTime(photo.capturedAt)} Uhr</span>
-                        {minPhotoPrice !== null && (
-                          <span className="font-semibold" style={{ color: accent }}>
-                            ab {formatEuro(minPhotoPrice)}
-                          </span>
-                        )}
+                        <span className="text-[#6b6a63]">{photoTime(photo.capturedAt)} Uhr</span>
+                        {minPhotoPrice !== null && <span className="font-black tabular-nums">ab {formatEuro(minPhotoPrice)}</span>}
                       </div>
                     </button>
                   ))}
@@ -367,7 +418,7 @@ export default function DemoShop() {
               <button
                 type="button"
                 onClick={() => setShowAllPhotos(true)}
-                className="mt-4 w-full rounded-full border border-slate-300 bg-white py-2.5 text-sm font-semibold text-slate-700 sm:hidden"
+                className="mt-4 w-full rounded-sm border border-black/20 bg-white py-3 text-sm font-black uppercase italic tracking-wide sm:hidden"
               >
                 Weitere Fotos anzeigen ({photos.length - 6})
               </button>
@@ -375,78 +426,90 @@ export default function DemoShop() {
           </section>
 
           {dayPass && (
-            <section className="mx-auto max-w-6xl px-4 pb-8">
-              <div className="flex flex-col items-center gap-4 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200 sm:flex-row">
-                <ProductMockup productKey="daypass" photo={heroPhoto} accent={accent} className="h-28 w-36 shrink-0" />
-                <div className="flex-1 text-center sm:text-left">
-                  <p className="text-base font-bold">{dayPass.label}</p>
-                  <p className="text-sm text-slate-500">{dayPass.description}</p>
+            <section className="mx-auto max-w-6xl px-4 pb-10">
+              <div className="flex flex-col items-center gap-4 overflow-hidden rounded-md border border-black/10 bg-white sm:flex-row">
+                <span className="hidden w-1.5 self-stretch sm:block" style={{ backgroundColor: accent }} />
+                <ProductMockup productKey="daypass" photo={heroPhoto} accent={accent} className="mt-4 h-28 w-36 shrink-0 sm:my-4" />
+                <div className="flex-1 px-4 text-center sm:px-0 sm:text-left">
+                  <p className={`text-lg ${heading}`}>{dayPass.label}</p>
+                  <p className="text-sm text-[#6b6a63]">{dayPass.description}</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => addToCart(dayPass, null)}
-                  className="rounded-full px-5 py-2.5 text-sm font-semibold"
-                  style={{ backgroundColor: accent, color: onAccent }}
-                >
-                  {formatEuro(dayPass.price_cents)} · In den Warenkorb
-                </button>
+                <div className="flex w-full flex-col items-center gap-1 border-t border-black/10 p-4 sm:w-auto sm:border-l sm:border-t-0 sm:px-6">
+                  <span className="text-xl font-black tabular-nums">{formatEuro(dayPass.price_cents)}</span>
+                  <button type="button" onClick={() => addToCart(dayPass, null)} className={primaryButton} style={{ backgroundColor: accent, color: onAccent }}>
+                    In den Warenkorb
+                  </button>
+                </div>
               </div>
             </section>
           )}
 
           {perPhotoProducts.length > 1 && (
-            <section className="mx-auto max-w-6xl px-4 pb-12">
-              <h2 className="text-lg font-bold">Dein Foto auf …</h2>
-              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-                {perPhotoProducts.map((product) => (
-                  <div key={product.key} className="rounded-2xl bg-white p-3 text-center shadow-sm ring-1 ring-slate-200">
-                    <ProductMockup
-                      productKey={product.key}
-                      photo={heroPhoto}
-                      accent={accent}
-                      parkName={brandName}
-                      className="mx-auto h-24 w-full"
-                    />
-                    <p className="mt-2 text-sm font-semibold">{product.label}</p>
-                    <p className="text-xs text-slate-500">{formatEuro(product.price_cents)}</p>
-                  </div>
-                ))}
+            <section className="border-t border-black/10 bg-white">
+              <div className="mx-auto max-w-6xl px-4 py-10">
+                <h2 className={`text-2xl ${heading}`}>Dein Foto auf …</h2>
+                <p className="mt-1 text-sm text-[#6b6a63]">Wähle oben dein Foto – diese Produkte kannst du damit bestellen.</p>
+                <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+                  {perPhotoProducts.map((product) => (
+                    <div key={product.key} className="rounded-md border border-black/10 bg-[#faf9f6] p-3 text-center">
+                      <ProductMockup
+                        productKey={product.key}
+                        photo={heroPhoto}
+                        accent={accent}
+                        parkName={brandName}
+                        className="mx-auto h-24 w-full"
+                      />
+                      <p className="mt-2 text-sm font-bold leading-tight">{product.label}</p>
+                      <p className="mt-0.5 text-xs tabular-nums text-[#6b6a63]">{formatEuro(product.price_cents)}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
             </section>
           )}
         </main>
       )}
 
-      <footer className="border-t border-slate-200 bg-white py-6 text-center text-xs text-slate-400">
-        {brandName} · Foto-Shop powered by Liftpictures
+      <footer className="bg-[#1a1a1a] px-4 py-8 text-center text-xs text-white/60">
+        <p className="font-black uppercase tracking-widest text-white">{brandName}</p>
+        <p className="mt-2">Foto-Shop powered by Liftpictures · Impressum · Datenschutz · AGB</p>
       </footer>
 
       {added && (
-        <div className="fixed bottom-5 left-1/2 z-40 -translate-x-1/2 rounded-full bg-slate-900 px-4 py-2 text-sm text-white shadow-lg">
+        <div className="fixed bottom-20 left-1/2 z-40 -translate-x-1/2 rounded-sm bg-[#1a1a1a] px-4 py-2 text-sm text-white shadow-lg sm:bottom-5">
           {added} liegt im Warenkorb
         </div>
       )}
 
+      {/* Handy: fester Balken, sobald etwas im Warenkorb liegt */}
+      {cartCount > 0 && !cartOpen && (
+        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-black/10 bg-white p-3 sm:hidden">
+          <button type="button" onClick={() => setCartOpen(true)} className={`${primaryButton} w-full`} style={{ backgroundColor: accent, color: onAccent }}>
+            <ShoppingBag className="h-4 w-4" /> Warenkorb ({cartCount}) · {formatEuro(cartTotal)}
+          </button>
+        </div>
+      )}
+
       {cartOpen && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/40" onClick={() => setCartOpen(false)}>
+        <div className="fixed inset-0 z-50 flex justify-end bg-black/40" onClick={() => setCartOpen(false)}>
           <aside
             className="flex h-full w-full max-w-md flex-col bg-white shadow-2xl"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-              <h2 className="text-lg font-bold">Warenkorb</h2>
+            <div className="flex items-center justify-between border-b border-black/10 px-5 py-4">
+              <h2 className={`text-xl ${heading}`}>Warenkorb</h2>
               <button type="button" onClick={() => setCartOpen(false)} aria-label="Schließen">
-                <X className="h-5 w-5 text-slate-500" />
+                <X className="h-5 w-5 text-[#6b6a63]" />
               </button>
             </div>
-            <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
-              {cart.length === 0 && <p className="text-sm text-slate-500">Dein Warenkorb ist leer.</p>}
+            <div className="flex-1 divide-y divide-black/10 overflow-y-auto px-5">
+              {cart.length === 0 && <p className="py-6 text-sm text-[#6b6a63]">Dein Warenkorb ist leer.</p>}
               {cart.map((item, index) => {
                 const product = productByKey.get(item.key);
                 if (!product) return null;
                 const photo = item.photoId ? photoById.get(item.photoId) : null;
                 return (
-                  <div key={`${item.key}-${item.photoId}`} className="flex items-center gap-3 rounded-2xl border border-slate-200 p-3">
+                  <div key={`${item.key}-${item.photoId}`} className="flex items-center gap-3 py-4">
                     <ProductMockup
                       productKey={item.key}
                       photo={photo?.thumb ?? heroPhoto}
@@ -455,42 +518,44 @@ export default function DemoShop() {
                       className="h-14 w-16 shrink-0"
                     />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold">{product.label}</p>
-                      <p className="text-xs text-slate-500">
+                      <p className="truncate text-sm font-bold">{product.label}</p>
+                      <p className="text-xs text-[#6b6a63]">
                         {item.photoId ? `Foto #${item.photoId.slice(0, 6).toUpperCase()}` : 'Alle Fotos des Tages'}
                       </p>
                       <div className="mt-1.5 flex items-center gap-2">
-                        <button type="button" onClick={() => changeQuantity(index, -1)} className="rounded-full border p-1" aria-label="Weniger">
+                        <button type="button" onClick={() => changeQuantity(index, -1)} className="rounded-sm border border-black/20 p-1" aria-label="Weniger">
                           {item.quantity === 1 ? <Trash2 className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
                         </button>
-                        <span className="w-4 text-center text-sm">{item.quantity}</span>
-                        <button type="button" onClick={() => changeQuantity(index, 1)} className="rounded-full border p-1" aria-label="Mehr">
+                        <span className="w-4 text-center text-sm tabular-nums">{item.quantity}</span>
+                        <button type="button" onClick={() => changeQuantity(index, 1)} className="rounded-sm border border-black/20 p-1" aria-label="Mehr">
                           <Plus className="h-3 w-3" />
                         </button>
                       </div>
                     </div>
-                    <span className="text-sm font-bold">{formatEuro(product.price_cents * item.quantity)}</span>
+                    <span className="text-sm font-black tabular-nums">{formatEuro(product.price_cents * item.quantity)}</span>
                   </div>
                 );
               })}
             </div>
-            <div className="border-t border-slate-200 px-5 py-4">
-              <div className="mb-3 flex items-center justify-between text-base font-bold">
-                <span>Summe</span>
-                <span>{formatEuro(cartTotal)}</span>
+            <div className="border-t border-black/10 px-5 py-4">
+              <div className="mb-3 flex items-center justify-between text-base font-black">
+                <span className="uppercase tracking-wide">Summe</span>
+                <span className="tabular-nums">{formatEuro(cartTotal)}</span>
               </div>
               {checkoutError && <p className="mb-2 text-sm text-rose-600">{checkoutError}</p>}
               <button
                 type="button"
                 disabled={cart.length === 0 || checkingOut}
                 onClick={() => void checkout()}
-                className="flex w-full items-center justify-center gap-2 rounded-full py-3 text-sm font-bold disabled:opacity-50"
+                className={`${primaryButton} w-full`}
                 style={{ backgroundColor: accent, color: onAccent }}
               >
                 {checkingOut && <Loader2 className="h-4 w-4 animate-spin" />}
                 Zur Kasse
               </button>
-              <p className="mt-2 text-center text-[11px] text-slate-400">Sichere Zahlung über Stripe · Testmodus</p>
+              <p className="mt-2 flex items-center justify-center gap-1.5 text-[11px] text-[#6b6a63]">
+                <Lock className="h-3 w-3" /> Sichere Zahlung über Stripe · Testmodus
+              </p>
             </div>
           </aside>
         </div>

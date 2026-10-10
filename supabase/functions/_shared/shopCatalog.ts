@@ -9,6 +9,8 @@ export type CatalogProduct = {
   default_price_cents: number;
   // false: one item for the whole visit (e.g. day pass), not tied to one photo
   per_photo: boolean;
+  // false: neu im Katalog, bleibt aus, bis der Betreiber es einschaltet (bestehende Shops ändern sich nicht)
+  default_enabled?: boolean;
 };
 
 export const SHOP_CATALOG: CatalogProduct[] = [
@@ -18,6 +20,10 @@ export const SHOP_CATALOG: CatalogProduct[] = [
   { key: 'magnet', label: 'Kühlschrankmagnet', description: 'Erinnerung für jeden Tag', default_price_cents: 699, per_photo: true },
   { key: 'mug', label: 'Tasse', description: 'Keramiktasse mit deinem Foto, spülmaschinenfest', default_price_cents: 1499, per_photo: true },
   { key: 'tshirt', label: 'T-Shirt', description: 'Bio-Baumwolle, dein Foto auf der Brust', default_price_cents: 2499, per_photo: true },
+  { key: 'poster', label: 'Poster 30×40', description: 'Dein Foto groß an der Wand, matt gedruckt', default_price_cents: 1499, per_photo: true, default_enabled: false },
+  { key: 'canvas', label: 'Leinwand 30×40', description: 'Auf Keilrahmen gespannt, fertig zum Aufhängen', default_price_cents: 3999, per_photo: true, default_enabled: false },
+  { key: 'keychain', label: 'Schlüsselanhänger', description: 'Dein Foto immer dabei', default_price_cents: 899, per_photo: true, default_enabled: false },
+  { key: 'puzzle', label: 'Puzzle (120 Teile)', description: 'Dein Foto zum Zusammensetzen', default_price_cents: 1999, per_photo: true, default_enabled: false },
   { key: 'daypass', label: 'Tagespass', description: 'Alle deine Fotos des Tages als Download', default_price_cents: 1499, per_photo: false },
 ];
 
@@ -37,7 +43,7 @@ export function mergeProducts(stored: unknown): ShopProduct[] {
     const price = Number(override?.price_cents);
     return {
       ...product,
-      enabled: typeof override?.enabled === 'boolean' ? override.enabled : true,
+      enabled: typeof override?.enabled === 'boolean' ? override.enabled : product.default_enabled !== false,
       price_cents: Number.isInteger(price) && price >= 50 ? price : product.default_price_cents,
     };
   });

@@ -1,7 +1,7 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import QRCode from '../lib/vendor/qrcode.bundle.js';
-import { CheckCircle2, ExternalLink, Image as ImageIcon, Monitor, Send, X } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, ChevronDown, ExternalLink, Image as ImageIcon, Monitor, Pencil, Send, Smartphone, X } from 'lucide-react';
 import GlassCard from '../components/ui/GlassCard';
 import ProductMockup from '../components/shop/ProductMockup';
 import { usePark } from '../contexts/ParkContext';
@@ -11,6 +11,7 @@ import {
   saveShopSettings,
   uploadShopLogo,
   type ShopRedemptions,
+  type ShopRevenue,
   type ShopSettings,
 } from '../lib/shop';
 import { formatEuro } from '../lib/demoShop';
@@ -110,6 +111,11 @@ export default function Shop() {
   const [settings, setSettings] = useState<ShopSettings | null>(null);
   const [days, setDays] = useState<AggregatedDay[] | null>(null);
   const [redemptions, setRedemptions] = useState<ShopRedemptions | null>(null);
+  const [revenue, setRevenue] = useState<ShopRevenue | null>(null);
+  const editing = useLocation().pathname.endsWith('/bearbeiten');
+  const [openSection, setOpenSection] = useState<'design' | 'texts' | 'products' | 'layout' | 'payments' | null>('design');
+  const [previewMode, setPreviewMode] = useState<'phone' | 'desktop'>('phone');
+  const [dirty, setDirty] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
@@ -139,10 +145,11 @@ export default function Shop() {
     let active = true;
     setLoading(true);
     fetchShopOverview(parkId)
-      .then(({ settings: s, redemptions: r }) => {
+      .then(({ settings: s, redemptions: r, revenue: rev }) => {
         if (!active) return;
         applySettings(s);
         setRedemptions(r);
+        setRevenue(rev ?? null);
       })
       .catch((e) => active && setError(e instanceof Error ? e.message : t('shop.load_failed')))
       .finally(() => active && setLoading(false));
@@ -221,6 +228,7 @@ export default function Shop() {
       });
       applySettings(updated);
       setPreviewVersion((v) => v + 1);
+      setDirty(false);
       setStatus(t('shop.saved'));
     } catch (e) {
       setError(e instanceof Error ? e.message : t('shop.save_failed'));
@@ -246,6 +254,304 @@ export default function Shop() {
   }
 
   const requestedAt = settings?.activation_requested_at ? new Date(settings.activation_requested_at) : null;
+  const productLabel = (product: EditableProduct) =>
+    t(`shop.catalog.${product.key}.label`) === `shop.catalog.${product.key}.label` ? product.label : t(`shop.catalog.${product.key}.label`);
+  const productDescription = (product: EditableProduct) =>
+    t(`shop.catalog.${product.key}.description`) === `shop.catalog.${product.key}.description` ? product.description : t(`shop.catalog.${product.key}.description`);
+  const activeProducts = products.filter((p) => p.enabled);
+  const NEW_KEYS = ['poster', 'canvas', 'keychain', 'puzzle'];
+  const field = 'mt-1 w-full rounded-lg border border-[color:var(--line-strong)] bg-white px-3 py-2 text-sm text-[color:var(--ink)] focus:border-brand-500 focus:outline-none';
+  const touch = () => { setDirty(true); setStatus(null); };
+
+  const statusChip = (
+    <span
+      className={`rounded-full px-3 py-1 text-xs font-semibold ${requestedAt ? 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200' : 'bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-200'}`}
+    >
+      {requestedAt ? t('shop.activation_requested') : t('shop.stripe_test')}
+    </span>
+  );
+
+  const shownMode = editing ? previewMode : 'phone';
+  const preview = demoUrl ? (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="inline-flex rounded-md border border-[color:var(--line-strong)] p-0.5">
+          {(['phone', 'desktop'] as const).map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => (mode === 'desktop' && !editing ? setDesktopOpen(true) : setPreviewMode(mode))}
+              aria-pressed={shownMode === mode}
+              className={`inline-flex items-center gap-1.5 rounded px-3 py-1 text-xs transition-colors ${
+                shownMode === mode ? 'bg-[color:var(--ink)] text-white' : 'text-[color:var(--ink-2)] hover:bg-slate-100'
+              }`}
+            >
+              {mode === 'phone' ? <Smartphone className="h-3.5 w-3.5" /> : <Monitor className="h-3.5 w-3.5" />}
+              {mode === 'phone' ? t('shop2.phone') : t('shop.desktop_version')}
+            </button>
+          ))}
+        </div>
+        <a
+          href={qrUrl ?? demoUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="ml-auto inline-flex items-center gap-1.5 text-xs font-semibold text-brand-700 hover:underline"
+        >
+          <ExternalLink className="h-3.5 w-3.5" />
+          {t('shop.open_demo')}
+        </a>
+      </div>
+      <PreviewFrame key={`${previewVersion}-${shownMode}`} src={`${demoUrl}?embed=1`} mode={shownMode} />
+      {qr && !editing && (
+        <div className="flex items-center gap-4 rounded-xl bg-slate-50 p-3">
+          <img src={qr} alt={t('shop.preview_qr')} className="h-24 w-24 shrink-0 rounded" />
+          <p className="text-xs text-slate-600">
+            {t('shop.scan_qr')}
+          </p>
+        </div>
+      )}
+    </div>
+  ) : (
+    <p className="text-sm text-slate-400">{loading ? t('app.loading') : t('shop.preview_unavailable')}</p>
+  );
+
+  const desktopDialog = desktopOpen && demoUrl && (
+    <div className="fixed inset-0 z-50 flex flex-col bg-slate-900/60 p-3 sm:p-6" onClick={() => setDesktopOpen(false)}>
+      <div
+        className="mx-auto flex h-full w-full max-w-[1500px] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-2.5">
+          <p className="text-sm font-semibold text-slate-700">{t('shop.desktop_title')}</p>
+          <div className="flex items-center gap-2">
+            <a
+              href={qrUrl ?? demoUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              {t('shop.open_demo')}
+            </a>
+            <button type="button" onClick={() => setDesktopOpen(false)} aria-label={t('app.dismiss')} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+        <iframe title={t('shop.desktop_title')} src={`${demoUrl}?embed=1`} className="w-full flex-1 border-0" />
+      </div>
+    </div>
+  );
+
+  // ---------------------------------------------------------------- Editor (/shop/bearbeiten)
+  if (editing) {
+    const section = (
+      key: NonNullable<typeof openSection>,
+      title: string,
+      subtitle: string,
+      children: React.ReactNode,
+      badge?: string,
+    ) => (
+      <div className="border-b border-[color:var(--line)] last:border-0">
+        <button
+          type="button"
+          onClick={() => setOpenSection(openSection === key ? null : key)}
+          aria-expanded={openSection === key}
+          className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left"
+        >
+          <span className="min-w-0">
+            <span className="flex items-center gap-2 text-sm font-semibold text-[color:var(--ink)]">
+              {title}
+              {badge && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">{badge}</span>}
+            </span>
+            <span className="mt-0.5 block text-xs text-[color:var(--ink-3)]">{subtitle}</span>
+          </span>
+          <ChevronDown className={`h-4 w-4 shrink-0 text-[color:var(--ink-3)] transition-transform ${openSection === key ? 'rotate-180' : ''}`} />
+        </button>
+        {openSection === key && <div className="px-5 pb-5">{children}</div>}
+      </div>
+    );
+
+    return (
+      <div className="space-y-6">
+        <UpgradePageHeader
+          back={
+            <Link to="/shop" className="inline-flex items-center gap-1.5 text-sm text-[color:var(--ink-3)] hover:text-[color:var(--ink)]">
+              <ArrowLeft className="h-4 w-4" /> {t('shop2.back')}
+            </Link>
+          }
+          title={t('shop2.edit_shop')}
+          subtitle={t('shop2.editor_sub')}
+          actions={statusChip}
+        />
+
+        {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
+
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,440px)_minmax(0,1fr)]">
+          <GlassCard className="self-start overflow-hidden p-0">
+            {loading ? (
+              <p className="p-5 text-sm text-slate-400">{t('app.loading')}</p>
+            ) : (
+              <>
+                {section('design', t('shop2.sec_design'), t('shop2.sec_design_sub'), (
+                  <div className="space-y-4">
+                    <div className="flex flex-wrap items-center gap-6">
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="color"
+                          value={color}
+                          onChange={(e) => { setColor(e.target.value); touch(); }}
+                          className="h-9 w-14 cursor-pointer rounded border border-slate-200 bg-white"
+                        />
+                        <span className="text-sm text-slate-500">{color.toUpperCase()}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg bg-slate-50">
+                          {settings?.logo_url ? (
+                            <img src={settings.logo_url} alt="Logo" className="h-full w-full object-contain" />
+                          ) : (
+                            <ImageIcon className="h-5 w-5 text-slate-300" />
+                          )}
+                        </div>
+                        <input
+                          ref={logoInputRef}
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) void handleLogoChange(file);
+                          }}
+                        />
+                        <button
+                          type="button"
+                          disabled={uploadingLogo}
+                          onClick={() => logoInputRef.current?.click()}
+                          className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-60"
+                        >
+                          {uploadingLogo ? t('shop.uploading') : t('shop.upload_logo')}
+                        </button>
+                      </div>
+                    </div>
+                    <label className="block text-xs font-medium text-slate-600">
+                      {t('shop.font')}
+                      <select value={fontFamily} onChange={(e) => { setFontFamily(e.target.value); touch(); }} className={field}>
+                        {SHOP_FONTS.map((font) => (
+                          <option key={font.key} value={font.key}>
+                            {font.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                ))}
+
+                {section('texts', t('shop2.sec_texts'), t('shop2.sec_texts_sub'), (
+                  <div className="space-y-4">
+                    <label className="block text-xs font-medium text-slate-600">
+                      {t('shop.name')}
+                      <input value={shopName} maxLength={60} placeholder={parkName ?? t('shop.photo_shop')} onChange={(e) => { setShopName(e.target.value); touch(); }} className={field} />
+                    </label>
+                    <label className="block text-xs font-medium text-slate-600">
+                      {t('shop.welcome_text')}
+                      <textarea value={welcomeText} maxLength={240} rows={3} placeholder={t('shop.welcome_placeholder')} onChange={(e) => { setWelcomeText(e.target.value); touch(); }} className={field} />
+                    </label>
+                  </div>
+                ))}
+
+                {section('products', t('shop.products_prices'), t('shop2.active_products', { count: activeProducts.length }), (
+                  <div className="divide-y divide-slate-100">
+                    {products.map((product, index) => (
+                      <div key={product.key} className="flex items-center gap-3 py-2.5">
+                        <ProductMockup productKey={product.key} photo={null} accent={color} parkName={parkName ?? ''} className="h-12 w-14 shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <p className={`flex items-center gap-1.5 text-sm font-medium ${product.enabled ? 'text-slate-800' : 'text-slate-400'}`}>
+                            <span className="truncate">{productLabel(product)}</span>
+                            {NEW_KEYS.includes(product.key) && (
+                              <span className="shrink-0 rounded-full bg-brand-50 px-1.5 py-0.5 text-[10px] font-semibold text-brand-700">{t('shop2.new')}</span>
+                            )}
+                          </p>
+                          <p className="truncate text-xs text-slate-500">{productDescription(product)}</p>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <input
+                            value={product.price}
+                            inputMode="decimal"
+                            disabled={!product.enabled}
+                            onChange={(e) => {
+                              setProducts((prev) => prev.map((p, i) => (i === index ? { ...p, price: e.target.value } : p)));
+                              touch();
+                            }}
+                            className="w-20 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-right text-sm text-slate-700 focus:border-sky-400 focus:outline-none disabled:opacity-50"
+                          />
+                          <span className="text-sm text-slate-500">€</span>
+                        </div>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={product.enabled}
+                          aria-label={t('shop.offer_product', { product: productLabel(product) })}
+                          onClick={() => {
+                            setProducts((prev) => prev.map((p, i) => (i === index ? { ...p, enabled: !p.enabled } : p)));
+                            touch();
+                          }}
+                          className={`relative h-6 w-11 shrink-0 rounded-full transition ${product.enabled ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                        >
+                          <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition ${product.enabled ? 'left-[22px]' : 'left-0.5'}`} />
+                        </button>
+                      </div>
+                    ))}
+                    <p className="pt-3 text-xs text-slate-500">
+                      {t('shop.merch_note')}{kioskPriceCents ? t('shop.kiosk_comparison', { amount: formatEuro(kioskPriceCents, locale) }) : ''}.
+                    </p>
+                  </div>
+                ))}
+
+                {section('layout', t('shop2.sec_layout'), t('shop2.layout_text'), (
+                  <p className="rounded-lg bg-slate-50 p-3 text-sm text-[color:var(--ink-3)]">{t('shop2.layout_text')}</p>
+                ), t('plans.soon'))}
+
+                {section('payments', t('shop2.sec_payments'), t('shop.stripe_test'), (
+                  <p className="rounded-lg bg-slate-50 p-3 text-sm text-[color:var(--ink-2)]">{t('shop2.payments_text')}</p>
+                ))}
+              </>
+            )}
+          </GlassCard>
+
+          <div className="xl:sticky xl:top-6 xl:self-start">
+            <SectionCard title={t('shop.live_preview')} subtitle={t('shop.preview_desc')}>
+              <div className="mt-4">{preview}</div>
+            </SectionCard>
+          </div>
+        </div>
+
+        {/* Feste Speichern-Leiste */}
+        <div className="sticky bottom-4 z-30 rounded-lg border border-[color:var(--line-strong)] bg-white/95 px-4 py-3 shadow-lg backdrop-blur max-[900px]:bottom-[calc(84px+env(safe-area-inset-bottom,0px))]">
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            {status && !dirty && <span className="flex items-center gap-1 text-sm text-emerald-700"><CheckCircle2 className="h-4 w-4" /> {status}</span>}
+            {dirty && <span className="text-sm text-amber-700">{t('shop2.unsaved')}</span>}
+            <button type="button" onClick={() => void handleSave()} disabled={saving || loading || !dirty} className="glass-button-primary disabled:opacity-50">
+              {saving ? t('shop.saving') : t('shop.save_preview')}
+            </button>
+          </div>
+        </div>
+        {desktopDialog}
+      </div>
+    );
+  }
+
+  // ---------------------------------------------------------------- Übersicht (/shop)
+  const hasSales = (revenue?.salesCount ?? 0) > 0;
+  const tile = (label: string, value: string | null) => (
+    <div className="rounded-lg border border-[color:var(--line)] bg-white p-4">
+      <p className="text-xs text-[color:var(--ink-3)]">{label}</p>
+      {value !== null ? (
+        <p className="mt-1.5 text-[26px] font-light leading-none tracking-tight text-[color:var(--ink)]">{value}</p>
+      ) : (
+        <p className="mt-2 inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500">{t('shop2.a_later')}</p>
+      )}
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -253,20 +559,19 @@ export default function Shop() {
         title={t('nav.shop')}
         actions={
           <>
+            {statusChip}
             <Link to="/shop/preise" className="glass-button-secondary">
               {t('shop.view_plans')}
             </Link>
-            <span
-              className={`rounded-full px-3 py-1 text-xs font-semibold ${requestedAt ? 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200' : 'bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-200'}`}
-            >
-              {requestedAt ? t('shop.activation_requested') : t('shop.stripe_test')}
-            </span>
+            <Link to="/shop/bearbeiten" className="glass-button-primary">
+              <Pencil className="h-4 w-4" />
+              {t('shop2.edit_shop')}
+            </Link>
           </>
         }
       />
 
       {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
-      {status && <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{status}</p>}
 
       {isKioskPark && (
         <div className="rounded-xl border border-[color:var(--line)] bg-white p-6 sm:p-8">
@@ -331,215 +636,74 @@ export default function Shop() {
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_440px]">
         <div className="space-y-6">
-          <SectionCard title={t('shop.appearance')} subtitle={t('shop.appearance_desc')}>
+          <SectionCard title={t('shop2.your_shop')} subtitle={loading ? undefined : t('shop2.active_products', { count: activeProducts.length })}>
             {loading ? (
               <p className="mt-4 text-sm text-slate-400">{t('app.loading')}</p>
             ) : (
               <div className="mt-4 space-y-4">
-                <label className="block">
-                  <span className="text-xs font-medium text-slate-600">{t('shop.name')}</span>
-                  <input
-                    value={shopName}
-                    maxLength={60}
-                    placeholder={parkName ?? t('shop.photo_shop')}
-                    onChange={(e) => setShopName(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:border-sky-400 focus:outline-none"
-                  />
-                </label>
-                <label className="block">
-                  <span className="text-xs font-medium text-slate-600">{t('shop.welcome_text')}</span>
-                  <textarea
-                    value={welcomeText}
-                    maxLength={240}
-                    rows={2}
-                    placeholder={t('shop.welcome_placeholder')}
-                    onChange={(e) => setWelcomeText(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:border-sky-400 focus:outline-none"
-                  />
-                </label>
-                <label className="block">
-                  <span className="text-xs font-medium text-slate-600">{t('shop.font')}
-                  </span>
-                  <select
-                    value={fontFamily}
-                    onChange={(e) => setFontFamily(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:border-sky-400 focus:outline-none"
-                  >
-                    {SHOP_FONTS.map((font) => (
-                      <option key={font.key} value={font.key}>
-                        {font.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <div className="flex flex-wrap items-center gap-6">
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="color"
-                      value={color}
-                      onChange={(e) => setColor(e.target.value)}
-                      className="h-9 w-14 cursor-pointer rounded border border-slate-200 bg-white"
-                    />
-                    <span className="text-sm text-slate-500">{color.toUpperCase()}</span>
+                <div className="flex flex-wrap items-center gap-4">
+                  <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg bg-slate-50">
+                    {settings?.logo_url ? <img src={settings.logo_url} alt="Logo" className="h-full w-full object-contain" /> : <ImageIcon className="h-5 w-5 text-slate-300" />}
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg bg-slate-50">
-                      {settings?.logo_url ? (
-                        <img src={settings.logo_url} alt="Logo" className="h-full w-full object-contain" />
-                      ) : (
-                        <ImageIcon className="h-5 w-5 text-slate-300" />
-                      )}
-                    </div>
-                    <input
-                      ref={logoInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) void handleLogoChange(file);
-                      }}
-                    />
-                    <button
-                      type="button"
-                      disabled={uploadingLogo}
-                      onClick={() => logoInputRef.current?.click()}
-                      className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-60"
-                    >
-                      {uploadingLogo ? t('shop.uploading') : t('shop.upload_logo')}
-                    </button>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-[color:var(--ink)]">{shopName || parkName || t('shop.photo_shop')}</p>
+                    <p className="line-clamp-2 text-xs text-[color:var(--ink-3)]">{welcomeText || t('shop.welcome_placeholder')}</p>
                   </div>
+                  <span className="h-8 w-8 shrink-0 rounded-full border border-[color:var(--line)]" style={{ backgroundColor: color }} title={color.toUpperCase()} />
                 </div>
+                <ul className="divide-y divide-[color:var(--line)] border-y border-[color:var(--line)]">
+                  {activeProducts.map((product) => (
+                    <li key={product.key} className="flex items-center gap-3 py-2">
+                      <ProductMockup productKey={product.key} photo={null} accent={color} parkName={parkName ?? ''} className="h-9 w-11 shrink-0" />
+                      <span className="min-w-0 flex-1 truncate text-sm text-[color:var(--ink-2)]">{productLabel(product)}</span>
+                      <span className="text-sm font-medium tabular-nums text-[color:var(--ink)]">{product.price} €</span>
+                    </li>
+                  ))}
+                </ul>
+                <Link to="/shop/bearbeiten" className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-700 hover:underline">
+                  <Pencil className="h-3.5 w-3.5" /> {t('shop2.edit_shop')}
+                </Link>
               </div>
             )}
           </SectionCard>
 
-          <SectionCard title={t('shop.products_prices')} subtitle={t('shop.products_desc')}>
-            {loading ? (
-              <p className="mt-4 text-sm text-slate-400">{t('app.loading')}</p>
-            ) : (
-              <div className="mt-4 divide-y divide-slate-100">
-                {products.map((product, index) => (
-                  <div key={product.key} className="flex items-center gap-3 py-2.5">
-                    <ProductMockup productKey={product.key} photo={null} accent={color} parkName={parkName ?? ''} className="h-12 w-14 shrink-0" />
-                    <div className="min-w-0 flex-1">
-                      <p className={`text-sm font-medium ${product.enabled ? 'text-slate-800' : 'text-slate-400'}`}>{t(`shop.catalog.${product.key}.label`) === `shop.catalog.${product.key}.label` ? product.label : t(`shop.catalog.${product.key}.label`)}</p>
-                      <p className="truncate text-xs text-slate-500">{t(`shop.catalog.${product.key}.description`) === `shop.catalog.${product.key}.description` ? product.description : t(`shop.catalog.${product.key}.description`)}</p>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <input
-                        value={product.price}
-                        inputMode="decimal"
-                        disabled={!product.enabled}
-                        onChange={(e) =>
-                          setProducts((prev) => prev.map((p, i) => (i === index ? { ...p, price: e.target.value } : p)))
-                        }
-                        className="w-20 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-right text-sm text-slate-700 focus:border-sky-400 focus:outline-none disabled:opacity-50"
-                      />
-                      <span className="text-sm text-slate-500">€</span>
-                    </div>
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={product.enabled}
-                      aria-label={t('shop.offer_product', { product: t(`shop.catalog.${product.key}.label`) === `shop.catalog.${product.key}.label` ? product.label : t(`shop.catalog.${product.key}.label`) })}
-                      onClick={() =>
-                        setProducts((prev) => prev.map((p, i) => (i === index ? { ...p, enabled: !p.enabled } : p)))
-                      }
-                      className={`relative h-6 w-11 shrink-0 rounded-full transition ${product.enabled ? 'bg-emerald-500' : 'bg-slate-300'}`}
-                    >
-                      <span
-                        className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition ${product.enabled ? 'left-[22px]' : 'left-0.5'}`}
-                      />
-                    </button>
-                  </div>
-                ))}
-                <p className="pt-3 text-xs text-slate-500">
-                  {t('shop.merch_note')}{kioskPriceCents ? t('shop.kiosk_comparison', { amount: formatEuro(kioskPriceCents, locale) }) : ''}.
-                </p>
-              </div>
-            )}
+          <SectionCard title={t('shop2.analytics')} subtitle={hasSales ? t('shop2.a_test_note') : undefined}>
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              {tile(t('shop2.a_orders'), hasSales ? (revenue?.salesCount ?? 0).toLocaleString(locale) : null)}
+              {tile(t('shop2.a_revenue'), hasSales ? formatEuro(revenue?.totalCents ?? 0, locale) : null)}
+              {tile(t('shop2.a_rate'), null)}
+              {tile(t('shop2.a_top'), null)}
+            </div>
           </SectionCard>
 
-          <div className="flex justify-end">
-            <button
-              type="button"
-              onClick={() => void handleSave()}
-              disabled={saving || loading}
-              className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-500 disabled:opacity-60"
-            >
-              {saving ? t('shop.saving') : t('shop.save_preview')}
-            </button>
-          </div>
+          <SectionCard title={t('shop2.roadmap')}>
+            <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+              {[
+                ['shop2.r_orders', 'shop2.r_orders_text'],
+                ['shop2.sec_layout', 'shop2.layout_text'],
+                ['shop2.r_discount', 'shop2.r_discount_text'],
+                ['shop2.r_stats', 'shop2.r_stats_text'],
+              ].map(([title, text]) => (
+                <li key={title} className="rounded-lg border border-[color:var(--line)] bg-white p-4">
+                  <p className="flex items-center gap-2 text-sm font-semibold text-[color:var(--ink)]">
+                    {t(title)}
+                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">{t('plans.soon')}</span>
+                  </p>
+                  <p className="mt-1 text-xs leading-relaxed text-[color:var(--ink-3)]">{t(text)}</p>
+                </li>
+              ))}
+            </ul>
+          </SectionCard>
         </div>
 
         <div className="xl:sticky xl:top-6 xl:self-start">
           <SectionCard title={t('shop.live_preview')} subtitle={t('shop.preview_desc')}>
-            {demoUrl ? (
-              <div className="mt-4 space-y-4">
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setDesktopOpen(true)}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-white"
-                  >
-                    <Monitor className="h-3.5 w-3.5" />
-                    {t('shop.desktop_version')}
-                  </button>
-                  <a
-                    href={qrUrl ?? demoUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700"
-                  >
-                    <ExternalLink className="h-3.5 w-3.5" />
-                    {t('shop.open_demo')}
-                  </a>
-                </div>
-                <PreviewFrame key={previewVersion} src={`${demoUrl}?embed=1`} mode="phone" />
-                {qr && (
-                  <div className="flex items-center gap-4 rounded-xl bg-slate-50 p-3">
-                    <img src={qr} alt={t('shop.preview_qr')} className="h-24 w-24 shrink-0 rounded" />
-                    <p className="text-xs text-slate-600">
-                      {t('shop.scan_qr')}
-                    </p>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <p className="mt-4 text-sm text-slate-400">{loading ? t('app.loading') : t('shop.preview_unavailable')}</p>
-            )}
+            <div className="mt-4">{preview}</div>
           </SectionCard>
         </div>
       </div>
 
-      {desktopOpen && demoUrl && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-slate-900/60 p-3 sm:p-6" onClick={() => setDesktopOpen(false)}>
-          <div
-            className="mx-auto flex h-full w-full max-w-[1500px] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-2.5">
-              <p className="text-sm font-semibold text-slate-700">{t('shop.desktop_title')}</p>
-              <div className="flex items-center gap-2">
-                <a
-                  href={qrUrl ?? demoUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700"
-                >
-                  <ExternalLink className="h-3.5 w-3.5" />
-                  {t('shop.open_demo')}
-                </a>
-                <button type="button" onClick={() => setDesktopOpen(false)} aria-label={t('app.dismiss')} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100">
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
-            <iframe title={t('shop.desktop_title')} src={`${demoUrl}?embed=1`} className="w-full flex-1 border-0" />
-          </div>
-        </div>
-      )}
+      {desktopDialog}
     </div>
   );
 }

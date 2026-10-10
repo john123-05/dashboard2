@@ -97,6 +97,51 @@ export default function ProductMockup({ productKey, photo, accent, parkName, blu
         </g>
       );
       break;
+    case 'poster':
+      body = (
+        <g filter={`url(#${shadow})`}>
+          <rect x="54" y="8" width="92" height="124" fill="#fff" rx="1" />
+          {photoRect(60, 14, 80, 100, 1)}
+          <rect x="60" y="120" width="34" height="4" rx="2" fill={accent} opacity="0.6" />
+          <rect x="52" y="4" width="96" height="5" rx="2" fill="#475569" />
+          <rect x="52" y="131" width="96" height="5" rx="2" fill="#475569" />
+        </g>
+      );
+      break;
+    case 'canvas':
+      body = (
+        <g filter={`url(#${shadow})`}>
+          <path d="M40 24 L160 24 L168 32 L168 136 L48 136 L40 128 Z" fill="#e2e8f0" />
+          <rect x="40" y="24" width="120" height="104" fill="#fff" />
+          {photoRect(40, 24, 120, 104, 0)}
+        </g>
+      );
+      break;
+    case 'keychain':
+      body = (
+        <g filter={`url(#${shadow})`}>
+          <circle cx="100" cy="24" r="14" fill="none" stroke="#94a3b8" strokeWidth="4" />
+          <rect x="97" y="36" width="6" height="14" rx="2" fill="#94a3b8" />
+          <rect x="60" y="48" width="80" height="96" rx="12" fill="#fff" stroke="#e2e8f0" />
+          {photoRect(66, 56, 68, 68, 6)}
+          <rect x="76" y="130" width="48" height="5" rx="2.5" fill={accent} opacity="0.5" />
+        </g>
+      );
+      break;
+    case 'puzzle':
+      body = (
+        <g filter={`url(#${shadow})`}>
+          <rect x="34" y="26" width="132" height="104" rx="3" fill="#fff" />
+          {photoRect(38, 30, 124, 96, 2)}
+          <g stroke="#fff" strokeWidth="1.6" fill="none" opacity="0.9">
+            <path d="M79 30 v28 c8 -6 8 14 0 8 v28 c8 -6 8 14 0 8 v24" />
+            <path d="M121 30 v24 c-8 -6 -8 14 0 8 v30 c-8 -6 -8 14 0 8 v26" />
+            <path d="M38 62 h28 c-6 8 14 8 8 0 h30 c-6 8 14 8 8 0 h50" />
+            <path d="M38 94 h24 c-6 -8 14 -8 8 0 h34 c-6 -8 14 -8 8 0 h50" />
+          </g>
+        </g>
+      );
+      break;
     case 'daypass':
       body = (
         <g filter={`url(#${shadow})`}>
