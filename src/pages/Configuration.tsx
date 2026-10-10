@@ -21,6 +21,7 @@ import { loadParkDashboardData } from '../lib/parkDashboard';
 import { fetchParkEquipment, meldeAusstattungsInteresse, type EquipmentItem } from '../lib/equipment';
 import { equipmentPrice, equipmentTitle } from '../lib/equipmentI18n';
 import { equipmentDescription } from '../lib/equipmentDescriptions';
+import { PLAN_LABEL_KEY, PLAN_ORDER, useEntitlements, type PlanKey } from '../lib/plans';
 
 type Gruppe = 'Hardware' | 'Materialien' | 'Software' | 'Wartung' | 'Support' | 'Services';
 
@@ -73,6 +74,64 @@ function HeaderIconLink({ to, label, icon: Icon }: { to: string; label: string; 
     >
       <Icon className="h-4 w-4" />
     </Link>
+  );
+}
+
+const PLAN_PRICE: Record<PlanKey, number> = { basis: 0, marketing_starter: 49, marketing_pro: 149 };
+const PLAN_POINTS: Record<PlanKey, string[]> = {
+  basis: ['plans.b_ops', 'plans.b_system', 'plans.b_support'],
+  marketing_starter: ['plans.s_contacts', 'plans.s_survey', 'plans.s_email'],
+  marketing_pro: ['plans.p_social', 'plans.p_review', 'plans.p_email'],
+};
+
+/** „Dein Plan“: die drei Pläne kompakt, der aktuelle markiert; Einzelheiten stehen unter Preise & Pakete. */
+function PlanStrip() {
+  const { t } = useI18n();
+  const locale = useLocaleTag();
+  const { plan, loading } = useEntitlements();
+  return (
+    <SectionCard
+      title={t('fs.plan_title')}
+      subtitle={loading ? undefined : t('fs.plan_sub', { plan: t(PLAN_LABEL_KEY[plan]) })}
+      action={
+        <Link to="/plaene" className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-brand-700 hover:underline">
+          {t('fs.all_prices')}
+          <ChevronRight className="h-4 w-4" />
+        </Link>
+      }
+    >
+      <div className="mt-4 grid gap-3 md:grid-cols-3">
+        {PLAN_ORDER.map((key) => {
+          const current = !loading && plan === key;
+          return (
+            <Link
+              key={key}
+              to="/plaene"
+              className={`flex flex-col rounded-xl border p-4 transition hover:border-brand-300 ${
+                current ? 'border-brand-600 bg-brand-50/40' : 'border-[color:var(--line)] bg-white'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-semibold text-[color:var(--ink)]">{t(PLAN_LABEL_KEY[key])}</p>
+                {current && (
+                  <span className="rounded-full bg-brand-600 px-2 py-0.5 text-[11px] font-semibold text-white">{t('fs.current')}</span>
+                )}
+              </div>
+              <p className="mt-1 text-sm text-[color:var(--ink-2)]">
+                {key === 'basis'
+                  ? t('fs.free')
+                  : t('fs.from_month', { price: PLAN_PRICE[key].toLocaleString(locale, { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }) })}
+              </p>
+              <ul className="mt-3 space-y-1">
+                {PLAN_POINTS[key].map((point) => (
+                  <li key={point} className="text-xs leading-snug text-[color:var(--ink-3)]">· {t(point)}</li>
+                ))}
+              </ul>
+            </Link>
+          );
+        })}
+      </div>
+    </SectionCard>
   );
 }
 
@@ -239,6 +298,7 @@ export default function Configuration() {
         <GlassCard className="p-6">
           <p className="text-sm text-slate-500">{t('config.kiosk_only')}</p>
         </GlassCard>
+        <PlanStrip />
       </div>
     );
   }
@@ -248,7 +308,7 @@ export default function Configuration() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-[28px] font-light tracking-tight text-[color:var(--ink)] sm:text-[32px]">{t('nav.configuration')}</h2>
-          <p className="mt-1 text-sm text-slate-500">{t('config.subtitle')}</p>
+          <p className="mt-1 text-sm text-slate-500">{t('fs.subtitle')}</p>
         </div>
         <div className="flex items-center gap-2">
           <HeaderIconLink to="/configuration/faq" label={t('config.faq')} icon={Info} />
@@ -288,6 +348,8 @@ export default function Configuration() {
           </div>
         )}
       </SectionCard>
+
+      <PlanStrip />
 
       {!loading && empfohlen.length > 0 && (
         <SectionCard title={t('config.more_from_kiosk')}>

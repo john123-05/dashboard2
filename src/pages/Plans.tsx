@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Check, Minus, ChevronRight } from 'lucide-react';
+import { Check, Minus, ChevronRight, Gauge, Mail, Package, ShoppingBag, type LucideIcon } from 'lucide-react';
 import { usePark } from '../contexts/ParkContext';
 import { meldeAusstattungsInteresse } from '../lib/equipment';
 import { BillingDisabledError, openBillingPortal, startCheckout } from '../lib/billing';
@@ -49,23 +49,51 @@ const ROWS: { labelKey: string; cells: [Cell, Cell, Cell]; soon?: boolean }[] = 
   { labelKey: 'plans.row_survey', cells: [false, true, true] },
   { labelKey: 'plans.row_pixel', cells: [false, true, true] },
   { labelKey: 'plans.row_email', cells: [false, '2.000', '10.000'] },
+  { labelKey: 'pp.row_segments', cells: [false, true, true] },
+  { labelKey: 'pp.row_automations', cells: [false, false, true] },
   { labelKey: 'plans.row_social', cells: [false, 'plans.cell_share_unlock', 'plans.cell_campaigns'] },
   { labelKey: 'plans.row_review', cells: [false, false, true] },
   { labelKey: 'plans.row_reports', cells: [false, false, true], soon: true },
   { labelKey: 'plans.row_rights', cells: [false, false, true] },
+  { labelKey: 'pp.row_guides', cells: [true, true, true] },
+  { labelKey: 'pp.row_addon_shop', cells: ['pp.cell_addon', 'pp.cell_addon', 'pp.cell_addon'] },
+  { labelKey: 'pp.row_addon_speed', cells: ['pp.cell_addon', 'pp.cell_addon', 'pp.cell_addon'] },
 ];
 
-const ADDONS = [
-  { to: '/shop/preise', titleKey: 'nav.shop', textKey: 'plans.addon_shop' },
-  { to: '/users', titleKey: 'nav.speed', textKey: 'plans.addon_speed' },
-  { to: '/configuration', titleKey: 'nav.configuration', textKey: 'plans.addon_hardware' },
+type Filter = 'all' | 'marketing' | 'shop' | 'speed' | 'system';
+const FILTERS: { key: Filter; labelKey: string }[] = [
+  { key: 'all', labelKey: 'pp.filter_all' },
+  { key: 'marketing', labelKey: 'pp.filter_marketing' },
+  { key: 'shop', labelKey: 'pp.filter_shop' },
+  { key: 'speed', labelKey: 'pp.filter_speed' },
+  { key: 'system', labelKey: 'pp.filter_system' },
+];
+
+// Zusätzlich buchbare Erweiterungen (unabhängig vom Plan). `feature`: zeigt „Aktiv“, wenn gebucht.
+const ADDONS: {
+  key: string;
+  group: Exclude<Filter, 'all'>;
+  icon: LucideIcon;
+  titleKey: string;
+  textKey: string;
+  priceKey: string;
+  to?: string;
+  linkKey?: string;
+  feature?: 'online_shop' | 'speed';
+}[] = [
+  { key: 'shop', group: 'shop', icon: ShoppingBag, titleKey: 'pp.addon_shop_title', textKey: 'pp.addon_shop_text', priceKey: 'pp.addon_shop_price', to: '/shop/preise', linkKey: 'pp.details', feature: 'online_shop' },
+  { key: 'speed', group: 'speed', icon: Gauge, titleKey: 'pp.addon_speed_title', textKey: 'pp.addon_speed_text', priceKey: 'pp.addon_speed_price', to: '/users', linkKey: 'pp.details', feature: 'speed' },
+  { key: 'mail', group: 'marketing', icon: Mail, titleKey: 'pp.addon_mail_title', textKey: 'pp.addon_mail_text', priceKey: 'pp.addon_mail_price' },
+  { key: 'hardware', group: 'system', icon: Package, titleKey: 'pp.addon_hw_title', textKey: 'pp.addon_hw_text', priceKey: 'pp.price_on_request', to: '/configuration', linkKey: 'pp.open_page' },
 ];
 
 export default function Plans() {
   const { t } = useI18n();
   const locale = useLocaleTag();
   const { parkId } = usePark();
-  const { plan: currentPlan } = useEntitlements();
+  const { plan: currentPlan, has } = useEntitlements();
+  const [filter, setFilter] = useState<Filter>('all');
+  const [mailRequested, setMailRequested] = useState(false);
   const [busy, setBusy] = useState<PlanKey | null>(null);
   const [requested, setRequested] = useState<PlanKey[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -112,124 +140,197 @@ export default function Plans() {
   const showCell = (cell: Cell) => {
     if (cell === true) return <Check className="mx-auto h-4 w-4 text-brand-600" aria-label="✓" />;
     if (cell === false) return <Minus className="mx-auto h-4 w-4 text-slate-300" aria-label="–" />;
-    return <span className="text-sm text-[color:var(--ink)]">{cell.startsWith('plans.') ? t(cell) : cell}</span>;
+    return <span className="text-sm text-[color:var(--ink)]">{cell.startsWith('plans.') || cell.startsWith('pp.') ? t(cell) : cell}</span>;
   };
+
+  const showPlans = filter === 'all' || filter === 'marketing';
+  const addons = ADDONS.filter((addon) => filter === 'all' || addon.group === filter);
+
+  async function requestExtraMails() {
+    if (!parkId) return;
+    setError(null);
+    try {
+      await meldeAusstattungsInteresse(parkId, { label: 'Zusatz-E-Mails anfragen (E-Mail-Marketing)' });
+      setMailRequested(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t('crm_pricing.request_failed'));
+    }
+  }
 
   return (
     <div className="space-y-8">
-      <UpgradePageHeader title={t('plans.page_title')} subtitle={t('plans.page_subtitle')} />
+      <UpgradePageHeader title={t('pp.title')} subtitle={t('pp.subtitle')} />
 
       {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
       {billingResult === 'success' && <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{t('plans.billing_success')}</p>}
       {billingResult === 'cancel' && <p className="rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-700">{t('plans.billing_cancel')}</p>}
-      {currentPlan !== 'basis' && (
-        <button type="button" onClick={() => void manageBilling()} className="glass-button-secondary">
-          {t('plans.manage_billing')}
-        </button>
-      )}
 
-      <div className="grid items-stretch gap-5 pt-3 lg:grid-cols-3">
-        {CARDS.map((card) => {
-          const isCurrent = currentPlan === card.plan;
-          // Niedrigere Pläne als der aktuelle werden nicht mehr zum Anfragen angeboten.
-          const lower = ['basis', 'marketing_starter', 'marketing_pro'].indexOf(card.plan) <
-            ['basis', 'marketing_starter', 'marketing_pro'].indexOf(currentPlan);
-          return (
-            <PlanCard
-              key={card.plan}
-              highlight={card.highlight}
-              badge={card.highlight ? t('plans.badge_popular') : undefined}
-              badgeTone="brand"
-              name={t(PLAN_LABEL_KEY[card.plan])}
-              price={
-                <PriceFigure
-                  value={money(PRICE[card.plan])}
-                  suffix={card.plan === 'basis' ? undefined : t('crm_pricing.per_month')}
-                />
-              }
-              priceNote={t(card.noteKey)}
-              includedLabel={t('crm_pricing.included')}
-              points={card.points.map((key) => t(key))}
-              action={
-                card.plan === 'basis' || lower ? (
-                  <div className="mt-5 min-h-[2.5rem]" />
-                ) : (
-                  <PlanAction
-                    highlight={card.highlight}
-                    done={isCurrent || requested.includes(card.plan)}
-                    doneLabel={isCurrent ? t('plans.current') : t('crm_pricing.requested')}
-                    busy={busy === card.plan}
-                    disabled={busy !== null}
-                    label={t('plans.request')}
-                    busyLabel={t('crm_pricing.sending')}
-                    onClick={() => void request(card.plan)}
-                  />
-                )
-              }
-            />
-          );
-        })}
-      </div>
-      <p className="-mt-4 text-center text-xs text-[color:var(--ink-3)]">{t('plans.request_note')}</p>
-
-      <GlassCard className="overflow-hidden p-0">
-        <div className="border-b border-[color:var(--line)] px-5 py-4">
-          <h3 className="text-base font-semibold text-[color:var(--ink)]">{t('plans.compare_title')}</h3>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[640px] text-left">
-            <thead>
-              <tr className="border-b border-[color:var(--line)] text-xs text-[color:var(--ink-3)]">
-                <th className="px-5 py-3 font-medium" />
-                {CARDS.map((card) => (
-                  <th key={card.plan} className={`w-32 px-3 py-3 text-center font-semibold ${card.highlight ? 'text-brand-700' : 'text-[color:var(--ink-2)]'}`}>
-                    {t(PLAN_LABEL_KEY[card.plan])}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[color:var(--line)]">
-              {ROWS.map((row) => (
-                <tr key={row.labelKey}>
-                  <td className="px-5 py-3 text-sm text-[color:var(--ink-2)]">
-                    {t(row.labelKey)}
-                    {row.soon && (
-                      <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">
-                        {t('plans.soon')}
-                      </span>
-                    )}
-                  </td>
-                  {row.cells.map((cell, index) => (
-                    <td key={index} className="px-3 py-3 text-center">
-                      {showCell(cell)}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </GlassCard>
-
-      <section>
-        <h3 className="text-base font-semibold text-[color:var(--ink)]">{t('plans.addons_title')}</h3>
-        <p className="mt-0.5 text-sm text-[color:var(--ink-3)]">{t('plans.addons_sub')}</p>
-        <div className="mt-4 grid gap-4 sm:grid-cols-3">
-          {ADDONS.map((addon) => (
-            <Link
-              key={addon.to}
-              to={addon.to}
-              className="group flex items-center gap-3 rounded-xl border border-[color:var(--line)] bg-white p-4 transition hover:border-brand-300"
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex max-w-full gap-1 overflow-x-auto rounded-md border border-[color:var(--line-strong)] p-0.5">
+          {FILTERS.map((item) => (
+            <button
+              key={item.key}
+              type="button"
+              onClick={() => setFilter(item.key)}
+              aria-pressed={filter === item.key}
+              className={`shrink-0 rounded px-3.5 py-1.5 text-sm transition-colors ${
+                filter === item.key ? 'bg-[color:var(--ink)] text-white' : 'text-[color:var(--ink-2)] hover:bg-slate-100'
+              }`}
             >
-              <span className="min-w-0 flex-1">
-                <span className="block text-sm font-semibold text-[color:var(--ink)]">{t(addon.titleKey)}</span>
-                <span className="mt-0.5 block text-xs text-[color:var(--ink-3)]">{t(addon.textKey)}</span>
-              </span>
-              <ChevronRight className="h-4 w-4 shrink-0 text-[color:var(--ink-3)] transition group-hover:text-brand-600" />
-            </Link>
+              {t(item.labelKey)}
+            </button>
           ))}
         </div>
-      </section>
+        {currentPlan !== 'basis' && (
+          <button type="button" onClick={() => void manageBilling()} className="glass-button-secondary ml-auto">
+            {t('plans.manage_billing')}
+          </button>
+        )}
+      </div>
+
+      {showPlans && (
+        <section>
+          <h3 className="text-base font-semibold text-[color:var(--ink)]">{t('pp.plans_title')}</h3>
+          <p className="mt-0.5 text-sm text-[color:var(--ink-3)]">{t('pp.plans_sub')}</p>
+          <div className="mt-4 grid items-stretch gap-5 pt-3 lg:grid-cols-3">
+            {CARDS.map((card) => {
+              const isCurrent = currentPlan === card.plan;
+              // Niedrigere Pläne als der aktuelle werden nicht mehr zum Anfragen angeboten.
+              const lower = ['basis', 'marketing_starter', 'marketing_pro'].indexOf(card.plan) <
+                ['basis', 'marketing_starter', 'marketing_pro'].indexOf(currentPlan);
+              return (
+                <PlanCard
+                  key={card.plan}
+                  highlight={card.highlight}
+                  badge={card.highlight ? t('plans.badge_popular') : undefined}
+                  badgeTone="brand"
+                  name={t(PLAN_LABEL_KEY[card.plan])}
+                  price={
+                    <PriceFigure
+                      value={money(PRICE[card.plan])}
+                      suffix={card.plan === 'basis' ? undefined : t('crm_pricing.per_month')}
+                    />
+                  }
+                  priceNote={t(card.noteKey)}
+                  includedLabel={t('crm_pricing.included')}
+                  points={card.points.map((key) => t(key))}
+                  action={
+                    card.plan === 'basis' || lower ? (
+                      <div className="mt-5 min-h-[2.5rem]" />
+                    ) : (
+                      <PlanAction
+                        highlight={card.highlight}
+                        done={isCurrent || requested.includes(card.plan)}
+                        doneLabel={isCurrent ? t('plans.current') : t('crm_pricing.requested')}
+                        busy={busy === card.plan}
+                        disabled={busy !== null}
+                        label={t('plans.request')}
+                        busyLabel={t('crm_pricing.sending')}
+                        onClick={() => void request(card.plan)}
+                      />
+                    )
+                  }
+                />
+              );
+            })}
+          </div>
+          <p className="mt-3 text-center text-xs text-[color:var(--ink-3)]">{t('plans.request_note')}</p>
+        </section>
+      )}
+
+      {addons.length > 0 && (
+        <section>
+          <h3 className="text-base font-semibold text-[color:var(--ink)]">{t('pp.addons_title')}</h3>
+          <p className="mt-0.5 text-sm text-[color:var(--ink-3)]">{t('pp.addons_sub')}</p>
+          <div className={`mt-4 grid gap-4 ${addons.length > 1 ? 'md:grid-cols-2' : ''}`}>
+            {addons.map((addon) => {
+              const Icon = addon.icon;
+              const active = addon.feature ? has(addon.feature) : false;
+              return (
+                <div key={addon.key} className="flex flex-col rounded-xl border border-[color:var(--line)] bg-white p-5">
+                  <div className="flex items-start gap-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-[color:var(--ink-2)]">
+                      <Icon className="h-5 w-5" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-base font-semibold text-[color:var(--ink)]">{t(addon.titleKey)}</p>
+                        {active && (
+                          <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-200">
+                            {t('pp.active')}
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-1 text-sm leading-relaxed text-[color:var(--ink-2)]">{t(addon.textKey)}</p>
+                    </div>
+                  </div>
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[color:var(--line)] pt-4">
+                    <p className="text-sm font-medium text-[color:var(--ink)]">{t(addon.priceKey)}</p>
+                    {addon.to ? (
+                      <Link to={addon.to} className="inline-flex items-center gap-1 text-sm font-semibold text-brand-700 hover:underline">
+                        {t(addon.linkKey ?? 'pp.details')}
+                        <ChevronRight className="h-4 w-4" />
+                      </Link>
+                    ) : mailRequested ? (
+                      <span className="inline-flex items-center gap-1 text-sm font-medium text-emerald-700">
+                        <Check className="h-4 w-4" /> {t('crm_pricing.requested')}
+                      </span>
+                    ) : (
+                      <button type="button" onClick={() => void requestExtraMails()} className="text-sm font-semibold text-brand-700 hover:underline">
+                        {t('plans.request')}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {showPlans && (
+        <GlassCard className="overflow-hidden p-0">
+          <div className="border-b border-[color:var(--line)] px-5 py-4">
+            <h3 className="text-base font-semibold text-[color:var(--ink)]">{t('plans.compare_title')}</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[640px] text-left">
+              <thead>
+                <tr className="border-b border-[color:var(--line)] text-xs text-[color:var(--ink-3)]">
+                  <th className="sticky left-0 bg-white px-5 py-3 font-medium" />
+                  {CARDS.map((card) => (
+                    <th key={card.plan} className={`w-32 px-3 py-3 text-center font-semibold ${card.highlight ? 'text-brand-700' : 'text-[color:var(--ink-2)]'}`}>
+                      {t(PLAN_LABEL_KEY[card.plan])}
+                      <span className="block text-[11px] font-normal text-[color:var(--ink-3)]">
+                        {card.plan === 'basis' ? t('fs.free') : `${money(PRICE[card.plan])} ${t('crm_pricing.per_month')}`}
+                      </span>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[color:var(--line)]">
+                {ROWS.map((row) => (
+                  <tr key={row.labelKey}>
+                    <td className="sticky left-0 bg-white px-5 py-3 text-sm text-[color:var(--ink-2)]">
+                      {t(row.labelKey)}
+                      {row.soon && (
+                        <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">
+                          {t('plans.soon')}
+                        </span>
+                      )}
+                    </td>
+                    {row.cells.map((cell, index) => (
+                      <td key={index} className="px-3 py-3 text-center">
+                        {showCell(cell)}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </GlassCard>
+      )}
     </div>
   );
 }
