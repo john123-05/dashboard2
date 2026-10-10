@@ -309,10 +309,10 @@ export default function ConfigurationProduct() {
 
           <div className="flex flex-col gap-5 p-6 lg:p-8">
             <div>
-              <span className="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide text-slate-500">
+              <span className="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500">
                 {t(`config.category.${item.kategorie}`)}
               </span>
-              <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-800">{equipmentTitle(item.titel, t)}</h2>
+              <h2 className="mt-2 text-[28px] font-light tracking-tight text-[color:var(--ink)] sm:text-[32px]">{equipmentTitle(item.titel, t)}</h2>
             </div>
 
             {preise.length > 0 && (
@@ -327,7 +327,7 @@ export default function ConfigurationProduct() {
 
             {punkte.length > 1 ? (
               <div>
-                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">{t('crm_pricing.included')}</p>
+                <p className="mb-2 text-[11px] font-semibold text-slate-400">{t('crm_pricing.included')}</p>
                 <ul className="space-y-2">
                   {punkte.map((punkt) => (
                     <li key={punkt} className="flex items-start gap-2 text-sm leading-snug text-slate-600">
@@ -345,7 +345,7 @@ export default function ConfigurationProduct() {
             {istVerkauf && (
               <div className="space-y-4">
                 <div>
-                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                  <p className="mb-2 text-[11px] font-semibold text-slate-400">
                     {t('product.add_ons')}
                   </p>
                   <div className="grid gap-2.5 sm:grid-cols-2">
@@ -374,7 +374,7 @@ export default function ConfigurationProduct() {
                             </span>
                           </span>
                           {zusatz.badge && (
-                            <span className="mt-1 w-fit rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800">
+                            <span className="mt-1 w-fit rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
                               {t('speed.offer.popular')}
                             </span>
                           )}
@@ -395,7 +395,7 @@ export default function ConfigurationProduct() {
                 </div>
 
                 <div>
-                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                  <p className="mb-2 text-[11px] font-semibold text-slate-400">
                     {t('product.installment_question')}
                   </p>
                   <div className="grid gap-2.5 sm:grid-cols-2">
@@ -460,7 +460,7 @@ export default function ConfigurationProduct() {
             {istShop && (
               <div className="space-y-4">
                 <div>
-                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">{t('product.choose_subscription')}</p>
+                  <p className="mb-2 text-[11px] font-semibold text-slate-400">{t('product.choose_subscription')}</p>
                   <div className="grid gap-2.5">
                     {([
                       { key: 'monatlich', titel: 'Monatlich', zeile: `${money(SHOP_EINRICHTUNG)} einmalig + ${money(SHOP_MONATLICH)} / Monat`, text: 'Einrichtung einmalig, dann monatlich für Hosting, Service und Wartung.' },
@@ -479,7 +479,7 @@ export default function ConfigurationProduct() {
                         <span className="flex items-center gap-2">
                           <span className="text-sm font-bold text-slate-800">{t(`product.shop_plan.${plan.key}.name`)}</span>
                           {plan.badge && (
-                            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800">
+                            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
                               {t('speed.offer.popular')}
                             </span>
                           )}
@@ -500,7 +500,7 @@ export default function ConfigurationProduct() {
 
             {istSpeed && (
               <div>
-                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">{t('product.choose_plan')}</p>
+                <p className="mb-2 text-[11px] font-semibold text-slate-400">{t('product.choose_plan')}</p>
                 <div className="grid gap-2.5">
                   {SPEED_PAKETE.map((paket) => (
                     <button
@@ -518,7 +518,7 @@ export default function ConfigurationProduct() {
                       <span className="flex items-center gap-2">
                         <span className="text-sm font-bold text-slate-800">{t(paket.key === 'basis' ? 'speed.offer.plan_basic' : paket.key === 'display' ? 'speed.offer.plan_display' : 'speed.offer.plan_long')}</span>
                         {'badge' in paket && (
-                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800">
+                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
                             {t(paket.key === 'display' ? 'speed.offer.popular' : 'speed.offer.value')}
                           </span>
                         )}
@@ -534,7 +534,7 @@ export default function ConfigurationProduct() {
 
             {istCrm && (
               <div>
-                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">{t('product.choose_plan')}</p>
+                <p className="mb-2 text-[11px] font-semibold text-slate-400">{t('product.choose_plan')}</p>
                 <div className="grid gap-2.5">
                   {CRM_PAKETE.map((paket) => (
                     <button
@@ -549,7 +549,7 @@ export default function ConfigurationProduct() {
                       <span className="flex items-center gap-2">
                         <span className="text-sm font-bold text-slate-800">{t(paket.key === 'monatlich' ? 'crm_pricing.monthly' : paket.key === 'jaehrlich' ? 'crm_pricing.yearly_name' : 'crm_pricing.long_name')}</span>
                         {'badge' in paket && (
-                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800">
+                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
                             {t('speed.offer.popular')}
                           </span>
                         )}

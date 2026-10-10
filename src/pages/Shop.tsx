@@ -343,7 +343,7 @@ export default function Shop() {
                     maxLength={60}
                     placeholder={parkName ?? t('shop.photo_shop')}
                     onChange={(e) => setShopName(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white/70 px-3 py-2 text-sm text-slate-700 focus:border-sky-400 focus:outline-none"
+                    className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:border-sky-400 focus:outline-none"
                   />
                 </label>
                 <label className="block">
@@ -354,7 +354,7 @@ export default function Shop() {
                     rows={2}
                     placeholder={t('shop.welcome_placeholder')}
                     onChange={(e) => setWelcomeText(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white/70 px-3 py-2 text-sm text-slate-700 focus:border-sky-400 focus:outline-none"
+                    className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:border-sky-400 focus:outline-none"
                   />
                 </label>
                 <label className="block">
@@ -363,7 +363,7 @@ export default function Shop() {
                   <select
                     value={fontFamily}
                     onChange={(e) => setFontFamily(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white/70 px-3 py-2 text-sm text-slate-700 focus:border-sky-400 focus:outline-none"
+                    className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:border-sky-400 focus:outline-none"
                   >
                     {SHOP_FONTS.map((font) => (
                       <option key={font.key} value={font.key}>
@@ -383,7 +383,7 @@ export default function Shop() {
                     <span className="text-sm text-slate-500">{color.toUpperCase()}</span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg bg-white/60">
+                    <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg bg-slate-50">
                       {settings?.logo_url ? (
                         <img src={settings.logo_url} alt="Logo" className="h-full w-full object-contain" />
                       ) : (
@@ -434,7 +434,7 @@ export default function Shop() {
                         onChange={(e) =>
                           setProducts((prev) => prev.map((p, i) => (i === index ? { ...p, price: e.target.value } : p)))
                         }
-                        className="w-20 rounded-lg border border-slate-200 bg-white/70 px-2 py-1.5 text-right text-sm text-slate-700 focus:border-sky-400 focus:outline-none disabled:opacity-50"
+                        className="w-20 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-right text-sm text-slate-700 focus:border-sky-400 focus:outline-none disabled:opacity-50"
                       />
                       <span className="text-sm text-slate-500">€</span>
                     </div>
@@ -481,7 +481,7 @@ export default function Shop() {
                   <button
                     type="button"
                     onClick={() => setDesktopOpen(true)}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white/70 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-white"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-white"
                   >
                     <Monitor className="h-3.5 w-3.5" />
                     {t('shop.desktop_version')}
@@ -498,7 +498,7 @@ export default function Shop() {
                 </div>
                 <PreviewFrame key={previewVersion} src={`${demoUrl}?embed=1`} mode="phone" />
                 {qr && (
-                  <div className="flex items-center gap-4 rounded-xl bg-white/60 p-3">
+                  <div className="flex items-center gap-4 rounded-xl bg-slate-50 p-3">
                     <img src={qr} alt={t('shop.preview_qr')} className="h-24 w-24 shrink-0 rounded" />
                     <p className="text-xs text-slate-600">
                       {t('shop.scan_qr')}

@@ -206,8 +206,8 @@ export default function Users() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="h-8 w-32 animate-pulse rounded-lg bg-white/40" />
-        <div className="h-96 animate-pulse rounded-2xl bg-white/30" />
+        <div className="h-8 w-32 animate-pulse rounded-lg bg-slate-100" />
+        <div className="h-96 animate-pulse rounded-2xl bg-slate-100" />
       </div>
     );
   }
@@ -215,7 +215,7 @@ export default function Users() {
   if (error) {
     return (
       <div className="space-y-6">
-        <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('users.title')}</h2>
+        <h2 className="text-[28px] font-light tracking-tight text-[color:var(--ink)] sm:text-[32px]">{t('users.title')}</h2>
         <div className="rounded-2xl bg-red-50 border border-red-200 p-6">
           <h3 className="text-lg font-semibold text-red-800 mb-2">{t('users.load_error')}</h3>
           <p className="text-sm text-red-600 mb-4">{error}</p>
@@ -233,7 +233,7 @@ export default function Users() {
     <div className="flex min-h-[calc(100vh-4rem)] flex-col gap-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('users.title')}</h2>
+          <h2 className="text-[28px] font-light tracking-tight text-[color:var(--ink)] sm:text-[32px]">{t('users.title')}</h2>
           <p className="mt-1 text-sm text-slate-500">
             {t('users.subtitle')}
           </p>
@@ -345,7 +345,7 @@ export default function Users() {
           <GlassCard className="overflow-hidden">
             <div className="border-b border-slate-100/80 px-6 py-4">
               <div className="flex items-baseline justify-between gap-3">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{t('users.registered_guests')}</h3>
+                <h3 className="text-sm font-semibold text-slate-500">{t('users.registered_guests')}</h3>
                 {overview && <span className="text-xs text-slate-400">{t('users.registered_count', { count: overview.users.length })}</span>}
               </div>
               <p className="mt-1 text-xs text-slate-400">
@@ -369,7 +369,7 @@ export default function Users() {
               )}
 
               {!overview ? (
-                <div className="h-24 animate-pulse rounded-xl bg-white/40" />
+                <div className="h-24 animate-pulse rounded-xl bg-slate-100" />
               ) : filteredGuests.length === 0 ? (
                 <p className="text-sm text-slate-500">
                   {guestSearch ? t('users.no_results') : t('users.no_guests')}

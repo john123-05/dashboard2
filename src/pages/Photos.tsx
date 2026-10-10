@@ -341,7 +341,7 @@ export default function Photos({ embedded = false }: { embedded?: boolean } = {}
     const imageLink = selectedPhoto.imageUrl;
 
     return (
-      <div ref={selectedPhotoCardRef} className="rounded-xl bg-white/30 p-3 sm:p-4">
+      <div ref={selectedPhotoCardRef} className="rounded-xl bg-slate-50 p-3 sm:p-4">
         {selectedPhoto.imageUrl && (
           <img
             src={selectedPhoto.imageUrl}
@@ -384,7 +384,7 @@ export default function Photos({ embedded = false }: { embedded?: boolean } = {}
         </div>
 
         {claimLink && (
-          <div className="mt-4 rounded-2xl border border-slate-200/70 bg-white/70 p-3 sm:p-4">
+          <div className="mt-4 rounded-2xl border border-slate-200/70 bg-slate-50 p-3 sm:p-4">
             <div className="flex flex-col items-center gap-3">
               <div className="rounded-2xl bg-white p-3 shadow-sm">
                 <img
@@ -400,7 +400,7 @@ export default function Photos({ embedded = false }: { embedded?: boolean } = {}
                   Der Gast scannt den Code und landet direkt auf der passenden Claim-Seite mit dem korrekten Bildcode.
                 </p>
                 {selectedPhoto.externalCode && (
-                  <p className="text-[11px] font-medium uppercase tracking-[0.24em] text-slate-400">
+                  <p className="text-[11px] font-medium text-slate-400">
                     Code {selectedPhoto.externalCode}
                   </p>
                 )}
@@ -536,10 +536,10 @@ export default function Photos({ embedded = false }: { embedded?: boolean } = {}
   if (loading) {
     return (
       <div className={embedded ? 'space-y-4 customer-embedded-root preview-photos' : 'space-y-6'}>
-        <div className="h-8 w-32 animate-pulse rounded-lg bg-white/40" />
+        <div className="h-8 w-32 animate-pulse rounded-lg bg-slate-100" />
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 sm:gap-6">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-32 animate-pulse rounded-2xl bg-white/30" />
+            <div key={i} className="h-32 animate-pulse rounded-2xl bg-slate-100" />
           ))}
         </div>
       </div>
@@ -549,7 +549,7 @@ export default function Photos({ embedded = false }: { embedded?: boolean } = {}
   if (error) {
     return (
       <div className={embedded ? 'space-y-4 customer-embedded-root preview-photos' : 'space-y-6'}>
-        <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('photos.title')}</h2>
+        <h2 className="text-[28px] font-light tracking-tight text-[color:var(--ink)] sm:text-[32px]">{t('photos.title')}</h2>
         <div className="rounded-2xl bg-red-50 border border-red-200 p-6">
           <h3 className="text-lg font-semibold text-red-800 mb-2">{t('photos.load_error')}</h3>
           <p className="text-sm text-red-600 mb-4">{error}</p>
@@ -564,7 +564,7 @@ export default function Photos({ embedded = false }: { embedded?: boolean } = {}
   return (
     <div className={embedded ? 'space-y-4 customer-embedded-root preview-photos' : 'space-y-6'}>
       <div className="customer-operator-pagehead">
-        <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('photos.title')}</h2>
+        <h2 className="text-[28px] font-light tracking-tight text-[color:var(--ink)] sm:text-[32px]">{t('photos.title')}</h2>
         <p className="mt-1 text-sm text-slate-500">{t('photos.subtitle')}</p>
       </div>
 
@@ -576,7 +576,7 @@ export default function Photos({ embedded = false }: { embedded?: boolean } = {}
       )}
 
       {isKioskPark && !isStaff && selectedDate && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/40 bg-white/40 px-4 py-3 backdrop-blur-xl">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[color:var(--line)] bg-slate-50 px-4 py-3 backdrop-blur-xl">
           <div>
             <p className="text-sm font-semibold text-slate-700">Auswertung für {selectedDateLabel}</p>
             <p className="text-xs text-slate-400">{t('photos.stats_day_note')}</p>
@@ -590,7 +590,7 @@ export default function Photos({ embedded = false }: { embedded?: boolean } = {}
               value={selectedDate}
               max={todayStr}
               onChange={(e) => e.target.value && setSelectedDate(e.target.value)}
-              className="rounded-xl border border-white/50 bg-white/70 px-3 py-2 text-sm text-slate-700 customer-operator-input"
+              className="rounded-xl border border-[color:var(--line)] bg-slate-50 px-3 py-2 text-sm text-slate-700 customer-operator-input"
             />
             <button
               type="button"
@@ -689,7 +689,7 @@ export default function Photos({ embedded = false }: { embedded?: boolean } = {}
                 // Ohne verlaessliche Aufnahmezahl bestuende der Ring nur aus dem
                 // Segment "Gekauft" und saehe damit aus, als waere jede Fahrt
                 // gekauft worden. Lieber die eine Zahl nennen, die stimmt.
-                <div className="rounded-xl bg-white/30 p-4 text-sm leading-relaxed text-slate-500">
+                <div className="rounded-xl bg-slate-50 p-4 text-sm leading-relaxed text-slate-500">
                   Ohne die Zahl der Aufnahmen lässt sich die Verteilung nicht
                   darstellen. Gesichert ist nur:{' '}
                   <span className="font-medium text-slate-700">
@@ -731,7 +731,7 @@ export default function Photos({ embedded = false }: { embedded?: boolean } = {}
             {kioskConv && kioskConv.taken > 0 && aufnahmenUnvollstaendig && (
               <div>
                 <h3 className="mb-4 text-base font-semibold text-slate-800">Conversion</h3>
-                <div className="rounded-xl bg-white/30 p-4 text-sm leading-relaxed text-slate-500">
+                <div className="rounded-xl bg-slate-50 p-4 text-sm leading-relaxed text-slate-500">
                   Für diesen Tag nicht berechenbar. Die Conversion setzt die verkauften
                   Fotos ins Verhältnis zu den Aufnahmen — und die Aufnahmen wurden an
                   diesem Tag nicht vollständig gemeldet.
@@ -801,7 +801,7 @@ export default function Photos({ embedded = false }: { embedded?: boolean } = {}
           <h3 className="mb-4 text-base font-semibold text-slate-800">{t('photos.by_attraction')}</h3>
           <div className="space-y-3">
             {attractionStats.length === 0 && (
-              <div className="rounded-xl bg-white/30 p-4 text-sm text-slate-500">
+              <div className="rounded-xl bg-slate-50 p-4 text-sm text-slate-500">
                 Für diesen Tag liegen noch keine Attraktions-Daten vor.
               </div>
             )}
@@ -812,7 +812,7 @@ export default function Photos({ embedded = false }: { embedded?: boolean } = {}
               // Quote bei 4300 % liegt. (F-040)
               const luecke = a.purchased > a.total;
               return (
-                <div key={a.name} className="flex items-center justify-between gap-3 rounded-xl bg-white/30 p-3.5 sm:gap-4 sm:p-4">
+                <div key={a.name} className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 p-3.5 sm:gap-4 sm:p-4">
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-slate-700">{a.name}</p>
                     <p className="mt-1 text-xs text-slate-400">
@@ -859,7 +859,7 @@ export default function Photos({ embedded = false }: { embedded?: boolean } = {}
             })}
 
             {!isStaff && emailDay && (
-              <div className="flex items-center justify-between gap-3 rounded-xl bg-white/30 p-3.5 sm:gap-4 sm:p-4">
+              <div className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 p-3.5 sm:gap-4 sm:p-4">
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-slate-700">
                     {unlockMode === 'survey'
@@ -1010,7 +1010,7 @@ export default function Photos({ embedded = false }: { embedded?: boolean } = {}
         <div className={embedded ? 'space-y-4' : 'grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]'}>
           <div className={`grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4 ${embedded ? '2xl:grid-cols-5' : 'order-2 lg:order-1'}`}>
             {!browseLoading && browsePhotos.length === 0 && (
-              <div className="col-span-full rounded-xl bg-white/30 p-6 text-center text-sm text-slate-500">
+              <div className="col-span-full rounded-xl bg-slate-50 p-6 text-center text-sm text-slate-500">
                 Keine Fotos gefunden.
               </div>
             )}
@@ -1018,7 +1018,7 @@ export default function Photos({ embedded = false }: { embedded?: boolean } = {}
               <button
                 key={p.id}
                 onClick={() => setSelectedPhoto(p)}
-                className={`embedded-photo-tile group overflow-hidden rounded-xl bg-white/30 text-left transition-all hover:bg-white/50 hover:shadow-md ${
+                className={`embedded-photo-tile group overflow-hidden rounded-xl bg-slate-50 text-left transition-all hover:bg-slate-50 hover:shadow-md ${
                   selectedPhoto?.id === p.id ? 'ring-2 ring-brand-500' : ''
                 }`}
               >

@@ -32,7 +32,7 @@ export default function ConfigurationFaq() {
           <ArrowLeft className="h-3.5 w-3.5" />
           Zurück zur Konfiguration
         </Link>
-        <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-800">{t('faq.title')}</h2>
+        <h2 className="mt-2 text-[28px] font-light tracking-tight text-[color:var(--ink)] sm:text-[32px]">{t('faq.title')}</h2>
       </div>
 
       <GlassCard className="p-5 sm:p-6">

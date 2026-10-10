@@ -69,7 +69,7 @@ function HeaderIconLink({ to, label, icon: Icon }: { to: string; label: string; 
       to={to}
       title={label}
       aria-label={label}
-      className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-white/60 text-slate-500 transition hover:bg-white hover:text-slate-700"
+      className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-slate-50 text-slate-500 transition hover:bg-white hover:text-slate-700"
     >
       <Icon className="h-4 w-4" />
     </Link>
@@ -235,7 +235,7 @@ export default function Configuration() {
   if (!isKioskPark) {
     return (
       <div className="space-y-6">
-        <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('nav.configuration')}</h2>
+        <h2 className="text-[28px] font-light tracking-tight text-[color:var(--ink)] sm:text-[32px]">{t('nav.configuration')}</h2>
         <GlassCard className="p-6">
           <p className="text-sm text-slate-500">{t('config.kiosk_only')}</p>
         </GlassCard>
@@ -247,7 +247,7 @@ export default function Configuration() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('nav.configuration')}</h2>
+          <h2 className="text-[28px] font-light tracking-tight text-[color:var(--ink)] sm:text-[32px]">{t('nav.configuration')}</h2>
           <p className="mt-1 text-sm text-slate-500">{t('config.subtitle')}</p>
         </div>
         <div className="flex items-center gap-2">
@@ -271,7 +271,7 @@ export default function Configuration() {
           <div className="mt-4 grid gap-x-8 gap-y-5 md:grid-cols-2 xl:grid-cols-3">
             {GRUPPEN_REIHENFOLGE.filter((g) => ausstattungsGruppen[g].length > 0).map((gruppe) => (
               <div key={gruppe}>
-                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">{t(`config.group.${gruppe}`)}</p>
+                <p className="mb-1 text-xs font-semibold text-slate-400">{t(`config.group.${gruppe}`)}</p>
                 <dl className="divide-y divide-slate-100">
                   {ausstattungsGruppen[gruppe].map((zeile) => (
                     <div key={zeile.key} className="flex items-center justify-between gap-3 py-2">
@@ -298,7 +298,7 @@ export default function Configuration() {
                 value={suche}
                 onChange={(e) => setSuche(e.target.value)}
                 placeholder={t('config.search_products')}
-                className="w-full rounded-lg border border-slate-200 bg-white/70 py-2 pl-9 pr-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-sky-400 focus:outline-none"
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-sky-400 focus:outline-none"
               />
             </div>
             <div className="flex flex-wrap gap-2">
@@ -338,7 +338,7 @@ export default function Configuration() {
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') navigate(`/configuration/produkt/${item.id}`);
                   }}
-                  className="flex cursor-pointer flex-col overflow-hidden rounded-xl border border-slate-200/60 bg-white/70 transition hover:border-slate-300 hover:shadow-md"
+                  className="flex cursor-pointer flex-col overflow-hidden rounded-xl border border-slate-200/60 bg-slate-50 transition hover:border-slate-300 hover:shadow-md"
                 >
                   {eintragBilder(item).length >= 3 || (!(item.before_image_url && item.after_image_url) && item.image_url) ? (
                     <Link
@@ -368,7 +368,7 @@ export default function Configuration() {
                     </div>
                   )}
                   <div className="flex flex-1 flex-col gap-2 p-4">
-                    <span className="inline-flex w-fit items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide text-slate-500">
+                    <span className="inline-flex w-fit items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500">
                       <Icon className="h-3 w-3" />
                       {t(`config.category.${item.kategorie}`)}
                     </span>

@@ -80,7 +80,7 @@ export default function Team() {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight text-slate-800">Mitarbeiter</h2>
+        <h2 className="text-[28px] font-light tracking-tight text-[color:var(--ink)] sm:text-[32px]">Mitarbeiter</h2>
         <p className="mt-1 text-sm text-slate-500">
           Lege Mitarbeiter-Zugänge für deinen Park an. Mitarbeiter sehen nur <strong>Fotos</strong>,{' '}
           <strong>Personalisierung</strong>, <strong>Support</strong> und <strong>Systemzustand</strong> — keine
@@ -97,34 +97,34 @@ export default function Team() {
         </div>
       )}
 
-      <div className="rounded-2xl border border-white/40 bg-white/40 p-5 shadow-sm">
+      <div className="rounded-2xl border border-[color:var(--line)] bg-slate-50 p-5 shadow-sm">
         <div className="mb-4 flex items-center gap-2">
           <UserPlus className="h-5 w-5 text-brand-500" />
           <h3 className="text-base font-semibold text-slate-800">{t('team.add_title')}</h3>
         </div>
         <form onSubmit={handleCreate} className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-400">Name</label>
+            <label className="mb-1 block text-xs font-medium text-slate-400">Name</label>
             <input
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               placeholder="Max Mustermann"
-              className="w-full rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm text-slate-800 outline-none focus:border-brand-400"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 outline-none focus:border-brand-400"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-400">E-Mail</label>
+            <label className="mb-1 block text-xs font-medium text-slate-400">E-Mail</label>
             <input
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="mitarbeiter@park.at"
-              className="w-full rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm text-slate-800 outline-none focus:border-brand-400"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 outline-none focus:border-brand-400"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-400">
+            <label className="mb-1 block text-xs font-medium text-slate-400">
               Passwort (min. 8 Zeichen)
             </label>
             <input
@@ -134,7 +134,7 @@ export default function Team() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder={t('team.password_placeholder')}
-              className="w-full rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm text-slate-800 outline-none focus:border-brand-400"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 outline-none focus:border-brand-400"
             />
           </div>
           <div className="flex items-end">
@@ -153,7 +153,7 @@ export default function Team() {
         </p>
       </div>
 
-      <div className="rounded-2xl border border-white/40 bg-white/40 p-5 shadow-sm">
+      <div className="rounded-2xl border border-[color:var(--line)] bg-slate-50 p-5 shadow-sm">
         <div className="mb-4 flex items-center gap-2">
           <ShieldCheck className="h-5 w-5 text-brand-500" />
           <h3 className="text-base font-semibold text-slate-800">Mitarbeiter ({staff.length})</h3>

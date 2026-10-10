@@ -47,7 +47,7 @@ export default function ConfigurationOrders() {
           <ArrowLeft className="h-3.5 w-3.5" />
           Zurück zur Konfiguration
         </Link>
-        <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-800">{t('orders.title')}</h2>
+        <h2 className="mt-2 text-[28px] font-light tracking-tight text-[color:var(--ink)] sm:text-[32px]">{t('orders.title')}</h2>
         <p className="mt-1 text-sm text-slate-500">{t('orders.subtitle')}</p>
       </div>
 
@@ -63,7 +63,7 @@ export default function ConfigurationOrders() {
             {bestellt.map((item) => {
               const Icon = KATEGORIE_ICON[item.kategorie] ?? Gauge;
               return (
-                <div key={item.id} className="rounded-xl bg-white/60 p-5">
+                <div key={item.id} className="rounded-xl bg-slate-50 p-5">
                   <div className="flex items-center gap-3">
                     {item.image_url ? (
                       <img src={item.image_url} alt={item.titel} className="h-12 w-12 rounded-lg object-cover" />
