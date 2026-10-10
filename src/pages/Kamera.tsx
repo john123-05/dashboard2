@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Camera, Loader2, RotateCcw, AlertTriangle, Info, Send } from 'lucide-react';
+import {
+  Aperture, AlertTriangle, Camera, ChevronDown, Contrast, Info, Loader2, Minus, Palette, Plus, RefreshCw, RotateCcw, Send, Sun,
+  type LucideIcon,
+} from 'lucide-react';
 import GlassCard from '../components/ui/GlassCard';
+import Modal from '../components/ui/Modal';
 import { usePark } from '../contexts/ParkContext';
 import { useI18n, useLocaleTag } from '../lib/i18n';
 import { supabase, EXTERNAL_SUPABASE_URL, EXTERNAL_SUPABASE_ANON_KEY } from '../lib/supabase';
@@ -145,6 +149,20 @@ const EIGENSCHAFTEN: Eigenschaft[] = [
   },
 ];
 
+/**
+ * Die Regler in vier Gruppen, so wie man über ein Bild nachdenkt. Eine Eigenschaft,
+ * die in keiner Gruppe steht, landet in der letzten – es geht nie ein Regler verloren.
+ */
+const GRUPPEN: { id: string; icon: LucideIcon; schluessel: string[] }[] = [
+  { id: 'exposure', icon: Sun, schluessel: ['Exposure.Auto', 'Exposure.Value', 'Exposure.Auto Reference', 'Gain.Auto', 'Gain.Auto Max Value'] },
+  { id: 'color', icon: Palette, schluessel: ['WhiteBalance.Auto', 'Saturation.Value', 'Hue.Value'] },
+  { id: 'contrast', icon: Contrast, schluessel: ['Brightness.Value', 'Contrast.Value', 'Gamma.Value', 'Highlight Reduction.Enable', 'Tone Mapping.Enable'] },
+  { id: 'sharp', icon: Aperture, schluessel: ['Sharpness.Value', 'Denoise.Value'] },
+];
+
+// Ab wann der Automat als nicht verbunden gilt (wie in lib/cameraControl.ts).
+const MAX_OFFLINE_MINUTEN = 15;
+
 /** Schlüssel einer Eigenschaft im Wörterbuch, zum Beispiel `camera.prop.exposure_auto.title`. */
 function propKey(e: Eigenschaft, part: 'title' | 'text'): string {
   return `camera.prop.${e.schluessel.toLowerCase().replace(/[^a-z]+/g, '_')}.${part}`;
@@ -202,6 +220,15 @@ export default function Kamera() {
   const [bild, setBild] = useState<{ url: string; wann: string; test: boolean } | null>(null);
   const [verlauf, setVerlauf] = useState<{ url: string; wann: string }[]>([]);
   const [entwurf, setEntwurf] = useState<Record<string, number>>({});
+  // Auf schmalen Bildschirmen startet nur die erste Gruppe offen, sonst wird die Seite endlos.
+  const [offen, setOffen] = useState<Record<string, boolean>>(() => {
+    const breit = typeof window === 'undefined' || window.innerWidth >= 1280;
+    return { exposure: true, color: breit, contrast: breit, sharp: breit };
+  });
+  const [erklaert, setErklaert] = useState<Record<string, boolean>>({});
+  const [original, setOriginal] = useState(false);
+  const [dialog, setDialog] = useState<'senden' | 'testfoto' | null>(null);
+  const [technikOffen, setTechnikOffen] = useState(false);
 
   const kopfzeilen = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -306,7 +333,7 @@ export default function Kamera() {
 
   async function testfoto() {
     if (!automat) return;
-    if (!confirm(t('camera.confirm_test_photo'))) return;
+    setDialog(null);
     setBeschaeftigt('testfoto'); setHinweis(null); setFehler(null);
     const h = await kopfzeilen();
     if (!h) { setFehler(t('camera.session_expired')); setBeschaeftigt(null); return; }
@@ -326,11 +353,7 @@ export default function Kamera() {
 
   async function senden() {
     if (!automat || geaendert.length === 0) return;
-    const liste = geaendert
-      .map((e) => `  ${t(propKey(e, 'title'))}: ${anzeige(e, wertAus(kamera!.werte, e.schluessel)!, t)} → ${anzeige(e, entwurf[e.schluessel], t)}`)
-      .join('\n');
-    if (!confirm(t('camera.confirm_send', { list: liste }))) return;
-
+    setDialog(null);
     setBeschaeftigt('senden'); setHinweis(null); setFehler(null);
     const h = await kopfzeilen();
     if (!h) { setFehler(t('camera.session_expired')); setBeschaeftigt(null); return; }
@@ -360,6 +383,16 @@ export default function Kamera() {
     setBeschaeftigt(null);
   }
 
+  function verwerfen() {
+    const start: Record<string, number> = {};
+    for (const e of EIGENSCHAFTEN) {
+      const w = wertAus(kamera?.werte ?? {}, e.schluessel);
+      if (w !== null) start[e.schluessel] = w;
+    }
+    setEntwurf(start);
+    setOriginal(false);
+  }
+
   if (laden) {
     return <div className="flex min-h-[50vh] items-center justify-center"><Loader2 className="h-7 w-7 animate-spin text-brand-500" /></div>;
   }
@@ -381,6 +414,33 @@ export default function Kamera() {
     );
   }
 
+  const verbunden = automat?.offline_minutes == null || automat.offline_minutes <= MAX_OFFLINE_MINUTEN;
+  const zugeordnet = new Set(GRUPPEN.flatMap((g) => g.schluessel));
+  const gruppen = GRUPPEN.map((g, i) => ({
+    ...g,
+    regler: bedienbar.filter((e) => g.schluessel.includes(e.schluessel) || (i === GRUPPEN.length - 1 && !zugeordnet.has(e.schluessel))),
+  })).filter((g) => g.regler.length > 0);
+  const istGeaendert = (e: Eigenschaft) => geaendert.includes(e);
+  const setze = (e: Eigenschaft, wert: number) => {
+    const begrenzt = Math.min(e.bis, Math.max(e.von, Number(wert.toFixed(6))));
+    setEntwurf((a) => ({ ...a, [e.schluessel]: begrenzt }));
+    setOriginal(false);
+  };
+  const aenderungsliste = (
+    <dl className="divide-y divide-[color:var(--line)] rounded-lg border border-[color:var(--line)]">
+      {geaendert.map((e) => (
+        <div key={e.schluessel} className="flex items-baseline justify-between gap-3 px-3 py-2 text-sm">
+          <dt className="text-[color:var(--ink-2)]">{t(propKey(e, 'title'))}</dt>
+          <dd className="font-mono text-xs tabular-nums text-[color:var(--ink)]">
+            <span className="text-[color:var(--ink-3)]">{anzeige(e, wertAus(kamera!.werte, e.schluessel)!, t)}</span>
+            {' → '}
+            <span className="font-semibold">{anzeige(e, entwurf[e.schluessel], t)}</span>
+          </dd>
+        </div>
+      ))}
+    </dl>
+  );
+
   return (
     <div className="space-y-6">
       {/* Gamma braucht einen echten Filter - CSS hat dafür nichts. */}
@@ -393,62 +453,83 @@ export default function Kamera() {
         </filter>
       </svg>
 
+      {/* Kopf: Kamera, Status, Automat */}
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-[28px] font-light tracking-tight text-[color:var(--ink)] sm:text-[32px]">{t('camera.title')}</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            {kamera?.modell ?? t('camera.title')}
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-[28px] font-light tracking-tight text-[color:var(--ink)] sm:text-[32px]">{t('camera.title')}</h1>
+            <span
+              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${
+                verbunden ? 'bg-emerald-50 text-emerald-700 ring-emerald-200' : 'bg-amber-50 text-amber-800 ring-amber-200'
+              }`}
+            >
+              <span className={`h-1.5 w-1.5 rounded-full ${verbunden ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+              {verbunden ? t('cam2.online') : t('cam2.offline', { minutes: Math.round(automat?.offline_minutes ?? 0) })}
+            </span>
+          </div>
+          <p className="mt-1 text-sm text-[color:var(--ink-3)]">
+            {kamera?.modell ?? t('camera.subtitle')}
             {kamera?.seriennummer && <> · {t('camera.serial_no', { no: kamera.seriennummer })}</>}
             {kamera?.videoformat && <> · {kamera.videoformat}</>}
             {kamera?.fps && <> · {t('camera.fps', { fps: kamera.fps })}</>}
           </p>
         </div>
         {mitKamera.length > 1 && (
-          <select
-            value={gewaehlt ?? ''}
-            onChange={(e) => setGewaehlt(e.target.value)}
-            className="rounded-lg border border-[color:var(--line-strong)] bg-white px-3 py-2 text-sm text-slate-700"
-          >
-            {mitKamera.map((m) => <option key={m.id} value={m.id}>{m.machine_label || m.machine_id}</option>)}
-          </select>
+          <label className="flex items-center gap-2 text-xs text-[color:var(--ink-3)]">
+            {t('cam2.machine')}
+            <select
+              value={gewaehlt ?? ''}
+              onChange={(e) => setGewaehlt(e.target.value)}
+              className="rounded-lg border border-[color:var(--line-strong)] bg-white px-3 py-2 text-sm text-[color:var(--ink)]"
+            >
+              {mitKamera.map((m) => <option key={m.id} value={m.id}>{m.machine_label || m.machine_id}</option>)}
+            </select>
+          </label>
         )}
       </div>
 
-      {fehler && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">{fehler}</div>}
-      {hinweis && <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm leading-relaxed text-emerald-800">{hinweis}</div>}
+      {fehler && <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">{fehler}</div>}
+      {hinweis && <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm leading-relaxed text-emerald-800">{hinweis}</div>}
       {kamera?.fehler && (
-        <div className="flex gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
+        <div className="flex gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
           <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" />
           <p className="text-sm leading-relaxed text-amber-900">{t('camera.cannot_read', { error: kamera.fehler })}</p>
         </div>
       )}
 
-      <div className="flex gap-3 rounded-xl border border-sky-200 bg-sky-50 p-4">
-        <Info className="mt-0.5 h-5 w-5 shrink-0 text-sky-700" />
-        <p className="text-sm leading-relaxed text-sky-900">
-          {t('camera.info_banner')}
-        </p>
-      </div>
+      {/* In drei Schritten */}
+      <ol className="grid gap-px overflow-hidden rounded-lg border border-[color:var(--line)] bg-[color:var(--line)] sm:grid-cols-3" aria-label={t('cam2.how_title')}>
+        {[1, 2, 3].map((n) => (
+          <li key={n} className="flex gap-3 bg-white p-4">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[color:var(--ink)] text-xs font-semibold text-white">{n}</span>
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold text-[color:var(--ink)]">{t(`cam2.step${n}_title`)}</span>
+              <span className="mt-0.5 block text-xs leading-relaxed text-[color:var(--ink-3)]">{t(`cam2.step${n}_text`)}</span>
+            </span>
+          </li>
+        ))}
+      </ol>
 
-      <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
-        <div className="space-y-6">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
+        {/* Bild */}
+        <div className="xl:sticky xl:top-6 xl:self-start">
           <GlassCard className="p-5 sm:p-6">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="text-base font-semibold text-slate-800">{t('camera.last_photo')}</h2>
-                <p className="mt-0.5 text-xs text-slate-500">
+              <div className="min-w-0">
+                <h2 className="text-base font-semibold text-[color:var(--ink)]">{t('camera.last_photo')}</h2>
+                <p className="mt-0.5 text-xs text-[color:var(--ink-3)]">
                   {bild ? `${t('camera.taken_at', { time: bild.wann })}${bild.test ? ` · ${t('camera.test_photo_suffix')}` : ''}` : t('camera.none_yet')}
-                  {geaendert.length > 0 && <> · <span className="text-sky-700">{t('camera.preview_active')}</span></>}
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
-                <button type="button" onClick={() => void letztesBildHolen()}
-                  className="glass-button-secondary">
+                <button type="button" onClick={() => void letztesBildHolen()} className="glass-button-secondary">
+                  <RefreshCw className="h-4 w-4" />
                   {t('camera.reload_image')}
                 </button>
                 {automat?.can_test_photo && (
-                  <button type="button" onClick={() => void testfoto()} disabled={beschaeftigt !== null}
-                    className="glass-button-primary disabled:opacity-50">
+                  <button type="button" onClick={() => setDialog('testfoto')} disabled={beschaeftigt !== null}
+                    className="glass-button-secondary disabled:opacity-50">
+                    <Camera className="h-4 w-4" />
                     {beschaeftigt === 'testfoto' ? t('camera.triggering') : t('camera.trigger_test')}
                   </button>
                 )}
@@ -456,11 +537,28 @@ export default function Kamera() {
             </div>
 
             {bild ? (
-              <div className="overflow-hidden rounded-xl bg-slate-100">
-                <img src={bild.url} alt={t('camera.last_photo_alt')} style={{ filter: filter || undefined }} className="w-full" />
+              <div className="relative overflow-hidden rounded-lg bg-slate-100">
+                <img src={bild.url} alt={t('camera.last_photo_alt')} style={{ filter: (!original && filter) || undefined }} className="w-full" />
+                {filter && (
+                  <div className="absolute left-3 top-3 inline-flex rounded-md bg-white/95 p-0.5 shadow-sm ring-1 ring-black/5">
+                    {[false, true].map((o) => (
+                      <button
+                        key={String(o)}
+                        type="button"
+                        onClick={() => setOriginal(o)}
+                        aria-pressed={original === o}
+                        className={`rounded px-3 py-1 text-xs font-medium transition-colors ${
+                          original === o ? 'bg-[color:var(--ink)] text-white' : 'text-[color:var(--ink-2)] hover:bg-slate-100'
+                        }`}
+                      >
+                        {o ? t('cam2.view_original') : t('cam2.view_preview')}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             ) : (
-              <div className="flex min-h-[260px] items-center justify-center rounded-xl bg-slate-50 p-6 text-center text-sm text-slate-500">
+              <div className="flex min-h-[260px] items-center justify-center rounded-lg bg-slate-50 p-6 text-center text-sm text-slate-500">
                 {t('camera.no_photo_yet')}
               </div>
             )}
@@ -484,131 +582,228 @@ export default function Kamera() {
               </div>
             )}
 
-            <p className="mt-3 text-xs leading-relaxed text-slate-400">
+            <p className="mt-3 text-xs leading-relaxed text-[color:var(--ink-3)]">
               {t('camera.no_live_note')}
             </p>
           </GlassCard>
-
-          {geaendert.length > 0 && (
-            <GlassCard className="p-5 sm:p-6">
-              <h2 className="mb-3 text-base font-semibold text-slate-800">
-                {t(geaendert.length === 1 ? 'camera.changes_ready_one' : 'camera.changes_ready_many', { count: geaendert.length })}
-              </h2>
-              <dl className="mb-4 space-y-1.5">
-                {geaendert.map((e) => (
-                  <div key={e.schluessel} className="flex items-baseline justify-between gap-3 text-sm">
-                    <dt className="text-slate-600">{t(propKey(e, 'title'))}</dt>
-                    <dd className="font-mono text-xs tabular-nums text-slate-700">
-                      <span className="text-slate-400">{anzeige(e, wertAus(kamera!.werte, e.schluessel)!, t)}</span>
-                      {' → '}
-                      <span className="font-semibold">{anzeige(e, entwurf[e.schluessel], t)}</span>
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-              <div className="flex flex-wrap gap-2">
-                <button type="button" onClick={() => void senden()} disabled={beschaeftigt !== null}
-                  className="glass-button-primary disabled:opacity-50">
-                  <Send className="h-4 w-4" />
-                  {beschaeftigt === 'senden' ? t('camera.sending') : t('camera.send_to_camera')}
-                </button>
-                <button type="button" onClick={() => {
-                  const start: Record<string, number> = {};
-                  for (const e of EIGENSCHAFTEN) {
-                    const w = wertAus(kamera?.werte ?? {}, e.schluessel);
-                    if (w !== null) start[e.schluessel] = w;
-                  }
-                  setEntwurf(start);
-                }}
-                  className="glass-button-secondary">
-                  <RotateCcw className="h-4 w-4" /> {t('camera.discard')}
-                </button>
-              </div>
-              <p className="mt-3 text-xs leading-relaxed text-slate-500">
-                {t('camera.backup_note')}
-              </p>
-            </GlassCard>
-          )}
         </div>
 
-        <div className="space-y-6">
-          <GlassCard className="p-5 sm:p-6">
-            <h2 className="mb-4 text-base font-semibold text-slate-800">{t('camera.settings')}</h2>
-
-            {belichtungAutomatisch && (
-              <p className="mb-4 rounded-xl bg-amber-50 px-3 py-2.5 text-xs leading-relaxed text-amber-900">
-                {t('camera.auto_exposure_warning')}
-              </p>
-            )}
-
-            <div className="space-y-5">
-              {bedienbar.map((e) => {
-                const alt = wertAus(kamera!.werte, e.schluessel)!;
-                const jetzt = entwurf[e.schluessel] ?? alt;
-                const anders = jetzt !== alt;
-                return (
-                  <div key={e.schluessel}>
-                    <div className="flex items-baseline justify-between gap-3">
-                      <label htmlFor={`e-${e.schluessel}`} className="text-sm font-medium text-slate-700">
-                        {t(propKey(e, 'title'))}
-                        {!e.vorschau && <span className="ml-1.5 text-xs font-normal text-slate-400">{t('camera.not_previewable')}</span>}
-                      </label>
-                      <span className={`font-mono text-xs tabular-nums ${anders ? 'font-semibold text-sky-700' : 'text-slate-500'}`}>
-                        {anzeige(e, jetzt, t)}
-                      </span>
-                    </div>
-
-                    {e.art === 'schalter' ? (
-                      <div className="mt-2 inline-flex rounded-md border border-[color:var(--line-strong)] p-0.5">
-                        {[1, 0].map((v) => (
-                          <button key={v} type="button"
-                            onClick={() => setEntwurf((a) => ({ ...a, [e.schluessel]: v }))}
-                            className={`rounded px-4 py-1.5 text-sm transition-colors ${
-                              jetzt === v ? 'bg-[color:var(--ink)] text-white' : 'text-[color:var(--ink-2)] hover:bg-slate-100'
-                            }`}>
-                            {v ? t('camera.on') : t('camera.off')}
-                          </button>
-                        ))}
-                      </div>
-                    ) : (
-                      <input id={`e-${e.schluessel}`} type="range"
-                        min={e.von} max={e.bis} step={e.schritt} value={jetzt}
-                        onChange={(ev) => setEntwurf((a) => ({ ...a, [e.schluessel]: Number(ev.target.value) }))}
-                        className="mt-2 w-full accent-slate-800" />
-                    )}
-                    <p className="mt-1 text-xs leading-relaxed text-slate-400">{t(propKey(e, 'text'))}</p>
-                  </div>
-                );
-              })}
-            </div>
-          </GlassCard>
-
-          <GlassCard className="p-5 sm:p-6">
-            <h2 className="mb-1 text-base font-semibold text-slate-800">{t('camera.actual_values')}</h2>
-            <p className="mb-4 text-xs leading-relaxed text-slate-500">
-              {t('camera.read_from', { source: kamera?.quelle ?? '—' })}
-              {kamera?.programm && t('camera.controlled_by', { program: kamera.programm })}.
+        {/* Einstellungen in Gruppen */}
+        <div className="space-y-4">
+          {belichtungAutomatisch && (
+            <p className="flex gap-2.5 rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-3 text-xs leading-relaxed text-amber-900">
+              <Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
+              {t('camera.auto_exposure_warning')}
             </p>
-            <dl className="space-y-2">
-              {Object.keys(kamera?.werte ?? {}).sort().map((name) => (
-                <div key={name} className="flex items-baseline justify-between gap-3 border-b border-[color:var(--line)] pb-2 last:border-0">
-                  <dt className="text-sm text-slate-600">{nameLabel(name, t)}</dt>
-                  <dd className="text-right font-mono text-xs tabular-nums text-slate-700">{istWert(kamera?.werte ?? {}, name, t)}</dd>
-                </div>
-              ))}
-            </dl>
-          </GlassCard>
+          )}
 
-          <GlassCard className="p-5 sm:p-6">
-            <div className="flex gap-3">
-              <Camera className="mt-0.5 h-5 w-5 shrink-0 text-slate-400" />
-              <p className="text-xs leading-relaxed text-slate-500">
-                {t('camera.limits_note')}
-              </p>
-            </div>
+          {gruppen.map((g) => {
+            const anzahl = g.regler.filter(istGeaendert).length;
+            const auf = offen[g.id] ?? true;
+            const Icon = g.icon;
+            return (
+              <GlassCard key={g.id} className="overflow-hidden p-0">
+                <button
+                  type="button"
+                  onClick={() => setOffen((a) => ({ ...a, [g.id]: !auf }))}
+                  aria-expanded={auf}
+                  className="flex w-full items-center gap-3 px-5 py-4 text-left"
+                >
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-[color:var(--ink-2)]">
+                    <Icon className="h-[18px] w-[18px]" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-semibold text-[color:var(--ink)]">{t(`cam2.group_${g.id}`)}</span>
+                    <span className="block text-xs text-[color:var(--ink-3)]">{t(`cam2.group_${g.id}_sub`)}</span>
+                  </span>
+                  {anzahl > 0 && (
+                    <span className="rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-semibold text-brand-700 ring-1 ring-inset ring-brand-200">
+                      {t('cam2.changed', { count: anzahl })}
+                    </span>
+                  )}
+                  <ChevronDown className={`h-4 w-4 shrink-0 text-[color:var(--ink-3)] transition-transform ${auf ? 'rotate-180' : ''}`} />
+                </button>
+
+                {auf && (
+                  <div className="divide-y divide-[color:var(--line)] border-t border-[color:var(--line)] px-5">
+                    {g.regler.map((e) => {
+                      const alt = wertAus(kamera!.werte, e.schluessel)!;
+                      const jetzt = entwurf[e.schluessel] ?? alt;
+                      const anders = jetzt !== alt;
+                      const zeigt = erklaert[e.schluessel] ?? false;
+                      return (
+                        <div key={e.schluessel} className="py-4">
+                          <div className="flex items-center gap-2">
+                            <label htmlFor={`e-${e.schluessel}`} className="min-w-0 flex-1 text-sm font-medium text-[color:var(--ink)]">
+                              {t(propKey(e, 'title'))}
+                              {!e.vorschau && e.art === 'zahl' && (
+                                <span className="ml-2 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">{t('cam2.no_preview')}</span>
+                              )}
+                            </label>
+                            {anders && (
+                              <button
+                                type="button"
+                                onClick={() => setze(e, alt)}
+                                title={t('cam2.reset')}
+                                aria-label={`${t('cam2.reset')}: ${t(propKey(e, 'title'))}`}
+                                className="rounded-md p-1 text-[color:var(--ink-3)] hover:bg-slate-100 hover:text-[color:var(--ink)]"
+                              >
+                                <RotateCcw className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                            <span className={`rounded-md px-2 py-0.5 font-mono text-xs tabular-nums ${anders ? 'bg-brand-50 font-semibold text-brand-700' : 'bg-slate-100 text-[color:var(--ink-2)]'}`}>
+                              {anzeige(e, jetzt, t)}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setErklaert((a) => ({ ...a, [e.schluessel]: !zeigt }))}
+                              aria-expanded={zeigt}
+                              aria-label={`${t('cam2.explain')}: ${t(propKey(e, 'title'))}`}
+                              title={t('cam2.explain')}
+                              className={`rounded-md p-1 hover:bg-slate-100 ${zeigt ? 'text-[color:var(--ink)]' : 'text-[color:var(--ink-3)]'}`}
+                            >
+                              <Info className="h-4 w-4" />
+                            </button>
+                          </div>
+
+                          {e.art === 'schalter' ? (
+                            <button
+                              id={`e-${e.schluessel}`}
+                              type="button"
+                              role="switch"
+                              aria-checked={jetzt === 1}
+                              onClick={() => setze(e, jetzt === 1 ? 0 : 1)}
+                              className={`relative mt-2.5 h-6 w-11 rounded-full transition ${jetzt === 1 ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                            >
+                              <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${jetzt === 1 ? 'left-[22px]' : 'left-0.5'}`} />
+                            </button>
+                          ) : (
+                            <div className="mt-2.5 flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setze(e, jetzt - e.schritt)}
+                                disabled={jetzt <= e.von}
+                                aria-label="−"
+                                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[color:var(--line-strong)] text-[color:var(--ink-2)] hover:bg-slate-50 disabled:opacity-40"
+                              >
+                                <Minus className="h-3.5 w-3.5" />
+                              </button>
+                              <input id={`e-${e.schluessel}`} type="range"
+                                min={e.von} max={e.bis} step={e.schritt} value={jetzt}
+                                onChange={(ev) => setze(e, Number(ev.target.value))}
+                                className="w-full accent-slate-800" />
+                              <button
+                                type="button"
+                                onClick={() => setze(e, jetzt + e.schritt)}
+                                disabled={jetzt >= e.bis}
+                                aria-label="+"
+                                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[color:var(--line-strong)] text-[color:var(--ink-2)] hover:bg-slate-50 disabled:opacity-40"
+                              >
+                                <Plus className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          )}
+
+                          {anders && (
+                            <p className="mt-1.5 text-xs text-[color:var(--ink-3)]">{t('cam2.camera_value', { value: anzeige(e, alt, t) })}</p>
+                          )}
+                          {zeigt && (
+                            <p className="mt-2 rounded-md bg-slate-50 px-3 py-2 text-xs leading-relaxed text-[color:var(--ink-2)]">{t(propKey(e, 'text'))}</p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </GlassCard>
+            );
+          })}
+
+          {/* Technische Werte, eingeklappt */}
+          <GlassCard className="overflow-hidden p-0">
+            <button
+              type="button"
+              onClick={() => setTechnikOffen((v) => !v)}
+              aria-expanded={technikOffen}
+              className="flex w-full items-center gap-3 px-5 py-4 text-left"
+            >
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold text-[color:var(--ink)]">{t('cam2.technical')}</span>
+                <span className="block text-xs text-[color:var(--ink-3)]">
+                  {t('camera.read_from', { source: kamera?.quelle ?? '—' })}
+                  {kamera?.programm && t('camera.controlled_by', { program: kamera.programm })}
+                </span>
+              </span>
+              <ChevronDown className={`h-4 w-4 shrink-0 text-[color:var(--ink-3)] transition-transform ${technikOffen ? 'rotate-180' : ''}`} />
+            </button>
+            {technikOffen && (
+              <div className="border-t border-[color:var(--line)] px-5 py-4">
+                <dl className="space-y-2">
+                  {Object.keys(kamera?.werte ?? {}).sort().map((name) => (
+                    <div key={name} className="flex items-baseline justify-between gap-3 border-b border-[color:var(--line)] pb-2 last:border-0">
+                      <dt className="text-sm text-[color:var(--ink-2)]">{nameLabel(name, t)}</dt>
+                      <dd className="text-right font-mono text-xs tabular-nums text-[color:var(--ink)]">{istWert(kamera?.werte ?? {}, name, t)}</dd>
+                    </div>
+                  ))}
+                </dl>
+                <p className="mt-4 text-xs leading-relaxed text-[color:var(--ink-3)]">{t('camera.limits_note')}</p>
+              </div>
+            )}
           </GlassCard>
         </div>
       </div>
+
+      {/* Feste Änderungsleiste */}
+      {geaendert.length > 0 && (
+        <div className="sticky bottom-4 z-30 rounded-lg border border-[color:var(--line-strong)] bg-white/95 px-4 py-3 shadow-lg backdrop-blur max-[900px]:bottom-[calc(84px+env(safe-area-inset-bottom,0px))]">
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="min-w-0 flex-1 text-sm">
+              <span className="font-semibold text-[color:var(--ink)]">
+                {t(geaendert.length === 1 ? 'camera.changes_ready_one' : 'camera.changes_ready_many', { count: geaendert.length })}
+              </span>
+              <span className="ml-2 hidden text-[color:var(--ink-3)] md:inline">
+                {geaendert.slice(0, 3).map((e) => t(propKey(e, 'title'))).join(' · ')}
+                {geaendert.length > 3 ? ' …' : ''}
+              </span>
+            </p>
+            <button type="button" onClick={verwerfen} disabled={beschaeftigt !== null} className="glass-button-secondary disabled:opacity-50">
+              <RotateCcw className="h-4 w-4" /> {t('camera.discard')}
+            </button>
+            <button type="button" onClick={() => setDialog('senden')} disabled={beschaeftigt !== null} className="glass-button-primary disabled:opacity-50">
+              <Send className="h-4 w-4" />
+              {beschaeftigt === 'senden' ? t('camera.sending') : t('camera.send_to_camera')}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {dialog === 'senden' && (
+        <Modal onClose={() => setDialog(null)} labelledBy="kamera-dialog" panelClassName="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
+          <h2 id="kamera-dialog" className="text-lg font-semibold text-[color:var(--ink)]">{t('cam2.confirm_title')}</h2>
+          <p className="mt-2 text-sm leading-relaxed text-[color:var(--ink-2)]">{t('cam2.confirm_text')}</p>
+          <div className="mt-4 max-h-[40vh] overflow-y-auto">{aenderungsliste}</div>
+          <p className="mt-3 text-xs leading-relaxed text-[color:var(--ink-3)]">{t('camera.backup_note')}</p>
+          <div className="mt-5 flex flex-wrap justify-end gap-2">
+            <button type="button" onClick={() => setDialog(null)} className="glass-button-secondary">{t('cam2.cancel')}</button>
+            <button type="button" onClick={() => void senden()} className="glass-button-primary">
+              <Send className="h-4 w-4" /> {t('camera.send_to_camera')}
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {dialog === 'testfoto' && (
+        <Modal onClose={() => setDialog(null)} labelledBy="kamera-dialog" panelClassName="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+          <h2 id="kamera-dialog" className="text-lg font-semibold text-[color:var(--ink)]">{t('cam2.test_title')}</h2>
+          <p className="mt-2 text-sm leading-relaxed text-[color:var(--ink-2)]">{t('cam2.test_text')}</p>
+          <div className="mt-5 flex flex-wrap justify-end gap-2">
+            <button type="button" onClick={() => setDialog(null)} className="glass-button-secondary">{t('cam2.cancel')}</button>
+            <button type="button" onClick={() => void testfoto()} className="glass-button-primary">
+              <Camera className="h-4 w-4" /> {t('camera.trigger_test')}
+            </button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
