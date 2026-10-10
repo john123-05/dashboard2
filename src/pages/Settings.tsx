@@ -101,10 +101,36 @@ function normalizeNotificationErrorMessage(message: string | null): string | nul
   return message;
 }
 
+// Abschnitte der Seite in Anzeigereihenfolge (Navigation links). `id` = Anker der Section.
+const SETTINGS_SECTIONS = [
+  { id: 'einstellungen-profil', labelKey: 'settings.profile' },
+  { id: 'einstellungen-organisation', labelKey: 'settings.organization' },
+  { id: 'einstellungen-sprache', labelKey: 'settings.language' },
+  { id: 'einstellungen-bildpreis', labelKey: 'settings.kiosk_price.title' },
+  { id: 'einstellungen-zeiten', labelKey: 'settings.schedule.title' },
+  { id: 'benachrichtigungen', labelKey: 'settings.notifications.title' },
+  { id: 'einstellungen-stripe', labelKey: 'settings.stripe_products' },
+];
+
 export default function Settings() {
   // Sprungmarke aus der Leiste oben rechts (Benachrichtigungen -> Zahnrad):
   // die Seite lädt ihre Karten nachträglich, daher kurz warten und scrollen.
   const { hash } = useLocation();
+  const [activeSection, setActiveSection] = useState(SETTINGS_SECTIONS[0].id);
+  // Markiert in der Navigation den Abschnitt, der gerade oben im Bild steht.
+  useEffect(() => {
+    const sections = SETTINGS_SECTIONS.map((s) => document.getElementById(s.id)).filter(Boolean) as HTMLElement[];
+    if (sections.length === 0 || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+        if (visible) setActiveSection(visible.target.id);
+      },
+      { rootMargin: '-15% 0px -70% 0px' },
+    );
+    sections.forEach((section) => observer.observe(section));
+    return () => observer.disconnect();
+  });
   useEffect(() => {
     if (!hash) return;
     const id = hash.slice(1);
@@ -693,8 +719,8 @@ export default function Settings() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="h-8 w-32 animate-pulse rounded-lg bg-white/40" />
-        <div className="h-64 animate-pulse rounded-2xl bg-white/30" />
+        <div className="h-8 w-32 animate-pulse rounded-lg bg-slate-100" />
+        <div className="h-64 animate-pulse rounded-2xl bg-slate-100" />
       </div>
     );
   }
@@ -702,11 +728,36 @@ export default function Settings() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('settings.title')}</h2>
-        <p className="mt-1 text-sm text-slate-500">{t('settings.subtitle')}</p>
+        <h2 className="text-[28px] font-light tracking-tight text-[color:var(--ink)] sm:text-[32px]">{t('settings.title')}</h2>
+        <p className="mt-1 text-sm text-[color:var(--ink-3)]">{t('settings.subtitle')}</p>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-10">
+        <nav aria-label={t('settings.title')} className="lg:sticky lg:top-6 lg:self-start">
+          <div className="flex gap-2 overflow-x-auto pb-1 lg:flex-col lg:gap-0 lg:overflow-visible lg:border-l lg:border-[color:var(--line)] lg:pb-0">
+            {SETTINGS_SECTIONS.map((section) => (
+              <button
+                key={section.id}
+                type="button"
+                onClick={() => {
+                  setActiveSection(section.id);
+                  document.getElementById(section.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }}
+                aria-current={activeSection === section.id ? 'true' : undefined}
+                className={`shrink-0 whitespace-nowrap rounded-full border px-3 py-1.5 text-left text-sm transition-colors lg:-ml-px lg:rounded-none lg:border-0 lg:border-l-2 lg:px-4 lg:py-2 ${
+                  activeSection === section.id
+                    ? 'border-[color:var(--ink)] bg-[color:var(--ink)] text-white lg:border-brand-600 lg:bg-transparent lg:font-medium lg:text-[color:var(--ink)]'
+                    : 'border-[color:var(--line-strong)] text-[color:var(--ink-2)] hover:bg-slate-100 lg:border-transparent lg:text-[color:var(--ink-3)] lg:hover:bg-transparent lg:hover:text-[color:var(--ink)]'
+                }`}
+              >
+                {t(section.labelKey)}
+              </button>
+            ))}
+          </div>
+        </nav>
+
+      <div className="flex min-w-0 flex-col gap-6">
+        <section id="einstellungen-sprache" className="order-3 scroll-mt-6">
         <GlassCard className="p-6">
           <h3 className="mb-4 text-base font-semibold text-slate-800">{t('settings.language')}</h3>
           <label className="mb-1.5 block text-sm font-medium text-slate-700">
@@ -726,6 +777,8 @@ export default function Settings() {
             <option value="lv">Latviešu</option>
           </select>
         </GlassCard>
+        </section>
+        <section id="einstellungen-stripe" className="order-7 scroll-mt-6">
         <GlassCard className="p-6">
           <h3 className="mb-4 text-base font-semibold text-slate-800">{t('settings.stripe_products')}</h3>
           <p className="mb-4 text-sm text-slate-600">
@@ -736,6 +789,8 @@ export default function Settings() {
             {t('settings.select_products')}
           </button>
         </GlassCard>
+        </section>
+        <section id="einstellungen-profil" className="order-1 scroll-mt-6">
         <GlassCard className="p-6">
           <h3 className="mb-4 text-base font-semibold text-slate-800">{t('settings.profile')}</h3>
           <form onSubmit={handleSaveProfile} className="space-y-4">
@@ -780,12 +835,14 @@ export default function Settings() {
             </button>
           </form>
         </GlassCard>
+        </section>
 
+        <section id="einstellungen-organisation" className="order-2 scroll-mt-6">
         <GlassCard className="p-6">
           <h3 className="mb-4 text-base font-semibold text-slate-800">{t('settings.organization')}</h3>
           {parksToRender.length > 0 ? (
             <div className="space-y-4">
-              <div className="flex items-center gap-3 rounded-xl bg-white/30 p-4">
+              <div className="flex items-center gap-3 rounded-xl bg-slate-50 p-4">
                 <div className="rounded-xl bg-brand-100 p-3">
                   <Building2 className="h-5 w-5 text-brand-600" />
                 </div>
@@ -801,7 +858,7 @@ export default function Settings() {
               <div className="space-y-3">
                 <p className="text-sm font-medium text-slate-600">{t('settings.parks_attractions')}</p>
                 {parksToRender.map((park) => (
-                  <div key={park.id} className="rounded-xl bg-white/30 p-4">
+                  <div key={park.id} className="rounded-xl bg-slate-50 p-4">
                     <div className="mb-2 flex items-center gap-2">
                       <MapPin className="h-4 w-4 text-brand-500" />
                       <p className="text-sm font-semibold text-slate-800">{park.name}</p>
@@ -838,15 +895,17 @@ export default function Settings() {
             <p className="text-sm text-slate-500">{t('app.none')}</p>
           )}
         </GlassCard>
+        </section>
 
+        <section id="einstellungen-bildpreis" className="order-4 scroll-mt-6">
         <GlassCard className="p-5">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <h3 className="text-base font-semibold text-slate-800">{t('settings.kiosk_price.title')}</h3>
               <p className="mt-1 text-sm text-slate-500">{t('settings.kiosk_price.desc')}</p>
             </div>
-            <div className="rounded-xl bg-white/30 px-3 py-2.5">
-              <p className="text-xs uppercase tracking-[0.24em] text-slate-400">{t('settings.kiosk_price.current')}</p>
+            <div className="rounded-xl bg-slate-50 px-3 py-2.5">
+              <p className="text-xs text-slate-400">{t('settings.kiosk_price.current')}</p>
               <p className="mt-1 text-base font-semibold text-slate-800">
                 {selectedPark?.price_per_photo_cents != null
                   ? `${formatEuroInputFromCents(selectedPark.price_per_photo_cents)} €`
@@ -875,7 +934,7 @@ export default function Settings() {
               </div>
             </div>
 
-            <div className="rounded-2xl bg-white/30 p-4">
+            <div className="rounded-xl bg-slate-50 p-4">
               <p className="text-sm font-medium text-slate-700">{t('settings.kiosk_price.scope')}</p>
               <div className="mt-3 flex flex-wrap gap-2.5">
                 <button
@@ -919,14 +978,16 @@ export default function Settings() {
             </div>
           </div>
         </GlassCard>
+        </section>
 
-        <GlassCard className="self-start p-5">
-          <div id="benachrichtigungen" className="flex scroll-mt-24 items-start justify-between gap-4">
+        <section id="benachrichtigungen" className="order-6 scroll-mt-6">
+        <GlassCard className="p-5">
+          <div className="flex items-start justify-between gap-4">
             <div>
               <h3 className="text-base font-semibold text-slate-800">{t('settings.notifications.title')}</h3>
             </div>
-            <div className="rounded-2xl bg-white/30 px-3 py-2.5">
-              <p className="text-xs uppercase tracking-[0.24em] text-slate-400">
+            <div className="rounded-xl bg-slate-50 px-3 py-2.5">
+              <p className="text-xs text-slate-400">
                 {t('settings.notifications.active_device')}
               </p>
               <p className="mt-1 text-sm font-semibold text-slate-800">
@@ -939,7 +1000,7 @@ export default function Settings() {
             </div>
           </div>
 
-          <div className="mt-4 rounded-2xl bg-white/30 p-4">
+          <div className="mt-4 rounded-xl bg-slate-50 p-4">
             {notificationLoading ? (
               <div className="flex items-center gap-3 py-6 text-sm text-slate-500">
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -995,7 +1056,7 @@ export default function Settings() {
                         className="mt-1 h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
                       />
                     </div>
-                    <label className="mt-3 block text-xs font-medium uppercase tracking-[0.24em] text-slate-400">
+                    <label className="mt-3 block text-xs font-medium text-slate-400">
                       {t('settings.notifications.minutes')}
                     </label>
                     <input
@@ -1026,7 +1087,7 @@ export default function Settings() {
                         className="mt-1 h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
                       />
                     </div>
-                    <label className="mt-3 block text-xs font-medium uppercase tracking-[0.24em] text-slate-400">
+                    <label className="mt-3 block text-xs font-medium text-slate-400">
                       {t('settings.notifications.threshold')}
                     </label>
                     <input
@@ -1106,8 +1167,10 @@ export default function Settings() {
             )}
           </div>
         </GlassCard>
+        </section>
 
-        <GlassCard className="p-6 xl:col-span-2">
+        <section id="einstellungen-zeiten" className="order-5 scroll-mt-6">
+        <GlassCard className="p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <h3 className="text-base font-semibold text-slate-800">{t('settings.schedule.title')}</h3>
@@ -1116,8 +1179,8 @@ export default function Settings() {
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-3">
-              <div className="rounded-xl bg-white/30 px-4 py-3 text-right">
-                <p className="text-xs uppercase tracking-[0.24em] text-slate-400">{t('settings.schedule.timezone')}</p>
+              <div className="rounded-xl bg-slate-50 px-4 py-3 text-right">
+                <p className="text-xs text-slate-400">{t('settings.schedule.timezone')}</p>
                 <p className="mt-1 text-sm font-semibold text-slate-800">{selectedPark?.timezone || 'Europe/Vienna'}</p>
               </div>
               <button
@@ -1133,7 +1196,7 @@ export default function Settings() {
           </div>
 
           <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
-            <div className="rounded-2xl bg-white/30 p-4">
+            <div className="rounded-xl bg-slate-50 p-4">
               <div className="mb-4 flex items-center gap-2">
                 <Clock3 className="h-4 w-4 text-brand-600" />
                 <p className="text-sm font-semibold text-slate-800">{t('settings.schedule.weekly')}</p>
@@ -1215,14 +1278,14 @@ export default function Settings() {
 
             <div className="border-t border-slate-200/70 pt-5 xl:border-l xl:border-t-0 xl:pl-5 xl:pt-0">
               <div className="space-y-3">
-                <div className="rounded-2xl bg-white/30 p-4">
+                <div className="rounded-xl bg-slate-50 p-4">
                   <div className="mb-3 flex items-center gap-2">
                     <CalendarDays className="h-4 w-4 text-brand-600" />
                     <p className="text-sm font-semibold text-slate-800">{t('settings.schedule.season')}</p>
                   </div>
                   <div className="space-y-3">
                     <div>
-                      <label className="mb-1.5 block text-xs font-medium uppercase tracking-[0.18em] text-slate-400">{t('settings.schedule.season_start')}</label>
+                      <label className="mb-1.5 block text-xs font-medium text-slate-400">{t('settings.schedule.season_start')}</label>
                       <input
                         type="date"
                         value={scheduleConfig.season_start ?? ''}
@@ -1231,7 +1294,7 @@ export default function Settings() {
                       />
                     </div>
                     <div>
-                      <label className="mb-1.5 block text-xs font-medium uppercase tracking-[0.18em] text-slate-400">{t('settings.schedule.season_end')}</label>
+                      <label className="mb-1.5 block text-xs font-medium text-slate-400">{t('settings.schedule.season_end')}</label>
                       <input
                         type="date"
                         value={scheduleConfig.season_end ?? ''}
@@ -1258,7 +1321,7 @@ export default function Settings() {
               const items = scheduleConfig.exceptions.filter((entry) => entry.type === type);
 
               return (
-                <details key={type} className="rounded-2xl bg-white/30 p-4" open={items.length > 0}>
+                <details key={type} className="rounded-xl bg-slate-50 p-4" open={items.length > 0}>
                   <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3">
                     <div>
                       <p className="text-sm font-semibold text-slate-800">{title}</p>
@@ -1266,7 +1329,7 @@ export default function Settings() {
                         {items.length > 0 ? t('settings.schedule.entries', { count: items.length }) : t('settings.schedule.no_entries')}
                       </p>
                     </div>
-                    <span className="text-xs font-medium uppercase tracking-[0.2em] text-slate-400">{t('settings.schedule.edit')}</span>
+                    <span className="text-xs font-medium text-slate-400">{t('settings.schedule.edit')}</span>
                   </summary>
 
                   <div className="mt-4 space-y-3">
@@ -1403,6 +1466,8 @@ export default function Settings() {
 
           {scheduleMessage && <p className="mt-3 text-sm text-slate-600">{scheduleMessage}</p>}
         </GlassCard>
+        </section>
+      </div>
       </div>
 
       {showProductModal && (
