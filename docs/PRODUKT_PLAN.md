@@ -148,7 +148,7 @@ ohne seitliches Scrollen funktionieren.
   park_manager, marketing, support_agent, staff`. `AuthContext`: `isOwner` = org_owner|platform_admin,
   `isStaff` = staff. Mitarbeiter anlegen: Edge Function `manage-staff` (nur org_owner).
 - Gesperrt/freigeschaltet heute: Speedmessung über `hasGuestActivity(parkId)` (feste Park-Liste in
-  `src/lib/guestActivity.ts`), Online-Shop über `shop.activation_requested_at`, CRM nicht gesperrt.
+  `src/components/GuestActivityAwareOverlay.tsx`), Online-Shop über `shop.activation_requested_at`, CRM nicht gesperrt.
   Ausstattung/Upgrades: Tabelle `park_equipment_items` (shared), `src/lib/equipment.ts`.
 - Benachrichtigungen: `src/lib/notificationFeed.ts` (`useNotificationFeed`), UI in `TopBar.tsx`.
   **Bug:** Übersicht-Karte „Benachrichtigungen und Aktivitäten“ (`src/pages/Overview.tsx`,
@@ -176,7 +176,7 @@ Legende Modell: **S** = Sonnet/Codex medium reicht · **O** = Opus empfohlen (Ar
 
 ### Phase B – Pläne & Freischaltungen (Grundlage für alles Weitere)
 
-- [ ] **B1 Funktions-Register** (O)
+- [x] **B1 Funktions-Register** (O) – erledigt 10.10.2026
   - Dateien: neu `src/lib/plans.ts`.
   - Inhalt: `type PlanKey = 'basis' | 'marketing_starter' | 'marketing_pro'`; `type FeatureKey =
     'crm_contacts' | 'crm_survey' | 'crm_social' | 'crm_pixel' | 'email_marketing' | 'social_campaigns' |
@@ -185,7 +185,8 @@ Legende Modell: **S** = Sonnet/Codex medium reicht · **O** = Opus empfohlen (Ar
     (`/leads/kontakte`→crm_contacts, `/leads/umfrage`→crm_survey, `/leads/social`→crm_social,
     `/leads/pixel`→crm_pixel, `/marketing/email`→email_marketing, `/shop`→online_shop, `/users`→speed).
   - Hook `useEntitlements()` → `{ plan, has(feature), loading }`. Übergangsweise: `plan = 'marketing_starter'`
-    für alle Parks, die heute CRM nutzen (kein Bruch!), Add-ons wie bisher (`hasGuestActivity`, Shop-Status).
+    für alle Parks (kein Bruch!), Add-ons wie bisher (`hasGuestActivity`; Online-Shop überall noch Upgrade).
+    Zusätzlich: `featureForPath(pathname)`, `planIncludes(plan, feature)`, `PLAN_LABEL_KEY` (Texte `plans.*` mit B3).
   - Fertig, wenn: tsc grün, noch keine sichtbare Änderung.
 - [ ] **B2 Tabelle `park_entitlements`** (O) – Voraussetzung B1.
   - Migration (shared, `supabase/migrations/2026101012…_park_entitlements.sql`):
@@ -379,3 +380,4 @@ keine Vertriebs-Pipeline für Parks. Keine Preise ändern ohne John.
   Dabei behoben: eine laufende Automaten-Störung erschien jeden Tag als neue Meldung (Kennung mit Datum).
   Jetzt eine Meldung je Störung, solange sie andauert (`active` in `notificationFeed.ts`); Schweregrad
   auf der Übersicht übersetzt („Warnung“ statt „warning“).
+- 10.10.2026: B1 umgesetzt: `src/lib/plans.ts` (Plan-/Funktionsliste, Seiten-Zuordnung, `useEntitlements()` mit Übergangsregel). Noch nirgends eingebunden, keine sichtbare Änderung.
