@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { usePark } from '../../contexts/ParkContext';
 import { meldeAusstattungsInteresse } from '../../lib/equipment';
 import { useI18n, useLocaleTag } from '../../lib/i18n';
-import { bulletList, catalogGroup, catalogPackage, fillText, packageText, useCatalog } from '../../lib/catalog';
+import { bulletList, catalogGroup, catalogPackage, fillText, packageText, reportDealRequest, useCatalog } from '../../lib/catalog';
+import DealNote from './DealNote';
 import PlanCard, { PlanAction, PriceFigure } from './PlanCard';
 
 // Speedmessung nur als Software, für Parks die die Messhardware schon haben.
@@ -66,7 +67,8 @@ export default function SoftwarePackages() {
     try {
       const paid = plan.months - plan.free;
       const label = `Speedmessung nur Software (Hardware vorhanden${display ? ', mit Display' : ''}): ${plan.months} Monate Laufzeit, ${monthly} €/Monat${plan.free ? `, ${plan.free} Monate geschenkt, im Voraus ${paid * monthly} €` : ''}`;
-      await meldeAusstattungsInteresse(parkId, { label });
+      await meldeAusstattungsInteresse(parkId, { label: plan.cp?.deal ? `${label} (Aktion/Kundenpreis)` : label });
+      void reportDealRequest(parkId, plan.cp);
       setRequested((prev) => [...prev, `${plan.key}-${display}`]);
     } catch (e) {
       setError(e instanceof Error ? e.message : t('crm_pricing.request_failed'));
@@ -119,11 +121,14 @@ export default function SoftwarePackages() {
               badgeTone={plan.highlight ? 'brand' : 'positive'}
               name={packageText(plan.cp, 'name', language) ?? t(plan.name)}
               price={
-                plan.free ? (
+                <>
+                <DealNote pkg={plan.cp} />
+                {plan.free ? (
                   <PriceFigure compact value={eur(total, locale)} suffix={t('crm_pricing.for_months', { months: plan.months })} />
                 ) : (
                   <PriceFigure compact value={eur(monthly, locale)} suffix={t('crm_pricing.per_month')} />
-                )
+                )}
+                </>
               }
               priceNote={
                 plan.free ? (

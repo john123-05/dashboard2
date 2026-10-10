@@ -5,7 +5,8 @@ import { usePark } from '../contexts/ParkContext';
 import { meldeAusstattungsInteresse } from '../lib/equipment';
 import { BillingDisabledError, openBillingPortal, startCheckout } from '../lib/billing';
 import { useI18n, useLocaleTag } from '../lib/i18n';
-import { bulletList, catalogCompare, catalogGroup, catalogPackage, packageText, useCatalog } from '../lib/catalog';
+import { bulletList, catalogCompare, catalogGroup, catalogPackage, packageText, reportDealRequest, useCatalog } from '../lib/catalog';
+import DealNote from '../components/upgrade/DealNote';
 import { PLAN_LABEL_KEY, useEntitlements, type PlanKey } from '../lib/plans';
 import { UpgradePageHeader } from '../components/upgrade/UpgradeHero';
 import PlanCard, { PlanAction, PriceFigure } from '../components/upgrade/PlanCard';
@@ -130,7 +131,8 @@ export default function Plans() {
         }
       }
       const name = plan === 'marketing_pro' ? 'Marketing Pro' : 'Marketing Starter';
-      await meldeAusstattungsInteresse(parkId, { label: `Plan anfragen: ${name} (${price(plan)} €/Monat)` });
+      await meldeAusstattungsInteresse(parkId, { label: `Plan anfragen: ${name} (${price(plan)} €/Monat${catalogPackage(catalog, plan)?.deal ? ', Aktion/Kundenpreis' : ''})` });
+      void reportDealRequest(parkId, catalogPackage(catalog, plan));
       setRequested((prev) => [...prev, plan]);
     } catch (e) {
       setError(e instanceof Error ? e.message : t('crm_pricing.request_failed'));
@@ -181,6 +183,13 @@ export default function Plans() {
     <div className="space-y-8">
       <UpgradePageHeader title={t('pp.title')} subtitle={t('pp.subtitle')} />
 
+      {(catalog?.promotions ?? []).map((promo) => (
+        <div key={promo.id} className="flex flex-wrap items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+          <span className="rounded-full bg-emerald-600 px-2.5 py-0.5 text-xs font-semibold text-white">{promo.texts?.[language]?.title || promo.texts?.de?.title || t('deal.promo_default')}</span>
+          <span className="min-w-0 flex-1">{promo.texts?.[language]?.banner || promo.texts?.de?.banner || t('deal.banner_default', { name: promo.name })}</span>
+          {promo.ends_on && <span className="text-xs text-emerald-800">{t('deal.until', { date: new Date(`${promo.ends_on}T00:00:00`).toLocaleDateString(locale) })}</span>}
+        </div>
+      ))}
       {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
       {billingResult === 'success' && <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{t('plans.billing_success')}</p>}
       {billingResult === 'cancel' && <p className="rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-700">{t('plans.billing_cancel')}</p>}
@@ -230,10 +239,13 @@ export default function Plans() {
                   badgeTone="brand"
                   name={packageText(cp, 'name', language) ?? t(PLAN_LABEL_KEY[card.plan])}
                   price={
+                    <>
+                    <DealNote pkg={cp} />
                     <PriceFigure
                       value={money(price(card.plan))}
                       suffix={price(card.plan) === 0 ? undefined : t('crm_pricing.per_month')}
                     />
+                    </>
                   }
                   priceNote={packageText(cp, 'tagline', language) ?? t(card.noteKey)}
                   includedLabel={t('crm_pricing.included')}

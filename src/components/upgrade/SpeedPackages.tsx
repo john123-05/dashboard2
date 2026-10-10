@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { usePark } from '../../contexts/ParkContext';
 import { meldeAusstattungsInteresse } from '../../lib/equipment';
 import { useI18n, useLocaleTag } from '../../lib/i18n';
-import { bulletList, catalogGroup, catalogPackage, fillText, packageText, useCatalog } from '../../lib/catalog';
+import { bulletList, catalogGroup, catalogPackage, fillText, packageText, reportDealRequest, useCatalog } from '../../lib/catalog';
+import DealNote from './DealNote';
 import PlanCard, { PlanAction, PriceFigure } from './PlanCard';
 import SoftwarePackages from './SoftwarePackages';
 
@@ -99,7 +100,9 @@ export default function SpeedPackages({ softwareOnly = false }: { softwareOnly?:
     try {
       const internalName = plan.key === 'basis' ? 'Speedmessung' : plan.key === 'display' ? 'Speedmessung + Display' : 'Speedmessung 48 Monate';
       const label = `Speedmessung nachrüsten: ${internalName} (${plan.months} Monate, ${plan.monthly} €/Monat${plan.fromYear2 ? `, ab Jahr 2 ${plan.fromYear2} €/Monat` : ''}, Hardware kostenlos)`;
-      await meldeAusstattungsInteresse(parkId, { label });
+      const cp = plans.find((p) => p.plan.key === planKey)?.cp;
+      await meldeAusstattungsInteresse(parkId, { label: cp?.deal ? `${label} (Aktion/Kundenpreis)` : label });
+      void reportDealRequest(parkId, cp);
       setRequested((prev) => [...prev, planKey]);
     } catch (e) {
       setError(e instanceof Error ? e.message : t('crm_pricing.request_failed'));
@@ -124,7 +127,7 @@ export default function SpeedPackages({ softwareOnly = false }: { softwareOnly?:
             badge={packageText(cp, 'badge', language) ? fillText(packageText(cp, 'badge', language)!, { months: cp?.free_months ?? 0 }) : plan.badge ? t(plan.badge) : undefined}
             badgeTone={plan.highlight ? 'brand' : 'positive'}
             name={packageText(cp, 'name', language) ?? t(plan.name)}
-            price={<PriceFigure compact value={eur(plan.monthly, locale)} suffix={t('crm_pricing.per_month')} />}
+            price={<><DealNote pkg={cp} /><PriceFigure compact value={eur(plan.monthly, locale)} suffix={t('crm_pricing.per_month')} /></>}
             priceNote={
               <>
                 {t('speed.offer.term', { months: plan.months })} · {plan.fromYear2 ? t('speed.offer.year2', { amount: eur(plan.fromYear2, locale) }) : t('speed.offer.hardware_zero')} · {t('speed.offer.excl_vat')}

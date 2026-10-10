@@ -3,7 +3,8 @@ import { usePark } from '../../contexts/ParkContext';
 import { meldeAusstattungsInteresse } from '../../lib/equipment';
 import { requestShopActivation } from '../../lib/shop';
 import { useI18n, useLocaleTag } from '../../lib/i18n';
-import { bulletList, catalogGroup, catalogPackage, fillText, packageText, useCatalog } from '../../lib/catalog';
+import { bulletList, catalogGroup, catalogPackage, fillText, packageText, reportDealRequest, useCatalog } from '../../lib/catalog';
+import DealNote from './DealNote';
 import PlanCard, { PlanAction, PriceFigure } from './PlanCard';
 
 type PlanKey = 'monatlich' | 'jaehrlich' | 'fullservice';
@@ -69,7 +70,9 @@ export default function ShopPackages() {
           : plan === 'jaehrlich'
             ? `Shop freischalten: Einrichtung ${setupY} € einmalig + ${termY} Monate im Voraus ${yearlyPrice} € (${freeMonths} Monate geschenkt)`
             : `Shop freischalten: Full-Service, ${share} % der Shop-Einnahmen, Einrichtung und Monatskosten 0 €`;
-      await meldeAusstattungsInteresse(parkId, { label });
+      const cp = plan === 'monatlich' ? cm : plan === 'jaehrlich' ? cy : cf;
+      await meldeAusstattungsInteresse(parkId, { label: cp?.deal ? `${label} (Aktion/Kundenpreis)` : label });
+      void reportDealRequest(parkId, cp);
       await requestShopActivation(parkId).catch(() => undefined);
       setRequested((prev) => [...prev, plan]);
     } catch (e) {
@@ -120,7 +123,7 @@ export default function ShopPackages() {
           <PlanCard
             badge={packageText(cm, 'badge', language) ?? t('crm_pricing.monthly')}
             name={name(cm, 'shop_pricing.monthly_name')}
-            price={setupPlus(setupM, money(monthlyM), t('shop_pricing.per_month'))}
+            price={<><DealNote pkg={cm} />{setupPlus(setupM, money(monthlyM), t('shop_pricing.per_month'))}</>}
             priceNote={note(cm) ?? t('shop_pricing.setup_desc')}
             includedLabel={t('crm_pricing.included')}
             points={included(cm, PACKAGE_POINTS)}
@@ -135,13 +138,13 @@ export default function ShopPackages() {
             badge={packageText(cy, 'badge', language) ? fillText(packageText(cy, 'badge', language)!, { months: freeMonths }) : t('shop_pricing.yearly_badge', { months: freeMonths })}
             badgeTone="brand"
             name={name(cy, 'shop_pricing.yearly_name')}
-            price={setupPlus(
+            price={<><DealNote pkg={cy} />{setupPlus(
               setupY,
               money(yearlyPrice),
               <>
                 {t('crm_pricing.for_months', { months: termY })} <span className="text-slate-400 line-through">{money(yearlyFull)}</span>
               </>,
-            )}
+            )}</>}
             priceNote={
               <>
                 <span className="font-semibold text-emerald-700">{t('crm_pricing.saving', { amount: money(yearlyFull - yearlyPrice) })}</span>{' '}

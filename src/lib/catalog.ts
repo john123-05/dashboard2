@@ -22,6 +22,27 @@ export type CatalogPackage = {
   texts: Record<string, { name?: string; tagline?: string; badge?: string; price_note?: string }>;
   bullets: { texts: Texts; included: boolean }[];
   meta: { share_percent?: number; year2_cents?: number; display_cents?: number };
+  /** Kundenpreis oder Aktion: Preise oben sind schon angepasst, der Listenpreis steht hier. */
+  deal?: {
+    source: 'override' | 'promotion';
+    name: string | null;
+    promotion_id: string | null;
+    percent: number | null;
+    fixed: boolean;
+    extra_free_months: number;
+    valid_until: string | null;
+    list_price_cents: number | null;
+    list_free_months: number;
+  } | null;
+};
+export type CatalogPromotion = {
+  id: string;
+  name: string;
+  texts: Record<string, { title?: string; banner?: string }>;
+  discount_percent: number | null;
+  free_months: number;
+  ends_on: string | null;
+  package_keys: string[];
 };
 export type CatalogPoint = {
   key: string;
@@ -32,7 +53,7 @@ export type CatalogPoint = {
   texts: Texts;
 };
 export type CatalogCell = { package_key: string; point_key: string; included: boolean; value: Texts | null };
-export type Catalog = { packages: CatalogPackage[]; points: CatalogPoint[]; cells: CatalogCell[] };
+export type Catalog = { packages: CatalogPackage[]; points: CatalogPoint[]; cells: CatalogCell[]; promotions?: CatalogPromotion[] };
 
 const cache = new Map<string, { at: number; promise: Promise<Catalog | null> }>();
 const MAX_AGE_MS = 60_000;
@@ -148,4 +169,23 @@ export function catalogCompare(
 /** Platzhalter {months}, {paid} … in Texten aus dem Katalog füllen. */
 export function fillText(text: string, params: Record<string, string | number>): string {
   return text.replace(/\{(\w+)\}/g, (match, name) => (name in params ? String(params[name]) : match));
+}
+
+/** Meldet, dass der Park wegen einer Aktion eine Anfrage geschickt hat (für die Zähler im CRM). */
+export async function reportDealRequest(parkId: string, pkg: CatalogPackage | undefined): Promise<void> {
+  const promotionId = pkg?.deal?.promotion_id;
+  if (!promotionId) return;
+  try {
+    const {
+      data: { session },
+    } = await getFunctionSession();
+    if (!session?.access_token) return;
+    await fetch(`${EXTERNAL_SUPABASE_URL}/functions/v1/operator-catalog`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}`, apikey: EXTERNAL_SUPABASE_ANON_KEY },
+      body: JSON.stringify({ park_id: parkId, promotion_id: promotionId, event: 'requested' }),
+    });
+  } catch {
+    // Zähler ist nur eine Zugabe, die Anfrage selbst ist schon raus.
+  }
 }
