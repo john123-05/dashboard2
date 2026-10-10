@@ -17,6 +17,7 @@ interface AuthState {
   role: OrganizationMembership['role'] | null;
   isStaff: boolean;
   isOwner: boolean;
+  allowedPages: string[] | null;
 }
 
 export interface AuthContextType extends AuthState {
@@ -86,6 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     role: null,
     isStaff: false,
     isOwner: false,
+    allowedPages: null,
   });
 
   function clearAuthState() {
@@ -101,6 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       role: null,
       isStaff: false,
       isOwner: false,
+      allowedPages: null,
       loading: false,
     }));
   }
@@ -174,6 +177,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const currentOrg = currentMembership ? currentMembership.organization : null;
       const role = currentMembership ? currentMembership.role : null;
 
+      // Vom Betreiber deaktivierter Zugang: sofort abmelden.
+      if (currentMembership?.disabled_at) {
+        await supabase.auth.signOut().catch(() => undefined);
+        clearAuthState();
+        return;
+      }
+
       setState((prev) => ({
         ...prev,
         profile: profile as OperatorProfile | null,
@@ -184,6 +194,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         role,
         isStaff: role === 'staff',
         isOwner: role === 'org_owner' || role === 'platform_admin',
+        allowedPages: Array.isArray(currentMembership?.allowed_pages) ? currentMembership.allowed_pages : null,
         loading: false,
       }));
     } catch (fehler) {

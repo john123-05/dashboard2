@@ -35,6 +35,7 @@ import { usePark } from '../../contexts/ParkContext';
 import { supabase } from '../../lib/supabase';
 import ProfileParkSwitcher from './ProfileParkSwitcher';
 import { CRM_TABS } from '../../lib/crmTabs';
+import { canSee, pageKeyForPath } from '../../lib/permissions';
 import { featureForPath, useEntitlements, PLAN_LABEL_KEY } from '../../lib/plans';
 
 type NavItem = {
@@ -183,7 +184,7 @@ export default function Sidebar({
   mobileOpen,
   onCloseMobile,
 }: SidebarProps) {
-  const { profile, currentOrg, signOut, isStaff, isOwner, refreshProfile } = useAuth();
+  const { profile, currentOrg, signOut, isStaff, isOwner, allowedPages, refreshProfile } = useAuth();
   const location = useLocation();
   const { t } = useI18n();
   const { parkName, setPark, isKioskPark, parkId, cameraControlAvailable } = usePark();
@@ -208,7 +209,8 @@ export default function Sidebar({
 
   const visibleItemsDefaultOrder = navItems.filter((item) => {
     if (item.to === '/kamera' && cameraControlAvailable !== true) return false;
-    if (isStaff) return item.staffAllowed;
+    if (!canSee(pageKeyForPath(item.to), { isOwner, isStaff, allowedPages })) return false;
+    if (isStaff && !allowedPages) return item.staffAllowed;
     if (item.ownerOnly) return isOwner;
     return true;
   });

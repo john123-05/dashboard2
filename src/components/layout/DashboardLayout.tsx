@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Outlet, Navigate, useLocation } from 'react-router-dom';
+import { canSee, firstAllowedPath, pageKeyForPath } from '../../lib/permissions';
 import { useAuth } from '../../contexts/AuthContext';
 import Sidebar from './Sidebar';
 import WelcomeTour from '../WelcomeTour';
@@ -10,7 +11,7 @@ import { useI18n } from '../../lib/i18n';
 import { usePark } from '../../contexts/ParkContext';
 
 export default function DashboardLayout() {
-  const { user, loading, hasOrg, orgUnknown, joinDemoOrg, refreshProfile } = useAuth();
+  const { user, loading, hasOrg, orgUnknown, joinDemoOrg, refreshProfile, isOwner, isStaff, allowedPages } = useAuth();
   const [retrying, setRetrying] = useState(false);
   const { t } = useI18n();
   const { parkId } = usePark();
@@ -98,6 +99,12 @@ export default function DashboardLayout() {
 
   if (user && !parkId) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Rechte je Seite: ohne Recht geht es zur ersten erlaubten Seite (auch bei getippter Adresse).
+  const viewer = { isOwner, isStaff, allowedPages };
+  if (!canSee(pageKeyForPath(location.pathname), viewer)) {
+    return <Navigate to={firstAllowedPath(viewer)} replace />;
   }
 
   return (

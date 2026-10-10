@@ -86,6 +86,10 @@ export interface OrganizationMembership {
   organization_id: string;
   role: 'platform_admin' | 'org_owner' | 'park_manager' | 'marketing' | 'support_agent' | 'staff';
   created_at: string;
+  /** Seiten, die ein Mitarbeiter sehen darf; null = Standard der Rolle. */
+  allowed_pages?: string[] | null;
+  role_label?: string | null;
+  disabled_at?: string | null;
 }
 
 export interface Customer {
