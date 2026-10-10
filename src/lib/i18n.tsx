@@ -1827,6 +1827,10 @@ const translations: Record<Language, Record<string, string>> = {
     'team2.cancel': "Abbrechen",
     'team2.limit_reached': "Dein Plan {plan} erlaubt {limit} Mitarbeiter. Mit einem größeren Plan sind es mehr.",
     'team2.confirm_remove': "Diesen Zugang wirklich entfernen?",
+    'camp.example': "Beispiel einfügen",
+    'camp.preview_friends': "Freunde, die deinen Link geöffnet haben: {n}",
+    'camp.preview_rights': "Der Park darf mein Foto veröffentlichen",
+    'camp.preview_hint': "Beispielzahlen – so sieht deine Kampagne auf der Abholseite aus.",
   },
   en: {
     'app.loading': 'Loading…',
@@ -3637,6 +3641,10 @@ const translations: Record<Language, Record<string, string>> = {
     'team2.cancel': "Cancel",
     'team2.limit_reached': "Your {plan} plan allows {limit} team members. A larger plan allows more.",
     'team2.confirm_remove': "Really remove this access?",
+    'camp.example': "Insert example",
+    'camp.preview_friends': "Friends who opened your link: {n}",
+    'camp.preview_rights': "The park may publish my photo",
+    'camp.preview_hint': "Sample numbers – this is how your campaign looks on the pick-up page.",
   },
   es: {
     'app.loading': 'Cargando…',
@@ -5447,6 +5455,10 @@ const translations: Record<Language, Record<string, string>> = {
     'team2.cancel': "Cancelar",
     'team2.limit_reached': "Tu plan {plan} permite {limit} miembros. Un plan mayor permite más.",
     'team2.confirm_remove': "¿Eliminar este acceso de verdad?",
+    'camp.example': "Insertar ejemplo",
+    'camp.preview_friends': "Amigos que abrieron tu enlace: {n}",
+    'camp.preview_rights': "El parque puede publicar mi foto",
+    'camp.preview_hint': "Cifras de ejemplo: así se ve tu campaña en la página de recogida.",
   },
   fr: {
     'app.loading': 'Chargement…',
@@ -7257,6 +7269,10 @@ const translations: Record<Language, Record<string, string>> = {
     'team2.cancel': "Annuler",
     'team2.limit_reached': "Votre forfait {plan} autorise {limit} membres. Un forfait supérieur en autorise davantage.",
     'team2.confirm_remove': "Vraiment supprimer cet accès ?",
+    'camp.example': "Insérer un exemple",
+    'camp.preview_friends': "Amis ayant ouvert votre lien : {n}",
+    'camp.preview_rights': "Le parc peut publier ma photo",
+    'camp.preview_hint': "Chiffres d’exemple : voici l’aspect de votre campagne sur la page de retrait.",
   },
   it: {
     'app.loading': 'Caricamento…',
@@ -9067,6 +9083,10 @@ const translations: Record<Language, Record<string, string>> = {
     'team2.cancel': "Annulla",
     'team2.limit_reached': "Il tuo piano {plan} consente {limit} membri. Un piano più grande ne consente di più.",
     'team2.confirm_remove': "Rimuovere davvero questo accesso?",
+    'camp.example': "Inserisci esempio",
+    'camp.preview_friends': "Amici che hanno aperto il tuo link: {n}",
+    'camp.preview_rights': "Il parco può pubblicare la mia foto",
+    'camp.preview_hint': "Numeri di esempio: ecco come appare la tua campagna nella pagina di ritiro.",
   },
   nl: {
     'app.loading': 'Laden…',
@@ -10877,6 +10897,10 @@ const translations: Record<Language, Record<string, string>> = {
     'team2.cancel': "Annuleren",
     'team2.limit_reached': "Je plan {plan} staat {limit} teamleden toe. Een groter plan staat er meer toe.",
     'team2.confirm_remove': "Deze toegang echt verwijderen?",
+    'camp.example': "Voorbeeld invoegen",
+    'camp.preview_friends': "Vrienden die je link openden: {n}",
+    'camp.preview_rights': "Het park mag mijn foto publiceren",
+    'camp.preview_hint': "Voorbeeldcijfers – zo ziet je campagne eruit op de ophaalpagina.",
   },
   lv: {
     'app.loading': 'Ielādē…',
@@ -12687,6 +12711,10 @@ const translations: Record<Language, Record<string, string>> = {
     'team2.cancel': "Atcelt",
     'team2.limit_reached': "Jūsu plāns {plan} atļauj {limit} komandas locekļus. Lielāks plāns atļauj vairāk.",
     'team2.confirm_remove': "Vai tiešām noņemt šo piekļuvi?",
+    'camp.example': "Ievietot piemēru",
+    'camp.preview_friends': "Draugi, kas atvēra jūsu saiti: {n}",
+    'camp.preview_rights': "Parks drīkst publicēt manu fotogrāfiju",
+    'camp.preview_hint': "Piemēra skaitļi – šādi jūsu kampaņa izskatās saņemšanas lapā.",
   },
 };
 

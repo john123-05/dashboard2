@@ -5,6 +5,7 @@ import { PlanBadge } from '../upgrade/PlanGate';
 import { LocalizedField, inputClass } from './SurveyManager';
 import { useI18n, useLocaleTag } from '../../lib/i18n';
 import { PLAN_LABEL_KEY, useEntitlements } from '../../lib/plans';
+import { accentColorForPark, accentTextColorForPark } from '../../lib/parkBrand';
 import {
   approveEntry,
   drawWinner,
@@ -64,13 +65,83 @@ const EMPTY: CampaignDraft = {
   ends_at: null,
 };
 
+function pick(value: Record<string, string> | undefined, lang: string): string {
+  if (!value) return '';
+  return value[lang] || value.de || value.en || Object.values(value)[0] || '';
+}
+
+/** Vorschau der Abholseite nach der Freischaltung (wie die Claim-Seite, mit Beispielzahlen). */
+function CampaignPreview({ draft, parkId }: { draft: CampaignDraft; parkId: string }) {
+  const { t, language } = useI18n();
+  const accent = accentColorForPark(parkId);
+  const accentText = accentTextColorForPark(parkId);
+  const tags = [draft.mention, draft.hashtag].filter(Boolean) as string[];
+  const rules = pick(draft.rules_text, language);
+  const giveaway = draft.type === 'giveaway';
+  return (
+    <div className="space-y-2 lg:sticky lg:top-4 lg:self-start">
+      <p className="text-xs font-medium text-[color:var(--ink-3)]">{t('social.preview_title')}</p>
+      <div className="mx-auto max-w-sm space-y-3 rounded-2xl border border-[color:var(--line)] bg-slate-50 p-4">
+        <div className="space-y-3 rounded-lg border border-[color:var(--line)] bg-white p-4">
+          <p className="text-sm font-semibold text-[color:var(--ink)]">{draft.name || t('social.share_now')}</p>
+          <p className="text-sm text-[color:var(--ink-2)]">
+            {tags.length > 0 ? t('social.default_share_tagged', { tags: tags.join(' ') }) : t('social.default_share')}
+          </p>
+          {tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {tags.map((tag) => (
+                <span key={tag} className="rounded border border-[color:var(--line-strong)] px-2.5 py-1 text-xs font-semibold text-[color:var(--ink)]">
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+          <span
+            style={{ backgroundColor: accent, color: accentText }}
+            className="inline-block rounded px-4 py-2 text-xs font-black uppercase italic"
+          >
+            {t('social.share_photo')}
+          </span>
+          <p className="text-sm font-semibold text-[color:var(--ink)]">{t('camp.preview_friends', { n: 3 })}</p>
+        </div>
+
+        {giveaway && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+            <p className="text-xs font-semibold text-amber-700">{t('social.giveaway')}</p>
+            <p className="mt-1 text-sm text-amber-900">{draft.prize || t('social.default_giveaway_text')}</p>
+          </div>
+        )}
+
+        {rules && (
+          <div className="rounded-lg border border-[color:var(--line)] bg-white p-3">
+            <p className="text-xs font-semibold text-[color:var(--ink-3)]">{t('camp.rules')}</p>
+            <p className="mt-1 line-clamp-4 whitespace-pre-line text-xs text-[color:var(--ink-3)]">{rules}</p>
+          </div>
+        )}
+
+        <div className="space-y-2 rounded-lg border border-[color:var(--line)] bg-white p-3">
+          <p className="text-xs font-medium text-slate-500">{t('social.post_link_label')} {t('social.optional_suffix')}</p>
+          <div className="h-8 rounded border border-[color:var(--line)] bg-slate-50" />
+          <label className="flex items-start gap-2 text-xs text-[color:var(--ink-2)]">
+            <input type="checkbox" disabled className="mt-0.5 h-3.5 w-3.5" />
+            {t('camp.preview_rights')}
+          </label>
+        </div>
+      </div>
+      <p className="text-center text-xs text-[color:var(--ink-3)]">{t('camp.preview_hint')}</p>
+    </div>
+  );
+}
+
 function Editor({
+  parkId,
   initial,
   proUnlocked,
   busy,
   onSave,
   onCancel,
 }: {
+  parkId: string;
   initial: CampaignDraft;
   proUnlocked: boolean;
   busy: boolean;
@@ -81,9 +152,24 @@ function Editor({
   const [step, setStep] = useState<1 | 2 | 3>(initial.id ? 2 : 1);
   const [draft, setDraft] = useState<CampaignDraft>(initial);
   const patch = (p: Partial<CampaignDraft>) => setDraft((d) => ({ ...d, ...p }));
-  const tags = [draft.mention, draft.hashtag].filter(Boolean).join(' ');
+
+  const example = () =>
+    setDraft((d) => ({
+      ...d,
+      name: 'Sommer-Gewinnspiel',
+      type: proUnlocked ? 'giveaway' : 'share_unlock',
+      hashtag: '#alpinecoaster',
+      mention: '@imster_bergbahnen',
+      prize: 'Eine Freifahrt für die ganze Familie',
+      rules_text: {
+        de: 'Teilnahme ab 18 Jahren. Unter allen geprüften Beiträgen verlosen wir eine Freifahrt für bis zu vier Personen. Der Rechtsweg ist ausgeschlossen.',
+        en: 'Open to adults. Among all verified posts we raffle a free ride for up to four people. No recourse to legal action.',
+      },
+      ends_at: new Date(Date.now() + 30 * 86_400_000).toISOString(),
+    }));
 
   return (
+    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
     <GlassCard className="p-5 sm:p-6">
       <div className="flex flex-wrap items-center gap-2 text-sm">
         {([1, 2, 3] as const).map((n) => (
@@ -94,6 +180,11 @@ function Editor({
             {t(n === 1 ? 'camp.step_type' : n === 2 ? 'camp.step_details' : 'camp.step_review')}
           </span>
         ))}
+        {!draft.id && (
+          <button type="button" onClick={example} className="ml-auto text-xs font-medium text-brand-700 hover:underline">
+            {t('camp.example')}
+          </button>
+        )}
       </div>
 
       {step === 1 && (
@@ -176,20 +267,11 @@ function Editor({
       )}
 
       {step === 3 && (
-        <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
-          <div className="space-y-2 text-sm text-[color:var(--ink-2)]">
-            <p className="text-base font-semibold text-[color:var(--ink)]">{draft.name || '–'}</p>
-            <p>{t(`camp.type_${draft.type}`)}</p>
-            {draft.prize && <p>{t('camp.prize')}: {draft.prize}</p>}
-            <p className="pt-2 text-xs text-[color:var(--ink-3)]">{t('camp.one_active_hint')}</p>
-          </div>
-          <div className="rounded-2xl border border-[color:var(--line)] bg-slate-50 p-4">
-            <div className="rounded-lg border border-[color:var(--line)] bg-white p-3">
-              <p className="text-sm font-semibold text-[color:var(--ink)]">{t('social.share_now')}</p>
-              {tags && <p className="mt-2 text-sm font-medium text-brand-700">{tags}</p>}
-              {draft.prize && draft.type === 'giveaway' && <p className="mt-2 text-xs text-[color:var(--ink-3)]">{draft.prize}</p>}
-            </div>
-          </div>
+        <div className="mt-5 space-y-2 text-sm text-[color:var(--ink-2)]">
+          <p className="text-base font-semibold text-[color:var(--ink)]">{draft.name || '–'}</p>
+          <p>{t(`camp.type_${draft.type}`)}</p>
+          {draft.prize && <p>{t('camp.prize')}: {draft.prize}</p>}
+          <p className="pt-2 text-xs text-[color:var(--ink-3)]">{t('camp.one_active_hint')}</p>
         </div>
       )}
 
@@ -224,6 +306,8 @@ function Editor({
         </button>
       </div>
     </GlassCard>
+    <CampaignPreview draft={draft} parkId={parkId} />
+    </div>
   );
 }
 
@@ -446,7 +530,7 @@ export default function CampaignsManager({ parkId }: { parkId: string }) {
     return (
       <div className="space-y-3">
         {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
-        <Editor initial={editing} proUnlocked={proUnlocked} busy={busy} onSave={(d) => void save(d)} onCancel={() => setEditing(null)} />
+        <Editor parkId={parkId} initial={editing} proUnlocked={proUnlocked} busy={busy} onSave={(d) => void save(d)} onCancel={() => setEditing(null)} />
       </div>
     );
   }
