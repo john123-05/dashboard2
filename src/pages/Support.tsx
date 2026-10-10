@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Plus, X, Loader2, MessageSquare, Send, ExternalLink, Archive, ArrowLeft } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Plus, X, Loader2, MessageSquare, Phone, Send, ExternalLink, Archive, ArrowLeft } from 'lucide-react';
+import { HELP_ARTICLES, SUPPORT_PHONE, SUPPORT_PHONE_HREF } from '../lib/helpContent';
 import { invokeEdgeFunction } from '../lib/edgeFunctions';
 import { useAuth } from '../contexts/AuthContext';
 import { usePark } from '../contexts/ParkContext';
@@ -54,6 +56,16 @@ export default function Support() {
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [form, setForm] = useState({ subject: '', description: '', priority: 'medium' });
+
+  // Vor dem Absenden passende Hilfe-Artikel vorschlagen (Wörter aus dem Betreff).
+  const suggestions = useMemo(() => {
+    const words = form.subject.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((w) => w.length >= 4);
+    if (words.length === 0) return [];
+    return HELP_ARTICLES.filter((article) => {
+      const haystack = `${t(`help.${article.id}.title`)} ${t(`help.${article.id}.body`)}`.toLowerCase();
+      return words.some((word) => haystack.includes(word));
+    }).slice(0, 3);
+  }, [form.subject, t]);
 
   const detailRef = useRef<HTMLDivElement | null>(null);
   const loadedForParkRef = useRef<string | null>(null);
@@ -270,17 +282,17 @@ export default function Support() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="h-8 w-32 animate-pulse rounded-lg bg-white/40" />
-        <div className="h-96 animate-pulse rounded-2xl bg-white/30" />
+        <div className="h-8 w-32 animate-pulse rounded-lg bg-slate-100" />
+        <div className="h-96 animate-pulse rounded-2xl bg-slate-100" />
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('support.title')}</h2>
+          <h2 className="text-[28px] font-light tracking-tight text-[color:var(--ink)] sm:text-[32px]">{t('support.title')}</h2>
           <p className="mt-1 text-sm text-slate-500">{t('support.subtitle')}</p>
         </div>
         <button onClick={() => setShowCreate(true)} className="glass-button-primary">
@@ -326,7 +338,7 @@ export default function Support() {
           )}
 
           {visibleTickets.length === 0 ? (
-            <div className="rounded-2xl bg-white/30 p-8 text-center">
+            <div className="rounded-2xl bg-slate-50 p-8 text-center">
               <MessageSquare className="mx-auto mb-3 h-7 w-7 text-slate-300" />
               <p className="text-sm text-slate-500">
                 {viewingArchived ? t('support.archive.empty') : t('support.none')}
@@ -342,8 +354,8 @@ export default function Support() {
                     onClick={() => selectTicket(ticket.id)}
                     className={`w-full rounded-2xl p-4 pr-9 text-left transition-colors ${
                       ticket.id === selectedTicketId
-                        ? 'bg-white/70 ring-1 ring-brand-200'
-                        : 'bg-white/30 hover:bg-white/50'
+                        ? 'bg-slate-50 ring-1 ring-brand-200'
+                        : 'bg-slate-50 hover:bg-slate-50'
                     }`}
                   >
                     <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
@@ -364,7 +376,7 @@ export default function Support() {
                       event.stopPropagation();
                       setMenuOpenForTicketId((current) => (current === ticket.id ? null : ticket.id));
                     }}
-                    className="absolute right-2 top-2 rounded-lg p-1 text-slate-300 transition-colors hover:bg-white/60 hover:text-slate-500"
+                    className="absolute right-2 top-2 rounded-lg p-1 text-slate-300 transition-colors hover:bg-slate-50 hover:text-slate-500"
                     aria-label={t('support.menu.archive')}
                   >
                     <X className="h-4 w-4" />
@@ -410,7 +422,7 @@ export default function Support() {
             </div>
           ) : (
             <>
-              <div className="mb-3 flex items-start justify-between gap-3 border-b border-white/40 pb-3">
+              <div className="mb-3 flex items-start justify-between gap-3 border-b border-[color:var(--line)] pb-3">
                 <div>
                   <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
                     <span className={`status-badge ${statusColor(selectedTicket.status)}`}>
@@ -434,11 +446,11 @@ export default function Support() {
                       className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm ${
                         entry.author_role === 'operator'
                           ? 'rounded-br-sm bg-brand-500 text-white'
-                          : 'rounded-bl-sm bg-white/60 text-slate-700'
+                          : 'rounded-bl-sm bg-slate-50 text-slate-700'
                       }`}
                     >
                       <p
-                        className={`mb-1 text-[11px] font-semibold uppercase tracking-wide ${
+                        className={`mb-1 text-[11px] font-semibold ${
                           entry.author_role === 'operator' ? 'text-white/70' : 'text-slate-400'
                         }`}
                       >
@@ -459,7 +471,7 @@ export default function Support() {
                 {!messagesLoading && messagesError && <p className="text-sm text-red-600">{messagesError}</p>}
               </div>
 
-              <div className="mt-3 border-t border-white/40 pt-3">
+              <div className="mt-3 border-t border-[color:var(--line)] pt-3">
                 <textarea
                   value={replyText}
                   onChange={(event) => setReplyText(event.target.value)}
@@ -493,16 +505,23 @@ export default function Support() {
           <div className="space-y-3">
             <a
               href="mailto:support@liftpictures.com"
-              className="flex items-center gap-3 rounded-xl bg-white/30 p-3 text-sm text-slate-700 transition-colors hover:bg-white/50"
+              className="flex items-center gap-3 rounded-xl bg-slate-50 p-3 text-sm text-slate-700 transition-colors hover:bg-slate-50"
             >
               <Send className="h-4 w-4 text-brand-500" />
               support@liftpictures.com
             </a>
             <a
+              href={SUPPORT_PHONE_HREF}
+              className="flex items-center gap-3 rounded-xl bg-slate-50 p-3 text-sm text-slate-700 transition-colors hover:bg-slate-100"
+            >
+              <Phone className="h-4 w-4 text-brand-500" />
+              {SUPPORT_PHONE}
+            </a>
+            <a
               href="https://liftpictures.com/docs"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-3 rounded-xl bg-white/30 p-3 text-sm text-slate-700 transition-colors hover:bg-white/50"
+              className="flex items-center gap-3 rounded-xl bg-slate-50 p-3 text-sm text-slate-700 transition-colors hover:bg-slate-50"
             >
               <ExternalLink className="h-4 w-4 text-brand-500" />
               Documentation
@@ -537,7 +556,7 @@ export default function Support() {
               <h3 className="text-lg font-semibold text-slate-800">{t('support.form.title')}</h3>
               <button
                 onClick={() => setShowCreate(false)}
-                className="rounded-lg p-1.5 text-slate-400 hover:bg-white/40 hover:text-slate-600"
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-50 hover:text-slate-600"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -557,6 +576,21 @@ export default function Support() {
                   className="glass-input"
                 />
               </div>
+
+              {suggestions.length > 0 && (
+                <div className="rounded-lg border border-[color:var(--line)] bg-slate-50 p-3">
+                  <p className="text-xs text-[color:var(--ink-3)]">{t('support.suggest_title')}</p>
+                  <ul className="mt-1.5 space-y-1">
+                    {suggestions.map((article) => (
+                      <li key={article.id}>
+                        <Link to={article.link} className="text-sm font-medium text-brand-700 hover:underline">
+                          {t(`help.${article.id}.title`)}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
               <div>
                 <label className="mb-1.5 block text-sm font-medium text-slate-700">

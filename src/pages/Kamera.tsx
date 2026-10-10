@@ -360,7 +360,7 @@ export default function Kamera() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-800">{t('camera.title')}</h1>
+          <h1 className="text-[28px] font-light tracking-tight text-[color:var(--ink)] sm:text-[32px]">{t('camera.title')}</h1>
           <p className="mt-1 text-sm text-slate-500">{t('camera.subtitle')}</p>
         </div>
         <GlassCard className="p-6">
@@ -387,7 +387,7 @@ export default function Kamera() {
 
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-800">{t('camera.title')}</h1>
+          <h1 className="text-[28px] font-light tracking-tight text-[color:var(--ink)] sm:text-[32px]">{t('camera.title')}</h1>
           <p className="mt-1 text-sm text-slate-500">
             {kamera?.modell ?? t('camera.title')}
             {kamera?.seriennummer && <> · {t('camera.serial_no', { no: kamera.seriennummer })}</>}
@@ -399,23 +399,23 @@ export default function Kamera() {
           <select
             value={gewaehlt ?? ''}
             onChange={(e) => setGewaehlt(e.target.value)}
-            className="rounded-xl border border-white/50 bg-white/70 px-3 py-2 text-sm text-slate-700"
+            className="rounded-lg border border-[color:var(--line-strong)] bg-white px-3 py-2 text-sm text-slate-700"
           >
             {mitKamera.map((m) => <option key={m.id} value={m.id}>{m.machine_label || m.machine_id}</option>)}
           </select>
         )}
       </div>
 
-      {fehler && <div className="rounded-2xl border border-rose-200/70 bg-rose-50/70 p-4 text-sm text-rose-800">{fehler}</div>}
-      {hinweis && <div className="rounded-2xl border border-emerald-200/70 bg-emerald-50/70 p-4 text-sm leading-relaxed text-emerald-800">{hinweis}</div>}
+      {fehler && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">{fehler}</div>}
+      {hinweis && <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm leading-relaxed text-emerald-800">{hinweis}</div>}
       {kamera?.fehler && (
-        <div className="flex gap-3 rounded-2xl border border-amber-200/70 bg-amber-50/70 p-4">
+        <div className="flex gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
           <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" />
           <p className="text-sm leading-relaxed text-amber-900">{t('camera.cannot_read', { error: kamera.fehler })}</p>
         </div>
       )}
 
-      <div className="flex gap-3 rounded-2xl border border-sky-200/70 bg-sky-50/70 p-4">
+      <div className="flex gap-3 rounded-xl border border-sky-200 bg-sky-50 p-4">
         <Info className="mt-0.5 h-5 w-5 shrink-0 text-sky-700" />
         <p className="text-sm leading-relaxed text-sky-900">
           {t('camera.info_banner')}
@@ -435,12 +435,12 @@ export default function Kamera() {
               </div>
               <div className="flex flex-wrap gap-2">
                 <button type="button" onClick={() => void letztesBildHolen()}
-                  className="rounded-xl bg-white/60 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-white/80">
+                  className="glass-button-secondary">
                   {t('camera.reload_image')}
                 </button>
                 {automat?.can_test_photo && (
                   <button type="button" onClick={() => void testfoto()} disabled={beschaeftigt !== null}
-                    className="rounded-xl bg-white/60 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-white/80 disabled:opacity-50">
+                    className="glass-button-primary disabled:opacity-50">
                     {beschaeftigt === 'testfoto' ? t('camera.triggering') : t('camera.trigger_test')}
                   </button>
                 )}
@@ -448,11 +448,11 @@ export default function Kamera() {
             </div>
 
             {bild ? (
-              <div className="overflow-hidden rounded-xl bg-slate-900/5">
+              <div className="overflow-hidden rounded-xl bg-slate-100">
                 <img src={bild.url} alt={t('camera.last_photo_alt')} style={{ filter: filter || undefined }} className="w-full" />
               </div>
             ) : (
-              <div className="flex min-h-[260px] items-center justify-center rounded-xl bg-white/30 p-6 text-center text-sm text-slate-500">
+              <div className="flex min-h-[260px] items-center justify-center rounded-xl bg-slate-50 p-6 text-center text-sm text-slate-500">
                 {t('camera.no_photo_yet')}
               </div>
             )}
@@ -481,7 +481,7 @@ export default function Kamera() {
               </dl>
               <div className="flex flex-wrap gap-2">
                 <button type="button" onClick={() => void senden()} disabled={beschaeftigt !== null}
-                  className="flex items-center gap-2 rounded-xl bg-slate-800 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50">
+                  className="glass-button-primary disabled:opacity-50">
                   <Send className="h-4 w-4" />
                   {beschaeftigt === 'senden' ? t('camera.sending') : t('camera.send_to_camera')}
                 </button>
@@ -493,7 +493,7 @@ export default function Kamera() {
                   }
                   setEntwurf(start);
                 }}
-                  className="flex items-center gap-2 rounded-xl bg-white/60 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-white/80">
+                  className="glass-button-secondary">
                   <RotateCcw className="h-4 w-4" /> {t('camera.discard')}
                 </button>
               </div>
@@ -509,7 +509,7 @@ export default function Kamera() {
             <h2 className="mb-4 text-base font-semibold text-slate-800">{t('camera.settings')}</h2>
 
             {belichtungAutomatisch && (
-              <p className="mb-4 rounded-xl bg-amber-50/70 px-3 py-2.5 text-xs leading-relaxed text-amber-900">
+              <p className="mb-4 rounded-xl bg-amber-50 px-3 py-2.5 text-xs leading-relaxed text-amber-900">
                 {t('camera.auto_exposure_warning')}
               </p>
             )}
@@ -532,12 +532,12 @@ export default function Kamera() {
                     </div>
 
                     {e.art === 'schalter' ? (
-                      <div className="mt-2 flex gap-2">
+                      <div className="mt-2 inline-flex rounded-md border border-[color:var(--line-strong)] p-0.5">
                         {[1, 0].map((v) => (
                           <button key={v} type="button"
                             onClick={() => setEntwurf((a) => ({ ...a, [e.schluessel]: v }))}
-                            className={`rounded-lg px-3 py-1.5 text-xs font-medium ${
-                              jetzt === v ? 'bg-slate-800 text-white' : 'bg-white/60 text-slate-600 hover:bg-white/80'
+                            className={`rounded px-4 py-1.5 text-sm transition-colors ${
+                              jetzt === v ? 'bg-[color:var(--ink)] text-white' : 'text-[color:var(--ink-2)] hover:bg-slate-100'
                             }`}>
                             {v ? t('camera.on') : t('camera.off')}
                           </button>
@@ -564,7 +564,7 @@ export default function Kamera() {
             </p>
             <dl className="space-y-2">
               {Object.keys(kamera?.werte ?? {}).sort().map((name) => (
-                <div key={name} className="flex items-baseline justify-between gap-3 border-b border-white/40 pb-2 last:border-0">
+                <div key={name} className="flex items-baseline justify-between gap-3 border-b border-[color:var(--line)] pb-2 last:border-0">
                   <dt className="text-sm text-slate-600">{nameLabel(name, t)}</dt>
                   <dd className="text-right font-mono text-xs tabular-nums text-slate-700">{istWert(kamera?.werte ?? {}, name, t)}</dd>
                 </div>

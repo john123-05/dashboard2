@@ -10,6 +10,7 @@ import {
 import { fetchKioskPurchasesLedger } from '../lib/kioskSales';
 import { formatCurrency as baseFormatCurrency, formatDateTime as baseFormatDateTime, statusColor, exportToCSV } from '../lib/utils';
 import DataTable, { type DataTableColumn } from '../components/ui/DataTable';
+import Drawer, { DrawerRow } from '../components/ui/Drawer';
 import { useI18n, useLocaleTag } from '../lib/i18n';
 import { usePark } from '../contexts/ParkContext';
 
@@ -86,6 +87,8 @@ export default function Purchases() {
   const [monatGekuerzt, setMonatGekuerzt] = useState(false);
   // Nach welchem Automaten gefiltert wird ('alle' = beide).
   const [automatFilter, setAutomatFilter] = useState<string>('alle');
+  const [paymentFilter, setPaymentFilter] = useState<string>('alle');
+  const [detail, setDetail] = useState<PurchaseRow | null>(null);
   const [automaten, setAutomaten] = useState<{ machine_id: string; machine_label: string }[]>([]);
 
   useEffect(() => {
@@ -263,8 +266,16 @@ export default function Purchases() {
     if (!isKioskPark && sourceFilter !== 'all') {
       rows = rows.filter((item) => item.source === sourceFilter);
     }
+    if (paymentFilter !== 'alle') {
+      rows = rows.filter((item) => item.payment_method === paymentFilter);
+    }
     return rows;
-  }, [purchases, sourceFilter, automatFilter, isKioskPark]);
+  }, [purchases, sourceFilter, automatFilter, paymentFilter, isKioskPark]);
+
+  const paymentMethods = useMemo(
+    () => Array.from(new Set(purchases.map((item) => item.payment_method).filter(Boolean))).sort(),
+    [purchases],
+  );
 
   function handleExport() {
     exportToCSV(
@@ -290,8 +301,8 @@ export default function Purchases() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="h-8 w-32 animate-pulse rounded-lg bg-white/40" />
-        <div className="h-96 animate-pulse rounded-2xl bg-white/30" />
+        <div className="h-8 w-32 animate-pulse rounded-lg bg-slate-100" />
+        <div className="h-96 animate-pulse rounded-2xl bg-slate-100" />
       </div>
     );
   }
@@ -299,7 +310,7 @@ export default function Purchases() {
   if (error || !parkData) {
     return (
       <div className="space-y-6">
-        <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('purchases.title')}</h2>
+        <h2 className="text-[28px] font-light tracking-tight text-[color:var(--ink)] sm:text-[32px]">{t('purchases.title')}</h2>
         <div className="rounded-2xl border border-red-200 bg-red-50 p-6">
           <h3 className="mb-2 text-lg font-semibold text-red-800">{t('overview.error_title')}</h3>
           <p className="mb-4 text-sm text-red-600">{error || 'Unknown error'}</p>
@@ -344,7 +355,14 @@ export default function Purchases() {
       key: 'customer_or_device',
       label: 'Customer / Device',
       render: (item: PurchaseRow) => (
-        <span className="font-medium text-slate-700">{item.customer_or_device}</span>
+        <button
+          type="button"
+          onClick={() => setDetail(item)}
+          title={t('purchases.open_detail')}
+          className="text-left font-medium text-slate-700 hover:text-brand-700 hover:underline"
+        >
+          {item.customer_or_device || '–'}
+        </button>
       ),
     },
     {
@@ -394,9 +412,9 @@ export default function Purchases() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-800">{t('purchases.title')}</h2>
+          <h2 className="text-[28px] font-light tracking-tight text-[color:var(--ink)] sm:text-[32px]">{t('purchases.title')}</h2>
           <p className="mt-1 text-sm text-slate-500">
             {isKioskPark
               ? t('purchases.subtitle_kiosk')
@@ -426,11 +444,23 @@ export default function Purchases() {
           isKioskPark ? (
             <div className="flex items-center gap-2">
               <Filter className="h-4 w-4 text-slate-400" />
+              {paymentMethods.length > 1 && (
+                <select
+                  value={paymentFilter}
+                  onChange={(event) => setPaymentFilter(event.target.value)}
+                  className="rounded-lg border border-[color:var(--line-strong)] bg-white px-3 py-1.5 text-sm text-slate-700"
+                >
+                  <option value="alle">{t('purchases.all_payments')}</option>
+                  {paymentMethods.map((method) => (
+                    <option key={method} value={method}>{method}</option>
+                  ))}
+                </select>
+              )}
               {automaten.length > 1 && (
                 <select
                   value={automatFilter}
                   onChange={(event) => setAutomatFilter(event.target.value)}
-                  className="rounded-lg border border-slate-200/60 bg-white/60 px-3 py-1.5 text-sm text-slate-700"
+                  className="rounded-lg border border-[color:var(--line-strong)] bg-white px-3 py-1.5 text-sm text-slate-700"
                 >
                   <option value="alle">{t('purchases.all_machines')}</option>
                   {automaten.map((m) => (
@@ -443,7 +473,7 @@ export default function Purchases() {
               <select
                 value={monat}
                 onChange={(event) => setMonat(event.target.value)}
-                className="rounded-lg border border-slate-200/60 bg-white/60 px-3 py-1.5 text-sm text-slate-700"
+                className="rounded-lg border border-[color:var(--line-strong)] bg-white px-3 py-1.5 text-sm text-slate-700"
               >
                 {monatsListe().map((m) => (
                   <option key={m} value={m}>
@@ -455,12 +485,24 @@ export default function Purchases() {
           ) : (
             <div className="flex items-center gap-2">
               <Filter className="h-4 w-4 text-slate-400" />
+              {paymentMethods.length > 1 && (
+                <select
+                  value={paymentFilter}
+                  onChange={(event) => setPaymentFilter(event.target.value)}
+                  className="rounded-lg border border-[color:var(--line-strong)] bg-white px-3 py-1.5 text-sm text-slate-700"
+                >
+                  <option value="alle">{t('purchases.all_payments')}</option>
+                  {paymentMethods.map((method) => (
+                    <option key={method} value={method}>{method}</option>
+                  ))}
+                </select>
+              )}
               <select
                 value={sourceFilter}
                 onChange={(event) => {
                   setSourceFilter(event.target.value as 'all' | 'online' | 'local' | 'kiosk');
                 }}
-                className="rounded-lg border border-slate-200/60 bg-white/60 px-3 py-1.5 text-sm text-slate-700"
+                className="rounded-lg border border-[color:var(--line-strong)] bg-white px-3 py-1.5 text-sm text-slate-700"
               >
                 <option value="all">{t('purchases.all_sources')}</option>
                 <option value="online">{t('purchases.online_only')}</option>
@@ -475,6 +517,29 @@ export default function Purchases() {
           Dieser Monat hat sehr viele Käufe – es werden die neuesten angezeigt. Für die
           restlichen einen früheren Monat wählen.
         </p>
+      )}
+      {detail && (
+        <Drawer
+          title={detail.customer_or_device || t('purchases.title')}
+          subtitle={formatDateTime(detail.purchased_at)}
+          onClose={() => setDetail(null)}
+        >
+          <dl>
+            <DrawerRow label={t('purchases.table.amount')}>
+              {detail.amount_cents === null ? '–' : formatCurrency(detail.amount_cents, detail.currency)}
+            </DrawerRow>
+            <DrawerRow label={t('purchases.table.status')}>
+              <span className={`status-badge ${statusColor(detail.status)}`}>{detail.status}</span>
+            </DrawerRow>
+            <DrawerRow label={t('purchases.f_payment')}>{detail.payment_method || '–'}</DrawerRow>
+            <DrawerRow label={isKioskPark ? 'Automat' : 'Source'}>
+              {detail.source === 'kiosk' ? detail.machine_label || 'Automat' : detail.source === 'online' ? 'Online' : 'Local'}
+            </DrawerRow>
+            <DrawerRow label={t('purchases.f_customer')}>{detail.customer_or_device || '–'}</DrawerRow>
+            <DrawerRow label={t('purchases.f_reference')}>{detail.reference || '–'}</DrawerRow>
+            <DrawerRow label={t('purchases.f_description')}>{detail.description || '–'}</DrawerRow>
+          </dl>
+        </Drawer>
       )}
     </div>
   );
