@@ -78,18 +78,18 @@ export default function UnlockCenter({
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-          <h2 className="text-2xl font-bold tracking-tight text-slate-800">{tab === 'overview' ? t('crm.overview_title') : shown ? t(shown.labelKey) : ''}</h2>
+          <h2 className="text-[28px] font-light tracking-tight text-[color:var(--ink)] sm:text-[32px]">{tab === 'overview' ? t('crm.overview_title') : shown ? t(shown.labelKey) : ''}</h2>
           <PlanBadge feature="crm_contacts" />
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <div className="inline-flex rounded-xl bg-white/50 p-1">
+          <div className="inline-flex rounded-lg bg-slate-100 p-1">
             {TABS.map((tabItem) => (
               <button
                 key={tabItem.key}
                 type="button"
                 onClick={() => openTab(tabItem.key)}
-                className={`inline-flex items-center gap-2 rounded-lg px-4 py-1.5 text-sm font-medium transition ${
-                  tab === tabItem.key ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                className={`inline-flex items-center gap-2 rounded-md px-4 py-1.5 text-sm font-medium transition ${
+                  tab === tabItem.key ? 'bg-white text-[color:var(--ink)] shadow-sm' : 'text-[color:var(--ink-3)] hover:text-[color:var(--ink)]'
                 }`}
               >
                 {active === tabItem.mode && <span className="h-2 w-2 rounded-full bg-emerald-500" title={t('crm.active_for_guests')} />}

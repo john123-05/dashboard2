@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Camera, ClipboardList, Download, Info, Mail, MessageSquare, Minus, Plus, Share2, Star, ThumbsUp, Trash2, UserPlus } from 'lucide-react';
+import { ClipboardList, Download, Info, Minus, Plus, Share2, Star, Trash2, UserPlus, X } from 'lucide-react';
 import { getOptionalSourceWarning, invokeEdgeFunction, isEdgeSourceUnavailable } from '../lib/edgeFunctions';
 import { fetchKioskPhotosForDay, fetchKioskSales, getClosingMinutesForDate, type KioskPurchaseRow } from '../lib/kioskSales';
 import { claimLinkFor, claimSiteBaseFor, fetchRecentPhotos } from '../lib/photoBrowser';
@@ -8,6 +8,7 @@ import GlassCard from '../components/ui/GlassCard';
 import DataTable from '../components/ui/DataTable';
 import { useI18n, useLocaleTag } from '../lib/i18n';
 import { usePark } from '../contexts/ParkContext';
+import MarketingHome from '../components/marketing/MarketingHome';
 import UnlockCenter from '../components/survey/UnlockCenter';
 import ContactSettings from '../components/survey/ContactSettings';
 import {
@@ -593,6 +594,29 @@ function LeadsContacts({
   const [notice, setNotice] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [claimDelayLoading, setClaimDelayLoading] = useState(false);
+  // Spaltenauswahl der Kontaktliste (pro Browser gemerkt) und Kontakt-Schublade.
+  const [hiddenColumns, setHiddenColumns] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem('lp-crm-columns');
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed.filter((key): key is string => typeof key === 'string') : [];
+    } catch {
+      return [];
+    }
+  });
+  const [columnMenuOpen, setColumnMenuOpen] = useState(false);
+  const [drawerLead, setDrawerLead] = useState<Record<string, unknown> | null>(null);
+  function toggleColumn(key: string) {
+    setHiddenColumns((current) => {
+      const next = current.includes(key) ? current.filter((k) => k !== key) : [...current, key];
+      try {
+        localStorage.setItem('lp-crm-columns', JSON.stringify(next));
+      } catch {
+        /* nur Komfort */
+      }
+      return next;
+    });
+  }
 
   // Nur für die Übersicht: aktiver Freischalt-Modus, Lebenszeit-Verkäufe und
   // die letzten 30 Tage je Modus - unabhängig vom Freischalt-Reiter geladen,
@@ -647,6 +671,8 @@ function LeadsContacts({
   }, [view, parkId, unlockMode]);
 
   useEffect(() => {
+    // Die 1,1-MB-Weltkarte wird erst geholt, wenn jemand sie öffnet (C4).
+    if (!showLocationDetails || worldMapSvg) return;
     let active = true;
 
     fetch('/world-map-gray.svg')
@@ -661,7 +687,7 @@ function LeadsContacts({
     return () => {
       active = false;
     };
-  }, []);
+  }, [showLocationDetails, worldMapSvg]);
 
   useEffect(() => {
     if (!showLocationDetails) return;
@@ -881,7 +907,6 @@ function LeadsContacts({
       .sort((a, b) => b.count - a.count || a.countryName.localeCompare(b.countryName));
   }, [leads, locale]);
 
-  const optInRate = stats.total > 0 ? Math.round((stats.optedIn / stats.total) * 100) : 0;
   const worldMapMarkup = useMemo(() => buildWorldMapSvg(worldMapSvg), [worldMapSvg]);
   const worldMapStyle = useMemo(
     () => buildWorldMapStyle(countryStats, hoveredCountryInfo?.countryCode || selectedCountry),
@@ -893,12 +918,12 @@ function LeadsContacts({
   const [resolvedCountryStats, setResolvedCountryStats] = useState<CountryStat[]>(countryStats);
   useEffect(() => {
     setResolvedCountryStats(countryStats);
-    if (!worldMapMarkup) return;
+    if (!worldMapMarkup || !showLocationDetails) return;
     const timer = window.setTimeout(() => {
       setResolvedCountryStats(resolveLeadMapPoints(countryStats, worldMapMarkup));
     }, 50);
     return () => window.clearTimeout(timer);
-  }, [countryStats, worldMapMarkup]);
+  }, [countryStats, worldMapMarkup, showLocationDetails]);
   const topCountries = resolvedCountryStats.slice(0, 6);
   const hoveredCountryStat = hoveredCountryInfo?.countryCode
     ? resolvedCountryStats.find((country) => country.countryCode === hoveredCountryInfo.countryCode) || null
@@ -1250,7 +1275,14 @@ function LeadsContacts({
         const localeBadge = leadLocaleBadge(item);
         return (
           <div className="flex flex-col gap-1">
-            <span className="font-medium text-slate-700">{(item.email as string) || (item.phone as string) || '–'}</span>
+            <button
+              type="button"
+              onClick={() => setDrawerLead(item)}
+              title={t('mk.open_contact')}
+              className="w-fit text-left font-medium text-slate-700 hover:text-brand-700 hover:underline"
+            >
+              {(item.email as string) || (item.phone as string) || '–'}
+            </button>
             {Boolean(item.email) && Boolean(item.phone) && (
               <span className="text-xs text-slate-500">{item.phone as string}</span>
             )}
@@ -1390,31 +1422,17 @@ function LeadsContacts({
       {view === 'overview' && (
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
         <div className="min-w-0 space-y-4">
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <CompactMetricCard
-              title={t('leads.photos_sold')}
-              value={lifetimeSold !== null ? formatNumber(lifetimeSold, locale) : '–'}
-              subtitle={t('leads.photos_sold_sub')}
-              icon={Camera}
-              iconClassName="text-violet-600"
-              iconWrapClassName="bg-violet-50"
+          {parkId && (
+            <MarketingHome
+              parkId={parkId}
+              leads={leads}
+              lifetimeSold={lifetimeSold}
+              config={contactConfig}
+              survey30={overviewSurvey}
             />
-            <CompactMetricCard
-              title={t('leads.total')}
-              value={formatNumber(stats.total, locale)}
-              subtitle={t('leads.collected_contacts')}
-              icon={UserPlus}
-              iconClassName="text-sky-600"
-              iconWrapClassName="bg-sky-50"
-            />
-            <CompactMetricCard
-              title={t('leads.optins')}
-              value={formatNumber(stats.optedIn, locale)}
-              subtitle={`${optInRate}% ${t('leads.optin_rate')}`}
-              icon={Mail}
-              iconClassName="text-emerald-600"
-              iconWrapClassName="bg-emerald-50"
-            />
+          )}
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <CompactMetricCard
               title={t('leads.current_mode')}
               value={
@@ -1433,29 +1451,12 @@ function LeadsContacts({
               active={unlockMode !== null}
             />
             <CompactMetricCard
-              title={t('leads.responses')}
-              value={overviewSurvey ? formatNumber(overviewSurvey.total, locale) : '–'}
-              subtitle={t('leads.responses_sub')}
-              icon={MessageSquare}
-              iconClassName="text-sky-600"
-              iconWrapClassName="bg-sky-50"
-            />
-            <CompactMetricCard
               title={t('leads.satisfaction')}
               value={overviewSurvey?.average_score != null ? overviewSurvey.average_score.toFixed(1) : '–'}
               subtitle={t('leads.satisfaction_sub')}
               icon={Star}
               iconClassName="text-amber-600"
               iconWrapClassName="bg-amber-50"
-            />
-            <CompactMetricCard
-              title="NPS"
-              value={overviewSurvey?.nps != null ? String(overviewSurvey.nps) : '–'}
-              subtitle={t('leads.recommendation')}
-              icon={ThumbsUp}
-              iconClassName="text-emerald-600"
-              iconWrapClassName="bg-emerald-50"
-              info={t('leads.nps_info')}
             />
             <CompactMetricCard
               title="Social Media"
@@ -1479,19 +1480,22 @@ function LeadsContacts({
                   <h3 className="text-base font-semibold text-slate-800">{t('leads.location')}</h3>
                   <span className="text-xs text-slate-400 sm:text-sm">{t('leads.country_count', { count: resolvedCountryStats.length })}</span>
                 </div>
-                <div className="pb-2">
-                  <div className="w-full">
-                    <LeadWorldMap
-                      svgMarkup={worldMapMarkup}
-                      styleCss={worldMapStyle}
-                      points={resolvedCountryStats}
-                      selectedCountry={selectedCountryStat?.countryCode || null}
-                      onSelectCountry={setSelectedCountry}
-                      offset={{ x: 0, y: 0 }}
-                      compact
-                    />
-                  </div>
-                </div>
+                <ul className="space-y-2.5 pb-1">
+                  {countryStats.slice(0, 5).map((country) => {
+                    const share = countryStats[0]?.count ? (country.count / countryStats[0].count) * 100 : 0;
+                    return (
+                      <li key={country.countryCode} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1">
+                        <p className="min-w-0 truncate text-sm text-[color:var(--ink-2)]">
+                          {countryCodeToFlag(country.countryCode)} {country.countryName}
+                        </p>
+                        <p className="text-sm font-semibold text-[color:var(--ink)]">{formatNumber(country.count, locale)}</p>
+                        <div className="col-span-2 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                          <div className="h-full rounded-full bg-brand-500" style={{ width: `${Math.max(3, share)}%` }} />
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
                 <button
                   type="button"
                   onClick={() =>
@@ -1679,7 +1683,7 @@ function LeadsContacts({
       {view === 'list' && (
       <DataTable
         data={filtered}
-        columns={columns}
+        columns={columns.filter((column) => !hiddenColumns.includes(column.key))}
         title={t('leads.title')}
         searchable
         searchKeys={['email', 'phone', 'full_name', 'source', 'park_name', 'country_code', 'locale']}
@@ -1687,6 +1691,40 @@ function LeadsContacts({
         embeddedOperator={embedded}
         actions={
           <div className="flex items-center gap-2">
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setColumnMenuOpen((open) => !open)}
+                aria-expanded={columnMenuOpen}
+                className="rounded-lg border border-[color:var(--line-strong)] px-3 py-1.5 text-sm font-medium text-[color:var(--ink-2)] hover:bg-slate-100"
+              >
+                {t('mk.columns')}
+              </button>
+              {columnMenuOpen && (
+                <>
+                  <div className="fixed inset-0 z-30" onClick={() => setColumnMenuOpen(false)} />
+                  <div className="absolute right-0 z-40 mt-2 w-48 rounded-lg border border-[color:var(--line)] bg-white p-2 shadow-lg">
+                    {[
+                      ['full_name', t('leads.table.name')],
+                      ['park_name', t('leads.table.park')],
+                      ['source', t('leads.table.source')],
+                      ['opted_in', t('leads.table.opted_in')],
+                      ['created_at', t('leads.table.date')],
+                    ].map(([key, label]) => (
+                      <label key={key} className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-[color:var(--ink-2)] hover:bg-slate-50">
+                        <input
+                          type="checkbox"
+                          checked={!hiddenColumns.includes(key)}
+                          onChange={() => toggleColumn(key)}
+                          className="h-4 w-4 rounded border-slate-300 text-brand-600"
+                        />
+                        {label}
+                      </label>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
             <button
               type="button"
               onClick={toggleSelectionMode}
@@ -1785,6 +1823,64 @@ function LeadsContacts({
           </div>
         }
       />
+      )}
+
+      {drawerLead && (
+        <div className="fixed inset-0 z-[80]" role="presentation">
+          <div className="absolute inset-0 bg-slate-900/30" onClick={() => setDrawerLead(null)} />
+          <aside
+            role="dialog"
+            aria-modal="true"
+            aria-label={t('mk.contact_details')}
+            className="absolute right-0 top-0 flex h-full w-full max-w-md flex-col bg-white shadow-xl"
+          >
+            <div className="flex items-start justify-between gap-3 border-b border-[color:var(--line)] px-6 py-5">
+              <div className="min-w-0">
+                <p className="text-xs text-[color:var(--ink-3)]">{t('mk.contact_details')}</p>
+                <h3 className="mt-1 truncate text-lg font-semibold text-[color:var(--ink)]">
+                  {(drawerLead.full_name as string) || (drawerLead.email as string) || (drawerLead.phone as string) || '–'}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDrawerLead(null)}
+                aria-label={t('mk.close')}
+                className="rounded-md p-1.5 text-[color:var(--ink-3)] hover:bg-slate-100"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <dl className="flex-1 divide-y divide-[color:var(--line)] overflow-y-auto px-6">
+              {[
+                [t('leads.table.email'), drawerLead.email as string | null],
+                [t('mk.field_phone'), drawerLead.phone as string | null],
+                [t('leads.table.name'), drawerLead.full_name as string | null],
+                [
+                  t('mk.field_country'),
+                  typeof drawerLead.country_code === 'string' && drawerLead.country_code
+                    ? `${countryCodeToFlag(drawerLead.country_code)} ${getCountryName(drawerLead.country_code.toUpperCase(), locale)}`
+                    : null,
+                ],
+                [t('mk.field_language'), leadLocaleBadge(drawerLead)],
+                [
+                  t('leads.table.source'),
+                  drawerLead.source === 'social_media'
+                    ? t('leads.source_social')
+                    : drawerLead.source === 'photo_claim'
+                      ? t('leads.source_claim')
+                      : (drawerLead.source as string | null),
+                ],
+                [t('leads.table.opted_in'), drawerLead.opted_in ? t('leads.opted_in') : t('leads.opted_out')],
+                [t('leads.table.date'), drawerLead.created_at ? formatDate(drawerLead.created_at as string, locale) : null],
+              ].map(([label, value]) => (
+                <div key={label} className="grid grid-cols-[120px_minmax(0,1fr)] gap-3 py-3">
+                  <dt className="text-sm text-[color:var(--ink-3)]">{label}</dt>
+                  <dd className="break-words text-sm text-[color:var(--ink)]">{value || '–'}</dd>
+                </div>
+              ))}
+            </dl>
+          </aside>
+        </div>
       )}
 
     </div>

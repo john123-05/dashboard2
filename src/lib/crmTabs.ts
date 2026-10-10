@@ -12,10 +12,10 @@ import type { UnlockMode } from './surveyApi';
 export type TabKey = 'overview' | 'allContacts' | 'survey' | 'social' | 'tracking';
 
 export const CRM_TABS: { key: TabKey; mode?: UnlockMode; labelKey: string; path: string }[] = [
-  { key: 'overview', labelKey: 'nav.overview', path: '/leads' },
+  { key: 'overview', labelKey: 'crm.tab_start', path: '/leads' },
   { key: 'allContacts', mode: 'email', labelKey: 'leads.title', path: '/leads/kontakte' },
-  { key: 'survey', mode: 'survey', labelKey: 'crm.tab_survey', path: '/leads/umfrage' },
   { key: 'social', mode: 'social', labelKey: 'crm.tab_social', path: '/leads/social' },
+  { key: 'survey', mode: 'survey', labelKey: 'crm.tab_survey', path: '/leads/umfrage' },
   { key: 'tracking', labelKey: 'crm.tab_tracking', path: '/leads/pixel' },
 ];
 

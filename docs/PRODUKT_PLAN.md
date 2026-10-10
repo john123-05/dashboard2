@@ -233,10 +233,10 @@ früheren (O)-Aufgaben in Abschnitt 6a ausgeschrieben und damit (S). Opus nur no
 
 ### Phase C – Marketing-CRM
 
-- [ ] **C1 Navigation „Marketing-CRM“ mit Unterseiten** (S)
+- [x] **C1 Navigation „Marketing-CRM“ mit Unterseiten** (S) – erledigt 10.10.2026 (E-Mail-Reiter kommt mit F1)
   - `crmTabs.ts`: Reihenfolge Start · Kontakte · E-Mail-Marketing · Social-Media-Kampagnen · Umfrage ·
     Werbe-Pixel. (E-Mail erst sichtbar, wenn F1 fertig.) „Übersicht“-Reiter heißt „Start“.
-- [ ] **C2 Startseite Marketing-CRM** (S – Entwurf in 6a)
+- [~] **C2 Startseite Marketing-CRM** (S – Entwurf in 6a) – umgesetzt 10.10.2026, Sichtprüfung offen
   - Datei: `Leads.tsx` Ansicht `overview` neu (Logik bleibt, Darstellung neu), am besten eigene
     Komponente `src/components/marketing/MarketingHome.tsx`.
   - Aufbau von oben: Kopf „Marketing-CRM“ + Plan-Abzeichen · **Einrichtungsassistent** (HubSpot
@@ -246,7 +246,7 @@ früheren (O)-Aufgaben in Abschnitt 6a ausgeschrieben und damit (S). Opus nur no
     sobald F vorhanden) · **Trichter** (verkaufte Fotos → Freischaltungen → Kontakte → Opt-ins →
     Newsletter geöffnet; horizontale Balken mit Prozent) · **Aktive Freischaltung** (heutige „Gerade
     aktiv“-Karte) · **Live-Vorschau** rechts (vorhanden) · Weltkarte nur auf Klick laden (C4).
-- [ ] **C3 Kontakte** (S): Tabelle mit Segment-Filtern (Sprache, Land, Opt-in, Quelle E-Mail/Umfrage/Social,
+- [~] **C3 Kontakte** (S, Spaltenauswahl + Kontakt-Schublade fertig; Segmente, Mehrfachaktion „Zu Segment“, Umfrage-Antworten/E-Mail-Verlauf in der Schublade offen): Tabelle mit Segment-Filtern (Sprache, Land, Opt-in, Quelle E-Mail/Umfrage/Social,
   Zeitraum), Spaltenauswahl, Mehrfachauswahl → „Zu Segment hinzufügen“ / „Löschen“ / „Exportieren“.
   Kontakt-Schublade (rechts, wie NotificationsDrawer) mit Foto, Freischaltdatum, Umfrage-Antworten,
   E-Mail-Verlauf.
@@ -838,3 +838,4 @@ keine Vertriebs-Pipeline für Parks. Keine Preise ändern ohne John.
 - 10.10.2026: R2 (Einstellungen): links Unternavigation (Profil, Organisation, Sprache, Bildpreis, Öffnungszeiten, Benachrichtigungen, Stripe; Markierung folgt dem Scrollen, auf dem Handy als waagrechte Chips), rechts eine Spalte mit den bestehenden Karten (jede als `<section id=…>`, Reihenfolge per `order-N`; der Anker `#benachrichtigungen` sitzt jetzt auf der Section). Alle Felder, Speichern-Knöpfe und Funktionen unverändert, keine neuen Texte (vorhandene Schlüssel). Bewusst KEINE feste Speichern-Leiste unten, weil jeder Abschnitt einzeln speichert. R1-Muster angewendet (leichter Titel, `bg-slate-50`, `--line`-Rahmen, keine Großbuchstaben-Beschriftungen). NOCH ZU PRÜFEN: Desktop + 390 px, hell + dunkel, Sprung `/settings#benachrichtigungen` (Glocke/Hinweis).
 - 10.10.2026: R3 per Muster-Austausch wie R1 auf `Shop`, `Users` (Speedmessung), `Configuration` + `ConfigurationProduct/Orders/Faq`, `Photos`, `Team` angewendet: leichter Seitentitel (28–32 px), `bg-slate-50` statt Halbtransparent-Weiß, `--line`-Rahmen, keine Großbuchstaben-Beschriftungen. Keine Texte/Funktionen geändert. Nicht angefasst: `ShopPricing` (nichts zu ändern), `Login`/`Register` (Anmeldekarte, eigenes Layout), `Purchases`/`Kamera`/`Support` (kommen mit I1–I3). NOCH ZU PRÜFEN: Sichtprüfung Desktop + 390 px, hell + dunkel.
 - 10.10.2026: R4 teilweise: neue `src/components/ui/Modal.tsx` (Esc schließt, Klick daneben schließt abschaltbar, `locked` während Aktionen, Scroll-Sperre, Fokus hinein und zurück, `role=dialog`); eingesetzt in Settings (Produkt-Auswahl, Klick daneben schließt dort bewusst NICHT) und Support (Ticket anlegen, Löschen bestätigen). Nicht umgestellt: `WelcomeTour` (Rundgang mit eigenem Ablauf), TopBar-Fenster (Seitenleiste/Hilfe), `Shop`-Vollbildvorschau, `DemoShop`-Warenkorb. Globaler Tastatur-Fokusring in `index.css` (`:where(a, button, select, …):focus-visible`). Offen: einheitliche Leerzustände und Skeletons (Seiten sind uneinheitlich, ohne Sichtprüfung nicht sicher umzubauen), Tooltips (keine `title`-Attribute vorhanden, noch kein Konzept).
+- 10.10.2026: C1–C3. C1: Reiter-Reihenfolge Start · Kontakte · Social Media · Umfrage · Pixel (`crmTabs.ts`), erster Reiter heißt „Start“ (`crm.tab_start`), Reiterleiste ruhiger. C2: neue `src/components/marketing/MarketingHome.tsx` (Einrichtungsassistent mit Fortschritt, ausblendbar via `lp-crm-setup:<Park>`; vier Kennzahlen mit Vergleich zu den 30 Tagen davor; Trichter Verkaufte Fotos → Kontakte → Mit Einwilligung) oben in der Übersicht; die Kacheln Fotos verkauft/Gesamt/Opt-ins/Antworten/NPS aus `Leads.tsx` entfallen (stecken jetzt in Trichter/Kennzahlen), „Aktuelle Freischaltung“, Zufriedenheit und Social-Karte bleiben. Standort: Top-5-Länderliste statt kompakter Weltkarte; die 1,1-MB-Karte wird erst auf „Karte anzeigen“ geladen und vermessen (C4 Stufe 2). C3: Spaltenauswahl (`lp-crm-columns`) und Kontakt-Schublade (Klick auf die E-Mail) in der Kontaktliste. Neue Texte `mk.*` in 7 Sprachen. Offen bei C3: Segmente (braucht Tabelle, noch nicht angelegt), Umfrage-Antworten je Kontakt (liegen nicht je Kontakt vor) und E-Mail-Verlauf (kommt mit F).
