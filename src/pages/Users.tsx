@@ -24,6 +24,7 @@ import {
 import { accentColorForPark, accentTextColorForPark } from '../lib/parkBrand';
 import { claimSiteBaseFor } from '../lib/photoBrowser';
 import GlassCard from '../components/ui/GlassCard';
+import PageGuide from '../components/onboarding/PageGuide';
 import { useI18n, useLocaleTag } from '../lib/i18n';
 import { usePark } from '../contexts/ParkContext';
 
@@ -369,6 +370,8 @@ export default function Users() {
           )}
         </div>
       </div>
+
+      <PageGuide id="speed" />
 
       {notice && (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">

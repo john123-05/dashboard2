@@ -24,10 +24,10 @@ export default function MobileQrCard() {
   const { pathname } = useLocation();
   const [state, setState] = useState<State>(readState);
   const [forced, setForced] = useState(false);
-  // Die große Karte zeigt sich von selbst nur auf der Übersicht und bei „Erste Schritte“. Auf Seiten mit fester
+  // Die große Karte zeigt sich von selbst nur auf der Übersicht. Auf Seiten mit fester
   // Leiste unten (Shop bearbeiten, Kamera) bleibt die Ecke ganz frei, sonst steht nur der kleine Knopf da.
   const blocked = pathname === '/shop/bearbeiten' || pathname === '/kamera';
-  const roomy = pathname === '/' || pathname === '/start';
+  const roomy = pathname === '/';
   const [qr, setQr] = useState<string | null>(null);
 
   function update(next: State) {

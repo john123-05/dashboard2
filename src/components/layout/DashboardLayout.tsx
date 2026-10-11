@@ -6,6 +6,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import Sidebar from './Sidebar';
 import WelcomeTour from '../WelcomeTour';
 import { useOnboardingTracker } from '../../lib/onboarding';
+import { PageGuideStrip } from '../onboarding/PageGuide';
 import TopBar from './TopBar';
 import { NotificationsProvider } from '../../contexts/NotificationsContext';
 import { Loader2, Mountain, ArrowRight } from 'lucide-react';
@@ -129,6 +130,7 @@ export default function DashboardLayout() {
       >
         <div className="min-h-screen w-full min-w-0 p-4 pt-16 sm:p-6 sm:pt-16 lg:p-8 min-[901px]:pt-16 lg:pt-16">
           {/* Remount the page on a park switch so nothing from the previous park lingers. */}
+          <PageGuideStrip />
           <Outlet key={parkId ?? 'none'} />
         </div>
       </main>

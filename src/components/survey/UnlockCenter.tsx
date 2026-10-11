@@ -8,6 +8,7 @@ import CampaignsManager from './CampaignsManager';
 import EmailManager from './EmailManager';
 import { fetchSurveyConfig, setUnlockMode, type SurveyConfig, type UnlockMode } from '../../lib/surveyApi';
 import { CRM_TABS, crmTabForPath, type TabKey } from '../../lib/crmTabs';
+import PageGuide from '../onboarding/PageGuide';
 import { PlanBadge } from '../upgrade/PlanGate';
 import { useI18n } from '../../lib/i18n';
 
@@ -117,6 +118,7 @@ export default function UnlockCenter({
         </div>
       </div>
       {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
+      {tab !== 'overview' && <PageGuide id={{ allContacts: 'contacts', email: 'email', social: 'social', survey: 'survey', tracking: 'tracking' }[tab]} />}
 
       {tab === 'overview' && <div className="space-y-5">{children('overview')}</div>}
       {tab === 'allContacts' && <div className="space-y-5">{children('list')}</div>}

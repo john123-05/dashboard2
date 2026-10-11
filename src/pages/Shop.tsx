@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import QRCode from '../lib/vendor/qrcode.bundle.js';
 import { ArrowLeft, CheckCircle2, ChevronDown, ExternalLink, Image as ImageIcon, Monitor, Pencil, Send, Smartphone, X } from 'lucide-react';
 import GlassCard from '../components/ui/GlassCard';
+import PageGuide from '../components/onboarding/PageGuide';
 import ProductMockup from '../components/shop/ProductMockup';
 import { usePark } from '../contexts/ParkContext';
 import { aggregateByDate, fetchKioskSales, type AggregatedDay } from '../lib/kioskSales';
@@ -572,6 +573,7 @@ export default function Shop() {
       />
 
       {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
+      <PageGuide id="shop" />
 
       {isKioskPark && (
         <div className="rounded-xl border border-[color:var(--line)] bg-white p-6 sm:p-8">
