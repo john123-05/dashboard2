@@ -70,32 +70,15 @@ export default function UnlockCenter({
 
   return (
     <div className="space-y-5">
+      {/* Kopf auf jeder CRM-Seite gleich: Titel links, Aktion rechts, Reiter in eigener Zeile darunter. */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
           <h2 className="text-[28px] font-light tracking-tight text-[color:var(--ink)] sm:text-[32px]">{tab === 'overview' ? t('crm.overview_title') : shown ? t(shown.labelKey) : ''}</h2>
           <PlanBadge feature="crm_contacts" />
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="inline-flex rounded-lg bg-slate-100 p-1">
-            {TABS.map((tabItem) => (
-              <button
-                key={tabItem.key}
-                type="button"
-                onClick={() => openTab(tabItem.key)}
-                className={`inline-flex items-center gap-2 rounded-md px-4 py-1.5 text-sm font-medium transition ${
-                  tab === tabItem.key ? 'bg-white text-[color:var(--ink)] shadow-sm' : 'text-[color:var(--ink-3)] hover:text-[color:var(--ink)]'
-                }`}
-              >
-                {active === tabItem.mode && <span className="h-2 w-2 rounded-full bg-emerald-500" title={t('crm.active_for_guests')} />}
-                {t(tabItem.labelKey)}
-              </button>
-            ))}
-          </div>
+        <div className="flex flex-wrap items-center gap-2">
           {tab === 'overview' && (
-            <Link
-              to="/leads/preise"
-              className="inline-flex items-center justify-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
-            >
+            <Link to="/leads/preise" className="glass-button-secondary">
               {t('shop.view_plans')}
             </Link>
           )}
@@ -110,6 +93,27 @@ export default function UnlockCenter({
               {t('crm.activate_for_guests')}
             </button>
           )}
+        </div>
+      </div>
+      <div className="-mx-4 overflow-x-auto border-b border-[color:var(--line)] px-4 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden">
+        <div className="flex min-w-max gap-1" role="tablist">
+          {TABS.map((tabItem) => (
+            <button
+              key={tabItem.key}
+              type="button"
+              role="tab"
+              aria-selected={tab === tabItem.key}
+              onClick={() => openTab(tabItem.key)}
+              className={`-mb-px inline-flex items-center gap-2 whitespace-nowrap border-b-2 px-3 py-2.5 text-sm transition-colors ${
+                tab === tabItem.key
+                  ? 'border-brand-600 font-semibold text-[color:var(--ink)]'
+                  : 'border-transparent text-[color:var(--ink-3)] hover:text-[color:var(--ink)]'
+              }`}
+            >
+              {active === tabItem.mode && <span className="h-2 w-2 rounded-full bg-emerald-500" title={t('crm.active_for_guests')} />}
+              {t(tabItem.labelKey)}
+            </button>
+          ))}
         </div>
       </div>
       {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}

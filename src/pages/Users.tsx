@@ -325,7 +325,7 @@ export default function Users() {
         </div>
         <div className="min-w-0">
           <p className="text-[22px] font-light leading-tight tracking-tight text-[color:var(--ink)]">{value}</p>
-          <p className="truncate text-xs text-[color:var(--ink-3)]">{label}</p>
+          <p className="text-xs leading-snug text-[color:var(--ink-3)]">{label}</p>
         </div>
       </div>
     </GlassCard>
@@ -336,9 +336,9 @@ export default function Users() {
     <div className="flex min-h-[calc(100vh-4rem)] flex-col gap-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-[28px] font-light tracking-tight text-[color:var(--ink)] sm:text-[32px]">{t('users.title')}</h2>
+          <h2 className="text-[28px] font-light tracking-tight text-[color:var(--ink)] sm:text-[32px]">{t('nav.speed')}</h2>
           <p className="mt-1 text-sm text-slate-500">
-            {t('users.subtitle')}
+            {t('users.title')} – {t('users.subtitle')}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -437,7 +437,7 @@ export default function Users() {
 
           {period === 'day' ? (
             <div>
-              <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+              <div className="grid grid-cols-2 gap-3 min-[1700px]:grid-cols-4">
                 {kpi(!speed ? '…' : formatSpeed(stats?.fastest ?? null, locale), t('spd.kpi_fastest'), TrendingUp, 'bg-emerald-50 text-emerald-600')}
                 {kpi(!speed ? '…' : formatSpeed(stats?.slowest ?? null, locale), t('spd.kpi_slowest'), TrendingDown, 'bg-rose-50 text-rose-600')}
                 {kpi(!speed ? '…' : formatSpeed(stats?.average ?? null, locale), t('spd.kpi_average'), Gauge, 'bg-sky-50 text-sky-600')}

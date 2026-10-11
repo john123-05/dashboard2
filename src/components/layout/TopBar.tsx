@@ -204,11 +204,12 @@ function MobileTabBar({
   return (
     <nav
       aria-label={t('nav.more')}
-      className="operator-tabbar-mobile fixed inset-x-0 bottom-0 z-[70] grid grid-cols-5 border-t border-white/10 bg-[var(--sidebar-bg)] pb-[calc(env(safe-area-inset-bottom,0px)+10px)] min-[901px]:hidden"
+      // Schwebend mit Abstand zum Rand: auf dem iPhone sitzen die äußeren Ziele sonst in den runden Ecken.
+      className="operator-tabbar-mobile fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom,0px)+10px)] z-[70] grid grid-cols-5 rounded-2xl border border-white/10 bg-[var(--sidebar-bg)] px-1.5 py-1 shadow-[0_10px_30px_rgba(0,0,0,0.28)] min-[901px]:hidden"
     >
       {link('/', t('nav.overview'), LayoutDashboard)}
       {link('/revenue', t('nav.revenue'), DollarSign)}
-      {link('/health', t('nav.system_health'), Activity)}
+      {link('/health', t('mnav.system'), Activity)}
       <button
         type="button"
         onClick={onNotifications}
@@ -221,7 +222,7 @@ function MobileTabBar({
             {unread > 9 ? '9+' : unread}
           </span>
         )}
-        <span className="max-w-full truncate px-1">{t('top.notifications')}</span>
+        <span className="max-w-full truncate px-1">{t('mnav.alerts')}</span>
       </button>
       <button type="button" onClick={onMore} className="flex min-h-[52px] flex-col items-center justify-center gap-0.5 text-[11px] text-white/60">
         <Menu className="h-5 w-5" />

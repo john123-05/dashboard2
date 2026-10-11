@@ -332,7 +332,7 @@ export default function Purchases() {
     },
     {
       key: 'source',
-      label: isKioskPark ? 'Automat' : 'Source',
+      label: isKioskPark ? 'Automat' : t('purch2.col_source'),
       render: (item: PurchaseRow) => (
         <span
           className={`status-badge ${
@@ -347,13 +347,13 @@ export default function Purchases() {
             ? 'Online'
             : item.source === 'kiosk'
               ? item.machine_label || 'Automat'
-              : 'Local'}
+              : t('purch2.source_local')}
         </span>
       ),
     },
     {
       key: 'customer_or_device',
-      label: 'Customer / Device',
+      label: t('purch2.col_customer'),
       render: (item: PurchaseRow) => (
         <button
           type="button"
@@ -367,7 +367,7 @@ export default function Purchases() {
     },
     {
       key: 'payment_method',
-      label: 'Payment',
+      label: t('purch2.col_payment'),
       render: (item: PurchaseRow) => (
         <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
           {item.payment_method}
@@ -380,7 +380,7 @@ export default function Purchases() {
       render: (item: PurchaseRow) => (
         <div>
           <span className="font-semibold text-slate-800">
-            {item.amount_cents === null ? 'Unknown' : formatCurrency(item.amount_cents, item.currency)}
+            {item.amount_cents === null ? t('purch2.amount_unknown') : formatCurrency(item.amount_cents, item.currency)}
           </span>
           {item.amount_cents !== null && item.amount_kind === 'detected' && (
             <p className="mt-0.5 text-xs text-amber-600">{t('purchases.detected_not_confirmed')}</p>
@@ -398,12 +398,16 @@ export default function Purchases() {
       key: 'status',
       label: t('purchases.table.status'),
       render: (item: PurchaseRow) => (
-        <span className={`status-badge ${statusColor(item.status)}`}>{item.status}</span>
+        item.status === 'unknown' ? (
+          <span className="text-slate-400">–</span>
+        ) : (
+          <span className={`status-badge ${statusColor(item.status)}`}>{item.status === 'claimed' ? t('purch2.status_claimed') : item.status}</span>
+        )
       ),
     },
     {
       key: 'description',
-      label: 'Description',
+      label: t('purch2.col_description'),
       render: (item: PurchaseRow) => (
         <span className="text-slate-600">{item.description}</span>
       ),

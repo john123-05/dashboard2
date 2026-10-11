@@ -226,7 +226,7 @@ export default function Revenue() {
         const key = date.toISOString().slice(0, 10);
         days.set(key, {
           date: key,
-          label: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          label: date.toLocaleDateString(locale, { month: 'short', day: 'numeric' }),
           online: 0,
           local: 0,
           total: 0,
@@ -238,7 +238,7 @@ export default function Revenue() {
       for (const point of dashboard.sales.daily || []) {
         const entry = days.get(point.date) || {
           date: point.date,
-          label: new Date(point.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          label: new Date(point.date).toLocaleDateString(locale, { month: 'short', day: 'numeric' }),
           online: 0,
           local: 0,
           total: 0,
@@ -254,7 +254,7 @@ export default function Revenue() {
       for (const point of stripeRevenue) {
         const entry = days.get(point.date) || {
           date: point.date,
-          label: new Date(point.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          label: new Date(point.date).toLocaleDateString(locale, { month: 'short', day: 'numeric' }),
           online: 0,
           local: 0,
           total: 0,

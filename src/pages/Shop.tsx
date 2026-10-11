@@ -623,7 +623,7 @@ export default function Shop() {
               ) : (
                 <Link
                   to="/shop/preise"
-                  className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-[color:var(--ink)] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-black"
+                  className="glass-button-primary shrink-0"
                 >
                   <Send className="h-4 w-4" />
                   {t('shop.view_prices')}

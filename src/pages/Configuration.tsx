@@ -266,7 +266,7 @@ export default function Configuration() {
           type="button"
           onClick={() => void handleAnfrage(FOTOPAPIER_KEY, { label: 'Fotopapier nachbestellen' })}
           disabled={requestKey === FOTOPAPIER_KEY || requestedKeys.has(FOTOPAPIER_KEY)}
-          className="rounded-lg bg-slate-800 px-2.5 py-1 text-[11px] font-medium text-white hover:bg-slate-700 disabled:opacity-60"
+          className="rounded-full border border-[color:var(--ink-2)] bg-white px-3 py-1 text-[11px] font-semibold text-[color:var(--ink)] hover:bg-slate-50 disabled:opacity-60"
         >
           {anfrageLabel(FOTOPAPIER_KEY, t('config.reorder'))}
         </button>
@@ -314,7 +314,7 @@ export default function Configuration() {
           <HeaderIconLink to="/configuration/faq" label={t('config.faq')} icon={Info} />
           <Link
             to="/configuration/bestellungen"
-            className="inline-flex items-center gap-1.5 rounded-lg bg-slate-800 px-3.5 py-2 text-sm font-medium text-white hover:bg-slate-700"
+            className="glass-button-secondary"
           >
             {t('config.orders')}
             <ChevronRight className="h-4 w-4" />

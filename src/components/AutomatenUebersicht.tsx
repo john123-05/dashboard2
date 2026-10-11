@@ -2,8 +2,8 @@ import { useMemo } from 'react';
 import { CreditCard } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import GlassCard from './ui/GlassCard';
-import { formatCurrency, formatNumber } from '../lib/utils';
-import { useI18n } from '../lib/i18n';
+import { formatCurrency as baseFormatCurrency, formatNumber as baseFormatNumber } from '../lib/utils';
+import { useI18n, useLocaleTag } from '../lib/i18n';
 import type { MachineRevenue } from '../lib/kioskSales';
 
 export type Zeitraum = 'heute' | 'woche' | 'monat' | 'gesamt';
@@ -26,6 +26,9 @@ export default function AutomatenUebersicht({
   zeitraum: Zeitraum;
 }) {
   const { t } = useI18n();
+  const locale = useLocaleTag();
+  const formatCurrency = (cents: number, currency: string) => baseFormatCurrency(cents, currency, locale);
+  const formatNumber = (value: number) => baseFormatNumber(value, locale);
   const summe = useMemo(
     () => machines.reduce(
       (acc, m) => ({ cent: acc.cent + m[zeitraum].cent, anzahl: acc.anzahl + m[zeitraum].anzahl }),

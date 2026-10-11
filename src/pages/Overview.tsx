@@ -379,7 +379,7 @@ export default function Overview() {
         const key = date.toISOString().slice(0, 10);
         days.set(key, {
           date: key,
-          label: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          label: date.toLocaleDateString(locale, { month: 'short', day: 'numeric' }),
           onlineRevenue: 0,
           localRevenue: 0,
           totalRevenue: 0,
@@ -391,7 +391,7 @@ export default function Overview() {
       for (const point of dashboard.sales.daily || []) {
         const entry = days.get(point.date) || {
           date: point.date,
-          label: new Date(point.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          label: new Date(point.date).toLocaleDateString(locale, { month: 'short', day: 'numeric' }),
           onlineRevenue: 0,
           localRevenue: 0,
           totalRevenue: 0,
@@ -406,7 +406,7 @@ export default function Overview() {
       for (const point of stripeRevenue?.revenue_by_day || []) {
         const entry = days.get(point.date) || {
           date: point.date,
-          label: new Date(point.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          label: new Date(point.date).toLocaleDateString(locale, { month: 'short', day: 'numeric' }),
           onlineRevenue: 0,
           localRevenue: 0,
           totalRevenue: 0,
@@ -972,7 +972,7 @@ export default function Overview() {
       )}
 
       {isKioskPark && kioskKpis && (
-        <div className="grid grid-cols-2 gap-4 sm:gap-6 xl:grid-cols-6">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 min-[1700px]:grid-cols-6">
           <KPICard
             title={t('overview.revenue_today')}
             value={formatCurrency(kioskKpis.today.revenueCents, 'eur')}
@@ -1206,7 +1206,7 @@ export default function Overview() {
       )}
 
       {!isKioskPark && (
-      <div className="grid grid-cols-2 gap-4 sm:gap-6 xl:grid-cols-6">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 min-[1700px]:grid-cols-6">
         {parkData.features.stripe && (
           <KPICard
             title={t('overview.online_revenue')}
@@ -1265,7 +1265,7 @@ export default function Overview() {
       </div>
       )}
 
-      <div className={`grid grid-cols-2 gap-4 ${isKioskPark ? 'xl:grid-cols-4' : 'xl:grid-cols-6'}`}>
+      <div className={`grid grid-cols-2 gap-4 ${isKioskPark ? 'xl:grid-cols-4' : 'md:grid-cols-3 min-[1700px]:grid-cols-6'}`}>
         {liveStatusWidgets.map((widget) => (
           <button
             key={widget.id}
