@@ -46,15 +46,31 @@ export default function PlanGate({ feature, children }: { feature?: FeatureKey; 
   );
 }
 
-/** Kleines Abzeichen „Teil von …“ für Seitenköpfe von Plan-Funktionen. */
+const DEMO_PLAN_PRICE = { basis: 0, marketing_starter: 49, marketing_pro: 149 } as const;
+const DEMO_ADDON_PRICE: Partial<Record<FeatureKey, number>> = { online_shop: 99, speed: 49 };
+const DEMO_CHIP = 'inline-flex items-center rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-900 ring-1 ring-inset ring-amber-200';
+
+/** Kleines Abzeichen „Teil von …“ für Seitenköpfe von Plan-Funktionen. Im Demo-Park mit Preis. */
 export function PlanBadge({ feature }: { feature: FeatureKey }) {
   const { t } = useI18n();
-  const { requiredPlan } = useEntitlements();
+  const { requiredPlan, isDemo } = useEntitlements();
   const required = requiredPlan(feature);
-  if (required === 'addon') return null;
+  if (required === 'addon') return isDemo ? <DemoTag feature={feature} /> : null;
+  if (isDemo && required !== 'basis') {
+    return <span className={DEMO_CHIP}>{t('demo.badge_plan', { plan: t(PLAN_LABEL_KEY[required]), price: `${DEMO_PLAN_PRICE[required]} €` })}</span>;
+  }
   return (
     <span className="inline-flex items-center rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-medium text-brand-700 ring-1 ring-inset ring-brand-200">
       {t('plans.included_in', { plan: t(PLAN_LABEL_KEY[required]) })}
     </span>
   );
+}
+
+/** Nur im Demo-Park sichtbar: Hinweis an Zusatzleistungen (Online-Shop, Speedmessung), was sie sonst kosten. */
+export function DemoTag({ feature }: { feature: FeatureKey }) {
+  const { t } = useI18n();
+  const { isDemo } = useEntitlements();
+  const price = DEMO_ADDON_PRICE[feature];
+  if (!isDemo || !price) return null;
+  return <span className={DEMO_CHIP}>{t('demo.badge_addon', { price: `${price} €` })}</span>;
 }

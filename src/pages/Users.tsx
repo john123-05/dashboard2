@@ -25,6 +25,7 @@ import { accentColorForPark, accentTextColorForPark } from '../lib/parkBrand';
 import { claimSiteBaseFor } from '../lib/photoBrowser';
 import GlassCard from '../components/ui/GlassCard';
 import PageGuide from '../components/onboarding/PageGuide';
+import { DemoTag } from '../components/upgrade/PlanGate';
 import { useI18n, useLocaleTag } from '../lib/i18n';
 import { usePark } from '../contexts/ParkContext';
 
@@ -337,7 +338,10 @@ export default function Users() {
     <div className="flex min-h-[calc(100vh-4rem)] flex-col gap-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-[28px] font-light tracking-tight text-[color:var(--ink)] sm:text-[32px]">{t('nav.speed')}</h2>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <h2 className="text-[28px] font-light tracking-tight text-[color:var(--ink)] sm:text-[32px]">{t('nav.speed')}</h2>
+            <DemoTag feature="speed" />
+          </div>
           <p className="mt-1 text-sm text-slate-500">
             {t('users.title')} – {t('users.subtitle')}
           </p>

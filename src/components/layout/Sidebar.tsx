@@ -327,6 +327,8 @@ export default function Sidebar({
   }
 
   function badgeFor(item: NavItem) {
+    // Demo-Park: alles ist offen, bezahlte Bereiche tragen stattdessen „kostet extra“.
+    if (entitlements.isDemo) return featureForPath(item.to) || item.to === '/leads' ? t('demo.paid') : null;
     const showComingSoon =
       item.comingSoon &&
       !(item.kioskUnlocks && isKioskPark) &&

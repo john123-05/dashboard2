@@ -103,7 +103,8 @@ export default function Plans() {
     const cents = catalogPackage(catalog, plan)?.price_cents;
     return cents != null ? cents / 100 : PRICE[plan];
   };
-  const { plan: currentPlan, has } = useEntitlements();
+  // `hasBooked`: im Demo-Park ist alles offen, „Aktiv“ soll aber nur zeigen, was wirklich gebucht ist.
+  const { plan: currentPlan, hasBooked: has } = useEntitlements();
   const [filter, setFilter] = useState<Filter>(() => {
     const wanted = new URLSearchParams(window.location.search).get('gruppe');
     return FILTERS.some((item) => item.key === wanted) ? (wanted as Filter) : 'all';

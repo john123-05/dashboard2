@@ -32,7 +32,9 @@ export type FeatureKey =
   | 'team_permissions'
   | 'reports_pro'
   | 'online_shop'
-  | 'speed';
+  | 'speed'
+  // Kein Produkt, sondern ein Schalter: Demo-Park (alles frei, mit Preis-Hinweisen). Setzt Staff im CRM.
+  | 'demo';
 
 /** Ab welchem Plan eine Funktion enthalten ist; `addon` = einzeln buchbar, unabhängig vom Plan. */
 export const FEATURE_PLAN: Record<FeatureKey, PlanKey | 'addon'> = {
@@ -48,6 +50,7 @@ export const FEATURE_PLAN: Record<FeatureKey, PlanKey | 'addon'> = {
   reports_pro: 'marketing_pro',
   online_shop: 'addon',
   speed: 'addon',
+  demo: 'addon',
 };
 
 /** Rangfolge der Pläne: ein höherer Plan enthält alles der niedrigeren. */
@@ -99,6 +102,10 @@ export type Entitlements = {
   /** Gebuchte Add-ons (Online-Shop, Speedmessung …). */
   addons: FeatureKey[];
   has: (feature: FeatureKey) => boolean;
+  /** Demo-Park: alles ist freigeschaltet, bezahlte Funktionen tragen einen Preis-Hinweis. */
+  isDemo: boolean;
+  /** Wie `has`, aber ohne den Demo-Schalter – also „hat der Park das wirklich gebucht?“. */
+  hasBooked: (feature: FeatureKey) => boolean;
   /** Kleinster Plan, der die Funktion enthält - für Upgrade-Hinweise. */
   requiredPlan: (feature: FeatureKey) => PlanKey | 'addon';
   loading: boolean;
@@ -230,10 +237,14 @@ export function useEntitlements(): Entitlements {
     const { plan, features } = current
       ? resolveEntitlements(current.row, parkId)
       : { plan: 'basis' as PlanKey, features: [] as FeatureKey[] };
+    const isDemo = !loading && features.includes('demo');
+    const hasBooked = (feature: FeatureKey) => !loading && (planIncludes(plan, feature) || features.includes(feature));
     return {
       plan,
-      addons: features.filter((feature) => FEATURE_PLAN[feature] === 'addon'),
-      has: (feature: FeatureKey) => !loading && (planIncludes(plan, feature) || features.includes(feature)),
+      addons: features.filter((feature) => FEATURE_PLAN[feature] === 'addon' && feature !== 'demo'),
+      has: (feature: FeatureKey) => isDemo || hasBooked(feature),
+      isDemo,
+      hasBooked,
       requiredPlan: (feature: FeatureKey) => FEATURE_PLAN[feature],
       loading,
       /** Letzter Abruf gescheitert - nur zur Information, sperrt nichts. */

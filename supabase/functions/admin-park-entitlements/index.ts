@@ -5,6 +5,8 @@ const STATUS = ['active', 'trial', 'paused', 'cancelled'];
 const FEATURES = [
   'crm_contacts', 'crm_survey', 'crm_social', 'crm_pixel', 'email_marketing',
   'email_automations', 'social_campaigns', 'review_routing', 'team_permissions', 'reports_pro', 'online_shop', 'speed',
+  // Schalter, kein Produkt: Demo-Park (alles frei, Preis-Hinweise im Dashboard).
+  'demo',
 ];
 const COLUMNS = 'park_id, plan, features, status, trial_until, source, stripe_subscription_id, updated_at';
 const UUID = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;

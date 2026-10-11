@@ -4,6 +4,7 @@ import QRCode from '../lib/vendor/qrcode.bundle.js';
 import { ArrowLeft, CheckCircle2, ChevronDown, ExternalLink, Image as ImageIcon, Monitor, Pencil, Send, Smartphone, X } from 'lucide-react';
 import GlassCard from '../components/ui/GlassCard';
 import PageGuide from '../components/onboarding/PageGuide';
+import { DemoTag } from '../components/upgrade/PlanGate';
 import ProductMockup from '../components/shop/ProductMockup';
 import { usePark } from '../contexts/ParkContext';
 import { aggregateByDate, fetchKioskSales, type AggregatedDay } from '../lib/kioskSales';
@@ -560,6 +561,7 @@ export default function Shop() {
         title={t('nav.shop')}
         actions={
           <>
+            <DemoTag feature="online_shop" />
             {statusChip}
             <Link to="/shop/preise" className="glass-button-secondary">
               {t('shop.view_plans')}
