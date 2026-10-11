@@ -2477,6 +2477,17 @@ const dict: Record<string, string> = {
     'demoreq.open_new': "Ouvrir le calendrier dans une nouvelle fenêtre",
     'demoreq.privacy': "Nous utilisons vos données uniquement pour convenir de la démo.",
     'demoreq.error': "Veuillez saisir votre nom et une adresse e-mail valide.",
+    'auth.err_invalid': "E-mail ou mot de passe incorrect.",
+    'auth.err_unconfirmed': "L’adresse e-mail n’est pas encore confirmée. Ouvrez le lien dans l’e-mail de confirmation.",
+    'auth.err_exists': "Un compte existe déjà pour cette adresse e-mail.",
+    'auth.err_password_short': "Le mot de passe est trop court (6 caractères minimum).",
+    'auth.err_rate': "Trop de tentatives. Patientez un instant et réessayez.",
+    'auth.err_network': "Pas de connexion. Vérifiez Internet et réessayez.",
+    'auth.err_generic': "Cela n’a pas fonctionné. Veuillez réessayer.",
+    'auth.email_placeholder': "nom@entreprise.fr",
+    'auth.language': "Langue",
+    'auth.show_password': "Afficher le mot de passe",
+    'auth.hide_password': "Masquer le mot de passe",
 };
 
 export default dict;

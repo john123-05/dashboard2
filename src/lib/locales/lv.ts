@@ -2477,6 +2477,17 @@ const dict: Record<string, string> = {
     'demoreq.open_new': "Atvērt kalendāru jaunā logā",
     'demoreq.privacy': "Jūsu datus izmantojam tikai, lai vienotos par demo.",
     'demoreq.error': "Lūdzu, ievadiet vārdu un derīgu e-pasta adresi.",
+    'auth.err_invalid': "E-pasts vai parole nav pareiza.",
+    'auth.err_unconfirmed': "E-pasta adrese vēl nav apstiprināta. Atveriet saiti apstiprinājuma e-pastā.",
+    'auth.err_exists': "Šai e-pasta adresei konts jau pastāv.",
+    'auth.err_password_short': "Parole ir par īsu (vismaz 6 rakstzīmes).",
+    'auth.err_rate': "Pārāk daudz mēģinājumu. Uzgaidiet brīdi un mēģiniet vēlreiz.",
+    'auth.err_network': "Nav savienojuma. Pārbaudiet internetu un mēģiniet vēlreiz.",
+    'auth.err_generic': "Neizdevās. Lūdzu, mēģiniet vēlreiz.",
+    'auth.email_placeholder': "vards@uznemums.lv",
+    'auth.language': "Valoda",
+    'auth.show_password': "Rādīt paroli",
+    'auth.hide_password': "Slēpt paroli",
 };
 
 export default dict;

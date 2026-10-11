@@ -88,8 +88,29 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     document.documentElement.lang = language;
   }, [language]);
 
+  // Sicherheitsnetz: Sind die Texte der aktiven Sprache (noch) nicht geladen, nachladen und neu zeichnen.
+  const [loadedVersion, setLoadedVersion] = useState(0);
+  useEffect(() => {
+    if (translations[language]) return;
+    let active = true;
+    void loadLanguage(language).then(() => active && setLoadedVersion((n) => n + 1));
+    return () => {
+      active = false;
+    };
+  }, [language]);
+
   const setLanguage = (lang: Language) => {
     localStorage.setItem(STORAGE_KEY, lang);
+    // Eine Sprache aus dem Link (?lang=) gilt nur bis zur eigenen Wahl: Parameter aus der Adresse nehmen.
+    try {
+      const url = new URL(window.location.href);
+      if (url.searchParams.has('lang')) {
+        url.searchParams.delete('lang');
+        window.history.replaceState(window.history.state, '', url.toString());
+      }
+    } catch {
+      // Adresse bleibt, wie sie ist
+    }
     // Erst die Texte holen, dann umschalten – sonst blitzt kurz Deutsch auf.
     void loadLanguage(lang).then(() => setLanguageState(lang));
   };
@@ -102,7 +123,8 @@ export function I18nProvider({ children }: { children: ReactNode }) {
             Object.prototype.hasOwnProperty.call(params, name) ? String(params[name]) : match)
         : value;
     },
-    [language]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [language, loadedVersion]
   );
 
   return (
@@ -127,13 +149,10 @@ export function initI18n(): Promise<void> {
   return loadLanguage(readStoredLanguage());
 }
 
+// Dieselbe Reihenfolge wie beim Start der Oberfläche: Link (?lang=) vor gespeicherter Wahl vor Browsersprache.
+// Wichtig: Früher las diese Funktion zuerst die gespeicherte Wahl. Dann lud `initI18n` z. B. Deutsch, die
+// Oberfläche startete aber mit der Sprache aus dem Link – und zeigte mangels geladener Texte Deutsch an.
 function readStoredLanguage(): Language {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (isSupportedLanguage(stored)) return stored;
-  } catch {
-    // localStorage nicht verfügbar
-  }
   try {
     return detectInitialLanguage();
   } catch {

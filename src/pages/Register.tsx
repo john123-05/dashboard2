@@ -4,6 +4,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../lib/i18n';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import Footer from '../components/layout/Footer';
+import LanguagePicker from '../components/layout/LanguagePicker';
+import { authErrorKey } from '../lib/authErrors';
 
 export default function Register() {
   const { user, loading, signUp } = useAuth();
@@ -22,12 +24,12 @@ export default function Register() {
     e.preventDefault();
     setError('');
     if (password.length < 6) {
-      setError('Password must be at least 6 characters');
+      setError(t('auth.err_password_short'));
       return;
     }
     setSubmitting(true);
     const { error } = await signUp(email, password, fullName);
-    if (error) setError(error);
+    if (error) setError(t(authErrorKey(error)));
     setSubmitting(false);
   }
 
@@ -44,6 +46,7 @@ export default function Register() {
         }}
       >
         <div className="absolute inset-0 bg-slate-900/35 backdrop-blur-[1px]" />
+        <LanguagePicker className="absolute right-4 top-4 z-10" />
         <div className="relative w-full max-w-md">
           <div className="glass-panel-strong animate-slide-up rounded-3xl p-8">
             <div className="mb-8 text-center">
@@ -56,7 +59,7 @@ export default function Register() {
                 />
               </div>
               <h1 className="text-2xl font-bold tracking-tight text-slate-800">{t('auth.create_account')}</h1>
-              <p className="mt-1 text-sm text-slate-500">{t('nav.operator_dashboard')}</p>
+              <p className="mt-1 text-sm text-slate-500">Liftbase · {t('brand.tagline')}</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -72,7 +75,7 @@ export default function Register() {
                   type="text"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  placeholder="John Smith"
+                  placeholder={t('demoreq.name')}
                   required
                   className="glass-input"
                 />
@@ -84,7 +87,7 @@ export default function Register() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@company.com"
+                  placeholder={t('auth.email_placeholder')}
                   required
                   className="glass-input"
                 />

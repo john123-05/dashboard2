@@ -7,6 +7,8 @@ import { invokeEdgeFunction } from '../lib/edgeFunctions';
 import { supabase, EXTERNAL_SUPABASE_URL, EXTERNAL_SUPABASE_ANON_KEY } from '../lib/supabase';
 import { ArrowLeft, ArrowRight, CalendarCheck, ExternalLink, Loader2, Eye, EyeOff } from 'lucide-react';
 import Footer from '../components/layout/Footer';
+import LanguagePicker from '../components/layout/LanguagePicker';
+import { authErrorKey } from '../lib/authErrors';
 
 // Termin für die Demo (Videokonferenz) – Calendly von Liftpictures.
 const CALENDLY_URL = 'https://calendly.com/kontakt-liftpictures-fotosysteme/30min';
@@ -86,7 +88,7 @@ export default function Login() {
     if (!user) {
       const { error } = await signIn(email, password);
       if (error) {
-        setError(error);
+        setError(t(authErrorKey(error)));
         setSubmitting(false);
         return;
       }
@@ -127,6 +129,7 @@ export default function Login() {
         }}
       >
         <div className="absolute inset-0 bg-slate-900/35 backdrop-blur-[1px]" />
+        <LanguagePicker className="absolute right-4 top-4 z-10" />
         <div className={`relative w-full ${mode === 'calendar' ? 'max-w-3xl' : 'max-w-md'}`}>
           <div className="glass-panel-strong animate-slide-up rounded-3xl p-6 sm:p-8">
             {mode === 'demo' && (
@@ -214,7 +217,7 @@ export default function Login() {
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="you@company.com"
+                      placeholder={t('auth.email_placeholder')}
                       required
                       className="glass-input"
                     />
@@ -234,6 +237,8 @@ export default function Login() {
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
+                        aria-label={showPassword ? t('auth.hide_password') : t('auth.show_password')}
+                        title={showPassword ? t('auth.hide_password') : t('auth.show_password')}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                       >
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}

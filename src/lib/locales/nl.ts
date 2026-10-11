@@ -2477,6 +2477,17 @@ const dict: Record<string, string> = {
     'demoreq.open_new': "Agenda in nieuw venster openen",
     'demoreq.privacy': "We gebruiken uw gegevens alleen om de demo af te spreken.",
     'demoreq.error': "Vul uw naam en een geldig e-mailadres in.",
+    'auth.err_invalid': "E-mail of wachtwoord klopt niet.",
+    'auth.err_unconfirmed': "Het e-mailadres is nog niet bevestigd. Open de link in de bevestigingsmail.",
+    'auth.err_exists': "Er bestaat al een account voor dit e-mailadres.",
+    'auth.err_password_short': "Het wachtwoord is te kort (minimaal 6 tekens).",
+    'auth.err_rate': "Te veel pogingen. Wacht even en probeer het opnieuw.",
+    'auth.err_network': "Geen verbinding. Controleer internet en probeer het opnieuw.",
+    'auth.err_generic': "Dat is niet gelukt. Probeer het opnieuw.",
+    'auth.email_placeholder': "naam@bedrijf.nl",
+    'auth.language': "Taal",
+    'auth.show_password': "Wachtwoord tonen",
+    'auth.hide_password': "Wachtwoord verbergen",
 };
 
 export default dict;
