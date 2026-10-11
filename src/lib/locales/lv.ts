@@ -2462,6 +2462,21 @@ const dict: Record<string, string> = {
     'demo.paid': "papildus",
     'demo.badge_plan': "Demo – citādi {plan}, {price} / mēnesī",
     'demo.badge_addon': "Demo – citādi papildus no {price} / mēnesī",
+    'demoreq.cta': "Pieteikt demo",
+    'demoreq.cta_hint': "Vēl nav Liftbase? Parādīsim to tiešraidē.",
+    'demoreq.title': "Pieteikt demo",
+    'demoreq.intro': "Mūsu darbinieks videozvanā iepazīstinās jūs ar Liftbase – aptuveni 30 minūtes, bez maksas un saistībām.",
+    'demoreq.name': "Jūsu vārds",
+    'demoreq.email': "E-pasta adrese",
+    'demoreq.company': "Uzņēmums vai atrakcija",
+    'demoreq.phone': "Tālrunis (pēc izvēles)",
+    'demoreq.next': "Tālāk uz laika izvēli",
+    'demoreq.back': "Atpakaļ uz pieteikšanos",
+    'demoreq.cal_title': "Izvēlieties laiku",
+    'demoreq.cal_text': "Paldies, {name}! Tagad izvēlieties brīvu laiku videozvanam. Ielūgums pienāks e-pastā.",
+    'demoreq.open_new': "Atvērt kalendāru jaunā logā",
+    'demoreq.privacy': "Jūsu datus izmantojam tikai, lai vienotos par demo.",
+    'demoreq.error': "Lūdzu, ievadiet vārdu un derīgu e-pasta adresi.",
 };
 
 export default dict;

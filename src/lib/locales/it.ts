@@ -2462,6 +2462,21 @@ const dict: Record<string, string> = {
     'demo.paid': "extra",
     'demo.badge_plan': "Demo – altrimenti {plan}, {price} / mese",
     'demo.badge_addon': "Demo – altrimenti aggiungibile da {price} / mese",
+    'demoreq.cta': "Prenota una demo",
+    'demoreq.cta_hint': "Non ha ancora Liftbase? Glielo mostriamo dal vivo.",
+    'demoreq.title': "Prenota una demo",
+    'demoreq.intro': "Un nostro collaboratore Le presenta Liftbase in videoconferenza: circa 30 minuti, gratis e senza impegno.",
+    'demoreq.name': "Il Suo nome",
+    'demoreq.email': "Indirizzo e-mail",
+    'demoreq.company': "Azienda o attrazione",
+    'demoreq.phone': "Telefono (facoltativo)",
+    'demoreq.next': "Continua per scegliere l’orario",
+    'demoreq.back': "Torna all’accesso",
+    'demoreq.cal_title': "Scelga un orario",
+    'demoreq.cal_text': "Grazie, {name}! Scelga ora un orario libero per la videoconferenza. L’invito arriva via e-mail.",
+    'demoreq.open_new': "Apri il calendario in una nuova finestra",
+    'demoreq.privacy': "Usiamo i Suoi dati solo per concordare la demo.",
+    'demoreq.error': "Inserisca il nome e un indirizzo e-mail valido.",
 };
 
 export default dict;

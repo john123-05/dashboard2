@@ -213,6 +213,10 @@ nimmt den Katalog nur, wenn er da ist, sonst die jetzigen festen Werte.
   ein Gewinnspiel, eine versendete E-Mail, Ausstattung, ein Demo-Automat („Alles in Ordnung“).
   `demo_park_tick()` läuft alle 10 Minuten (pg_cron `demo-park-tick`) und zählt den heutigen Tag weiter.
   Neu einspielen: `select public.demo_park_seed();` · Entfernen: `select public.demo_park_wipe();` + cron-Job löschen.
+- [~] **DM6 „Demo buchen“ auf der Login-Seite** – Knopf unter der Anmeldung → Formular (Name, E-Mail, Unternehmen, Telefon)
+  → Terminwahl im eingebetteten Calendly (`https://calendly.com/kontakt-liftpictures-fotosysteme/30min`). Die Anfrage geht
+  über die öffentliche Function `demo-request` nach `german_website_requests` (CRM-Anfragen, Quelle „Liftbase (Demo buchen)“).
+  Schutz: unsichtbares Feld gegen Bots, eine Anfrage je E-Mail und Tag, höchstens 40 pro Stunde.
 - [ ] **DM4 Eigener Demo-Zugang** – ein Login, der NUR den Demo Park sieht (für Vorführungen am fremden Bildschirm).
   Legt Staff im CRM an. Bis dahin: Tom Noltings Zugang hat den Demo Park zusätzlich (Park-Wechsler).
 - [ ] **DM5 Offen** – Foto-Abholseite/Bestenlisten-Seite für den Demo Park (heute „keine Bestenlistenseite“),

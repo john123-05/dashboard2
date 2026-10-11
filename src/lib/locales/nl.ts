@@ -2462,6 +2462,21 @@ const dict: Record<string, string> = {
     'demo.paid': "extra",
     'demo.badge_plan': "Demo – anders {plan}, {price} / maand",
     'demo.badge_addon': "Demo – anders bij te boeken vanaf {price} / maand",
+    'demoreq.cta': "Demo boeken",
+    'demoreq.cta_hint': "Nog geen Liftbase? We laten het u live zien.",
+    'demoreq.title': "Demo boeken",
+    'demoreq.intro': "Een van onze medewerkers leidt u in een videogesprek door Liftbase – ongeveer 30 minuten, gratis en vrijblijvend.",
+    'demoreq.name': "Uw naam",
+    'demoreq.email': "E-mailadres",
+    'demoreq.company': "Bedrijf of attractie",
+    'demoreq.phone': "Telefoon (optioneel)",
+    'demoreq.next': "Verder naar tijdkeuze",
+    'demoreq.back': "Terug naar aanmelden",
+    'demoreq.cal_title': "Kies een tijdstip",
+    'demoreq.cal_text': "Bedankt, {name}! Kies nu een vrij tijdstip voor het videogesprek. De uitnodiging komt per e-mail.",
+    'demoreq.open_new': "Agenda in nieuw venster openen",
+    'demoreq.privacy': "We gebruiken uw gegevens alleen om de demo af te spreken.",
+    'demoreq.error': "Vul uw naam en een geldig e-mailadres in.",
 };
 
 export default dict;
