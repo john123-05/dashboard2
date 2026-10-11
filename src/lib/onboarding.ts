@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Activity, Aperture, BookOpen, ClipboardList, DollarSign, Gauge, LayoutDashboard, LifeBuoy, Mail, Package, Send,
-  Settings, Share2, ShoppingCart, Sparkles, Store, Tags, Target, UserCog, Users, Wand2, Camera,
+  Settings, Share2, ShoppingCart, Smartphone, Sparkles, Store, Tags, Target, UserCog, Users, Wand2, Camera,
   type LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -23,14 +23,17 @@ export type GuideItem = {
   /** Nur sichtbar, wenn die Kamera-Steuerung für den Park verfügbar ist. */
   needsCamera?: boolean;
   /** Kein Seitenbesuch, sondern eine Aktion (Rundgang). */
-  action?: 'tour';
+  action?: 'tour' | 'app';
 };
 export type GuideSection = { id: string; titleKey: string; subKey: string; items: GuideItem[] };
 
 export const GUIDE_SECTIONS: GuideSection[] = [
   {
     id: 'start', titleKey: 'ob.section_start', subKey: 'ob.section_start_sub',
-    items: [{ id: 'tour', path: '/start', icon: Sparkles, minutes: 2, action: 'tour' }],
+    items: [
+      { id: 'app', path: '/start', icon: Smartphone, minutes: 2, action: 'app' },
+      { id: 'tour', path: '/start', icon: Sparkles, minutes: 2, action: 'tour' },
+    ],
   },
   {
     id: 'park', titleKey: 'ob.section_park', subKey: 'ob.section_park_sub',

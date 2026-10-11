@@ -318,3 +318,26 @@ html {
 body[data-lp-tour] .lp-corner-card {
   display: none !important;
 }
+
+/* App-Anleitung (AppSetupGuide): Zeiger bewegt sich zum markierten Ziel und „tippt“. */
+@keyframes lp-pointer {
+  0% { transform: translate(34px, 30px) scale(1); opacity: 0; }
+  20% { opacity: 1; }
+  60% { transform: translate(0, 0) scale(1); opacity: 1; }
+  72% { transform: translate(0, 0) scale(0.78); }
+  84% { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(0, 0) scale(1); opacity: 1; }
+}
+.lp-pointer {
+  animation: lp-pointer 2.2s ease-in-out infinite;
+}
+@keyframes lp-scene-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.lp-scene-in {
+  animation: lp-scene-in 0.35s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lp-pointer, .lp-scene-in { animation: none; }
+}

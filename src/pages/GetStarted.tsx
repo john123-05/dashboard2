@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { ArrowRight, Check, ChevronDown, Clock, LifeBuoy, BookOpen, PlayCircle, RotateCcw } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
+import { ArrowRight, Check, ChevronDown, Clock, LifeBuoy, BookOpen, PlayCircle, RotateCcw, Smartphone } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../lib/i18n';
 import { useOnboarding, type VisibleGuideItem } from '../lib/onboarding';
 import GlassCard from '../components/ui/GlassCard';
 import ProgressRing from '../components/onboarding/ProgressRing';
+import AppSetupGuide from '../components/onboarding/AppSetupGuide';
 
 // Seite „Erste Schritte“ (HubSpot-Stil „Setup guide“): jede Seite des Dashboards mit dem, was man dort tun kann,
 // in Abschnitten, zum Abhaken. Ein Seitenbesuch hakt automatisch ab; von Hand geht es auch.
@@ -26,6 +27,34 @@ export default function GetStarted() {
   const isOpen = (id: string) => openSections[id] ?? id === nextSectionId;
 
   const startTour = () => window.dispatchEvent(new Event('lp:start-tour'));
+
+  // Anleitung „Als App hinzufügen“: offen, solange der Schritt nicht erledigt ist, oder wenn man mit #app kommt.
+  const { hash } = useLocation();
+  const appDone = sections.some((s) => s.items.some((i) => i.id === 'app' && i.done));
+  const [appOpen, setAppOpen] = useState<boolean | null>(null);
+  const showApp = appOpen ?? (!appDone || hash === '#app');
+  const openApp = () => {
+    setAppOpen(true);
+    window.setTimeout(() => document.getElementById('app')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+  };
+  useEffect(() => {
+    if (hash === '#app') openApp();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hash]);
+  const action = (item: VisibleGuideItem, className: string) =>
+    item.action === 'tour' ? (
+      <button type="button" onClick={startTour} className={className}>
+        <PlayCircle className="h-4 w-4" /> {t('ob.start_tour')}
+      </button>
+    ) : item.action === 'app' ? (
+      <button type="button" onClick={openApp} className={className}>
+        <Smartphone className="h-4 w-4" /> {t('app.open_guide')}
+      </button>
+    ) : (
+      <Link to={item.path} className={className}>
+        {t('ob.open_page')} <ArrowRight className="h-4 w-4" />
+      </Link>
+    );
 
   function row(item: VisibleGuideItem) {
     const Icon = item.icon;
@@ -97,15 +126,7 @@ export default function GetStarted() {
             </ul>
             {item.locked && <p className="mt-3 rounded-md bg-slate-50 px-3 py-2 text-xs text-[color:var(--ink-3)]">{t('ob.locked_hint')}</p>}
             <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center [&>*]:justify-center">
-              {item.action === 'tour' ? (
-                <button type="button" onClick={startTour} className="glass-button-primary">
-                  <PlayCircle className="h-4 w-4" /> {t('ob.start_tour')}
-                </button>
-              ) : (
-                <Link to={item.path} className="glass-button-primary">
-                  {t('ob.open_page')} <ArrowRight className="h-4 w-4" />
-                </Link>
-              )}
+              {action(item, 'glass-button-primary')}
               <button type="button" onClick={() => toggle(item.id)} className="glass-button-secondary">
                 {item.done ? t('ob.mark_undone') : t('ob.mark_done')}
               </button>
@@ -151,6 +172,26 @@ export default function GetStarted() {
         </div>
       </div>
 
+      {/* Als App hinzufügen + Benachrichtigungen */}
+      <GlassCard className="scroll-mt-6 overflow-hidden p-0" >
+        <div id="app" />
+        <button type="button" onClick={() => setAppOpen(!showApp)} aria-expanded={showApp} className="flex w-full items-center gap-4 px-4 py-4 text-left sm:px-5">
+          <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${appDone ? 'bg-brand-600 text-white' : 'bg-brand-50 text-brand-700'}`}>
+            {appDone ? <Check className="h-4 w-4" strokeWidth={3} /> : <Smartphone className="h-4 w-4" />}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-base font-semibold text-[color:var(--ink)]">{t('app.title')}</span>
+            <span className="block text-xs text-[color:var(--ink-3)]">{t('app.sub')}</span>
+          </span>
+          <ChevronDown className={`h-4 w-4 shrink-0 text-[color:var(--ink-3)] transition-transform ${showApp ? 'rotate-180' : ''}`} />
+        </button>
+        {showApp && (
+          <div className="border-t border-[color:var(--line)] p-4 sm:p-5">
+            <AppSetupGuide />
+          </div>
+        )}
+      </GlassCard>
+
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
         {/* Abschnitte */}
         <div className="space-y-4">
@@ -193,15 +234,7 @@ export default function GetStarted() {
               <p className="text-xs font-semibold text-[color:var(--ink-3)]">{t('ob.next_up')}</p>
               <p className="mt-1.5 text-base font-semibold text-[color:var(--ink)]">{t(`ob.${next.id}.title`)}</p>
               <p className="mt-1 text-sm leading-relaxed text-[color:var(--ink-2)]">{t(`ob.${next.id}.purpose`)}</p>
-              {next.action === 'tour' ? (
-                <button type="button" onClick={startTour} className="glass-button-primary mt-4 w-full justify-center">
-                  <PlayCircle className="h-4 w-4" /> {t('ob.start_tour')}
-                </button>
-              ) : (
-                <Link to={next.path} className="glass-button-primary mt-4 w-full justify-center">
-                  {t('ob.open_page')} <ArrowRight className="h-4 w-4" />
-                </Link>
-              )}
+              {action(next, 'glass-button-primary mt-4 w-full justify-center')}
             </GlassCard>
           )}
 

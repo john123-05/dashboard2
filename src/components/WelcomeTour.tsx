@@ -6,6 +6,7 @@ import { useI18n } from '../lib/i18n';
 import { hasAccountSeenTour, isTourDisabled, markAccountSeenTour, setTourDisabled } from '../lib/dashboardTourSettings';
 import { setOnboardingTrackingSuppressed, useOnboarding } from '../lib/onboarding';
 import Modal from './ui/Modal';
+import AppSetupGuide from './onboarding/AppSetupGuide';
 
 // Begrüßung und Rundgang (Teil von „Erste Schritte“, siehe src/lib/onboarding.ts).
 // - Beim ersten Anmelden: Begrüßung mit Auswahl „Rundgang“, „Erste Schritte“ oder „Später“.
@@ -18,7 +19,7 @@ export default function WelcomeTour() {
   const location = useLocation();
   const { items, markDone } = useOnboarding();
   const steps = items.filter((item) => !item.action);
-  const [mode, setMode] = useState<'off' | 'welcome' | 'tour'>('off');
+  const [mode, setMode] = useState<'off' | 'device' | 'welcome' | 'tour'>('off');
   const [index, setIndex] = useState(0);
   // Auf dem Handy startet die Karte klein, damit die Seite dahinter zu sehen ist.
   const [details, setDetails] = useState(() => typeof window === 'undefined' || window.innerWidth > 900);
@@ -29,7 +30,8 @@ export default function WelcomeTour() {
     if (!user || steps.length === 0) return;
     if (isTourDisabled() || hasAccountSeenTour(user.id)) return;
     markAccountSeenTour(user.id);
-    setMode('welcome');
+    // Als Erstes die Geräte-Frage: als App hinzufügen und Benachrichtigungen einschalten.
+    setMode('device');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, steps.length > 0]);
 
@@ -73,6 +75,27 @@ export default function WelcomeTour() {
     setMode('off');
     // Erst nach dem Ende des Rundgangs wieder mitzählen, dann zur Liste.
     window.setTimeout(() => navigate('/start'), 0);
+  }
+
+  if (mode === 'device') {
+    return (
+      <Modal onClose={() => setMode('welcome')} labelledBy="ob-device" panelClassName="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white p-5 shadow-xl sm:p-8">
+        <div className="flex items-start gap-3">
+          <div className="min-w-0 flex-1">
+            <h2 id="ob-device" className="text-[24px] font-light leading-tight tracking-tight text-[color:var(--ink)] sm:text-[26px]">
+              {firstName ? t('ob.modal_title', { name: firstName }) : t('ob.welcome_plain')}
+            </h2>
+            <p className="mt-1.5 text-sm leading-relaxed text-[color:var(--ink-2)]">{t('app.sub')}</p>
+          </div>
+          <button type="button" onClick={() => setMode('welcome')} className="shrink-0 rounded-full px-3 py-1.5 text-sm font-medium text-[color:var(--ink-3)] hover:text-[color:var(--ink)]">
+            {t('app.skip')}
+          </button>
+        </div>
+        <div className="mt-5">
+          <AppSetupGuide onDone={() => setMode('welcome')} />
+        </div>
+      </Modal>
+    );
   }
 
   if (mode === 'welcome') {
