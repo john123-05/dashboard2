@@ -48,7 +48,7 @@ export default function MobileQrCard() {
   useEffect(() => {
     if (qr) return;
     let active = true;
-    QRCode.toDataURL(`${window.location.origin}/login`, { margin: 1, width: 220 })
+    QRCode.toDataURL(`${window.location.origin}/login`, { margin: 1, width: 640 })
       .then((src: string) => active && setQr(src))
       .catch(() => undefined);
     return () => {
@@ -74,7 +74,7 @@ export default function MobileQrCard() {
   return (
     <aside
       aria-label={t('qr.title')}
-      className="lp-corner-card fixed bottom-4 right-4 z-[60] hidden w-[300px] rounded-xl border border-[color:var(--line-strong)] bg-white p-4 shadow-[0_16px_48px_rgba(16,24,40,0.18)] min-[901px]:block"
+      className="lp-corner-card fixed bottom-4 right-4 z-[60] hidden w-[380px] rounded-xl border border-[color:var(--line-strong)] bg-white p-4 shadow-[0_16px_48px_rgba(16,24,40,0.18)] min-[901px]:block"
     >
       <div className="flex items-start gap-2">
         <p className="min-w-0 flex-1 text-sm font-semibold text-[color:var(--ink)]">{t('qr.title')}</p>
@@ -85,13 +85,12 @@ export default function MobileQrCard() {
           <X className="h-4 w-4" />
         </button>
       </div>
-      <div className="mt-3 flex items-center gap-3">
-        <div className="flex h-[104px] w-[104px] shrink-0 items-center justify-center rounded-lg border border-[color:var(--line)] bg-white p-1.5">
-          {qr ? <img src={qr} alt="" className="h-full w-full" /> : <Smartphone className="h-6 w-6 text-slate-300" />}
-        </div>
-        <p className="text-xs leading-relaxed text-[color:var(--ink-2)]">{t('qr.text')}</p>
+      {/* Groß genug, um ihn aus Armlänge vom Bildschirm zu scannen. */}
+      <div className="mx-auto mt-3 flex h-[300px] w-[300px] items-center justify-center rounded-lg border border-[color:var(--line)] bg-white p-2">
+        {qr ? <img src={qr} alt="" className="h-full w-full" /> : <Smartphone className="h-8 w-8 text-slate-300" />}
       </div>
-      <Link to="/start#app" className="mt-3 inline-block text-xs font-semibold text-brand-700 hover:underline">
+      <p className="mt-3 text-center text-sm leading-relaxed text-[color:var(--ink-2)]">{t('qr.text')}</p>
+      <Link to="/start#app" className="mt-2 block text-center text-xs font-semibold text-brand-700 hover:underline">
         {t('qr.how')}
       </Link>
     </aside>
