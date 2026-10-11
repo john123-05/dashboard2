@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 export type Language = 'de' | 'en' | 'es' | 'fr' | 'it' | 'nl' | 'lv';
 
@@ -42,7 +42,8 @@ interface I18nContextValue {
 const I18nContext = createContext<I18nContextValue | null>(null);
 
 const SUPPORTED_LANGUAGES: Language[] = ['de', 'en', 'es', 'fr', 'it', 'nl', 'lv'];
-const defaultLanguage: Language = 'de';
+// Wenn sich die Sprache gar nicht bestimmen lässt (kein Speicher, keine Browser-Angabe): Englisch.
+const defaultLanguage: Language = 'en';
 
 const LOCALE_TAGS: Record<Language, string> = {
   de: 'de-DE', en: 'en-GB', es: 'es-ES', fr: 'fr-FR',
@@ -53,8 +54,10 @@ function isSupportedLanguage(value: string | null): value is Language {
   return !!value && (SUPPORTED_LANGUAGES as string[]).includes(value);
 }
 
-// No stored preference yet: use the browser's language if we support it,
-// otherwise fall back to German (this app's primary audience).
+// Noch keine eigene Wahl gespeichert: die Sprache des Browsers nehmen, wenn wir sie haben
+// (Deutsch, Englisch, Spanisch, Französisch, Italienisch, Niederländisch, Lettisch).
+// Der Browser nennt seine Sprachen in der Reihenfolge der Vorliebe; die erste, die wir haben, gewinnt.
+// Haben wir keine davon, gilt Englisch.
 function detectInitialLanguage(): Language {
   const stored = localStorage.getItem(STORAGE_KEY);
   if (isSupportedLanguage(stored)) return stored;
@@ -64,11 +67,16 @@ function detectInitialLanguage(): Language {
     const base = lang?.slice(0, 2).toLowerCase() ?? '';
     if (isSupportedLanguage(base)) return base;
   }
-  return defaultLanguage;
+  return 'en';
 }
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<Language>(detectInitialLanguage);
+
+  // Dem Browser sagen, in welcher Sprache die Seite ist (Vorlesen, Silbentrennung, Übersetzungs-Angebot).
+  useEffect(() => {
+    document.documentElement.lang = language;
+  }, [language]);
 
   const setLanguage = (lang: Language) => {
     localStorage.setItem(STORAGE_KEY, lang);
