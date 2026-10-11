@@ -59,6 +59,16 @@ function isSupportedLanguage(value: string | null): value is Language {
 // Der Browser nennt seine Sprachen in der Reihenfolge der Vorliebe; die erste, die wir haben, gewinnt.
 // Haben wir keine davon, gilt Englisch.
 function detectInitialLanguage(): Language {
+  // Link mit fester Sprache, z. B. /login?lang=en: gilt sofort und wird als Wahl gemerkt.
+  const fromLink = new URLSearchParams(window.location.search).get('lang')?.slice(0, 2).toLowerCase() ?? null;
+  if (isSupportedLanguage(fromLink)) {
+    try {
+      localStorage.setItem(STORAGE_KEY, fromLink);
+    } catch {
+      // ohne Speicher gilt die Sprache nur für diesen Aufruf
+    }
+    return fromLink;
+  }
   const stored = localStorage.getItem(STORAGE_KEY);
   if (isSupportedLanguage(stored)) return stored;
 
