@@ -297,9 +297,6 @@ export default function Login() {
             )}
           </div>
 
-          <p className="mt-6 text-center text-xs text-slate-400">
-            Liftbase · {t('brand.tagline')}
-          </p>
         </div>
       </div>
       <Footer />
