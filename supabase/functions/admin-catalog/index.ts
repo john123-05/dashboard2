@@ -90,7 +90,7 @@ export async function handler(req: Request): Promise<Response> {
         if (!UUID.test(parkParam)) return json({ error: 'Invalid park_id' }, 400);
         const [overrides, packages, promotions] = await Promise.all([
           supabaseService.from('park_price_overrides').select('*').eq('park_id', parkParam).order('created_at', { ascending: false }),
-          supabaseService.from('catalog_packages').select('key, grp, price_cents, price_unit, texts').order('grp').order('sort'),
+          supabaseService.from('catalog_packages').select('*').order('grp').order('sort'),
           supabaseService.from('catalog_promotions').select('id, name, discount_percent, free_months, package_keys, audience, starts_on, ends_on, active'),
         ]);
         for (const r of [overrides, packages, promotions]) if (r.error) return json({ error: r.error.message }, 503);
@@ -139,8 +139,13 @@ export async function handler(req: Request): Promise<Response> {
         const n = int((p.meta as Row | undefined)?.[f]);
         if (n !== null) meta[f] = n;
       }
+      // Für wen: alle Kunden oder nur ausgewählte Parks.
+      const rawAudience = (p.audience ?? { all: true }) as Row;
+      const audience = Array.isArray(rawAudience.park_ids)
+        ? { park_ids: rawAudience.park_ids.filter((x) => typeof x === 'string' && UUID.test(x)) }
+        : { all: true };
       const row = {
-        key, grp, sort: int(p.sort, 0, 10000) ?? 0, active: p.active !== false, highlight: p.highlight === true,
+        key, grp, sort: int(p.sort, 0, 10000) ?? 0, active: p.active !== false, highlight: p.highlight === true, audience,
         price_cents: int(p.price_cents), price_unit: unit, term_months: int(p.term_months, 1, 120),
         free_months: int(p.free_months, 0, 60) ?? 0, setup_cents: int(p.setup_cents),
         texts, bullets, meta, updated_at: new Date().toISOString(), updated_by: actor,
@@ -149,6 +154,17 @@ export async function handler(req: Request): Promise<Response> {
       if (error) return json({ error: error.message }, 503);
       await log(actor, key, before, row);
       return json({ ok: true, data: row });
+    }
+
+    if (body.action === 'delete_package') {
+      const key = str(body.key, 80);
+      // Nur selbst angelegte Karten lassen sich löschen; die eingebauten schaltet man aus.
+      if (!key.startsWith('custom_')) return json({ error: 'Eingebaute Karten können nur ausgeschaltet werden.' }, 400);
+      const { data: before } = await supabaseService.from('catalog_packages').select('*').eq('key', key).maybeSingle();
+      const { error } = await supabaseService.from('catalog_packages').delete().eq('key', key);
+      if (error) return json({ error: error.message }, 503);
+      await log(actor, key, before, { package_deleted: key });
+      return json({ ok: true });
     }
 
     if (body.action === 'save_point') {
@@ -198,11 +214,20 @@ export async function handler(req: Request): Promise<Response> {
       const percent = int(o.discount_percent, 1, 100);
       const fixed = int(o.fixed_price_cents, 0, 10_000_000);
       const extra = int(o.extra_free_months, 0, 36) ?? 0;
-      if (percent === null && fixed === null && extra === 0) return json({ error: 'Rabatt in %, Festpreis oder geschenkte Monate eintragen.' }, 400);
+      const hidden = o.hidden === true;
+      // Eigene Liste für diesen Kunden (null = Standardliste der Karte).
+      const ownBullets = Array.isArray(o.bullets)
+        ? o.bullets.slice(0, 40).map((b) => ({ texts: cleanTexts((b as Row)?.texts, null), included: (b as Row)?.included !== false }))
+            .filter((b) => Object.keys(b.texts).length > 0)
+        : null;
+      if (percent === null && fixed === null && extra === 0 && !hidden && !ownBullets) {
+        return json({ error: 'Nichts zu speichern: Preis, geschenkte Monate, eigene Liste oder Ausblenden angeben.' }, 400);
+      }
       const until = typeof o.valid_until === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(o.valid_until) ? o.valid_until : null;
       const row = {
         park_id: parkId, package_key: packageKey, discount_percent: fixed !== null ? null : percent, fixed_price_cents: fixed,
         extra_free_months: extra, note: str(o.note, 300) || null, valid_until: until, active: o.active !== false, created_by: actor,
+        bullets: ownBullets, hidden,
       };
       const { data: before } = await supabaseService.from('park_price_overrides').select('*').eq('park_id', parkId).eq('package_key', packageKey).maybeSingle();
       const { error } = await supabaseService.from('park_price_overrides').upsert(row, { onConflict: 'park_id,package_key' });

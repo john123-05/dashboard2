@@ -1,6 +1,6 @@
 import { handleOptions, json, supabaseService } from '../_shared/sameProjectAdminAuth.ts';
 import { requireOperatorForPark } from '../_shared/operatorAuth.ts';
-import { applyDeals, loadDealsFor } from '../_shared/catalogDeals.ts';
+import { applyDeals, loadDealsFor, visibleFor } from '../_shared/catalogDeals.ts';
 
 /**
  * operator-catalog (docs/AUSBAU_PLAN.md, PK3): Pakete, Preise und Vergleichszeilen für „Preise & Pakete“ im Dashboard.
@@ -34,7 +34,7 @@ export async function handler(req: Request): Promise<Response> {
 
     const [packages, points, cells] = await Promise.all([
       supabaseService.from('catalog_packages')
-        .select('key, grp, sort, highlight, price_cents, price_unit, term_months, free_months, setup_cents, texts, bullets, meta')
+        .select('key, grp, sort, highlight, price_cents, price_unit, term_months, free_months, setup_cents, texts, bullets, meta, audience')
         .eq('active', true).order('sort'),
       supabaseService.from('catalog_points').select('key, grp, sort, kind, soon, texts').eq('active', true).order('sort'),
       supabaseService.from('catalog_package_points').select('package_key, point_key, included, value'),
@@ -46,7 +46,9 @@ export async function handler(req: Request): Promise<Response> {
       if (result.error) return json({ error: 'Catalog unavailable' }, 503);
     }
     const deals = await loadDealsFor(auth.parkId);
-    const adjusted = applyDeals((packages.data ?? []) as Record<string, unknown>[], deals.overrides, deals.promotions);
+    // Erst: was darf dieser Park überhaupt sehen (Zielgruppe)? Dann Kundenpreis/Aktion/eigene Liste anwenden.
+    const visible = visibleFor((packages.data ?? []) as Record<string, unknown>[], auth.parkId).map(({ audience: _audience, ...rest }) => rest);
+    const adjusted = applyDeals(visible, deals.overrides, deals.promotions);
     const shown = new Set(adjusted.map((p) => (p.deal as { promotion_id?: string } | null)?.promotion_id).filter(Boolean) as string[]);
     const promotions = deals.promotions
       .filter((p) => shown.has(String(p.id)))

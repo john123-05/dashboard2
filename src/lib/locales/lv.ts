@@ -2495,6 +2495,11 @@ const dict: Record<string, string> = {
     'auth.park_pick': "Izvēlēties {park}",
     'auth.park_change': "Izvēlēties citu parku",
     'auth.park_error_pick': "Vispirms izvēlies savu parku.",
+    'pp.extra_once': "vienreizēji",
+    'pp.extra_setup': "+ {amount} iestatīšana",
+    'pp.extra_term': "{months} mēnešu termiņš",
+    'pp.extra_free': "{months} mēneši dāvanā",
+    'pp.extra_request': "Pieprasīt",
 };
 
 export default dict;

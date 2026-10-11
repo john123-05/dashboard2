@@ -2508,6 +2508,11 @@ const dict: Record<string, string> = {
     'auth.park_pick': "{park} auswählen",
     'auth.park_change': "Anderen Park wählen",
     'auth.park_error_pick': "Bitte zuerst deinen Park auswählen.",
+    'pp.extra_once': "einmalig",
+    'pp.extra_setup': "+ {amount} Einrichtung",
+    'pp.extra_term': "{months} Monate Laufzeit",
+    'pp.extra_free': "{months} Monate geschenkt",
+    'pp.extra_request': "Anfragen",
 };
 
 export default dict;

@@ -15,6 +15,7 @@ import { hasGuestActivity } from '../components/GuestActivityAwareOverlay';
 import { ShopCompare, SoftwareCompare, SpeedCompare } from '../components/upgrade/PackageCompare';
 import ShopPackages from '../components/upgrade/ShopPackages';
 import SpeedPackages from '../components/upgrade/SpeedPackages';
+import ExtraPackages from '../components/upgrade/ExtraPackages';
 
 // Seite „Pläne und Preise“ (docs/PRODUKT_PLAN.md, B4). Preise von John bestätigt
 // am 10.10.2026. Anfragen laufen wie bei CRM/Shop über `meldeAusstattungsInteresse`,
@@ -272,6 +273,7 @@ export default function Plans() {
               );
             })}
           </div>
+          <ExtraPackages grp="plan" />
           <p className="mt-3 text-center text-xs text-[color:var(--ink-3)]">{t('plans.request_note')}</p>
         </section>
       )}
@@ -288,6 +290,7 @@ export default function Plans() {
             </Link>
           </div>
           <ShopPackages />
+          <ExtraPackages grp="shop" />
         </section>
       )}
 
@@ -303,6 +306,8 @@ export default function Plans() {
             </Link>
           </div>
           <SpeedPackages softwareOnly={hasHardware} />
+          {!hasHardware && <ExtraPackages grp="speed" />}
+          <ExtraPackages grp="software" />
         </section>
       )}
 
@@ -361,6 +366,9 @@ export default function Plans() {
           </div>
         </section>
       )}
+
+      {(filter === 'all' || filter === 'system') && <ExtraPackages grp="system" />}
+      {filter === 'all' && <ExtraPackages grp="addon" />}
 
       {(filter === 'all' || filter === 'marketing' || filter === 'system') && (() => {
         const fromCatalog = catalogCompare(catalog, 'plan', { language, locale, t });

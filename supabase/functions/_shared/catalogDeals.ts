@@ -46,10 +46,25 @@ export async function loadDealsFor(parkId: string): Promise<{ overrides: Row[]; 
   return { overrides: okOverrides, promotions: okPromotions, plan };
 }
 
+/** Karten, die dieser Park sehen darf: Zielgruppe „alle“ oder der Park steht ausdrücklich drin. */
+export function visibleFor(packages: Row[], parkId: string): Row[] {
+  return packages.filter((pkg) => {
+    const audience = (pkg.audience ?? { all: true }) as Row;
+    if (Array.isArray(audience.park_ids)) return audience.park_ids.includes(parkId);
+    return true;
+  });
+}
+
 export function applyDeals(packages: Row[], overrides: Row[], promotions: Row[]): Row[] {
-  return packages.map((pkg) => {
+  // Für diesen Kunden ausgeblendete Karten fallen ganz weg.
+  const hidden = new Set(overrides.filter((o) => o.hidden === true).map((o) => o.package_key));
+  return packages.filter((pkg) => !hidden.has(pkg.key)).map((original) => {
+    // Eigene „Das ist dabei / nicht dabei“-Liste für diesen Kunden ersetzt die Standardliste.
+    const own = overrides.find((o) => o.package_key === original.key);
+    const pkg: Row = Array.isArray(own?.bullets) ? { ...original, bullets: own.bullets } : original;
     const hasPrice = typeof pkg.price_cents === 'number' && pkg.price_cents > 0;
-    const override = overrides.find((o) => o.package_key === pkg.key);
+    // Ein Eintrag je Kunde kann auch nur die Liste ändern – als Kundenpreis zählt er nur mit Preisangabe.
+    const override = own && (own.discount_percent != null || own.fixed_price_cents != null || (own.extra_free_months ?? 0) > 0) ? own : undefined;
     const promos = promotions
       .filter((p) => !p.package_keys?.length || p.package_keys.includes(pkg.key))
       .sort((a, b) => (b.discount_percent ?? 0) - (a.discount_percent ?? 0) || (b.free_months ?? 0) - (a.free_months ?? 0));

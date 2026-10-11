@@ -2495,6 +2495,11 @@ const dict: Record<string, string> = {
     'auth.park_pick': "Seleziona {park}",
     'auth.park_change': "Scegli un altro parco",
     'auth.park_error_pick': "Seleziona prima il tuo parco.",
+    'pp.extra_once': "una tantum",
+    'pp.extra_setup': "+ {amount} di configurazione",
+    'pp.extra_term': "Durata {months} mesi",
+    'pp.extra_free': "{months} mesi in regalo",
+    'pp.extra_request': "Richiedi",
 };
 
 export default dict;
