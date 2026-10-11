@@ -183,6 +183,33 @@ nimmt den Katalog nur, wenn er da ist, sonst die jetzigen festen Werte.
 - [ ] **OB5 (später)** Stand serverseitig speichern (gleich auf allen Geräten), echte Aufgaben erkennen (z. B. „erstes
   Overlay angelegt“, „erste E-Mail gesendet“) statt nur Seitenbesuch, kurze Videos je Seite, „Was ist neu?“.
 
+### Phase RD – Rundmachen (Durchgang 11.10.2026)
+
+- [~] **RD1 Durchgang Desktop + Handy** – alle Seiten im Browser angesehen (Claude in Chrome), Unstimmigkeiten behoben:
+  Kacheln ohne Überdeckung, Währung/Datum in der Sprache des Nutzers, Käufe-Tabelle übersetzt, CRM-Reiter überall
+  in eigener Zeile (Unterstrich-Stil), einheitliche Schaltflächen, Speedmessung mit Seitentitel, Mitarbeiter in voller Breite.
+- [~] **RD2 Name „Liftbase“** – Oberfläche heißt Liftbase (Navigation, Titel, App-Name, Login, Push); Firma bleibt Liftpictures.
+- [~] **RD3 QR-Karte „Liftbase auf dem Handy“** – unten rechts am großen Bildschirm (`MobileQrCard`), verkleinerbar/ausblendbar.
+- [~] **RD4 Leiste am Handy schwebend** – Abstand zum Rand, runde Ecken, kurze Beschriftungen.
+- [~] **RD5 Als App hinzufügen + Benachrichtigungen** – `AppSetupGuide` mit bewegten Skizzen für iPhone, Android, Mac, Windows
+  je Browser; echte Knöpfe „Jetzt installieren“ (wo der Browser es kann) und „Benachrichtigungen einschalten“. Erste Frage
+  in der Begrüßung, Karte in „Erste Schritte“.
+- [~] **RD6 Erklärungen** – `PageGuide` (ausführlich mit Beispielen: Social Media, E-Mail, Umfrage, Pixel, Kontakte,
+  Speedmessung, Shop) und `PageGuideStrip` (kurz, alle anderen Seiten). Einmal ausgeblendet bleibt es weg; Hilfe-Center → „Diese Seite erklären“.
+- [~] **RD7 Ladezeit** – Texte je Sprache in `src/lib/locales/<sprache>.ts`; Hauptpaket 1,37 MB → 0,65 MB.
+- [ ] **RD8 (offen)** Daten der Übersicht laden in Stufen nacheinander (rund 6 s bis alles da ist; einzelne Abfragen 2–3 s).
+  Nächster Schritt: Abfragen gleichzeitig starten und die langsamen Functions (`external-attractions`, `support-tickets`, `photos`) prüfen.
+
+### Phase DM – Demo-Park
+
+- [~] **DM1 Demo-Modus** – Schalter `demo` in `park_entitlements.features`: alles freigeschaltet (`has()`), Hinweis oben
+  (`DemoBanner`), Preis-Abzeichen an bezahlten Bereichen (`PlanBadge`, `DemoTag`), „kostet extra“ in der Navigation.
+  Im CRM auf der Plan-Seite des Kunden als Häkchen.
+- [~] **DM2 Park „Demo Park“** – angelegt (`supabase/migrations/20261011120000_demo_park.sql`): Plan Marketing Pro,
+  Online-Shop, Speedmessung, Demo-Schalter, eine Attraktion. **Login fehlt noch** (legt Staff im CRM an).
+- [ ] **DM3 Beispieldaten** – der Park ist leer. Offen, woher Fotos und Verkäufe kommen: echter Testautomat („testrechner“)
+  an den Demo Park hängen oder Beispielbilder + erzeugte Verkäufe/Kontakte/Umfragen einspielen.
+
 ### Phase MB – Mobil
 
 - [~] **MB1 Plan** – siehe Abschnitt 6. Umsetzung je Seite beim Bau gleich mit (kein eigener Durchgang).
@@ -353,6 +380,11 @@ Je Seite:
 6. Öffentliche Seiten bleiben auf Deutsch (wie bisher); Sprüche sind freie Texte des Betreibers.
 
 ## 8. Protokoll
+
+11.10.2026, Claude (Opus 5.5) – Phase RD und DM1/DM2, am lokalen Server im Browser angesehen (Desktop 1440 px, Handy 500 px):
+- Neue Dateien: `components/layout/{MobileQrCard,DemoBanner}.tsx`, `components/onboarding/{AppSetupGuide,PageGuide}.tsx`,
+  `lib/installPrompt.ts`, `lib/locales/*.ts`. Werkzeuge `scripts/i18n_apply.py`, `check-i18n.mjs`, `catalog_seed.py` arbeiten jetzt mit den Sprachdateien.
+- Nicht gesehen: Demo-Modus (kein Login für den Demo Park), echte Installation auf iPhone/Android/Windows, Push-Zustellung.
 
 11.10.2026, Claude (Opus 5.5) – OB1–OB4 gebaut, `[~]` bis John es gesehen hat:
 - `src/lib/onboarding.ts` (Liste der 22 Schritte, Speicher, `useOnboarding`, `useOnboardingTracker`), `src/pages/GetStarted.tsx`,

@@ -69,6 +69,8 @@ export default function PageGuide({ id }: { id: string }) {
     return () => window.removeEventListener('lp:show-page-guide', show);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+  // Auf dem Handy erst nur die Einleitung: Schritte und Beispiele klappt man auf, sonst rutscht die Seite weit nach unten.
+  const [open, setOpen] = useState(() => typeof window === 'undefined' || window.innerWidth >= 768);
   const examples = RICH[id];
   if (!examples || closed.includes(id)) return null;
 
@@ -88,6 +90,13 @@ export default function PageGuide({ id }: { id: string }) {
         </button>
       </div>
 
+      {!open && (
+        <button type="button" onClick={() => setOpen(true)} className="mt-3 inline-flex min-h-[40px] items-center gap-1.5 text-sm font-semibold text-brand-700">
+          {t('pg.examples')} <ChevronDown className="h-4 w-4" />
+        </button>
+      )}
+      {open && (
+      <>
       <ol className="mt-5 grid gap-4 md:grid-cols-3">
         {[1, 2, 3].map((n) => (
           <li key={n} className="flex gap-3">
@@ -115,6 +124,8 @@ export default function PageGuide({ id }: { id: string }) {
       <button type="button" onClick={() => setClosed(id, true)} className="mt-4 text-sm font-semibold text-brand-700 hover:underline">
         {t('pg.close')}
       </button>
+      </>
+      )}
     </section>
   );
 }
