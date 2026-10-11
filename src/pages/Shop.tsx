@@ -575,7 +575,6 @@ export default function Shop() {
       />
 
       {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
-      <PageGuide id="shop" />
 
       {isKioskPark && (
         <div className="rounded-xl border border-[color:var(--line)] bg-white p-6 sm:p-8">
@@ -637,6 +636,9 @@ export default function Shop() {
           )}
         </div>
       )}
+
+      {/* Erklärung unter dem Upgrade-Block (Zahlen zum Potenzial), über Shop und Vorschau. */}
+      <PageGuide id="shop" />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_440px]">
         <div className="space-y-6">
