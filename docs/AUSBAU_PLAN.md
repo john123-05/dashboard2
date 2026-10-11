@@ -219,8 +219,12 @@ nimmt den Katalog nur, wenn er da ist, sonst die jetzigen festen Werte.
   Schutz: unsichtbares Feld gegen Bots, eine Anfrage je E-Mail und Tag, höchstens 40 pro Stunde.
 - [ ] **DM4 Eigener Demo-Zugang** – ein Login, der NUR den Demo Park sieht (für Vorführungen am fremden Bildschirm).
   Legt Staff im CRM an. Bis dahin: Tom Noltings Zugang hat den Demo Park zusätzlich (Park-Wechsler).
-- [ ] **DM5 Offen** – Foto-Abholseite/Bestenlisten-Seite für den Demo Park (heute „keine Bestenlistenseite“),
-  Stoßzeiten-Diagramm zeigt für heute nur die 4 Demo-Fotos als Verkäufe.
+- [~] **DM5 Gäste-Seite für den Demo Park** – Repo `imst` (Remote `imstneu`), `src/demo/` (Kopie von Grünberg, ohne
+  Admin und Fahrtvideo): Startseite `/demo` mit drei Einstiegen, Foto freischalten `/demo/claim?code=…`
+  (Beispiel-Codes `9000000000000001` … `…24`), Bestenliste `/demo/ranking`, Shop `/demo-shop/<token>`.
+  Functions `demo-claim-submit`, `demo-claim-verify`, `demo-survey-submit`, `demo-social-submit`, `demo-profile-update`
+  (Quelle: `imst/demo-functions/`). Im Dashboard zeigt der Demo Park damit Live-Vorschau, TV-Ansicht und Shop-Vorschau.
+  Offen: Stoßzeiten-Diagramm zeigt für heute nur die Demo-Fotos als Verkäufe.
 
 ### Phase MB – Mobil
 

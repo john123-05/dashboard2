@@ -129,7 +129,7 @@ begin
   insert into photos (id, park_id, storage_bucket, storage_path, captured_at, speed_kmh, price_cents, currency, is_paid, is_test, attraction_id, camera_code, external_code)
   select md5('demo-photo-' || s)::uuid, p, 'test', 'processed/demo-park/demo-' || lpad(s::text, 2, '0') || '.jpg',
          ((current_date - ((s - 1) % 6)) + time '10:05' + make_interval(mins => s * 13)) at time zone tz,
-         round((19 + (abs(hashtext('v' || s::text)) % 240) / 10.0)::numeric, 1), 500, 'eur', false, false, att, 'demo-foto', 'DEMO' || lpad(s::text, 4, '0')
+         round((19 + (abs(hashtext('v' || s::text)) % 240) / 10.0)::numeric, 1), 500, 'eur', false, false, att, 'demo-foto', '90000000000000' || lpad(s::text, 2, '0')   -- 16 Ziffern: so findet die Abholseite das Foto (find_claim_photo)
   from generate_series(1, 24) s;
 
   -- 5) Umfrage: Einstellungen, zwei Fragen
@@ -230,6 +230,11 @@ begin
   insert into machine_status (machine_id, park_id, park_slug, last_seen_at, queue_count, disk_free_mb, paper_status, paper_remaining, camera_code, photos_taken_today, photos_sold_today, payload)
   values ('demo-automat', p, 'demo-park', now(), 0, 412000, 'ok', 412, 'demo1', 0, 0, '{}'::jsonb)
   on conflict (machine_id) do update set last_seen_at = now();
+
+  -- 12) Online-Shop: Einstellungen mit festem Vorschau-Link (die Demo-Gästeseite verlinkt darauf)
+  insert into park_shop_settings (park_id, accent_color, shop_name, welcome_text, demo_token)
+  values (p, '#E8722A', 'Demo Park Foto-Shop', 'Hol dir dein Foto vom Demo Coaster – als Download, Abzug oder auf Tasse, T-Shirt und mehr.', md5('demo-park-shop')::uuid)
+  on conflict (park_id) do nothing;
 
   perform public.demo_park_tick();
   return 'ok';
