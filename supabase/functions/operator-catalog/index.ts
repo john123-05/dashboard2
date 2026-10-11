@@ -4,7 +4,8 @@ import { applyDeals, loadDealsFor, visibleFor } from '../_shared/catalogDeals.ts
 
 /**
  * operator-catalog (docs/AUSBAU_PLAN.md, PK3): Pakete, Preise und Vergleichszeilen für „Preise & Pakete“ im Dashboard.
- *   GET ?park_id=…  -> { packages, points, cells, promotions }  (nur aktive; leer, wenn der Katalog noch nicht angelegt ist)
+ *   GET ?park_id=…  -> { packages, points, cells, promotions, groups }  (nur aktive; leer, wenn der Katalog noch nicht angelegt ist)
+ *       groups: Kategorien in der Reihenfolge aus dem CRM (PK10); fehlt die Tabelle, bleibt die Liste leer.
  *       Preise sind schon für diesen Park angepasst (Kundenpreis, Aktion); die Listenpreise stehen in `deal`.
  *   POST { park_id, promotion_id, event: 'requested' } -> zählt die Anfrage zur Aktion
  * Das Dashboard nimmt bei leerer Antwort oder Fehler seine eingebauten Werte (nie eine leere Preisseite).
@@ -45,6 +46,9 @@ export async function handler(req: Request): Promise<Response> {
       }
       if (result.error) return json({ error: 'Catalog unavailable' }, 503);
     }
+    // Kategorien sind eine Zugabe: ohne sie zeigt das Dashboard seine eingebauten Reiter.
+    const groupRows = await supabaseService.from('catalog_groups').select('key, sort, built_in, texts').eq('active', true).order('sort').order('key');
+    const groups = groupRows.error ? [] : groupRows.data ?? [];
     const deals = await loadDealsFor(auth.parkId);
     // Erst: was darf dieser Park überhaupt sehen (Zielgruppe)? Dann Kundenpreis/Aktion/eigene Liste anwenden.
     const visible = visibleFor((packages.data ?? []) as Record<string, unknown>[], auth.parkId).map(({ audience: _audience, ...rest }) => rest);
@@ -59,7 +63,7 @@ export async function handler(req: Request): Promise<Response> {
         { onConflict: 'promotion_id,park_id,event', ignoreDuplicates: true },
       );
     }
-    return json({ ok: true, data: { packages: adjusted, points: points.data ?? [], cells: cells.data ?? [], promotions } });
+    return json({ ok: true, data: { packages: adjusted, points: points.data ?? [], cells: cells.data ?? [], promotions, groups } });
   } catch (e) {
     return json({ error: e instanceof Error ? e.message : 'Catalog unavailable' }, 500);
   }

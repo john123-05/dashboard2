@@ -5,7 +5,7 @@ import { usePark } from '../contexts/ParkContext';
 import { meldeAusstattungsInteresse } from '../lib/equipment';
 import { BillingDisabledError, openBillingPortal, startCheckout } from '../lib/billing';
 import { useI18n, useLocaleTag } from '../lib/i18n';
-import { bulletList, catalogCompare, catalogGroup, catalogPackage, packageText, reportDealRequest, useCatalog } from '../lib/catalog';
+import { bulletList, catalogCompare, catalogGroup, catalogPackage, groupText, packageText, reportDealRequest, useCatalog } from '../lib/catalog';
 import DealNote from '../components/upgrade/DealNote';
 import { PLAN_LABEL_KEY, useEntitlements, type PlanKey } from '../lib/plans';
 import { UpgradePageHeader } from '../components/upgrade/UpgradeHero';
@@ -66,19 +66,21 @@ const ROWS: CompareRow[] = [
   { labelKey: 'pp.row_addon_speed', cells: ['pp.cell_addon', 'pp.cell_addon', 'pp.cell_addon'] },
 ];
 
-type Filter = 'all' | 'marketing' | 'shop' | 'speed' | 'system';
-const FILTERS: { key: Filter; labelKey: string }[] = [
+// Reiter: die eingebauten (unten) plus Kategorien, die im CRM angelegt wurden (Schlüssel cat_…).
+// Reihenfolge und Namen kommen aus dem Katalog (CRM → Pakete & Preise), sonst gilt diese Liste.
+type Filter = string;
+const FILTERS: { key: Filter; labelKey: string; grp?: string }[] = [
   { key: 'all', labelKey: 'pp.filter_all' },
-  { key: 'marketing', labelKey: 'pp.filter_marketing' },
-  { key: 'shop', labelKey: 'pp.filter_shop' },
-  { key: 'speed', labelKey: 'pp.filter_speed' },
-  { key: 'system', labelKey: 'pp.filter_system' },
+  { key: 'marketing', labelKey: 'pp.filter_marketing', grp: 'plan' },
+  { key: 'shop', labelKey: 'pp.filter_shop', grp: 'shop' },
+  { key: 'speed', labelKey: 'pp.filter_speed', grp: 'speed' },
+  { key: 'system', labelKey: 'pp.filter_system', grp: 'system' },
 ];
 
 // Zusätzlich buchbare Erweiterungen (unabhängig vom Plan). `feature`: zeigt „Aktiv“, wenn gebucht.
 const ADDONS: {
   key: string;
-  group: Exclude<Filter, 'all'>;
+  group: 'marketing' | 'shop' | 'speed' | 'system';
   icon: LucideIcon;
   titleKey: string;
   textKey: string;
@@ -106,10 +108,22 @@ export default function Plans() {
   };
   // `hasBooked`: im Demo-Park ist alles offen, „Aktiv“ soll aber nur zeigen, was wirklich gebucht ist.
   const { plan: currentPlan, hasBooked: has } = useEntitlements();
-  const [filter, setFilter] = useState<Filter>(() => {
-    const wanted = new URLSearchParams(window.location.search).get('gruppe');
-    return FILTERS.some((item) => item.key === wanted) ? (wanted as Filter) : 'all';
-  });
+  const [wantedFilter, setFilter] = useState<Filter>(() => new URLSearchParams(window.location.search).get('gruppe') ?? 'all');
+  // Eigene Kategorien aus dem CRM erscheinen, sobald dieser Park darin mindestens eine Karte sieht.
+  const groups = catalog?.groups ?? [];
+  const customGroups = groups.filter((group) => !group.built_in && catalogGroup(catalog, group.key).length > 0);
+  const tabs: { key: Filter; label: string }[] =
+    groups.length === 0
+      ? FILTERS.map((item) => ({ key: item.key, label: t(item.labelKey) }))
+      : [
+          { key: 'all', label: t('pp.filter_all') },
+          ...groups.flatMap((group) => {
+            const builtIn = FILTERS.find((item) => item.grp === group.key);
+            if (builtIn) return [{ key: builtIn.key, label: groupText(group, 'name', language) ?? t(builtIn.labelKey) }];
+            return customGroups.includes(group) ? [{ key: group.key, label: groupText(group, 'name', language) ?? group.key }] : [];
+          }),
+        ];
+  const filter: Filter = tabs.some((tab) => tab.key === wantedFilter) ? wantedFilter : 'all';
   const [mailRequested, setMailRequested] = useState(false);
   const [busy, setBusy] = useState<PlanKey | null>(null);
   const [requested, setRequested] = useState<PlanKey[]>([]);
@@ -198,7 +212,7 @@ export default function Plans() {
 
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex max-w-full gap-1 overflow-x-auto rounded-md border border-[color:var(--line-strong)] p-0.5">
-          {FILTERS.map((item) => (
+          {tabs.map((item) => (
             <button
               key={item.key}
               type="button"
@@ -208,7 +222,7 @@ export default function Plans() {
                 filter === item.key ? 'bg-[color:var(--ink)] text-white' : 'text-[color:var(--ink-2)] hover:bg-slate-100'
               }`}
             >
-              {t(item.labelKey)}
+              {item.label}
             </button>
           ))}
         </div>
@@ -310,6 +324,22 @@ export default function Plans() {
           <ExtraPackages grp="software" />
         </section>
       )}
+
+      {customGroups.filter((group) => filter === 'all' || filter === group.key).map((group) => {
+        const name = groupText(group, 'name', language) ?? group.key;
+        const sub = groupText(group, 'sub', language);
+        const compare = filter === group.key ? catalogCompare(catalog, group.key, { language, locale, t }) : null;
+        return (
+          <section key={group.key} className="space-y-4">
+            <div>
+              <h3 className="text-base font-semibold text-[color:var(--ink)]">{name}</h3>
+              {sub && <p className="mt-0.5 text-sm text-[color:var(--ink-3)]">{sub}</p>}
+            </div>
+            <ExtraPackages grp={group.key} />
+            {compare && <CompareTable title={t('pp.compare_group_title', { name })} columns={compare.columns} rows={compare.rows} />}
+          </section>
+        );
+      })}
 
       {addons.length > 0 && (
         <section>

@@ -10,9 +10,15 @@ import { handleOptions, json, requireAdminFromRequest, supabaseService } from '.
  *   GET ?park_id=…  zusätzlich { overrides }  Rabatte dieses Kunden;  GET ohne park_id: { promotions (mit Zählern) }
  *   POST { action: 'save_override' | 'delete_override', override }                 Rabatt je Kunde (PK4)
  *   POST { action: 'save_promotion' | 'delete_promotion', promotion }              Aktionen (PK5)
+ *   POST { action: 'save_group', group } | { action: 'delete_group', key } | { action: 'reorder_groups', keys }   Kategorien (PK10)
  * Jede Änderung wird in catalog_history festgehalten (wer, wann, vorher, nachher).
  */
-const GROUPS = ['plan', 'shop', 'speed', 'software', 'system', 'addon'];
+// Kategorien stehen in catalog_groups; eigene heißen cat_… und lassen sich löschen, die eingebauten nicht.
+const CUSTOM_GROUP = /^cat_[a-z0-9_]{1,40}$/;
+async function groupExists(key: string): Promise<boolean> {
+  const { data } = await supabaseService.from('catalog_groups').select('key').eq('key', key).maybeSingle();
+  return !!data;
+}
 const UNITS = ['month', 'once', 'share'];
 const KINDS = ['text', 'setup', 'monthly', 'prepay', 'share', 'year2', 'term', 'free_months', 'display_monthly'];
 const LANGS = ['de', 'en', 'es', 'fr', 'it', 'nl', 'lv'];
@@ -96,13 +102,14 @@ export async function handler(req: Request): Promise<Response> {
         for (const r of [overrides, packages, promotions]) if (r.error) return json({ error: r.error.message }, 503);
         return json({ ok: true, data: { overrides: overrides.data, packages: packages.data, promotions: promotions.data } });
       }
-      const [packages, points, cells, history] = await Promise.all([
+      const [packages, points, cells, history, groups] = await Promise.all([
         supabaseService.from('catalog_packages').select('*').order('grp').order('sort'),
         supabaseService.from('catalog_points').select('*').order('grp').order('sort'),
         supabaseService.from('catalog_package_points').select('*'),
         supabaseService.from('catalog_history').select('*').order('changed_at', { ascending: false }).limit(60),
+        supabaseService.from('catalog_groups').select('*').order('sort').order('key'),
       ]);
-      for (const r of [packages, points, cells, history]) if (r.error) return json({ error: r.error.message }, 503);
+      for (const r of [packages, points, cells, history, groups]) if (r.error) return json({ error: r.error.message }, 503);
       const promos = await supabaseService.from('catalog_promotions').select('*').order('created_at', { ascending: false });
       const events = promos.error ? { data: [] as Row[] } : await supabaseService.from('catalog_promotion_events').select('promotion_id, event').limit(50000);
       const counts = new Map<string, { seen: number; requested: number; booked: number }>();
@@ -113,7 +120,7 @@ export async function handler(req: Request): Promise<Response> {
         counts.set(String(e.promotion_id), c);
       }
       const promotions = ((promos.data ?? []) as Row[]).map((p) => ({ ...p, ...(counts.get(String(p.id)) ?? { seen: 0, requested: 0, booked: 0 }) }));
-      return json({ ok: true, data: { packages: packages.data, points: points.data, cells: cells.data, history: history.data, promotions } });
+      return json({ ok: true, data: { packages: packages.data, points: points.data, cells: cells.data, history: history.data, promotions, groups: groups.data } });
     }
 
     if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
@@ -124,8 +131,8 @@ export async function handler(req: Request): Promise<Response> {
       const p = (body.package ?? {}) as Row;
       const key = str(p.key, 80);
       if (!KEY.test(key)) return json({ error: 'Ungültiger Schlüssel (Kleinbuchstaben, Zahlen, _ und .).' }, 400);
-      const grp = str(p.grp, 20);
-      if (!GROUPS.includes(grp)) return json({ error: 'Ungültige Gruppe' }, 400);
+      const grp = str(p.grp, 50);
+      if (!(await groupExists(grp))) return json({ error: 'Diese Kategorie gibt es nicht (mehr).' }, 400);
       const unit = UNITS.includes(String(p.price_unit)) ? String(p.price_unit) : 'month';
       const { data: before } = await supabaseService.from('catalog_packages').select('*').eq('key', key).maybeSingle();
       const texts = dropStaleLanguages(before?.texts, cleanTexts(p.texts, ['name', 'tagline', 'badge', 'price_note']), ['name', 'tagline', 'badge', 'price_note']);
@@ -167,12 +174,65 @@ export async function handler(req: Request): Promise<Response> {
       return json({ ok: true });
     }
 
+    if (body.action === 'save_group') {
+      const g = (body.group ?? {}) as Row;
+      const key = str(g.key, 50);
+      const { data: before } = await supabaseService.from('catalog_groups').select('*').eq('key', key).maybeSingle();
+      // Neu anlegen geht nur mit einem cat_-Schlüssel; die eingebauten lassen sich nur umbenennen.
+      if (!before && !CUSTOM_GROUP.test(key)) return json({ error: 'Ungültiger Schlüssel für eine neue Kategorie.' }, 400);
+      const texts = dropStaleLanguages(before?.texts, cleanTexts(g.texts, ['name', 'sub']), ['name', 'sub']);
+      if (!(texts.de as Row | undefined)?.name) return json({ error: 'Der deutsche Name ist Pflicht.' }, 400);
+      let sort = int(g.sort, 0, 100000);
+      if (sort === null) {
+        if (before) sort = Number(before.sort) || 0;
+        else {
+          const { data: last } = await supabaseService.from('catalog_groups').select('sort').order('sort', { ascending: false }).limit(1).maybeSingle();
+          sort = (Number(last?.sort) || 0) + 10;
+        }
+      }
+      const row = { key, sort, active: g.active !== false, built_in: before ? before.built_in === true : false, texts, updated_at: new Date().toISOString(), updated_by: actor };
+      const { error } = await supabaseService.from('catalog_groups').upsert(row, { onConflict: 'key' });
+      if (error) return json({ error: error.message }, 503);
+      await log(actor, null, before, { group: row });
+      return json({ ok: true, data: row });
+    }
+
+    if (body.action === 'reorder_groups') {
+      const keys = (Array.isArray(body.keys) ? body.keys : []).map((k) => str(k, 50)).filter(Boolean).slice(0, 100);
+      const { data: existing, error: readError } = await supabaseService.from('catalog_groups').select('key, sort').order('sort').order('key');
+      if (readError) return json({ error: readError.message }, 503);
+      const known = new Set((existing ?? []).map((g) => String(g.key)));
+      const wanted = [...new Set(keys)].filter((k) => known.has(k));
+      // Was nicht mitgeschickt wurde, bleibt in alter Reihenfolge hinten.
+      const order = [...wanted, ...(existing ?? []).map((g) => String(g.key)).filter((k) => !wanted.includes(k))];
+      for (let i = 0; i < order.length; i += 1) {
+        const { error } = await supabaseService.from('catalog_groups').update({ sort: (i + 1) * 10, updated_at: new Date().toISOString(), updated_by: actor }).eq('key', order[i]);
+        if (error) return json({ error: error.message }, 503);
+      }
+      await log(actor, null, { groups_order: (existing ?? []).map((g) => g.key) }, { groups_order: order });
+      return json({ ok: true, data: order });
+    }
+
+    if (body.action === 'delete_group') {
+      const key = str(body.key, 50);
+      const { data: before } = await supabaseService.from('catalog_groups').select('*').eq('key', key).maybeSingle();
+      if (!before) return json({ ok: true });
+      if (before.built_in === true || !CUSTOM_GROUP.test(key)) return json({ error: 'Eingebaute Kategorien können nicht gelöscht werden.' }, 400);
+      const { count } = await supabaseService.from('catalog_packages').select('key', { count: 'exact', head: true }).eq('grp', key);
+      if ((count ?? 0) > 0) return json({ error: 'In dieser Kategorie sind noch Preiskarten. Erst die Karten löschen.' }, 400);
+      await supabaseService.from('catalog_points').delete().eq('grp', key);
+      const { error } = await supabaseService.from('catalog_groups').delete().eq('key', key);
+      if (error) return json({ error: error.message }, 503);
+      await log(actor, null, before, { group_deleted: key });
+      return json({ ok: true });
+    }
+
     if (body.action === 'save_point') {
       const p = (body.point ?? {}) as Row;
       const key = str(p.key, 100);
       if (!KEY.test(key)) return json({ error: 'Ungültiger Schlüssel' }, 400);
-      const grp = str(p.grp, 20);
-      if (!GROUPS.includes(grp)) return json({ error: 'Ungültige Gruppe' }, 400);
+      const grp = str(p.grp, 50);
+      if (!(await groupExists(grp))) return json({ error: 'Diese Kategorie gibt es nicht (mehr).' }, 400);
       const kind = KINDS.includes(String(p.kind)) ? String(p.kind) : 'text';
       const { data: before } = await supabaseService.from('catalog_points').select('*').eq('key', key).maybeSingle();
       const texts = dropStaleLanguages(before?.texts, cleanTexts(p.texts, null), null);

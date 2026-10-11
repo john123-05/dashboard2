@@ -11,7 +11,8 @@ import type { CompareCell, CompareColumn, CompareRow } from '../components/upgra
 type Texts = Record<string, string>;
 export type CatalogPackage = {
   key: string;
-  grp: 'plan' | 'shop' | 'speed' | 'software' | 'system' | 'addon';
+  /** Kategorie: eingebaut (plan, shop, speed, software, system, addon) oder im CRM angelegt (cat_…). */
+  grp: string;
   sort: number;
   highlight: boolean;
   price_cents: number | null;
@@ -53,7 +54,9 @@ export type CatalogPoint = {
   texts: Texts;
 };
 export type CatalogCell = { package_key: string; point_key: string; included: boolean; value: Texts | null };
-export type Catalog = { packages: CatalogPackage[]; points: CatalogPoint[]; cells: CatalogCell[]; promotions?: CatalogPromotion[] };
+/** Kategorie aus dem CRM, schon in der gewünschten Reihenfolge. `name` = Reiter, `sub` = Zeile unter der Überschrift. */
+export type CatalogGroup = { key: string; sort: number; built_in: boolean; texts: Record<string, { name?: string; sub?: string }> };
+export type Catalog = { packages: CatalogPackage[]; points: CatalogPoint[]; cells: CatalogCell[]; promotions?: CatalogPromotion[]; groups?: CatalogGroup[] };
 
 const cache = new Map<string, { at: number; promise: Promise<Catalog | null> }>();
 const MAX_AGE_MS = 60_000;
@@ -99,8 +102,13 @@ export function catalogPackage(catalog: Catalog | null, key: string): CatalogPac
 }
 
 /** Aktive Pakete einer Gruppe, sortiert. */
-export function catalogGroup(catalog: Catalog | null, grp: CatalogPackage['grp']): CatalogPackage[] {
+export function catalogGroup(catalog: Catalog | null, grp: string): CatalogPackage[] {
   return (catalog?.packages ?? []).filter((p) => p.grp === grp).sort((a, b) => a.sort - b.sort);
+}
+
+/** Name oder Unterzeile einer Kategorie in der Sprache des Nutzers, sonst Deutsch. */
+export function groupText(group: CatalogGroup | undefined, field: 'name' | 'sub', language: Language): string | undefined {
+  return (group?.texts?.[language]?.[field] || group?.texts?.de?.[field]) || undefined;
 }
 
 /** Text in der Sprache des Nutzers, sonst Deutsch (Deutsch ist die Quelle). */
@@ -122,7 +130,7 @@ const eur = (cents: number, locale: string) =>
  */
 export function catalogCompare(
   catalog: Catalog | null,
-  grp: CatalogPackage['grp'],
+  grp: string,
   ctx: { language: Language; locale: string; t: (key: string, params?: Record<string, string | number>) => string },
 ): { columns: CompareColumn[]; rows: CompareRow[] } | null {
   const packages = catalogGroup(catalog, grp);

@@ -2500,6 +2500,7 @@ const dict: Record<string, string> = {
     'pp.extra_term': "{months} mēnešu termiņš",
     'pp.extra_free': "{months} mēneši dāvanā",
     'pp.extra_request': "Pieprasīt",
+    'pp.compare_group_title': "Salīdzinājums: {name}",
 };
 
 export default dict;

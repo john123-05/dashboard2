@@ -172,6 +172,10 @@ nimmt den Katalog nur, wenn er da ist, sonst die jetzigen festen Werte.
   Preiskarte (Titel, Preis, Beschreibung, enthalten / nicht enthalten), schaltet sie live oder auf Entwurf, legt
   neue Karten an und sagt, für wen sie gilt (alle / ausgewählte Parks). „Ansicht für: Nur <Kunde>“ zeigt dieselben
   Karten für einen Kunden: eigener Preis, eigene Liste, Karte ausblenden.
+- [~] **PK10 Kategorien im CRM** – Die Reiter (Marketing, Online-Shop, Speedmessung …) stehen in `catalog_groups`. Im CRM:
+  „Kategorie hinzufügen“ (z. B. Hosting & Support), Namen direkt tippen, mit „nach vorne / nach hinten“ verschieben, eigene
+  Kategorien löschen (nur wenn leer). Die Reihenfolge im CRM ist die Reihenfolge der Reiter beim Kunden. Eine eigene
+  Kategorie erscheint beim Kunden, sobald er darin mindestens eine Live-Karte sieht.
 
 ### Phase OB – Onboarding („Erste Schritte“, HubSpot-Stil)
 
@@ -411,6 +415,18 @@ Je Seite:
 6. Öffentliche Seiten bleiben auf Deutsch (wie bisher); Sprüche sind freie Texte des Betreibers.
 
 ## 8. Protokoll
+
+11.10.2026, Claude (Opus 5.5) – PK10 gebaut, `[~]` bis John es im echten CRM und im Dashboard gesehen hat:
+- Datenbank: Migration `20261012100000_catalog_groups.sql` (Tabelle `catalog_groups`, sechs eingebaute Kategorien eingetragen;
+  `catalog_packages.grp` hat statt der festen Liste jetzt einen Verweis auf `catalog_groups`).
+- Functions (eingespielt): `admin-catalog` (`save_group`, `reorder_groups`, `delete_group`; GET liefert `groups`), `operator-catalog` (liefert `groups`).
+- CRM (Repo liftpictures-crm): `PackageCardsEditor.tsx` (`GroupHeader`, „Kategorie hinzufügen“), `PackagesPage.tsx` (Vergleichszeilen auch für eigene Kategorien).
+- Dashboard: `src/pages/Plans.tsx` baut die Reiter aus dem Katalog (Namen, Reihenfolge, eigene Kategorien mit `ExtraPackages`), `src/lib/catalog.ts` (`CatalogGroup`, `groupText`).
+- Grenzen: In der Ansicht „Alle“ bleibt die Reihenfolge der eingebauten Abschnitte fest (eigene Kategorien stehen nach den Plänen); verschoben
+  werden die Reiter. „Nur Software“ und „Zusatzleistungen“ haben beim Kunden keinen eigenen Reiter.
+- Geprüft: CRM-Bedienung in einer lokalen Vorschau mit nachgespieltem Speichern (anlegen, umbenennen, verschieben, Karte live, Löschen gesperrt
+  solange Karten drin sind). **Nicht geprüft:** echtes Speichern über `admin-catalog` und die Anzeige im Dashboard – beide Anmeldungen fehlten
+  (die lokale Dashboard-Sitzung war abgelaufen). Nur tsc, check:i18n, build.
 
 11.10.2026, Claude (Opus 5.5) – PK9 gebaut, `[~]` bis John im echten CRM einmal gespeichert hat:
 - CRM (Repo liftpictures-crm, Commit `d6bde8c`): `src/crm/pages/PackageCardsEditor.tsx` (Karten), eingebunden in `PackagesPage.tsx`,

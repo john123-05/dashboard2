@@ -2500,6 +2500,7 @@ const dict: Record<string, string> = {
     'pp.extra_term': "Looptijd {months} maanden",
     'pp.extra_free': "{months} maanden gratis",
     'pp.extra_request': "Aanvragen",
+    'pp.compare_group_title': "{name} vergeleken",
 };
 
 export default dict;

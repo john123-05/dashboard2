@@ -17,7 +17,7 @@ const BUILT_IN = new Set([
   'addon_shop', 'addon_speed', 'addon_mail', 'addon_hardware',
 ]);
 
-export default function ExtraPackages({ grp }: { grp: CatalogPackage['grp'] }) {
+export default function ExtraPackages({ grp }: { grp: string }) {
   const { t, language } = useI18n();
   const locale = useLocaleTag();
   const { parkId } = usePark();

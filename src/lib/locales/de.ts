@@ -2513,6 +2513,7 @@ const dict: Record<string, string> = {
     'pp.extra_term': "{months} Monate Laufzeit",
     'pp.extra_free': "{months} Monate geschenkt",
     'pp.extra_request': "Anfragen",
+    'pp.compare_group_title': "{name} im Vergleich",
 };
 
 export default dict;
