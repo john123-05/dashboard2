@@ -207,8 +207,16 @@ nimmt den Katalog nur, wenn er da ist, sonst die jetzigen festen Werte.
   Im CRM auf der Plan-Seite des Kunden als Häkchen.
 - [~] **DM2 Park „Demo Park“** – angelegt (`supabase/migrations/20261011120000_demo_park.sql`): Plan Marketing Pro,
   Online-Shop, Speedmessung, Demo-Schalter, eine Attraktion. **Login fehlt noch** (legt Staff im CRM an).
-- [ ] **DM3 Beispieldaten** – der Park ist leer. Offen, woher Fotos und Verkäufe kommen: echter Testautomat („testrechner“)
-  an den Demo Park hängen oder Beispielbilder + erzeugte Verkäufe/Kontakte/Umfragen einspielen.
+- [~] **DM3 Beispieldaten** – eingespielt (`supabase/migrations/20261011130000_demo_park_data.sql`): 180 Tage Verlauf,
+  Käufe der letzten 12 Tage, 24 Fotos (Kopien unter `test/processed/demo-park/`, Mischung aus Imst, Plose, Tarzans,
+  Grünberg – von John so gewünscht), rund 400 Kontakte mit Umfrage (erfundene Namen, `@example.com`), Bestenliste,
+  ein Gewinnspiel, eine versendete E-Mail, Ausstattung, ein Demo-Automat („Alles in Ordnung“).
+  `demo_park_tick()` läuft alle 10 Minuten (pg_cron `demo-park-tick`) und zählt den heutigen Tag weiter.
+  Neu einspielen: `select public.demo_park_seed();` · Entfernen: `select public.demo_park_wipe();` + cron-Job löschen.
+- [ ] **DM4 Eigener Demo-Zugang** – ein Login, der NUR den Demo Park sieht (für Vorführungen am fremden Bildschirm).
+  Legt Staff im CRM an. Bis dahin: Tom Noltings Zugang hat den Demo Park zusätzlich (Park-Wechsler).
+- [ ] **DM5 Offen** – Foto-Abholseite/Bestenlisten-Seite für den Demo Park (heute „keine Bestenlistenseite“),
+  Stoßzeiten-Diagramm zeigt für heute nur die 4 Demo-Fotos als Verkäufe.
 
 ### Phase MB – Mobil
 

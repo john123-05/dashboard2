@@ -2457,9 +2457,9 @@ const dict: Record<string, string> = {
     'pg.shop.s3_text': "Tot de livegang draait de shop in testmodus – er wordt niets afgeschreven. Onder ‘Prijzen en pakketten’ kies je hoe je boekt.",
     'pg.shop.ex1_title': "Tweede kans ’s avonds",
     'pg.shop.ex1_text': "Een gezin rijdt om 11 uur en koopt niets. ’s Avonds in het hotel scannen ze de code van het ticket, zien de foto’s van die dag en bestellen twee downloads en een mok.",
-    'demo.banner': "Demopark: alles is ontgrendeld. Wat gemarkeerd is als ‘kost extra’ hoort in het echt bij een betaald plan.",
+    'demo.banner': "Demopark: alles is ontgrendeld. Wat gemarkeerd is als ‘extra’ hoort in het echt bij een betaald plan.",
     'demo.prices': "Prijzen bekijken",
-    'demo.paid': "kost extra",
+    'demo.paid': "extra",
     'demo.badge_plan': "Demo – anders {plan}, {price} / maand",
     'demo.badge_addon': "Demo – anders bij te boeken vanaf {price} / maand",
 };

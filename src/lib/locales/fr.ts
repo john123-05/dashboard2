@@ -2457,9 +2457,9 @@ const dict: Record<string, string> = {
     'pg.shop.s3_text': "Jusqu’à la mise en ligne, la boutique tourne en mode test – rien n’est débité. Sous « Prix et offres », tu choisis la formule.",
     'pg.shop.ex1_title': "Deuxième chance le soir",
     'pg.shop.ex1_text': "Une famille descend à 11 h, n’achète rien. Le soir à l’hôtel, elle scanne le code du billet, voit les photos du jour et commande deux téléchargements et une tasse.",
-    'demo.banner': "Parc de démonstration : tout est débloqué. Ce qui est marqué « en supplément » fait partie d’une offre payante en exploitation réelle.",
+    'demo.banner': "Parc de démonstration : tout est débloqué. Ce qui est marqué « en plus » fait partie d’une offre payante en exploitation réelle.",
     'demo.prices': "Voir les prix",
-    'demo.paid': "en supplément",
+    'demo.paid': "en plus",
     'demo.badge_plan': "Démo – sinon {plan}, {price} / mois",
     'demo.badge_addon': "Démo – sinon en option dès {price} / mois",
 };

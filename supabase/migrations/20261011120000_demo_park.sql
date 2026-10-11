@@ -13,3 +13,8 @@ on conflict (park_id) do update set plan = excluded.plan, features = excluded.fe
 insert into public.attractions (park_id, slug, name, is_active)
 select p.id, 'demo-coaster', 'Demo Coaster', true from public.parks p
 where p.slug = 'demo-park' and not exists (select 1 from public.attractions a where a.park_id = p.id);
+
+-- Zusätzlich im OPERATOR-Projekt (xcrxltiiovpoladpaewd) ausgeführt, damit der Park im Park-Wechsler erscheint
+-- (sichtbar für Zugänge ohne Park-Beschränkung; Kunden mit `allowed_park_ids` sehen ihn nicht):
+--   insert into public.parks (id, organization_id, name, slug, timezone)
+--   values ('56ee64cf-a350-4010-8309-70412a5cf0bc', '645522fc-aea9-45b6-8a73-da85af901f63', 'Demo Park', 'demo-park', 'Europe/Vienna');

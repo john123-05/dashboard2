@@ -2470,9 +2470,9 @@ const dict: Record<string, string> = {
     'pg.shop.s3_text': "Bis zur Freischaltung läuft der Shop im Testmodus – es wird nichts abgebucht. Unter „Preise und Pakete“ wählst du, wie du ihn buchst.",
     'pg.shop.ex1_title': "Zweite Chance am Abend",
     'pg.shop.ex1_text': "Familie fährt um 11 Uhr, kauft nichts. Abends im Hotel scannt sie den Code vom Ticket, sieht die Fotos des Tages und bestellt zwei Downloads und eine Tasse.",
-    'demo.banner': "Demo-Park: Alles ist freigeschaltet. Was mit „kostet extra“ markiert ist, gehört im echten Betrieb zu einem bezahlten Plan.",
+    'demo.banner': "Demo-Park: Alles ist freigeschaltet. Was mit „extra“ markiert ist, gehört im echten Betrieb zu einem bezahlten Plan.",
     'demo.prices': "Preise ansehen",
-    'demo.paid': "kostet extra",
+    'demo.paid': "extra",
     'demo.badge_plan': "Demo – sonst {plan}, {price} / Monat",
     'demo.badge_addon': "Demo – sonst zubuchbar ab {price} / Monat",
 };

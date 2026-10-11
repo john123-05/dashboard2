@@ -2457,9 +2457,9 @@ const dict: Record<string, string> = {
     'pg.shop.s3_text': "Līdz palaišanai veikals darbojas testa režīmā – nekas netiek iekasēts. Sadaļā “Cenas un paketes” izvēlies, kā to pasūtīt.",
     'pg.shop.ex1_title': "Otrā iespēja vakarā",
     'pg.shop.ex1_text': "Ģimene brauc pulksten 11 un neko nenopērk. Vakarā viesnīcā noskenē biļetes kodu, redz dienas foto un pasūta divas lejupielādes un krūzi.",
-    'demo.banner': "Demo parks: viss ir atbloķēts. Ar “maksā papildus” atzīmētais reālā darbībā pieder maksas plānam.",
+    'demo.banner': "Demo parks: viss ir atbloķēts. Ar “papildus” atzīmētais reālā darbībā pieder maksas plānam.",
     'demo.prices': "Skatīt cenas",
-    'demo.paid': "maksā papildus",
+    'demo.paid': "papildus",
     'demo.badge_plan': "Demo – citādi {plan}, {price} / mēnesī",
     'demo.badge_addon': "Demo – citādi papildus no {price} / mēnesī",
 };
