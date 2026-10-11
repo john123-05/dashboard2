@@ -2488,6 +2488,13 @@ const dict: Record<string, string> = {
     'auth.language': "Taal",
     'auth.show_password': "Wachtwoord tonen",
     'auth.hide_password': "Wachtwoord verbergen",
+    'auth.park_search_placeholder': "Eerste letters van je park",
+    'auth.park_hint': "Typ minstens twee letters – je park verschijnt eronder.",
+    'auth.park_many': "Meerdere parken passen. Typ verder.",
+    'auth.park_none': "Geen park gevonden. Controleer de schrijfwijze.",
+    'auth.park_pick': "{park} kiezen",
+    'auth.park_change': "Ander park kiezen",
+    'auth.park_error_pick': "Kies eerst je park.",
 };
 
 export default dict;

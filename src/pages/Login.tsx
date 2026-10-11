@@ -4,11 +4,14 @@ import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../lib/i18n';
 import { usePark } from '../contexts/ParkContext';
 import { invokeEdgeFunction } from '../lib/edgeFunctions';
+import { Check, X } from 'lucide-react';
 import { supabase, EXTERNAL_SUPABASE_URL, EXTERNAL_SUPABASE_ANON_KEY } from '../lib/supabase';
 import { ArrowLeft, ArrowRight, CalendarCheck, ExternalLink, Loader2, Eye, EyeOff } from 'lucide-react';
 import Footer from '../components/layout/Footer';
 import LanguagePicker from '../components/layout/LanguagePicker';
 import { authErrorKey } from '../lib/authErrors';
+
+const LAST_PARK_KEY = 'lp-last-park';
 
 // Termin für die Demo (Videokonferenz) – Calendly von Liftpictures.
 const CALENDLY_URL = 'https://calendly.com/kontakt-liftpictures-fotosysteme/30min';
@@ -17,8 +20,21 @@ export default function Login() {
   const { user, loading, signIn } = useAuth();
   const { t } = useI18n();
   const { parkId: activeParkId, setPark } = usePark();
-  const [parks, setParks] = useState<{ id: string; name: string; slug: string }[]>([]);
-  const [parkId, setParkId] = useState('');
+  // Park-Auswahl ohne Liste aller Kunden: man tippt die ersten Buchstaben, die Function `park-lookup` gibt
+  // höchstens EINEN Park zurück (erst wenn die Eingabe eindeutig ist). Der zuletzt gewählte Park wird im
+  // Browser gemerkt, damit man ihn beim nächsten Mal nicht wieder tippen muss.
+  const [selectedPark, setSelectedPark] = useState<{ id: string; name: string } | null>(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(LAST_PARK_KEY) ?? 'null');
+      return saved && typeof saved.id === 'string' && typeof saved.name === 'string' ? { id: saved.id, name: saved.name } : null;
+    } catch {
+      return null;
+    }
+  });
+  const [parkQuery, setParkQuery] = useState('');
+  const [parkMatch, setParkMatch] = useState<{ id: string; name: string } | null>(null);
+  const [parkState, setParkState] = useState<'idle' | 'loading' | 'short' | 'none' | 'many' | 'one'>('idle');
+  const parkId = selectedPark?.id ?? '';
   const [parkPassword, setParkPassword] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -54,23 +70,37 @@ export default function Login() {
   }
 
   useEffect(() => {
+    const q = parkQuery.trim();
+    setParkMatch(null);
+    if (selectedPark || q.length === 0) { setParkState('idle'); return; }
+    if (q.length < 2) { setParkState('short'); return; }
+    setParkState('loading');
     let cancelled = false;
-
-    (async () => {
-      const { data, error } = await invokeEdgeFunction('external-parks');
-      if (!error && !cancelled) {
-        const loadedParks = data?.parks || [];
-        setParks(loadedParks);
-        if (loadedParks.length > 0) {
-          setParkId((prev) => prev || loadedParks[0].id);
-        }
-      }
-    })();
-
+    const timer = window.setTimeout(async () => {
+      const { data, error } = await invokeEdgeFunction<{ park: { id: string; name: string } | null; state: 'short' | 'none' | 'many' | 'one' }>(
+        'park-lookup', { query: { q } },
+      );
+      if (cancelled) return;
+      if (error || !data) { setParkState('none'); return; }
+      setParkMatch(data.park);
+      setParkState(data.park ? 'one' : data.state);
+    }, 250);
     return () => {
       cancelled = true;
+      window.clearTimeout(timer);
     };
-  }, []);
+  }, [parkQuery, selectedPark]);
+
+  function pickPark(park: { id: string; name: string }) {
+    setSelectedPark(park);
+    setParkQuery('');
+    setError('');
+    try {
+      localStorage.setItem(LAST_PARK_KEY, JSON.stringify(park));
+    } catch {
+      // ohne Speicher tippt man den Park beim nächsten Mal neu
+    }
+  }
 
   if (loading) {
     return (
@@ -94,7 +124,12 @@ export default function Login() {
       }
     }
 
-    if (!parkId || !parkPassword) {
+    if (!parkId) {
+      setError(t('auth.park_error_pick'));
+      setSubmitting(false);
+      return;
+    }
+    if (!parkPassword) {
       setError(t('auth.park_error_missing'));
       setSubmitting(false);
       return;
@@ -111,8 +146,7 @@ export default function Login() {
       return;
     }
 
-    const selected = parks.find((p) => p.id === parkId);
-    setPark(parkId, selected?.name || null);
+    setPark(parkId, selectedPark?.name || null);
     setSubmitting(false);
   }
 
@@ -250,18 +284,58 @@ export default function Login() {
 
               <div>
                 <label className="mb-1.5 block text-sm font-medium text-slate-700">{t('auth.park')}</label>
-                <select
-                  value={parkId}
-                  onChange={(e) => setParkId(e.target.value)}
-                  className="glass-input"
-                  required
-                >
-                  {parks.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
+                {selectedPark ? (
+                  <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5">
+                    <Check className="h-4 w-4 shrink-0 text-emerald-600" />
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-800">{selectedPark.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => { setSelectedPark(null); setParkState('idle'); }}
+                      aria-label={t('auth.park_change')}
+                      title={t('auth.park_change')}
+                      className="rounded-md p-1 text-slate-500 hover:bg-white hover:text-slate-800"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <input
+                      type="text"
+                      value={parkQuery}
+                      onChange={(e) => setParkQuery(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && parkMatch) { e.preventDefault(); pickPark(parkMatch); }
+                      }}
+                      placeholder={t('auth.park_search_placeholder')}
+                      autoComplete="off"
+                      autoCapitalize="none"
+                      spellCheck={false}
+                      aria-describedby="park-hint"
+                      className="glass-input"
+                    />
+                    <div id="park-hint" className="mt-1.5 min-h-[2.25rem] text-xs text-slate-500" aria-live="polite">
+                      {parkMatch ? (
+                        <button
+                          type="button"
+                          onClick={() => pickPark(parkMatch)}
+                          className="flex w-full items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-left text-sm font-medium text-slate-800 shadow-sm hover:border-brand-400"
+                        >
+                          <span className="min-w-0 flex-1 truncate">{parkMatch.name}</span>
+                          <span className="shrink-0 text-xs font-semibold text-brand-600">{t('auth.park_pick', { park: '' }).trim()}</span>
+                        </button>
+                      ) : parkState === 'loading' ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : parkState === 'many' ? (
+                        t('auth.park_many')
+                      ) : parkState === 'none' ? (
+                        t('auth.park_none')
+                      ) : (
+                        t('auth.park_hint')
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
 
               <div>

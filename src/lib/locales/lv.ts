@@ -2488,6 +2488,13 @@ const dict: Record<string, string> = {
     'auth.language': "Valoda",
     'auth.show_password': "Rādīt paroli",
     'auth.hide_password': "Slēpt paroli",
+    'auth.park_search_placeholder': "Tava parka pirmie burti",
+    'auth.park_hint': "Ieraksti vismaz divus burtus – tavs parks parādīsies zemāk.",
+    'auth.park_many': "Atbilst vairāki parki. Lūdzu, raksti tālāk.",
+    'auth.park_none': "Parks nav atrasts. Pārbaudi rakstību.",
+    'auth.park_pick': "Izvēlēties {park}",
+    'auth.park_change': "Izvēlēties citu parku",
+    'auth.park_error_pick': "Vispirms izvēlies savu parku.",
 };
 
 export default dict;

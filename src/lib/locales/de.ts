@@ -2501,6 +2501,13 @@ const dict: Record<string, string> = {
     'auth.language': "Sprache",
     'auth.show_password': "Passwort anzeigen",
     'auth.hide_password': "Passwort verbergen",
+    'auth.park_search_placeholder': "Erste Buchstaben deines Parks",
+    'auth.park_hint': "Tippe mindestens zwei Buchstaben – dein Park erscheint darunter.",
+    'auth.park_many': "Mehrere Parks passen. Bitte weiter tippen.",
+    'auth.park_none': "Kein Park gefunden. Bitte Schreibweise prüfen.",
+    'auth.park_pick': "{park} auswählen",
+    'auth.park_change': "Anderen Park wählen",
+    'auth.park_error_pick': "Bitte zuerst deinen Park auswählen.",
 };
 
 export default dict;

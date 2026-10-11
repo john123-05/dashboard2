@@ -200,6 +200,17 @@ nimmt den Katalog nur, wenn er da ist, sonst die jetzigen festen Werte.
 - [ ] **RD8 (offen)** Daten der Übersicht laden in Stufen nacheinander (rund 6 s bis alles da ist; einzelne Abfragen 2–3 s).
   Nächster Schritt: Abfragen gleichzeitig starten und die langsamen Functions (`external-attractions`, `support-tickets`, `photos`) prüfen.
 
+### Phase SI – Sicherheit Login
+
+- [~] **SI1 Park-Suche statt Kundenliste** – Login zeigt kein Aufklappmenü mit allen Parks mehr. Man tippt die ersten
+  Buchstaben; die öffentliche Function `park-lookup` (Operator-Projekt) gibt höchstens EINEN Park zurück, und erst wenn
+  die Eingabe eindeutig ist (mind. 2 Zeichen; „mehrere passen“ ohne Namen). Der zuletzt gewählte Park wird im Browser gemerkt.
+- [ ] **SI2 Alte Liste schließen (WICHTIG, erst NACH dem Veröffentlichen)** – `external-parks` (Operator-Projekt) gibt
+  weiterhin ohne Anmeldung alle Parks heraus, weil die noch veröffentlichte alte Login-Seite sie braucht. Sobald die neue
+  Login-Seite live ist: `external-parks` nur noch mit gültiger Anmeldung beantworten (und `ProfileParkSwitcher`,
+  `Settings` mit `useSessionAuth: true` aufrufen). Vorher würde die Live-Anmeldung brechen.
+- [ ] **SI3 (später)** Zählbremse für `park-lookup` (Durchprobieren von Buchstaben erschweren), z. B. je IP begrenzen.
+
 ### Phase DM – Demo-Park
 
 - [~] **DM1 Demo-Modus** – Schalter `demo` in `park_entitlements.features`: alles freigeschaltet (`has()`), Hinweis oben

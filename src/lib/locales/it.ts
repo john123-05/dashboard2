@@ -2488,6 +2488,13 @@ const dict: Record<string, string> = {
     'auth.language': "Lingua",
     'auth.show_password': "Mostra password",
     'auth.hide_password': "Nascondi password",
+    'auth.park_search_placeholder': "Prime lettere del tuo parco",
+    'auth.park_hint': "Digita almeno due lettere: il tuo parco appare sotto.",
+    'auth.park_many': "Corrispondono più parchi. Continua a digitare.",
+    'auth.park_none': "Nessun parco trovato. Controlla come è scritto.",
+    'auth.park_pick': "Seleziona {park}",
+    'auth.park_change': "Scegli un altro parco",
+    'auth.park_error_pick': "Seleziona prima il tuo parco.",
 };
 
 export default dict;
