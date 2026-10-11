@@ -313,3 +313,8 @@ html {
     font-size: 16px;
   }
 }
+
+/* Im Rundgang gehört die Ecke unten rechts der Rundgang-Karte (QR-Karte ausblenden). */
+body[data-lp-tour] .lp-corner-card {
+  display: none !important;
+}

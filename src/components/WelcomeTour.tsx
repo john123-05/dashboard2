@@ -45,7 +45,12 @@ export default function WelcomeTour() {
   // Im Rundgang zählen Seitenbesuche nicht als „erledigt“ – man hat die Seite ja nur kurz gezeigt bekommen.
   useEffect(() => {
     setOnboardingTrackingSuppressed(mode === 'tour');
-    return () => setOnboardingTrackingSuppressed(false);
+    // Im Rundgang gehört die Ecke unten rechts der Rundgang-Karte.
+    document.body.toggleAttribute('data-lp-tour', mode === 'tour');
+    return () => {
+      setOnboardingTrackingSuppressed(false);
+      document.body.removeAttribute('data-lp-tour');
+    };
   }, [mode]);
 
   useEffect(() => {

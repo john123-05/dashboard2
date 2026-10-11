@@ -597,7 +597,7 @@ export default function Sidebar({
         </div>
         {showFull && (
           <div className="overflow-hidden">
-            <h1 className="text-sm font-semibold tracking-tight text-white">Liftpictures</h1>
+            <h1 className="text-sm font-semibold tracking-tight text-white">Liftbase</h1>
             <p className="truncate text-[11px] text-slate-400">
               {parkName || currentOrg?.name || t('nav.operator_dashboard')}
             </p>

@@ -129,7 +129,7 @@ export default function Register() {
           </div>
 
           <p className="mt-6 text-center text-xs text-slate-400">
-            Liftpictures Operator Dashboard
+            Liftbase
           </p>
         </div>
       </div>

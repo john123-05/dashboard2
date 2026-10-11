@@ -43,7 +43,7 @@ function AppShellMetaController() {
   const location = useLocation();
 
   useEffect(() => {
-    document.title = 'Liftpictures Operator Dashboard';
+    document.title = 'Liftbase';
   }, [location.pathname, location.search]);
 
   return null;

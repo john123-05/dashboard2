@@ -1,8 +1,8 @@
 {
   "id": "/operator-dashboard",
-  "name": "Liftpictures Operator Dashboard",
-  "short_name": "Liftpictures",
-  "description": "Liftpictures Operator-Tools: Parks, Kameras, E-Mail-Liste, Umsatz und Einstellungen.",
+  "name": "Liftbase",
+  "short_name": "Liftbase",
+  "description": "Liftbase von Liftpictures: Statistik für deinen Automaten – Umsatz, Fotos, Systemzustand und Marketing.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

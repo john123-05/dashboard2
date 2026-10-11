@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { X } from 'lucide-react';
 import QRCode from '../../lib/vendor/qrcode.bundle.js';
+import MobileQrCard from './MobileQrCard';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePark } from '../../contexts/ParkContext';
 import { useI18n } from '../../lib/i18n';
@@ -117,7 +118,8 @@ export default function AnnouncementHost({ sidebarWidth }: { sidebarWidth: numbe
     };
   }, [current?.id, current?.qr_url]);
 
-  if (!current) return null;
+  // Ohne Hinweis ist die Ecke frei für „Liftbase auf dem Handy“.
+  if (!current) return <MobileQrCard />;
 
   function dismiss() {
     if (!current) return;

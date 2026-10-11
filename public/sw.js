@@ -10,10 +10,10 @@ self.addEventListener('push', (event) => {
   try {
     data = event.data ? event.data.json() : {};
   } catch {
-    data = { title: 'Liftpictures Operator-Tools', body: event.data ? event.data.text() : '' };
+    data = { title: 'Liftbase', body: event.data ? event.data.text() : '' };
   }
 
-  const title = data.title || 'Liftpictures Operator-Tools';
+  const title = data.title || 'Liftbase';
   const options = {
     body: data.body || '',
     icon: LOGO_URL,
