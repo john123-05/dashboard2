@@ -168,6 +168,10 @@ nimmt den Katalog nur, wenn er da ist, sonst die jetzigen festen Werte.
   neu · in Arbeit · erledigt.
 - [ ] **PK8 (später)** Stripe-Anbindung des Katalogs: aus einem Paket automatisch Stripe-Preis anlegen, Rabatt als
   Stripe-Gutschein, Aktionscode im Checkout.
+- [~] **PK9 Karten-Editor im CRM** – „Pakete & Preise“ sieht aus wie im Kunden-Dashboard. Man tippt direkt in die
+  Preiskarte (Titel, Preis, Beschreibung, enthalten / nicht enthalten), schaltet sie live oder auf Entwurf, legt
+  neue Karten an und sagt, für wen sie gilt (alle / ausgewählte Parks). „Ansicht für: Nur <Kunde>“ zeigt dieselben
+  Karten für einen Kunden: eigener Preis, eigene Liste, Karte ausblenden.
 
 ### Phase OB – Onboarding („Erste Schritte“, HubSpot-Stil)
 
@@ -407,6 +411,17 @@ Je Seite:
 6. Öffentliche Seiten bleiben auf Deutsch (wie bisher); Sprüche sind freie Texte des Betreibers.
 
 ## 8. Protokoll
+
+11.10.2026, Claude (Opus 5.5) – PK9 gebaut, `[~]` bis John im echten CRM einmal gespeichert hat:
+- CRM (Repo liftpictures-crm, Commit `d6bde8c`): `src/crm/pages/PackageCardsEditor.tsx` (Karten), eingebunden in `PackagesPage.tsx`,
+  Aussehen im Block `.pkg-editor` in `src/crm/styles.css`. Die Reiter Vergleichszeilen · Aktionen · Verlauf sind geblieben.
+- Datenbank: Migration `20261012090000_catalog_audience.sql` (`catalog_packages.audience`, `park_price_overrides.bullets` + `hidden`).
+- Functions: `admin-catalog` (audience, `delete_package` nur für selbst angelegte Karten `custom_*`, Kundenanpassung mit eigener Liste
+  und „ausblenden“), `operator-catalog` + `_shared/catalogDeals.ts` (`visibleFor`). Dashboard zeigt selbst angelegte Karten über
+  `ExtraPackages.tsx` (Commit `049dab3`).
+- Geprüft: nur Aussehen und Bedienung in einer lokalen Vorschau ohne Anmeldung (tippen, Punkt umschalten, Karte hinzufügen, live
+  schalten, „Für wen“, Ansicht je Kunde). **Nicht geprüft: echtes Speichern** – dafür braucht es Johns CRM-Anmeldung.
+- Offen: die eingebauten Karten (z. B. Basis) lassen sich auch ausschalten – bewusst so, aber Vorsicht.
 
 11.10.2026, Claude (Opus 5.5) – Phase RD und DM1/DM2, am lokalen Server im Browser angesehen (Desktop 1440 px, Handy 500 px):
 - Neue Dateien: `components/layout/{MobileQrCard,DemoBanner}.tsx`, `components/onboarding/{AppSetupGuide,PageGuide}.tsx`,
