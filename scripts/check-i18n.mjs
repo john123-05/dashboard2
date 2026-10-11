@@ -3,31 +3,31 @@ import path from 'node:path';
 import ts from 'typescript';
 
 const root = path.resolve(import.meta.dirname, '..');
-const source = fs.readFileSync(path.join(root, 'src/lib/i18n.tsx'), 'utf8');
-const file = ts.createSourceFile('i18n.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
 const langs = ['de', 'en', 'es', 'fr', 'it', 'nl', 'lv'];
 const dictionaries = new Map();
+const errors = [];
 
-function walk(node) {
-  if (ts.isVariableDeclaration(node) && node.name.getText(file) === 'translations' && node.initializer && ts.isObjectLiteralExpression(node.initializer)) {
-    for (const lang of node.initializer.properties) {
-      if (!ts.isPropertyAssignment(lang) || !ts.isObjectLiteralExpression(lang.initializer)) continue;
-      const values = new Map();
-      for (const prop of lang.initializer.properties) {
+// Jede Sprache steht in src/lib/locales/<sprache>.ts als `const dict = { … }`.
+for (const lang of langs) {
+  const source = fs.readFileSync(path.join(root, `src/lib/locales/${lang}.ts`), 'utf8');
+  const file = ts.createSourceFile(`${lang}.ts`, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  const values = new Map();
+  const walk = (node) => {
+    if (ts.isVariableDeclaration(node) && node.name.getText(file) === 'dict' && node.initializer && ts.isObjectLiteralExpression(node.initializer)) {
+      for (const prop of node.initializer.properties) {
         if (!ts.isPropertyAssignment(prop)) continue;
         const key = prop.name.getText(file).replace(/^['"]|['"]$/g, '');
-        const value = ts.isStringLiteral(prop.initializer) ? prop.initializer.text : '';
-        if (values.has(key)) errors.push(`Duplicate: ${lang.name.getText(file)}.${key}`);
+        const value = ts.isStringLiteral(prop.initializer) || ts.isNoSubstitutionTemplateLiteral(prop.initializer) ? prop.initializer.text : '';
+        if (values.has(key)) errors.push(`Duplicate: ${lang}.${key}`);
         values.set(key, value);
       }
-      dictionaries.set(lang.name.getText(file), values);
     }
-  }
-  ts.forEachChild(node, walk);
+    ts.forEachChild(node, walk);
+  };
+  walk(file);
+  dictionaries.set(lang, values);
 }
 
-const errors = [];
-walk(file);
 const reference = dictionaries.get('de') ?? new Map();
 const placeholders = (value) => [...value.matchAll(/\{([a-zA-Z][a-zA-Z0-9_]*)\}/g)].map((match) => match[1]).sort().join(',');
 for (const lang of langs) {

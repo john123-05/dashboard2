@@ -10,13 +10,9 @@ import ast, json, os, re
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 LANGS = ['de', 'en', 'es', 'fr', 'it', 'nl', 'lv']
-src = open(ROOT + '/src/lib/i18n.tsx').read()
-starts = {l: src.index('\n  %s: {' % l) for l in LANGS}
-order = sorted(LANGS, key=lambda l: starts[l])
 TEXT = {}
-for i, l in enumerate(order):
-    end = starts[order[i + 1]] if i + 1 < len(order) else src.index('\n};', starts[l])
-    block = src[starts[l]:end]
+for l in LANGS:
+    block = open(ROOT + '/src/lib/locales/%s.ts' % l).read()
     for m in re.finditer(r"^\s+'([^']+)':\s*(\"(?:[^\"\\]|\\.)*\"|'(?:[^'\\]|\\.)*'),\s*$", block, re.M):
         try:
             TEXT.setdefault(m.group(1), {})[l] = ast.literal_eval(m.group(2))

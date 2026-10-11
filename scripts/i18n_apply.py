@@ -1,4 +1,4 @@
-"""Neue Übersetzungsschlüssel in alle 7 Sprachblöcke von src/lib/i18n.tsx eintragen
+"""Neue Übersetzungsschlüssel in alle 7 Sprachdateien (src/lib/locales/<sprache>.ts) eintragen
 und feste Texte in Dateien ersetzen.
 
 Benutzung (aus dem Repo-Root, z. B. in einem kurzen Python-Skript):
@@ -22,29 +22,18 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
 def apply(keys, replacements, root=ROOT):
     """keys: {key: [de,en,es,fr,it,nl,lv]}; replacements: [(relpath, old, new)]"""
-    p=root+'/src/lib/i18n.tsx'
-    s=open(p).read()
-    # block boundaries
-    starts={l:s.index("\n  %s: {"%l) for l in LANGS}
-    order=sorted(LANGS,key=lambda l:starts[l])
-    # find end of each block: start of next block, or "\n};" for last
-    ends={}
-    for i,l in enumerate(order):
-        ends[l]=starts[order[i+1]] if i+1<len(order) else s.index("\n};",starts[l])
-    # insert from last to first so indexes stay valid
-    for l in sorted(LANGS,key=lambda l:-ends[l]):
-        idx=LANGS.index(l)
-        block=s[starts[l]:ends[l]]
+    # Jede Sprache hat eine eigene Datei: src/lib/locales/<sprache>.ts (ein Objekt `dict`, endet mit "};").
+    for idx,l in enumerate(LANGS):
+        p=root+'/src/lib/locales/%s.ts'%l
+        s=open(p).read()
         add=''
         for k,v in keys.items():
-            if "'%s':"%k in block or '"%s":'%k in block:
+            if "'%s':"%k in s or '"%s":'%k in s:
                 continue
             add+="    '%s': %s,\n"%(k,json.dumps(v[idx],ensure_ascii=False))
-        e=ends[l]
-        # insert before the closing "  }," that precedes ends[l]
-        close=s.rindex("  },",starts[l],e)
+        close=s.rindex("};")
         s=s[:close]+add+s[close:]
-    open(p,'w').write(s)
+        open(p,'w').write(s)
     for rel,old,new in replacements:
         fp=root+'/'+rel
         t=open(fp).read()

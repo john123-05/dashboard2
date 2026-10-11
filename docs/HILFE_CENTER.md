@@ -1,7 +1,7 @@
 # Leiste oben rechts: Hilfe-Center, Benachrichtigungen, Profil
 
 Stand: 10.10.2026. Code: `src/components/layout/TopBar.tsx`, Inhalte `src/lib/helpContent.ts`,
-Benachrichtigungen `src/lib/notificationFeed.ts`, Texte in `src/lib/i18n.tsx` (`top.*`, `notif.*`, `help.*`).
+Benachrichtigungen `src/lib/notificationFeed.ts`, Texte in `src/lib/locales/<sprache>.ts` (`top.*`, `notif.*`, `help.*`).
 
 Vorbild: HubSpot-Kopfleiste (Screenshots von John). Bei uns nur als kleine dunkle Ecke oben rechts,
 immer sichtbar ab 901 px Breite (auf dem Handy ausgeblendet, dort gibt es die Navigation unten).
