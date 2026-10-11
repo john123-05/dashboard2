@@ -176,6 +176,9 @@ nimmt den Katalog nur, wenn er da ist, sonst die jetzigen festen Werte.
   „Kategorie hinzufügen“ (z. B. Hosting & Support), Namen direkt tippen, mit „nach vorne / nach hinten“ verschieben, eigene
   Kategorien löschen (nur wenn leer). Die Reihenfolge im CRM ist die Reihenfolge der Reiter beim Kunden. Eine eigene
   Kategorie erscheint beim Kunden, sobald er darin mindestens eine Live-Karte sieht.
+- [~] **PK11 Vergleichstabelle, Aktionen, Verlauf im Karten-Design** – Alle vier Ansichten von „Pakete & Preise“ im CRM sehen gleich
+  aus (`.pkg-editor`). Vergleichstabelle wie beim Kunden (Zeilentext tippen, Haken je Zelle klicken, Zeilen verschieben, ein
+  Speichern-Balken). Aktionen als Karten mit Banner-Vorschau, Live-Schalter, „Für wen“, „Gilt für“. Verlauf nach Tagen mit Filter.
 
 ### Phase OB – Onboarding („Erste Schritte“, HubSpot-Stil)
 
@@ -415,6 +418,13 @@ Je Seite:
 6. Öffentliche Seiten bleiben auf Deutsch (wie bisher); Sprüche sind freie Texte des Betreibers.
 
 ## 8. Protokoll
+
+11.10.2026, Claude (Opus 5.5) – PK11 gebaut, `[~]` bis John es im echten CRM gesehen hat:
+- CRM (Repo liftpictures-crm): `PackagesPage.tsx` lädt nur noch und schaltet um; neu `PackageCompareEditor.tsx`, `PackagePromotions.tsx`,
+  `PackageHistory.tsx`; gemeinsame Helfer (`api`, `money`, `same` …) kommen aus `PackageCardsEditor.tsx`. Keine Änderung an Functions oder Datenbank.
+- Reiter heißen jetzt Preiskarten · Vergleichstabelle · Aktionen · Verlauf.
+- Geprüft: Bedienung in einer lokalen Vorschau mit nachgespieltem Speichern. **Nicht geprüft: echtes Speichern** (CRM-Anmeldung fehlt).
+- Aufgefallen: `catalog_history` ist leer – im echten CRM wurde bisher noch nichts am Katalog gespeichert.
 
 11.10.2026, Claude (Opus 5.5) – PK10 gebaut, `[~]` bis John es im echten CRM und im Dashboard gesehen hat:
 - Datenbank: Migration `20261012100000_catalog_groups.sql` (Tabelle `catalog_groups`, sechs eingebaute Kategorien eingetragen;
