@@ -7,6 +7,7 @@ const PARK_ACCENT_COLOR: Record<string, string> = {
   '3b08e092-beb5-46ec-9811-5698e86dd83a': '#0B2545', // Plose (Navy)
   '25c1022b-4e2e-4fc4-b54d-72a4ced2522b': '#30A85B', // Gruenberg-Flitzer (Gruen)
   '91902231-5950-471b-8cc9-a03833f2a318': '#CA004A', // Serlesblitz Mieders (Serles-Rot)
+  '56f864d0-1852-4baf-8167-a51fde746315': '#3D5732', // Spielpark Wingst (Dunkelgruen)
 };
 
 const DEFAULT_ACCENT_COLOR = '#C6A233';

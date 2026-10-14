@@ -9,6 +9,7 @@ export const GUEST_ACTIVITY_PARK_IDS = new Set([
   '3b08e092-beb5-46ec-9811-5698e86dd83a', // Plose
   '25c1022b-4e2e-4fc4-b54d-72a4ced2522b', // Gruenberg-Flitzer
   '91902231-5950-471b-8cc9-a03833f2a318', // Serlesblitz Mieders
+  '56f864d0-1852-4baf-8167-a51fde746315', // Spielpark Wingst
 ]);
 
 export function hasGuestActivity(parkId: string | null | undefined): boolean {
