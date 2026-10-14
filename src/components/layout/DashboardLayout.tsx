@@ -13,6 +13,7 @@ import { NotificationsProvider } from '../../contexts/NotificationsContext';
 import { Loader2, Mountain, ArrowRight } from 'lucide-react';
 import { useI18n } from '../../lib/i18n';
 import { usePark } from '../../contexts/ParkContext';
+import { IN_APP } from '../../lib/appMode';
 
 export default function DashboardLayout() {
   const { user, loading, hasOrg, orgUnknown, joinDemoOrg, refreshProfile, isOwner, isStaff, allowedPages } = useAuth();
@@ -116,29 +117,31 @@ export default function DashboardLayout() {
   return (
     <NotificationsProvider>
     <div className="operator-app mesh-gradient flex min-h-screen overflow-x-clip">
-      {mobileNavOpen && (
+      {!IN_APP && mobileNavOpen && (
         <div className="mobile-nav-backdrop" onClick={() => setMobileNavOpen(false)} />
       )}
-      <Sidebar
-        collapsed={collapsed}
-        onToggleCollapsed={() => setCollapsed((prev) => !prev)}
-        mobileOpen={mobileNavOpen}
-        onCloseMobile={() => setMobileNavOpen(false)}
-      />
+      {!IN_APP && (
+        <Sidebar
+          collapsed={collapsed}
+          onToggleCollapsed={() => setCollapsed((prev) => !prev)}
+          mobileOpen={mobileNavOpen}
+          onCloseMobile={() => setMobileNavOpen(false)}
+        />
+      )}
       <main
         className="operator-main flex-1 min-w-0 transition-all duration-300 overflow-x-clip"
-        style={{ paddingLeft: collapsed ? 72 : 256 }}
+        style={{ paddingLeft: IN_APP ? 0 : collapsed ? 72 : 256 }}
       >
-        <div className="min-h-screen w-full min-w-0 p-4 pt-16 sm:p-6 sm:pt-16 lg:p-8 min-[901px]:pt-16 lg:pt-16">
+        <div className={IN_APP ? 'min-h-screen w-full min-w-0 p-3 pb-[calc(env(safe-area-inset-bottom,0px)+24px)]' : 'min-h-screen w-full min-w-0 p-4 pt-16 sm:p-6 sm:pt-16 lg:p-8 min-[901px]:pt-16 lg:pt-16'}>
           {/* Remount the page on a park switch so nothing from the previous park lingers. */}
           <DemoBanner />
           <PageGuideStrip />
           <Outlet key={parkId ?? 'none'} />
         </div>
       </main>
-      <TopBar onOpenNav={() => setMobileNavOpen(true)} />
-      <AnnouncementHost sidebarWidth={collapsed ? 72 : 256} />
-      <WelcomeTour />
+      {!IN_APP && <TopBar onOpenNav={() => setMobileNavOpen(true)} />}
+      {!IN_APP && <AnnouncementHost sidebarWidth={collapsed ? 72 : 256} />}
+      {!IN_APP && <WelcomeTour />}
     </div>
     </NotificationsProvider>
   );

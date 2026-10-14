@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { IN_APP } from './appMode';
 
 export const SUPABASE_URL =
   import.meta.env.VITE_SUPABASE_URL ?? "https://xcrxltiiovpoladpaewd.supabase.co";
@@ -17,7 +18,21 @@ export const EXTERNAL_SUPABASE_ANON_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2cGN3bGNmZ21zbWFyanR3cHN4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA1MDczODEsImV4cCI6MjA4NjA4MzM4MX0.KiMNRutSws--fAxKnSRJgmoq3UiqoyfPowKiPWVs-A0";
 
 // Der Client, der die Anmeldung fuehrt. Nur dieser darf eine Sitzung halten.
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+export const supabase = createClient(
+  SUPABASE_URL,
+  SUPABASE_ANON_KEY,
+  IN_APP ? { auth: { autoRefreshToken: false } } : undefined,
+);
+
+// In der App: neue Sitzungen (nach einer Token-Erneuerung) kommen von der App.
+if (IN_APP && typeof window !== 'undefined') {
+  window.addEventListener('lp-app-session', (event) => {
+    const s = (event as CustomEvent<{ access_token?: string; refresh_token?: string }>).detail;
+    if (s?.access_token && s?.refresh_token) {
+      void supabase.auth.setSession({ access_token: s.access_token, refresh_token: s.refresh_token });
+    }
+  });
+}
 
 // Nur-Lese-Zugriff auf das geteilte Projekt, ohne Anmeldung.
 //
