@@ -138,6 +138,7 @@ const CLAIM_BASE_BY_PARK: Record<string, string> = {
   // Gleiches Muster: Plose laeuft unter /plose auf der Imst-Domain.
   '3b08e092-beb5-46ec-9811-5698e86dd83a': 'https://liftpictures-fotos.de/plose', // Plose
   '25c1022b-4e2e-4fc4-b54d-72a4ced2522b': 'https://liftpictures-fotos.de/gruenberg', // Gruenberg-Flitzer
+  '91902231-5950-471b-8cc9-a03833f2a318': 'https://liftpictures-fotos.de/serles', // Serlesblitz Mieders
   '56ee64cf-a350-4010-8309-70412a5cf0bc': 'https://liftpictures-fotos.de/demo', // Demo Park (Liftbase-Demo)
 };
 
