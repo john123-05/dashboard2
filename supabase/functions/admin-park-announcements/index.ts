@@ -1,5 +1,5 @@
 import { handleOptions, json, requireAdminFromRequest, supabaseService } from '../_shared/sameProjectAdminAuth.ts';
-import { sendPushToSubscriptions } from '../_shared/webpush.ts';
+import { isExpoSubscription, sendPushToSubscriptions } from '../_shared/webpush.ts';
 
 /**
  * admin-park-announcements (docs/AUSBAU_PLAN.md, HW1) – nur Staff (admin_users), für die CRM-Seite „Hinweise“.
@@ -116,16 +116,43 @@ export async function handler(req: Request): Promise<Response> {
       if (!title) return json({ error: 'Bitte einen Titel eingeben.' }, 400);
       const parkId = text(body.park_id, 40);
       if (parkId && !UUID.test(parkId)) return json({ error: 'Ungültiger Park.' }, 400);
+      // Wohin: alle Geräte, nur die iOS-App oder nur Browser; optional nur ein Benutzer.
+      const channel = text(body.channel, 10) || 'all';
+      const userId = text(body.user_id, 40);
+      if (!['all', 'app', 'web'].includes(channel)) return json({ error: 'Ungültiger Kanal.' }, 400);
+      if (userId && !UUID.test(userId)) return json({ error: 'Ungültiger Benutzer.' }, 400);
       let query = supabaseService.from('operator_push_subscriptions').select('endpoint, p256dh, auth_key');
       if (parkId) query = query.eq('park_id', parkId);
-      const { data: subscriptions, error } = await query.limit(5000);
+      if (userId) query = query.eq('operator_user_id', userId);
+      const { data: alle, error } = await query.limit(5000);
       if (error) return json({ error: error.message }, 500);
+      const subscriptions = (alle ?? []).filter((s) => channel === 'all' || (channel === 'app') === isExpoSubscription(s));
       if (!subscriptions || subscriptions.length === 0) return json({ ok: true, data: { sent: 0, devices: 0 } });
       const url = link(body.url);
       const payload = JSON.stringify({ title, body: text(body.body, 300), url: url && url.startsWith('/') ? url : '/' });
       const { sent, goneEndpoints } = await sendPushToSubscriptions(subscriptions, payload);
       if (goneEndpoints.length > 0) await supabaseService.from('operator_push_subscriptions').delete().in('endpoint', goneEndpoints);
       return json({ ok: true, data: { sent, devices: subscriptions.length } });
+    }
+
+    // Welche Geräte gibt es für einen Park (für die Auswahl im CRM)?
+    if (action === 'push_devices') {
+      const parkId = text(body.park_id, 40);
+      if (!parkId || !UUID.test(parkId)) return json({ error: 'Ungültiger Park.' }, 400);
+      const { data, error } = await supabaseService
+        .from('operator_push_subscriptions')
+        .select('operator_user_id, endpoint')
+        .eq('park_id', parkId)
+        .limit(2000);
+      if (error) return json({ error: error.message }, 500);
+      const byUser = new Map<string, { operator_user_id: string; app: number; web: number }>();
+      for (const row of data ?? []) {
+        const e = byUser.get(row.operator_user_id) ?? { operator_user_id: row.operator_user_id, app: 0, web: 0 };
+        if (isExpoSubscription(row)) e.app += 1;
+        else e.web += 1;
+        byUser.set(row.operator_user_id, e);
+      }
+      return json({ ok: true, data: { users: [...byUser.values()] } });
     }
 
     return json({ error: 'Unknown action' }, 400);
