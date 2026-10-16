@@ -83,3 +83,6 @@ verify_jwt = false
 [functions.admin-park-entitlements]
 # Eigene Prüfung von Shared-Session und admin_users, wie admin-park-equipment.
 verify_jwt = false
+
+[functions.admin-customer-overview]
+verify_jwt = false
