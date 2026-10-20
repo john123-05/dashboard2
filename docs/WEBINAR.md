@@ -11,3 +11,7 @@ Geprüft am 20.10.2026: check:i18n, typecheck und build erfolgreich; Aufruf /web
 Hosting: Die Produktionsdomain antwortet über Netlify. Laut aktueller Projektanleitung kann zusätzlich ein Publish in Bolt nötig sein; nach einem GitHub-Push den Live-Inhalt prüfen und gegebenenfalls das verbundene Bolt-Projekt veröffentlichen.
 
 Live-Prüfung nach Veröffentlichung: /webinar führt per 301 auf /webinar/ und liefert dort die Landingpage (HTTP 200) mit dem neuen Anmelde-Endpunkt. Alle 21 Bildadressen erreichbar. Formular live erfolgreich abgesendet; schmale Darstellung bei 375 CSS-Pixeln ohne horizontalen Überlauf geprüft.
+
+## Bildkarten (20.10.2026)
+
+Die fünf Karten starten gleich breit mit identischen Abständen. Die Reihe wächst beim Scrollen von eingerückt auf fast volle Bildschirmbreite. Erst Hover oder Tastaturfokus vergrößert eine Karte moderat (Faktor 1,85); beim Verlassen werden alle wieder gleich breit. Mini-Demos starten nur auf der aktiven Karte; ein Klick öffnet weiterhin die große Demo. Mobil bleibt die Wischleiste erhalten, bei reduzierten Bewegungen entfällt die Scrollanimation.

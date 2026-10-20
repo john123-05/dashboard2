@@ -77,16 +77,18 @@
   @keyframes stamp { from { opacity: 0; transform: rotate(-20deg) scale(1.45); } to { opacity: 1; transform: rotate(-9deg) scale(1); } }
   .hero-meta { margin-top: 18px; color: var(--muted); font-size: 14px; }
 
-  /* Drei Funktionen: Fotokarten, die aktive wird breit und zeigt die Animation */
+  /* Fünf gleich breite Fotokarten; erst bei Hover oder Tastaturfokus wird eine breiter. */
   .feat { padding: 0 0 24px; }
-  .feat-track { display: flex; gap: 8px; height: clamp(470px, 40vw, 580px); }
-  .fcard { position: relative; flex: 1 1 0; min-width: 0; overflow: hidden; padding: 0; border: 0; border-radius: 4px; background: #2b2724; text-align: left; cursor: pointer; transition: flex-grow .75s cubic-bezier(.2, .75, .2, 1); }
-  .fcard.is-active { flex-grow: 3.4; }
+  .feat .wide { width: calc(100% - var(--feature-inset, clamp(64px, 14vw, 240px))); max-width: none; padding: 0; }
+  .feat-track { scroll-margin-top: 96px; display: flex; gap: 10px; height: clamp(410px, 35vw, 580px); }
+  .fcard { position: relative; flex: 1 1 0; min-width: 0; overflow: hidden; padding: 0; border: 0; border-radius: 4px; background: #2b2724; text-align: left; cursor: pointer; transition: flex-grow .6s cubic-bezier(.2, .75, .2, 1); }
+  .fcard.is-active { flex-grow: 1.85; }
+  .fcard:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; }
   .fcard > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
   .fcard::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0, 0, 0, .08) 0%, rgba(0, 0, 0, 0) 30%, rgba(0, 0, 0, .55) 58%, rgba(0, 0, 0, .82) 100%); pointer-events: none; }
   .ftag { display: block; margin-bottom: 8px; color: #ff8a3d; font-family: var(--sans); font-size: 12.5px; font-weight: 700; line-height: 1.35; letter-spacing: .07em; text-transform: uppercase; hyphens: none; -webkit-hyphens: none; text-shadow: 0 1px 8px rgba(0,0,0,.35); }
-  .fcard:not(.is-active) .ftag { font-size: 11px; letter-spacing: .02em; hyphens: manual; -webkit-hyphens: manual; }
-  .fcap { position: absolute; right: 24px; bottom: 28px; left: 24px; hyphens: auto; -webkit-hyphens: auto; z-index: 2; color: #fff; font-family: var(--serif); font-size: clamp(20px, 1.75vw, 27px); font-weight: 500; line-height: 1.16; }
+  .ftag { font-size: clamp(10px, .75vw, 12.5px); letter-spacing: .035em; overflow-wrap: break-word; }
+  .fcap { position: absolute; right: clamp(16px, 1.5vw, 28px); bottom: 28px; left: clamp(16px, 1.5vw, 28px); hyphens: auto; -webkit-hyphens: auto; z-index: 2; color: #fff; font-family: var(--serif); font-size: clamp(19px, 1.55vw, 28px); font-weight: 500; line-height: 1.16; }
   .preview { position: absolute; display: block; top: 8%; left: 6%; z-index: 2; width: min(62%, 500px); padding: 8px; border-radius: 14px; background: rgba(255, 255, 255, .2); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .38), 0 20px 50px rgba(0, 0, 0, .25); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); opacity: 0; transform: translateY(12px); transition: opacity .45s, transform .45s; pointer-events: none; }
   .fcard.is-active .preview { opacity: 1; transform: none; transition-delay: .3s; }
   .preview .stage { border-radius: 8px; aspect-ratio: 16 / 10; }
@@ -257,7 +259,8 @@
   .reveal.is-in { opacity: 1; transform: none; }
   @media (prefers-reduced-motion: reduce) {
     .reveal { opacity: 1; transform: none; transition: none; }
-    .fcard, .preview { transition: none; }
+    html { scroll-behavior: auto; }
+    .fcard, .fcard > img, .preview { transition: none; }
     .stamp { animation: none; }
   }
 
@@ -269,7 +272,7 @@
     .flow-grid { margin-top: 40px; }
     .flow-grid > .reveal:first-child { position: static; }
     /* Am Handy: Karten seitlich wischen */
-    .feat .wide { padding: 0; }
+    .feat .wide { width: 100%; padding: 0; }
     .feat-track { height: auto; gap: 10px; padding: 0 16px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding: 0 16px; scrollbar-width: none; }
     .feat-track::-webkit-scrollbar { display: none; }
     .fcard { flex: 0 0 84%; height: 500px; scroll-snap-align: center; }
@@ -279,7 +282,8 @@
     .fcard.pv-right.is-active > img { object-position: 30% 50% !important; }
     .fcard.pv-low .preview { top: auto; right: 5%; bottom: 120px; left: auto; width: 62%; }
     .fcard.pv-low.is-active > img { object-position: 62% 50% !important; }
-    .fcap { right: 22px; bottom: 22px; left: 22px; }
+    .fcap { right: 22px; bottom: 22px; left: 22px; font-size: 26px; }
+    .ftag { font-size: 12px; }
     .feat-dots { display: flex; justify-content: center; gap: 8px; margin-top: 18px; }
     .feat-dots button { width: 8px; height: 8px; padding: 0; border: 0; border-radius: 50%; background: #cfcbc3; cursor: pointer; transition: width .2s, background .2s; }
     .feat-dots button.on { width: 22px; border-radius: 4px; background: var(--accent); }
@@ -345,7 +349,7 @@
 <section class="feat" aria-label="Das zeigen wir im Webinar">
   <div class="wide">
     <div class="feat-track" id="track">
-      <button type="button" class="fcard is-active" data-demo="umsatz" aria-label="Animation ansehen: Umsätze live einsehen und auswerten">
+      <button type="button" class="fcard" data-demo="umsatz" aria-label="Animation ansehen: Umsätze live einsehen und auswerten">
         <img src="/webinar/img/foto-umsatz.jpg" alt="" style="object-position: 40% 50%">
         <span class="preview"><span class="stage"></span><span class="play"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg></span></span>
         <span class="fcap"><span class="ftag">Statistik&shy;funktionen</span>Umsätze live einsehen und auswerten.</span>
@@ -831,13 +835,14 @@
     }
   }
 
-  // Fotokarten: die aktive Karte wird breit und spielt ihre Animation klein ab.
+  // Alle fünf starten gleich breit. Hover/Fokus öffnet eine Karte, Verlassen setzt sie zurück.
   const track = document.getElementById('track');
   const cards = [...track.querySelectorAll('.fcard')];
   const dots = [...document.querySelectorAll('#dots button')];
   const minis = cards.map((c) => new Demo(c.querySelector('.stage'), c.dataset.demo));
   const mobile = matchMedia('(max-width: 900px)');
-  let active = 0, trackVisible = false;
+  const hoverCards = matchMedia('(hover: hover) and (pointer: fine)');
+  let active = -1, trackVisible = false;
 
   const syncMinis = () => {
     minis.forEach((m, i) => {
@@ -851,14 +856,48 @@
     active = i;
     cards.forEach((c, n) => c.classList.toggle('is-active', n === i));
     dots.forEach((d, n) => d.classList.toggle('on', n === i));
-    minis[i].seek(0);
+    if (i >= 0) minis[i].seek(0);
     syncMinis();
   };
   cards.forEach((c, i) => {
-    c.addEventListener('mouseenter', () => { if (!mobile.matches) setActive(i); });
+    c.addEventListener('pointerenter', () => { if (!mobile.matches && hoverCards.matches) setActive(i); });
     c.addEventListener('focus', () => { if (!mobile.matches) setActive(i); });
     c.addEventListener('click', () => openModal(c.dataset.demo));
   });
+  track.addEventListener('pointerleave', () => {
+    if (!mobile.matches && !track.contains(document.activeElement)) setActive(-1);
+  });
+  track.addEventListener('focusout', (e) => {
+    if (!mobile.matches && !track.contains(e.relatedTarget)) {
+      const hovered = hoverCards.matches ? cards.findIndex((c) => c.matches(':hover')) : -1;
+      setActive(hovered);
+    }
+  });
+  mobile.addEventListener('change', () => setActive(mobile.matches ? 0 : -1));
+
+  // Die ganze Reihe öffnet sich beim Scrollen von eingerückt auf fast volle Breite.
+  // Eine rAF pro Bild begrenzt Layout-Lesen und Schreiben; mobil bleibt die Wischleiste stabil.
+  const featureSection = track.closest('.feat');
+  let featureFrame = 0;
+  const updateFeatureWidth = () => {
+    featureFrame = 0;
+    if (mobile.matches || reduced) {
+      featureSection.style.removeProperty('--feature-inset');
+      return;
+    }
+    const top = featureSection.getBoundingClientRect().top;
+    const progress = Math.max(0, Math.min(1, (innerHeight - top) / (innerHeight * .85)));
+    const eased = progress * progress * (3 - 2 * progress);
+    const start = Math.max(64, Math.min(240, innerWidth * .14));
+    featureSection.style.setProperty('--feature-inset', `${(start + (48 - start) * eased).toFixed(1)}px`);
+  };
+  const queueFeatureWidth = () => {
+    if (!featureFrame) featureFrame = requestAnimationFrame(updateFeatureWidth);
+  };
+  addEventListener('scroll', queueFeatureWidth, { passive: true });
+  addEventListener('resize', queueFeatureWidth);
+  updateFeatureWidth();
+
   new IntersectionObserver(([e]) => { trackVisible = e.isIntersecting; syncMinis(); }, { threshold: 0.2 }).observe(track);
   // Am Handy: die Karte in der Mitte ist die aktive.
   const cardIO = new IntersectionObserver((entries) => entries.forEach((e) => {
