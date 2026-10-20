@@ -20,7 +20,7 @@ async function parseEdgeErrorResponse(response: Response): Promise<string> {
 export async function invokeEdgeFunction<T = any>(
   functionName: string,
   options: {
-    method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
+    method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
     body?: any;
     query?: Record<string, string | number | boolean | null | undefined>;
     useSessionAuth?: boolean;

@@ -127,7 +127,7 @@ export function nachBildnummer(
       // neu los, der juengste Eintrag gehoert zum aktuellen Foto.
       setzeWennNeuer(befund.bildnummer, befund);
       for (const teiler of [10000, 100000]) {
-        const kurz = befund.bildnummer % teiler;
+        const kurz: number = befund.bildnummer % teiler;
         if (kurz !== befund.bildnummer) setzeWennNeuer(kurz, befund);
       }
     }

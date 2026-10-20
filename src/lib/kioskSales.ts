@@ -374,8 +374,6 @@ export function normalizeOpeningHoursConfig(
     exceptions?: unknown[];
   };
 
-  const base = createDefaultOpeningHoursConfig(fallbackOpeningHours);
-
   return {
     season_start: typeof raw.season_start === 'string' ? raw.season_start : null,
     season_end: typeof raw.season_end === 'string' ? raw.season_end : null,
