@@ -14,4 +14,10 @@ Live-Prüfung nach Veröffentlichung: /webinar führt per 301 auf /webinar/ und 
 
 ## Bildkarten (20.10.2026)
 
-Die fünf Karten starten gleich breit mit identischen Abständen. Die Reihe wächst beim Scrollen von eingerückt auf fast volle Bildschirmbreite. Erst Hover oder Tastaturfokus vergrößert eine Karte moderat (Faktor 1,85); beim Verlassen werden alle wieder gleich breit. Mini-Demos starten nur auf der aktiven Karte; ein Klick öffnet weiterhin die große Demo. Mobil bleibt die Wischleiste erhalten, bei reduzierten Bewegungen entfällt die Scrollanimation.
+Die fünf Karten starten gleich breit mit identischen Abständen. Auf Desktop bleibt die Gesamtfläche fest (bis 1460 px Breite, konstante Reihenhöhe); es gibt keine Scroll-Vergrößerung. Erst Hover oder Tastaturfokus öffnet eine Karte (Faktor 3,6), die Nachbarkarten werden innerhalb derselben Fläche schmaler. Beim Verlassen werden alle wieder gleich breit. Mini-Demos starten nur auf der aktiven Karte; ein Klick öffnet weiterhin die große Demo. Mobil bleibt die bisherige Wischleiste erhalten.
+
+Desktop-Vorschauen sind gegenüber dem ersten Entwurf um 30 % kleiner (53,2 % Kartenbreite). CRM-Foto zeigt den Laptop. Speed-Foto zeigt Vater, Kind und Bestenliste; seine Vorschau sitzt unten rechts (41,4 % Kartenbreite, 1,5 % rechter Abstand und 19 % unterer Abstand), damit Köpfe, zeigender Arm und Monitor frei bleiben.
+
+Shop-Demo startet direkt auf „Deine Fahrt. Dein Foto.“ und zeigt Gäste-Shop, Fotoauswahl und Produktkauf (ca. 12 Sekunden), ohne Dashboard-Einstieg.
+
+Desktop-Entwurf auf localhost gemeinsam mit John abgestimmt; Push am 20.10.2026 von John freigegeben. Browser-Darstellung, Shop-Startszene, check:i18n, typecheck und build geprüft.
