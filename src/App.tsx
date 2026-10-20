@@ -39,6 +39,15 @@ import PlanGate from './components/upgrade/PlanGate';
 import CameraAvailableOnly from './components/CameraAvailableOnly';
 const Team = seiteNachladen(() => import('./pages/Team'));
 
+// Static page also works when the dev server or host falls back to the SPA.
+function WebinarRedirect() {
+  const { search, hash } = useLocation();
+  useEffect(() => {
+    window.location.replace(`/webinar/index.html${search}${hash}`);
+  }, [search, hash]);
+  return null;
+}
+
 function AppShellMetaController() {
   const location = useLocation();
 
@@ -73,6 +82,7 @@ export default function App() {
             <NachladeGrenze>
             <Suspense fallback={<Ladeanzeige />}>
             <Routes>
+              <Route path="/webinar" element={<WebinarRedirect />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/privacy-policy" element={<PrivacyPolicy />} />

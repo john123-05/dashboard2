@@ -1,0 +1,978 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta property="og:title" content="Webinar für Liftpictures-Kunden: Ihr Fotosystem als Business-Tool">
+<meta property="og:image" content="https://dashboard-liftpictures.com/webinar/img/foto-umsatz.jpg">
+<title>Webinar: Ihr Fotosystem als Business-Tool | Liftpictures</title>
+<meta name="description" content="Webinar für Liftpictures-Kunden am 3. November 2026 um 17:00 Uhr: Das neue Liftpictures Dashboard macht Ihr Fotosystem zum Business-Tool.">
+<link rel="icon" href="/webinar/img/logo.webp">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #fcfcfa;
+    --fg: #1f1f1f;
+    --muted: #55534f;
+    --line: #e6e2da;
+    --soft: #f6f3ee;
+    --accent: #ff6600;
+    --accent-dark: #e05500;
+    --accent-text: #d95300;
+    --accent-soft: #fff3ea;
+    --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --sans: "Inter", system-ui, -apple-system, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 17px; line-height: 1.65; -webkit-font-smoothing: antialiased; }
+  img { display: block; max-width: 100%; }
+  a { color: inherit; }
+  button { font: inherit; color: inherit; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+  .wide { max-width: 1360px; margin: 0 auto; padding: 0 24px; }
+  section { padding: 112px 0; }
+
+  /* Platzhalter, die noch ausgefüllt werden müssen */
+  .ph { padding: 1px 6px; border: 1px dashed var(--accent); border-radius: 6px; background: var(--accent-soft); color: var(--accent-dark); font-weight: 600; white-space: nowrap; }
+
+  /* Schrift */
+  h1, h2, .serif { font-family: var(--serif); font-weight: 500; letter-spacing: -0.012em; }
+  h1 { max-width: 980px; margin: 0 auto; font-weight: 600; font-size: clamp(36px, 5.3vw, 68px); line-height: 1.12; }
+  h1 > b, h1 > span { display: block; font-weight: inherit; }
+  h1 > span { color: var(--accent-text); }
+  .hl-orange { color: var(--accent-text); }
+  h2 { font-size: clamp(30px, 3.7vw, 48px); line-height: 1.16; }
+  .eyebrow { margin-bottom: 18px; font-size: 14px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+  .text { margin-top: 22px; color: var(--muted); font-size: 18px; }
+
+  /* Knöpfe */
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 15px 28px; border: 2px solid var(--accent); border-radius: 8px; background: var(--accent); color: #fff; font-size: 16px; font-weight: 600; line-height: 1.3; text-decoration: none; cursor: pointer; transition: background .15s, border-color .15s, color .15s; }
+  .btn:hover { border-color: var(--accent-dark); background: var(--accent-dark); }
+  .btn.outline { background: transparent; color: var(--accent-text); }
+  .btn.outline:hover { background: var(--accent-soft); color: var(--accent-dark); }
+  .btn.lg { padding: 18px 36px; font-size: 17px; }
+  .btn.small { padding: 8px 16px; font-size: 14px; }
+
+  /* Navigation */
+  .top { position: sticky; top: 0; z-index: 20; background: rgba(252, 252, 250, 0.94); backdrop-filter: saturate(180%) blur(12px); -webkit-backdrop-filter: saturate(180%) blur(12px); border-bottom: 1px solid transparent; transition: border-color .2s, box-shadow .2s; }
+  .top.is-scrolled { border-bottom-color: var(--line); box-shadow: 0 1px 12px rgba(0, 0, 0, .04); }
+  .top .wide { display: flex; align-items: center; justify-content: space-between; height: 72px; }
+  .brand img { width: auto; height: 38px; }
+  .top-right { display: flex; align-items: center; gap: 10px; }
+
+  /* Kopf */
+  .hero { padding: 76px 0 64px; }
+  .hero-grid { display: grid; grid-template-columns: 1fr auto; gap: 48px; align-items: center; }
+  .hero h1 { margin: 0; }
+  .kicker { margin-bottom: 24px; font-size: 15px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+  .lead { max-width: 620px; margin-top: 28px; color: var(--muted); font-size: 18px; }
+  .hero-cta { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 36px; }
+
+  /* Stempel rechts im Kopf */
+  .stamp { width: clamp(220px, 24vw, 300px); transform: rotate(-9deg); filter: drop-shadow(0 18px 30px rgba(224, 85, 0, .28)); animation: stamp .55s cubic-bezier(.2, 1.4, .4, 1) .35s both; }
+  .stamp svg { display: block; width: 100%; height: auto; }
+  @keyframes stamp { from { opacity: 0; transform: rotate(-20deg) scale(1.45); } to { opacity: 1; transform: rotate(-9deg) scale(1); } }
+  .hero-meta { margin-top: 18px; color: var(--muted); font-size: 14px; }
+
+  /* Drei Funktionen: Fotokarten, die aktive wird breit und zeigt die Animation */
+  .feat { padding: 0 0 24px; }
+  .feat-track { display: flex; gap: 8px; height: clamp(470px, 40vw, 580px); }
+  .fcard { position: relative; flex: 1 1 0; min-width: 0; overflow: hidden; padding: 0; border: 0; border-radius: 4px; background: #2b2724; text-align: left; cursor: pointer; transition: flex-grow .75s cubic-bezier(.2, .75, .2, 1); }
+  .fcard.is-active { flex-grow: 3.4; }
+  .fcard > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .fcard::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0, 0, 0, .08) 0%, rgba(0, 0, 0, 0) 30%, rgba(0, 0, 0, .55) 58%, rgba(0, 0, 0, .82) 100%); pointer-events: none; }
+  .ftag { display: block; margin-bottom: 8px; color: #ff8a3d; font-family: var(--sans); font-size: 12.5px; font-weight: 700; line-height: 1.35; letter-spacing: .07em; text-transform: uppercase; hyphens: none; -webkit-hyphens: none; text-shadow: 0 1px 8px rgba(0,0,0,.35); }
+  .fcard:not(.is-active) .ftag { font-size: 11px; letter-spacing: .02em; hyphens: manual; -webkit-hyphens: manual; }
+  .fcap { position: absolute; right: 24px; bottom: 28px; left: 24px; hyphens: auto; -webkit-hyphens: auto; z-index: 2; color: #fff; font-family: var(--serif); font-size: clamp(20px, 1.75vw, 27px); font-weight: 500; line-height: 1.16; }
+  .preview { position: absolute; display: block; top: 8%; left: 6%; z-index: 2; width: min(62%, 500px); padding: 8px; border-radius: 14px; background: rgba(255, 255, 255, .2); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .38), 0 20px 50px rgba(0, 0, 0, .25); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); opacity: 0; transform: translateY(12px); transition: opacity .45s, transform .45s; pointer-events: none; }
+  .fcard.is-active .preview { opacity: 1; transform: none; transition-delay: .3s; }
+  .preview .stage { border-radius: 8px; aspect-ratio: 16 / 10; }
+  .play { position: absolute; top: 50%; left: 70%; display: grid; width: 66px; height: 66px; margin: -33px 0 0 -33px; place-items: center; border-radius: 50%; background: rgba(35, 35, 35, .55); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); color: #fff; transition: transform .2s, background .2s; }
+  .fcard:hover .play { transform: scale(1.06); background: rgba(35, 35, 35, .7); }
+  /* Karten, deren Foto selbst Handy oder Fernseher zeigt: Rahmen daneben, damit das Foto sichtbar bleibt */
+  .fcard > img { transition: object-position .75s cubic-bezier(.2, .75, .2, 1); }
+  .fcard.pv-right .preview { right: 5%; left: auto; width: min(50%, 400px); }
+  .fcard.pv-right.is-active > img { object-position: 94% 50% !important; }
+  .fcard.pv-low .preview { top: auto; right: 4%; bottom: 22%; left: auto; width: min(40%, 330px); }
+  .fcard.pv-low.is-active > img { object-position: 72% 50% !important; }
+  .feat-dots { display: none; }
+
+  /* Dashboard-Animation (Bühne mit Kamera, Mauszeiger, Markierung) */
+  .stage { position: relative; display: block; overflow: hidden; background: #f4f5f7; }
+  .stage .cv { position: absolute; top: 0; left: 0; transform-origin: 0 0; will-change: transform; transition: opacity .4s; }
+  .stage .cv.off { opacity: 0; }
+  .stage .cv > img { max-width: none; }
+  .stage .hl { position: absolute; border-radius: 12px; background: rgba(255, 102, 0, .06); box-shadow: 0 0 0 var(--bw, 3px) var(--accent), 0 0 0 4000px rgba(20, 20, 20, .16); opacity: 0; transition: opacity .35s, left .5s, top .5s, width .5s, height .5s; pointer-events: none; }
+  .stage .hl.on { opacity: 1; }
+  .stage .cur { position: absolute; top: 0; left: 0; width: 24px; height: 24px; transform-origin: 0 0; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .35)); pointer-events: none; }
+  .stage .rip { position: absolute; border-radius: 50%; background: rgba(255, 102, 0, .38); pointer-events: none; }
+  .stage .cap { position: absolute; bottom: 14px; left: 14px; max-width: calc(100% - 28px); padding: 7px 13px; border-radius: 8px; background: rgba(22, 22, 22, .8); color: #fff; font-size: 14px; line-height: 1.4; opacity: 0; transform: translateY(6px); transition: opacity .3s, transform .3s; }
+  .stage .cap.on { opacity: 1; transform: none; }
+
+  /* Großes Fenster mit der Animation */
+  .modal { position: fixed; inset: 0; z-index: 60; display: grid; padding: 24px; place-items: center; background: rgba(16, 16, 16, .94); opacity: 0; transition: opacity .25s; }
+  .modal.is-open { opacity: 1; }
+  .modal[hidden] { display: none; }
+  .m-box { width: min(1120px, 100%); }
+  .m-stage { border-radius: 6px; aspect-ratio: 1568 / 782; box-shadow: 0 30px 80px rgba(0, 0, 0, .45); }
+  .m-bar { display: flex; align-items: center; gap: 14px; margin-top: 14px; color: #fff; font-size: 13px; font-variant-numeric: tabular-nums; }
+  .m-pp { display: grid; width: 36px; height: 36px; flex: 0 0 36px; place-items: center; border: 0; border-radius: 50%; background: rgba(255, 255, 255, .14); color: #fff; cursor: pointer; }
+  .m-pp:hover { background: rgba(255, 255, 255, .24); }
+  .m-prog { position: relative; flex: 1; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, .22); cursor: pointer; }
+  .m-prog::before { content: ""; position: absolute; inset: -10px 0; }
+  .m-prog i { position: absolute; top: 0; bottom: 0; left: 0; width: 0; border-radius: 2px; background: var(--accent); }
+  .m-info { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 18px; margin-top: 22px; color: #fff; }
+  .m-info h3 { font-size: clamp(24px, 2.6vw, 32px); line-height: 1.2; }
+  .m-info p { max-width: 620px; margin-top: 6px; color: #c9c6c0; font-size: 16px; }
+  .btn.m-next { border-color: rgba(255, 255, 255, .5); color: #fff; }
+  .btn.m-next:hover { border-color: #fff; background: rgba(255, 255, 255, .1); color: #fff; }
+  .m-close { position: fixed; top: 18px; right: 18px; display: grid; width: 44px; height: 44px; place-items: center; border: 0; border-radius: 50%; background: #213343; color: #fff; cursor: pointer; }
+  .m-close:hover { background: #2d4559; }
+
+  /* Bisher im Blindflug + alle Funktionen */
+  .overview { background: var(--soft); }
+  .ov-grid { display: grid; grid-template-columns: 5fr 7fr; gap: 64px; align-items: start; }
+  .ov-left { position: sticky; top: 120px; }
+  .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .tile { display: flex; flex-direction: column; padding: 26px 24px 22px; border: 1px solid rgba(0, 0, 0, .09); border-radius: 12px; background: #fff; }
+  .tile-head { display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 600; line-height: 1.3; }
+  .tile-head svg { flex: 0 0 22px; color: var(--accent); }
+  .tile ul { display: grid; gap: 8px; margin: 16px 0 0; list-style: none; }
+  .tile li { display: flex; gap: 10px; color: var(--muted); font-size: 15px; line-height: 1.5; }
+  .tile li svg { flex: 0 0 16px; margin-top: 3px; color: var(--accent); }
+  .tile:last-child:nth-child(odd) { grid-column: 1 / -1; }
+  .tile-link { align-self: flex-start; margin-top: auto; padding-top: 20px; border: 0; background: none; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .tile-link span { border-bottom: 2px solid var(--accent); }
+  .tile-link:hover { color: var(--accent-text); }
+
+  /* Vorab-Video */
+  .glow { background: linear-gradient(115deg, #fff3ea 0%, #ffe2cf 50%, #ffd1b1 100%); }
+  .glow-head { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: end; }
+  .glow-head .text { margin-top: 0; }
+  .video { position: relative; margin-top: 48px; overflow: hidden; border-radius: 14px; background: #000; box-shadow: 0 30px 70px rgba(120, 50, 0, .18); aspect-ratio: 16 / 9; }
+  .video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+
+  /* Ablauf des Webinars */
+  .flow-head { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: end; }
+  .flow-head .text { margin-top: 0; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px 22px; margin-top: 28px; color: var(--muted); font-size: 15px; }
+  .chips span { display: inline-flex; align-items: center; gap: 8px; }
+  .chips svg { color: var(--accent); }
+  .flow-grid { display: grid; grid-template-columns: 7fr 5fr; gap: 56px; align-items: start; margin-top: 56px; }
+  .flow-grid > .reveal:first-child { position: sticky; top: 110px; }
+
+  .call { overflow: hidden; border-radius: 14px; background: #1b1c1f; box-shadow: 0 30px 70px rgba(0, 0, 0, .18); }
+  .call-top { display: flex; align-items: center; gap: 10px; padding: 11px 16px; color: #d6d6d6; font-size: 13px; }
+  .call-top i { width: 10px; height: 10px; border-radius: 50%; background: #45464b; }
+  .call-top b { margin-left: 8px; color: #fff; font-weight: 600; }
+  .call-top .live { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; padding: 3px 9px; border-radius: 5px; background: #e5322d; color: #fff; font-size: 11px; font-weight: 700; letter-spacing: .06em; }
+  .call-top .live::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: #fff; }
+  .call-body { display: grid; grid-template-columns: 1fr 26%; gap: 6px; padding: 0 6px; }
+  .call-main { position: relative; overflow: hidden; border-radius: 8px; aspect-ratio: 16 / 9; }
+  .call-main img { width: 100%; height: 100%; object-fit: cover; }
+  .call-name { position: absolute; bottom: 10px; left: 10px; padding: 4px 9px; border-radius: 5px; background: rgba(0, 0, 0, .55); color: #fff; font-size: 12px; }
+  .call-share { position: absolute; top: 10px; right: 10px; width: 34%; overflow: hidden; border: 2px solid rgba(255, 255, 255, .85); border-radius: 6px; box-shadow: 0 8px 20px rgba(0, 0, 0, .35); }
+  .call-share img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; object-position: left top; }
+  .call-people { display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; gap: 6px; }
+  .call-people span { position: relative; display: grid; place-items: center; border-radius: 7px; background: #2a2b30; color: #fff; font-size: 13px; font-weight: 600; }
+  .call-people span::before { content: attr(data-i); display: grid; width: 34px; height: 34px; place-items: center; border-radius: 50%; background: var(--c); font-size: 13px; }
+  .call-people span:not(:last-child) { font-size: 0; }
+  .call-people span.hand::after { content: "✋"; position: absolute; top: 5px; right: 6px; font-size: 13px; }
+  .call-people span.more::before { display: none; }
+  .call-bar { display: flex; justify-content: center; gap: 10px; padding: 12px; }
+  .call-bar i { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 50%; background: #34353a; color: #e6e6e6; }
+  .call-bar i.end { width: 50px; border-radius: 17px; background: #e5322d; }
+  .call-cap { margin-top: 14px; color: var(--muted); font-size: 13px; text-align: center; }
+
+  .agenda { display: grid; gap: 0; list-style: none; counter-reset: step; }
+  .agenda li { position: relative; padding: 0 0 30px 58px; counter-increment: step; }
+  .agenda li::before { content: "0" counter(step); position: absolute; top: -2px; left: 0; display: grid; width: 40px; height: 40px; place-items: center; border-radius: 50%; background: var(--accent-soft); color: var(--accent-text); font-size: 14px; font-weight: 700; }
+  .agenda li:not(:last-child)::after { content: ""; position: absolute; top: 44px; bottom: 4px; left: 19.5px; width: 1px; background: var(--line); }
+  .agenda h3 { font-size: 18px; line-height: 1.35; }
+  .agenda p { margin-top: 4px; color: var(--muted); font-size: 15.5px; line-height: 1.55; }
+
+  .flow .eyebrow { font-size: clamp(16px, 1.6vw, 20px); font-weight: 700; }
+  .flow h2.caps { font-family: var(--sans); font-size: clamp(28px, 3.3vw, 44px); font-weight: 800; line-height: 1.08; letter-spacing: -0.02em; text-transform: uppercase; }
+  .flow h2.caps span { color: var(--accent-text); }
+  .ag-topic { display: block; margin-bottom: 4px; color: var(--accent-text); font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+  .ag-who { display: inline-flex; align-items: center; gap: 8px; margin: -4px 0 10px; padding: 4px 12px 4px 4px; border: 1px solid var(--line); border-radius: 999px; background: #fff; font-size: 13px; font-weight: 600; }
+  .ag-who img { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; }
+  img.spk-av { width: 76px; height: 76px; flex: 0 0 76px; object-fit: cover; }
+  .li-btn { display: inline-flex; align-items: center; gap: 8px; margin-top: 16px; padding: 9px 16px; border-radius: 8px; background: #0a66c2; color: #fff; font-size: 14px; font-weight: 600; text-decoration: none; transition: background .15s; }
+  .li-btn:hover { background: #004182; }
+  .li-btn .ph { margin-left: 4px; font-size: 12px; }
+  .speakers { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 56px; }
+  .spk { display: flex; gap: 18px; align-items: flex-start; padding: 26px; border: 1px solid rgba(0, 0, 0, .09); border-radius: 14px; background: var(--soft); }
+  .spk-av { display: grid; width: 64px; height: 64px; flex: 0 0 64px; place-items: center; border-radius: 50%; background: var(--fg); color: #fff; font-size: 20px; font-weight: 600; }
+  .spk-av.orange { background: var(--accent); }
+  .spk-role { color: var(--accent-text); font-size: 12.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
+  .spk h3 { margin-top: 2px; font-size: 24px; line-height: 1.25; }
+  .spk p { margin-top: 8px; color: var(--muted); font-size: 15.5px; line-height: 1.55; }
+
+  /* Anmeldung */
+  .signup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: start; }
+  .facts { margin-top: 32px; border-top: 1px solid var(--line); }
+  .facts > div { display: flex; justify-content: space-between; gap: 18px; padding: 14px 0; border-bottom: 1px solid var(--line); font-size: 16px; }
+  .facts span:first-child { color: var(--muted); }
+  .facts span:last-child { font-weight: 600; text-align: right; }
+  .speaker { display: flex; align-items: center; gap: 14px; margin-top: 28px; }
+  .speaker + .speaker { margin-top: 14px; }
+  .speaker .avatar { display: grid; width: 48px; height: 48px; place-items: center; border-radius: 50%; background: var(--fg); color: #fff; font-weight: 600; }
+  .speaker p { color: var(--muted); font-size: 14px; }
+  .speaker strong { display: block; color: var(--fg); font-size: 16px; }
+  form { display: grid; gap: 16px; padding: 34px; border: 1px solid rgba(0, 0, 0, .09); border-radius: 12px; background: #fff; box-shadow: 0 20px 50px rgba(0, 0, 0, .05); }
+  .form-title { margin-bottom: 4px; font-size: 26px; line-height: 1.2; }
+  label { display: grid; gap: 6px; font-size: 14px; font-weight: 500; }
+  input { width: 100%; padding: 13px 14px; border: 1px solid #cfcbc3; border-radius: 6px; background: #fff; color: var(--fg); font: inherit; font-size: 16px; transition: border-color .15s, box-shadow .15s; }
+  input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 4px rgba(255, 102, 0, .12); }
+  form .btn { width: 100%; margin-top: 4px; }
+  .fine { color: var(--muted); font-size: 13px; }
+  .fine a { color: inherit; }
+  .form-error { color: #b42318; font-weight: 600; }
+  .success { display: none; padding: 40px 34px; border: 1px solid rgba(0, 0, 0, .09); border-radius: 12px; background: #fff; text-align: center; }
+  .success.is-on { display: grid; gap: 12px; justify-items: center; }
+  .success .check { display: grid; width: 56px; height: 56px; place-items: center; border-radius: 50%; background: var(--accent-soft); color: var(--accent); }
+  .success h3 { font-size: 26px; }
+
+  .alt { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 24px; margin-top: 64px; padding: 36px 40px; border: 1px solid rgba(0, 0, 0, .09); border-radius: 16px; background: #fff; }
+  .alt h3 { font-size: clamp(24px, 2.4vw, 30px); line-height: 1.2; }
+  .alt p { margin-top: 6px; color: var(--muted); font-size: 16px; }
+
+  footer { padding: 44px 0 56px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; }
+  footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; }
+  footer .links { display: flex; flex-wrap: wrap; gap: 12px 20px; }
+  footer a { text-decoration: none; }
+  footer a:hover { color: var(--fg); }
+
+  /* Anmelde-Knopf unten am Handy */
+  .sticky-cta { position: fixed; right: 12px; bottom: 12px; left: 12px; z-index: 30; display: none; transform: translateY(140%); transition: transform .3s; }
+  .sticky-cta.is-on { transform: translateY(0); }
+  .sticky-cta .btn { width: 100%; box-shadow: 0 10px 30px rgba(255, 102, 0, .35); }
+
+  /* Einblenden beim Scrollen */
+  .reveal { opacity: 0; transform: translateY(18px); transition: opacity .7s ease, transform .7s ease; }
+  .reveal.is-in { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: reduce) {
+    .reveal { opacity: 1; transform: none; transition: none; }
+    .fcard, .preview { transition: none; }
+    .stamp { animation: none; }
+  }
+
+  @media (max-width: 900px) {
+    section { padding: 80px 0; }
+    .ov-grid, .signup-grid, .glow-head { grid-template-columns: 1fr; gap: 36px; }
+    .ov-left { position: static; }
+    .flow-head, .flow-grid, .speakers { grid-template-columns: 1fr; gap: 32px; }
+    .flow-grid { margin-top: 40px; }
+    .flow-grid > .reveal:first-child { position: static; }
+    /* Am Handy: Karten seitlich wischen */
+    .feat .wide { padding: 0; }
+    .feat-track { height: auto; gap: 10px; padding: 0 16px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding: 0 16px; scrollbar-width: none; }
+    .feat-track::-webkit-scrollbar { display: none; }
+    .fcard { flex: 0 0 84%; height: 500px; scroll-snap-align: center; }
+    .fcard.is-active { flex-grow: 0; }
+    .preview { top: 18px; left: 5%; width: 90%; opacity: 1; transform: none; }
+    .fcard.pv-right .preview { top: 18px; right: 5%; left: auto; width: 62%; }
+    .fcard.pv-right.is-active > img { object-position: 30% 50% !important; }
+    .fcard.pv-low .preview { top: auto; right: 5%; bottom: 120px; left: auto; width: 62%; }
+    .fcard.pv-low.is-active > img { object-position: 62% 50% !important; }
+    .fcap { right: 22px; bottom: 22px; left: 22px; }
+    .feat-dots { display: flex; justify-content: center; gap: 8px; margin-top: 18px; }
+    .feat-dots button { width: 8px; height: 8px; padding: 0; border: 0; border-radius: 50%; background: #cfcbc3; cursor: pointer; transition: width .2s, background .2s; }
+    .feat-dots button.on { width: 22px; border-radius: 4px; background: var(--accent); }
+  }
+  @media (max-width: 600px) {
+    body { font-size: 16px; }
+    .top-right .outline { display: none; }
+    .hero { padding: 36px 0 40px; }
+    .hero-grid { grid-template-columns: 1fr; gap: 0; }
+    .stamp { order: -1; justify-self: end; width: 184px; margin: 0 -4px 6px 0; }
+    .hero .kicker { display: none; }
+    .lead, .text { font-size: 17px; }
+    .hero-cta .btn { width: 100%; }
+    .tiles { grid-template-columns: 1fr; }
+    form { padding: 24px; }
+    .alt { padding: 28px 24px; }
+    .modal { padding: 12px; }
+    .m-close { top: 10px; right: 10px; }
+    .stage .cap { bottom: 8px; left: 8px; padding: 5px 9px; font-size: 12px; }
+    .sticky-cta { display: block; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="top" id="top">
+  <div class="wide">
+    <a class="brand" href="#top"><img src="/webinar/img/logo.png" alt="Liftpictures"></a>
+    <div class="top-right">
+      <a class="btn small outline" href="https://calendly.com/kontakt-liftpictures-fotosysteme/30min" target="_blank" rel="noopener">Persönlicher Termin</a>
+      <a class="btn small" href="#anmeldung">Jetzt anmelden</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wide hero-grid">
+    <div>
+    <p class="kicker reveal">Webinar für Liftpictures-Bestandskunden</p>
+    <h1 class="reveal"><b>Endlich planbarer Fotoumsatz &amp; Gäste begeistern!</b> <span>Ihr Fotosystem als <span style="white-space:nowrap">Business-Tool</span></span></h1>
+    <p class="lead reveal">Am 3. November um 17:00 Uhr zeigen wir Ihnen das neue Liftpictures Dashboard: Umsätze, Technik und Gästekontakte an einem Ort.</p>
+    <div class="hero-cta reveal">
+      <a class="btn lg" href="#anmeldung">Jetzt anmelden</a>
+      <a class="btn lg outline" href="#video">Vorab-Video ansehen</a>
+    </div>
+    <p class="hero-meta reveal">60 Minuten · Aufzeichnung für alle Angemeldeten</p>
+    </div>
+    <div class="stamp" role="img" aria-label="Kostenloses Webinar für Bestandskunden am 3. November, 17:00 Uhr">
+      <svg viewBox="0 0 300 300" aria-hidden="true">
+        <circle cx="150" cy="150" r="146" fill="#ff6600"/>
+        <circle cx="150" cy="150" r="137" fill="none" stroke="#fff" stroke-width="2.5"/>
+        <text x="150" y="88" fill="#fff" font-family="Inter, sans-serif" font-size="25" font-weight="800" text-anchor="middle" letter-spacing="2">KOSTENLOS</text>
+        <text x="150" y="113" fill="#fff" font-family="Inter, sans-serif" font-size="14" font-weight="700" text-anchor="middle" letter-spacing="1.5">FÜR BESTANDSKUNDEN</text>
+        <line x1="72" y1="131" x2="228" y2="131" stroke="#fff" stroke-width="2"/>
+        <text x="150" y="174" fill="#fff" font-family="Inter, sans-serif" font-size="38" font-weight="800" text-anchor="middle" letter-spacing="1">WEBINAR</text>
+        <text x="150" y="216" fill="#fff" font-family="Inter, sans-serif" font-size="38" font-weight="800" text-anchor="middle">3. NOV.</text>
+        <text x="150" y="243" fill="#fff" font-family="Inter, sans-serif" font-size="15" font-weight="600" text-anchor="middle" letter-spacing="2">17:00 UHR</text>
+      </svg>
+    </div>
+  </div>
+</header>
+
+<section class="feat" aria-label="Das zeigen wir im Webinar">
+  <div class="wide">
+    <div class="feat-track" id="track">
+      <button type="button" class="fcard is-active" data-demo="umsatz" aria-label="Animation ansehen: Umsätze live einsehen und auswerten">
+        <img src="/webinar/img/foto-umsatz.jpg" alt="" style="object-position: 40% 50%">
+        <span class="preview"><span class="stage"></span><span class="play"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg></span></span>
+        <span class="fcap"><span class="ftag">Statistik&shy;funktionen</span>Umsätze live einsehen und auswerten.</span>
+      </button>
+      <button type="button" class="fcard" data-demo="technik" aria-label="Animation ansehen: Technische Probleme sofort sehen">
+        <img src="/webinar/img/foto-technik.jpg" alt="" style="object-position: 60% 50%">
+        <span class="preview"><span class="stage"></span><span class="play"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg></span></span>
+        <span class="fcap"><span class="ftag">Echtzeit-Einblicke</span>Technische Probleme sofort verstehen.</span>
+      </button>
+      <button type="button" class="fcard" data-demo="marketing" aria-label="Animation ansehen: Marketing-Tool mit echtem CRM">
+        <img src="/webinar/img/foto-marketing.jpg" alt="" style="object-position: 50% 50%">
+        <span class="preview"><span class="stage"></span><span class="play"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg></span></span>
+        <span class="fcap"><span class="ftag">Marketing-Tool mit echtem CRM</span>Fotos freischalten im Austausch für Besucherdaten.</span>
+      </button>
+      <button type="button" class="fcard pv-right" data-demo="shop" aria-label="Animation ansehen: Unverkaufte Bilder nach Parkschluss verkaufen">
+        <img src="/webinar/img/foto-shop.jpg" alt="" style="object-position: 50% 50%">
+        <span class="preview"><span class="stage"></span><span class="play"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg></span></span>
+        <span class="fcap"><span class="ftag">Online-Shop</span>Geben Sie Gästen die Chance, unverkaufte Bilder nachzukaufen.</span>
+      </button>
+      <button type="button" class="fcard pv-low" data-demo="speed" aria-label="Animation ansehen: Speedmessung mit Bestenliste">
+        <img src="/webinar/img/foto-speed.jpg" alt="" style="object-position: 40% 50%">
+        <span class="preview"><span class="stage"></span><span class="play"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg></span></span>
+        <span class="fcap"><span class="ftag">Speed-Messung 2.0</span>Die Attraktion wird zum Videospiel.</span>
+      </button>
+    </div>
+    <div class="feat-dots" id="dots" aria-hidden="true"><button class="on"></button><button></button><button></button><button></button><button></button></div>
+  </div>
+</section>
+
+<section class="overview">
+  <div class="wrap ov-grid">
+    <div class="ov-left reveal">
+      <h2>Ihr Fotosystem besteht aus komplexer Technik, <span class="hl-orange">jetzt wird es für Sie auch verständlich.</span></h2>
+      <p class="text">Umsätze sahen Sie bisher nur am Automaten oder per E-Mail, Ausfälle fielen oft erst auf, wenn ein Gast davorstand. Das neue Liftpictures Dashboard bringt Umsatz, Technik und Gästekontakte an einen Ort, am Computer und am Handy.</p>
+      <div class="hero-cta">
+        <a class="btn" href="#anmeldung">Jetzt anmelden</a>
+      </div>
+    </div>
+
+    <div class="tiles">
+      <div class="tile reveal">
+        <div class="tile-head"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 6-7"/></svg>Umsätze live</div>
+        <ul>
+          <li><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Heute, diese Woche, dieser Monat</li>
+          <li><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Jederzeit, auch von unterwegs</li>
+        </ul>
+        <button type="button" class="tile-link" data-open="umsatz"><span>Animation ansehen</span> →</button>
+      </div>
+      <div class="tile reveal">
+        <div class="tile-head"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Systemzustand</div>
+        <ul>
+          <li><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Zustand jedes Geräts auf einen Blick</li>
+          <li><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Automatische Benachrichtigung, wenn etwas nicht läuft</li>
+        </ul>
+        <button type="button" class="tile-link" data-open="technik"><span>Animation ansehen</span> →</button>
+      </div>
+      <div class="tile reveal">
+        <div class="tile-head"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>Marketing-CRM</div>
+        <ul>
+          <li><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Gäste schalten ihre Bilder über eine Seite im Design Ihres Parks frei</li>
+          <li><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>E-Mail-Adressen für Marketing und Umfragen</li>
+        </ul>
+        <button type="button" class="tile-link" data-open="marketing"><span>Animation ansehen</span> →</button>
+      </div>
+      <div class="tile reveal">
+        <div class="tile-head"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>Online-Shop</div>
+        <ul>
+          <li><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Gäste kaufen ihre Bilder auch nach Parkschluss</li>
+          <li><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Unverkaufte Bilder bekommen eine zweite Chance</li>
+        </ul>
+        <button type="button" class="tile-link" data-open="shop"><span>Animation ansehen</span> →</button>
+      </div>
+      <div class="tile reveal">
+        <div class="tile-head"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 14l4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg>Speedmessung</div>
+        <ul>
+          <li><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Das Tempo jeder Fahrt steht auf dem Foto</li>
+          <li><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Bestenliste für den Bildschirm an der Bahn</li>
+        </ul>
+        <button type="button" class="tile-link" data-open="speed"><span>Animation ansehen</span> →</button>
+      </div>
+      <div class="tile reveal">
+        <div class="tile-head"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Mitarbeiterzugänge</div>
+        <ul>
+          <li><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Eigene Zugänge für Ihr Team</li>
+        </ul>
+      </div>
+      <div class="tile reveal">
+        <div class="tile-head"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>Alle Bilder live in der App</div>
+        <ul>
+          <li><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Jedes Foto sofort sehen, auch am Handy</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="glow" id="video">
+  <div class="wrap">
+    <div class="glow-head reveal">
+      <div>
+        <p class="eyebrow">Vorab ein Eindruck</p>
+        <h2>Die 3 wichtigsten Funktionen von vielen erklärt.</h2>
+      </div>
+      <p class="text">Ein kurzer Überblick, wie das Dashboard aufgebaut ist. Im Webinar gehen wir dann gemeinsam in die Tiefe.</p>
+    </div>
+    <div class="video reveal">
+      <iframe src="https://www.loom.com/embed/0abfa46f7adf45cea10b32c2c8f8c2cc?hideEmbedTopBar=true" title="Vorab-Video zum Liftpictures Dashboard" allow="fullscreen" loading="lazy"></iframe>
+    </div>
+  </div>
+</section>
+
+<section class="flow" id="ablauf">
+  <div class="wrap">
+    <div class="flow-head reveal">
+      <div>
+        <p class="eyebrow">Das Webinar für Liftpictures-Kunden</p>
+        <h2 class="caps"><span>60 Minuten.</span> So holen Sie mehr aus Ihrer Fotoanlage heraus.</h2>
+      </div>
+      <p class="text">Wir erzählen, was wir in den Parks erlebt haben, gehen live durch die Funktionen und nehmen uns Zeit für Ihre Fragen.</p>
+    </div>
+    <div class="chips reveal">
+      <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>60 Minuten</span>
+      <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Live und online</span>
+      <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Fragen jederzeit möglich</span>
+      <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Aufzeichnung inklusive</span>
+    </div>
+
+    <div class="flow-grid">
+      <div class="reveal">
+        <div class="call" role="img" aria-label="Beispielansicht des Webinars: Referent im Video, daneben das Dashboard und die Teilnehmer">
+          <div class="call-top"><i></i><i></i><i></i><b>Liftpictures Webinar</b><span class="live">LIVE</span></div>
+          <div class="call-body">
+            <div class="call-main">
+              <img src="/webinar/img/webinar-speaker.jpg" alt="">
+              <div class="call-share"><img src="/webinar/img/uebersicht.jpg" alt=""></div>
+              <span class="call-name">Liftpictures</span>
+            </div>
+            <div class="call-people"><span data-i="MK" style="--c:#7b5ea7"></span><span data-i="SB" style="--c:#2f7d6d"></span><span data-i="AL" style="--c:#c0623b" class=hand></span><span data-i="JW" style="--c:#3c6db0"></span><span data-i="PH" style="--c:#9a7b2f"></span><span data-i="TR" style="--c:#b0435f"></span><span data-i="EF" style="--c:#4f7f3a"></span><span class="more">+ weitere</span></div>
+          </div>
+          <div class="call-bar">
+            <i><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5"/></svg></i>
+            <i><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="m22 8-6 4 6 4z"/></svg></i>
+            <i><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></i>
+            <i><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 11V6a2 2 0 0 0-4 0M14 10V4a2 2 0 0 0-4 0v2M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg></i>
+            <i class="end"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08a.99.99 0 0 1 0-1.41C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67a1 1 0 0 1 0 1.41l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28a11.27 11.27 0 0 0-2.67-1.85.996.996 0 0 1-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"/></svg></i>
+          </div>
+        </div>
+        <p class="call-cap">So sieht es aus: Video, Dashboard live und alle Teilnehmer in einem Fenster.</p>
+      </div>
+
+      <ol class="agenda reveal">
+        <li><span class="ag-who"><img src="/webinar/img/john.jpg" alt="">John Nolting</span><span class="ag-topic">Rundgang</span><h3>Gemeinsamer Rundgang durch das Dashboard</h3><p>Wir zeigen Ihnen live alle Funktionen und wie Sie sie in Ihrem Park einsetzen.</p></li>
+        <li><span class="ag-who"><img src="/webinar/img/john.jpg" alt="">John Nolting</span><span class="ag-topic">Unsere Erfahrung</span><h3>So nutzen Ihre Gäste die neuen Angebote</h3><p>Wie Sie Online-Shop, Speed-Messung und Freischaltseite an Ihrer Anlage so zeigen, dass Gäste sie sofort verstehen und mitmachen.</p></li>
+        <li><span class="ag-who"><img src="/webinar/img/tom.jpg" alt="">Tom Nolting</span><span class="ag-topic">Erfahrungen von Liftpictures</span><h3>20 Jahre Erfahrung: Mit welchen Hebeln konnten wir den Fotoumsatz steigern?</h3><p>Die technische Entwicklung über die Jahre: Was funktioniert 2026, was nicht, und worauf es bei der Hardware ankommt.</p></li>
+        <li><span class="ag-topic">Zum Schluss</span><h3>Ihre Fragen</h3><p>Danach ist Zeit für alles, was Sie wissen möchten.</p></li>
+      </ol>
+    </div>
+
+    <div class="speakers">
+      <div class="spk reveal">
+        <img class="spk-av" src="/webinar/img/tom.jpg" alt="Tom Nolting">
+        <div><span class="spk-role">CEO, Liftpictures</span><h3 class="serif">Tom Nolting</h3><p>20 Jahre Erfahrung mit Fotoanlagen: Er zeigt, mit welchen Hebeln Parks ihren Fotoumsatz gesteigert und mehr Kundendaten gewonnen haben.</p>
+          <a class="li-btn" href="https://www.linkedin.com/in/tom-nolting-1278703a2/" target="_blank" rel="noopener"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6zM2 9h4v12H2zM4 2a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"/></svg>Auf LinkedIn ansehen</a></div>
+      </div>
+      <div class="spk reveal">
+        <img class="spk-av" src="/webinar/img/john.jpg" alt="John Nolting">
+        <div><span class="spk-role">Web Development &amp; Datenanalyse</span><h3 class="serif">John Nolting</h3><p>Zeigt aus unserer Erfahrung, wie Sie das Dashboard ideal an Ihre Gäste bringen.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="anmeldung">
+  <div class="wrap signup-grid">
+    <div class="reveal">
+      <p class="eyebrow">Anmeldung</p>
+      <h2>Sichern Sie sich Ihren Platz.</h2>
+      <p class="text">Melden Sie sich an, wir schicken Ihnen den Link zum Webinar. Wenn Sie live nicht dabei sein können, bekommen Sie die Aufzeichnung.</p>
+      <div class="facts">
+        <div><span>Datum</span><span>Dienstag, 3. November 2026</span></div>
+        <div><span>Uhrzeit</span><span>17:00 Uhr (MEZ)</span></div>
+        <div><span>Dauer</span><span>60 Minuten</span></div>
+        <div><span>Format</span><span>Live, online</span></div>
+        <div><span>Aufzeichnung</span><span>Ja, für alle Angemeldeten</span></div>
+      </div>
+      <div class="speaker">
+        <img class="avatar" src="/webinar/img/tom.jpg" alt="" style="object-fit: cover">
+        <div><strong>Tom Nolting</strong><p>CEO, Liftpictures</p></div>
+      </div>
+      <div class="speaker">
+        <img class="avatar" src="/webinar/img/john.jpg" alt="" style="object-fit: cover">
+        <div><strong>John Nolting</strong><p>Web Development &amp; Datenanalyse</p></div>
+      </div>
+    </div>
+
+    <div class="reveal">
+      <form id="form" novalidate>
+        <h3 class="form-title serif">Jetzt anmelden</h3>
+        <label>Name<input name="name" maxlength="160" autocomplete="name" required placeholder="Vor- und Nachname"></label>
+        <label>E-Mail<input name="email" maxlength="254" type="email" autocomplete="email" required placeholder="name@ihr-park.de"></label>
+        <label>Parkname<input name="park" maxlength="200" autocomplete="organization" required placeholder="Name Ihres Parks"></label>
+        <button class="btn" type="submit">Jetzt anmelden</button>
+        <input type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
+        <p class="fine">Wir nutzen Ihre Angaben nur für dieses Webinar. Mehr dazu in der <a href="/privacy-policy">Datenschutzerklärung</a>.</p>
+        <p class="fine form-error" id="form-error" role="alert" hidden></p>
+      </form>
+      <div class="success" id="success" role="status">
+        <div class="check"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
+        <h3 class="serif">Danke, Sie sind angemeldet.</h3>
+        <p class="fine">Den Link zum Webinar schicken wir Ihnen per E-Mail.</p>
+        <a class="btn outline small" id="ics" href="#" download="liftpictures-webinar.ics">In den Kalender eintragen</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="alt reveal">
+      <div><h3 class="serif">Lieber ein persönlicher Termin?</h3><p>Wir zeigen Ihnen das Dashboard auch einzeln in 30 Minuten.</p></div>
+      <a class="btn outline" href="https://calendly.com/kontakt-liftpictures-fotosysteme/30min" target="_blank" rel="noopener">Termin wählen</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 Liftpictures</span>
+    <div class="links">
+      <a href="mailto:info@liftpictures.com">info@liftpictures.com</a>
+      <a href="https://www.liftpictures.com/impressum" target="_blank" rel="noopener">Impressum</a>
+      <a href="/privacy-policy">Datenschutz</a>
+    </div>
+  </div>
+</footer>
+
+<div class="sticky-cta" id="sticky"><a class="btn" href="#anmeldung">Jetzt anmelden · 3. Nov., 17 Uhr</a></div>
+
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="m-title" hidden>
+  <button type="button" class="m-close" id="m-close" aria-label="Schließen"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+  <div class="m-box">
+    <div class="stage m-stage" id="m-stage"></div>
+    <div class="m-bar">
+      <button type="button" class="m-pp" id="m-pp" aria-label="Pause"></button>
+      <div class="m-prog" id="m-prog"><i id="m-fill"></i></div>
+      <span id="m-time">0:00 / 0:00</span>
+    </div>
+    <div class="m-info">
+      <div><h3 class="serif" id="m-title"></h3><p id="m-text"></p></div>
+      <button type="button" class="btn outline small m-next" id="m-next"></button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Kopfzeile mit Linie beim Scrollen, Anmelde-Knopf unten am Handy (nicht über der Anmeldung).
+  const topBar = document.querySelector('.top');
+  const sticky = document.getElementById('sticky');
+  const signup = document.getElementById('anmeldung');
+  const onScroll = () => {
+    topBar.classList.toggle('is-scrolled', scrollY > 8);
+    const r = signup.getBoundingClientRect();
+    sticky.classList.toggle('is-on', scrollY > 500 && (r.top > innerHeight || r.bottom < 0));
+  };
+  addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+
+  // Sanftes Einblenden
+  const io = new IntersectionObserver((entries) => entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); } }), { threshold: 0.12 });
+  document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
+
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ---------------------------------------------------------------------------------------------
+  // Dashboard-Animationen: echte Screenshots aus dem Demo Park. Jede Animation hat eine oder mehrere
+  // Szenen (Bilder) und eine Liste von Haltepunkten: Szene sc, Kamera [Mitte x, Mitte y, Zoom],
+  // Mauszeiger [x, y], Markierung [x, y, b, h], Klick und Untertitel. Dazwischen wird weich übergeblendet,
+  // bei einem Szenenwechsel wird das Bild überblendet.
+  // ---------------------------------------------------------------------------------------------
+  const DEMOS = {
+    umsatz: {
+      scenes: [{ img: '/webinar/img/umsatz.jpg', w: 1568, h: 782 }],
+      title: 'Umsätze live einsehen und auswerten',
+      text: 'Heute, diese Woche, dieser Monat: jederzeit, auch von unterwegs.',
+      steps: [
+        { t: 0, cam: [600, 391, 1], cur: [980, 640] },
+        { t: 1.6, cam: [600, 391, 1], cur: [66, 168], click: true, hl: [10, 154, 189, 29], cap: 'Umsatz im Menü öffnen', d: 1.3 },
+        { t: 3.6, cam: [560, 190, 2], cur: [400, 198], hl: [236, 131, 311, 116], cap: 'Heute: Umsatz, verkaufte Fotos und Fahrten', d: 1.3 },
+        { t: 5.6, cam: [1010, 190, 2], cur: [1060, 198], hl: [898, 131, 311, 116], cap: 'Dieser Monat auf einen Blick', d: 1.2 },
+        { t: 7.4, cam: [560, 330, 2], cur: [700, 334], hl: [567, 268, 311, 116], cap: 'Verkaufsquote heute', d: 1.1 },
+        { t: 9.4, cam: [890, 585, 1.35], cur: [1130, 490], hl: [236, 407, 1305, 345], cap: 'Täglicher Verlauf von Umsatz und Fahrten', d: 1.3 },
+        { t: 11.4, cam: [1310, 444, 2.3], cur: [1340, 446], click: true, hl: [1311, 431, 57, 27], cap: 'Zeitraum wählen: heute, gestern oder ein anderer Tag', d: 1.2 },
+        { t: 13.2, cam: [1360, 82, 2.3], cur: [1475, 84], hl: [1401, 66, 140, 32], cap: 'Als CSV exportieren', d: 1.1 },
+        { t: 15.4, cam: [600, 391, 1], cur: [980, 640], d: 1.4 },
+      ],
+    },
+    technik: {
+      scenes: [{ img: '/webinar/img/systemzustand.jpg', w: 1568, h: 782 }],
+      title: 'Technische Probleme sofort sehen',
+      text: 'Sie sehen den Zustand jedes Geräts und werden automatisch benachrichtigt, wenn etwas nicht läuft.',
+      steps: [
+        { t: 0, cam: [600, 391, 1], cur: [1000, 650] },
+        { t: 1.6, cam: [600, 391, 1], cur: [86, 292], click: true, hl: [10, 278, 189, 29], cap: 'Systemzustand öffnen', d: 1.3 },
+        { t: 3.6, cam: [640, 160, 1.8], cur: [390, 144], hl: [236, 105, 1305, 112], cap: 'Alles in Ordnung: alle Programme und Geräte laufen', d: 1.3 },
+        { t: 5.6, cam: [560, 390, 1.7], cur: [291, 382], hl: [236, 352, 1305, 88], cap: 'Jedes Gerät am Automaten im Blick', d: 1.2 },
+        { t: 6.8, cam: [890, 390, 1.7], cur: [1008, 382], hl: [236, 352, 1305, 88], d: 1.0 },
+        { t: 8.0, cam: [1240, 390, 1.7], cur: [1485, 382], hl: [236, 352, 1305, 88], d: 1.0 },
+        { t: 9.8, cam: [1360, 315, 2.4], cur: [1330, 320], hl: [1276, 288, 116, 54], cap: 'Papier übrig im Drucker', d: 1.2 },
+        { t: 11.6, cam: [1210, 537, 1.9], cur: [1504, 539], click: true, hl: [892, 513, 632, 50], cap: 'Drucker: läuft seit 8 Stunden', d: 1.2 },
+        { t: 13.6, cam: [1400, 70, 2.4], cur: [1454, 20], click: true, hl: [1437, 3, 32, 30], cap: 'Benachrichtigungen, wenn etwas nicht läuft', d: 1.2 },
+        { t: 15.8, cam: [600, 391, 1], cur: [1000, 650], d: 1.4 },
+      ],
+    },
+    marketing: {
+      scenes: [{ img: '/webinar/img/marketing.jpg', w: 1568, h: 782 }],
+      title: 'Marketing-Tool mit echtem CRM',
+      text: 'Gäste schalten ihre Bilder über eine Seite im Design Ihres Parks frei. Sie sammeln E-Mail-Adressen und nutzen sie für E-Mail-Marketing und Umfragen.',
+      steps: [
+        { t: 0, cam: [600, 391, 1], cur: [1000, 650] },
+        { t: 1.6, cam: [600, 391, 1], cur: [88, 384], click: true, hl: [10, 370, 199, 29], cap: 'Marketing-CRM öffnen', d: 1.3 },
+        { t: 3.6, cam: [480, 486, 1.9], cur: [300, 490], hl: [236, 438, 234, 97], cap: 'Neue Kontakte der letzten 30 Tage', d: 1.3 },
+        { t: 5.6, cam: [900, 486, 1.9], cur: [1040, 490], hl: [983, 438, 234, 97], cap: 'Antworten aus Ihren Umfragen', d: 1.2 },
+        { t: 7.6, cam: [725, 630, 1.55], cur: [730, 642], hl: [236, 550, 981, 166], cap: 'Vom verkauften Foto zum Kontakt', d: 1.2 },
+        { t: 9.8, cam: [1386, 420, 1.5], cur: [1360, 517], hl: [1232, 160, 309, 622], cap: 'Live-Vorschau: Gäste schalten ihr Foto im Design Ihres Parks frei', d: 1.3 },
+        { t: 12.0, cam: [430, 124, 2.4], cur: [388, 126], click: true, hl: [362, 110, 52, 28], cap: 'E-Mails an Ihre Kontakte', d: 1.3 },
+        { t: 13.6, cam: [520, 124, 2.4], cur: [560, 126], click: true, hl: [516, 110, 76, 28], cap: 'Umfragen auswerten', d: 1.0 },
+        { t: 15.8, cam: [600, 391, 1], cur: [1000, 650], d: 1.4 },
+      ],
+    },
+    shop: {
+      scenes: [{ img: '/webinar/img/shop-dashboard.jpg', w: 1524, h: 784 }, { img: '/webinar/img/shop.jpg', w: 1524, h: 2002 }, { img: '/webinar/img/shop-produkt.jpg', w: 1524, h: 784 }],
+      title: 'Unverkaufte Bilder nach Parkschluss verkaufen',
+      text: 'Die meisten Gäste kaufen ihr Foto nicht am Automaten. Im Online-Shop finden sie es später wieder, als Download oder auf Tasse, Abzug und Wandbild. So bekommen unverkaufte Bilder eine zweite Chance.',
+      steps: [
+        { t: 0, cam: [600, 392, 1], cur: [980, 640] },
+        { t: 1.6, cam: [600, 392, 1], cur: [88, 460], click: true, hl: [10, 445, 200, 30], cap: 'Online-Shop öffnen', d: 1.3 },
+        { t: 3.6, cam: [880, 200, 1.9], cur: [745, 172], hl: [690, 140, 385, 115], cap: '91 % der Bilder wurden nie wieder zum Kauf angeboten', d: 1.3 },
+        { t: 5.6, cam: [600, 320, 1.9], cur: [700, 330], hl: [280, 290, 640, 62], cap: 'Unverkaufte Bilder erneut anbieten, als Download oder auf Tasse, T-Shirt und Co.', d: 1.2 },
+        { t: 7.6, cam: [880, 662, 1.6], cur: [380, 652], hl: [283, 627, 1192, 72], cap: 'Zweite Chance am Abend: Gäste kaufen nach dem Besuch', d: 1.2 },
+        { sc: 1, t: 9.4, cam: [762, 260, 1.05], cur: [374, 318], hl: [257, 297, 234, 40], cap: 'Der Shop, wie ihn Ihre Gäste sehen', d: 1.0 },
+        { sc: 1, t: 11.2, cam: [762, 560, 1.05], cur: [640, 500], d: 1.3 },
+        { sc: 1, t: 12.8, cam: [762, 640, 1.3], cur: [890, 620], click: true, hl: [769, 530, 243, 212], cap: 'Der Gast findet sein Foto von heute', d: 1.1 },
+        { sc: 2, t: 14.6, cam: [1035, 160, 1.9], cur: [1000, 170], hl: [795, 108, 432, 92], cap: 'Was möchtest du mit diesem Foto?', d: 1.0 },
+        { sc: 2, t: 16.6, cam: [1035, 450, 1.35], cur: [1100, 452], hl: [801, 211, 468, 482], cap: 'Download, Abzug, Postkarte, Magnet, Tasse oder T-Shirt', d: 1.2 },
+        { sc: 2, t: 18.6, cam: [1150, 585, 2.0], cur: [1198, 586], click: true, hl: [1126, 570, 145, 30], cap: 'Tasse in den Warenkorb', d: 1.1 },
+        { t: 20.8, cam: [600, 392, 1], cur: [980, 640], d: 1.4 },
+      ],
+    },
+    speed: {
+      scenes: [
+        { img: '/webinar/img/speed-top.jpg', w: 1524, h: 784 },
+        { img: '/webinar/img/speed.jpg', w: 1524, h: 784 },
+        { img: '/webinar/img/speed-handy.jpg', w: 1524, h: 784 },
+        { img: '/webinar/img/speed-tv.jpg', w: 1524, h: 867 },
+      ],
+      title: 'Speed-Messung 2.0: Die Attraktion wird zum Videospiel',
+      text: 'Bei jeder Fahrt wird das Tempo gemessen und steht auf dem Foto. Wer sein Foto freischaltet, kommt mit Name und Profilbild in die Bestenliste. Die läuft auf dem Bildschirm an der Bahn und spornt zur nächsten Fahrt an.',
+      steps: [
+        { sc: 2, t: 0, cam: [470, 470, 1.3], cur: [700, 600] },
+        { sc: 2, t: 1.6, cam: [470, 470, 1.6], cur: [381, 474], click: true, hl: [340, 431, 82, 82], cap: 'Der Gast lädt ein Profilbild hoch', d: 1.2 },
+        { sc: 2, t: 3.2, cam: [470, 560, 1.6], cur: [470, 571], click: true, hl: [342, 545, 258, 49], cap: 'und trägt seinen Namen für die Bestenliste ein', d: 1.0 },
+        { sc: 2, t: 4.6, cam: [470, 600, 1.6], cur: [397, 619], click: true, hl: [342, 600, 110, 36], cap: 'Speichern', d: 0.9 },
+        { sc: 2, t: 6.4, cam: [1054, 540, 1.35], cur: [1010, 658], hl: [924, 640, 266, 36], cap: 'Gespeichert: Platz 3 in der Tagesbestenliste', d: 1.4 },
+        { sc: 2, t: 8.0, cam: [1054, 640, 1.6], cur: [1056, 710], click: true, hl: [926, 686, 258, 46], cap: 'Zur Tagesbestenliste', d: 1.0 },
+        { sc: 3, t: 9.8, cam: [560, 700, 1.6], cur: [420, 732], hl: [49, 683, 1019, 101], cap: 'Und schon steht er auf dem Bildschirm an der Bahn, mit Profilbild', d: 1.0 },
+        { sc: 3, t: 12.0, cam: [762, 330, 1.15], cur: [600, 380], hl: [49, 296, 1019, 163], cap: 'Die schnellste Fahrt des Tages, groß für alle sichtbar', d: 1.3 },
+        { sc: 3, t: 14.0, cam: [1290, 400, 1.6], cur: [1200, 520], hl: [1104, 139, 374, 490], cap: 'Mit QR-Code: Gäste sehen die Bestenliste auch am Handy', d: 1.2 },
+        { t: 16.0, cam: [600, 392, 1], cur: [95, 494], click: true, hl: [10, 479, 200, 30], cap: 'Im Dashboard: Speedmessung', d: 1.0 },
+        { t: 18.0, cam: [560, 95, 2.0], cur: [610, 114], hl: [252, 58, 570, 70], cap: 'Die Attraktion wird zum Spiel: Gäste treten gegeneinander an', d: 1.3 },
+        { t: 20.0, cam: [880, 410, 1.6], cur: [640, 421], hl: [283, 374, 1192, 72], cap: 'Beispiel: Die schnellste Fahrt des Tages gewinnt eine Freifahrt', d: 1.2 },
+        { sc: 1, t: 21.8, cam: [660, 160, 1.8], cur: [560, 160], hl: [260, 125, 800, 70], cap: 'Jede Fahrt wird gemessen', d: 1.0 },
+        { sc: 1, t: 23.6, cam: [660, 480, 1.35], cur: [420, 330], hl: [261, 303, 798, 55], cap: 'Bestenliste: beste Fahrt je Gast', d: 1.2 },
+        { sc: 2, t: 25.8, cam: [470, 470, 1.3], cur: [700, 600], d: 1.2 },
+      ],
+    },
+  };
+  const ORDER = ['umsatz', 'technik', 'marketing', 'shop', 'speed'];
+
+  const ease = (p) => (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2);
+  const mix = (a, b, p) => a.map((v, i) => v + (b[i] - v) * p);
+  const CURSOR = '<svg class="cur" viewBox="0 0 24 24"><path d="M1 1l7.8 20 2.9-8.3L20 9.8z" fill="#fff" stroke="#111" stroke-width="1.6" stroke-linejoin="round"/></svg>';
+
+  class Demo {
+    constructor(stage, key, { captions = false } = {}) {
+      this.def = DEMOS[key];
+      this.steps = this.def.steps;
+      this.scenes = this.def.scenes;
+      this.sc = -1;
+      this.dur = this.steps[this.steps.length - 1].t + 1.2;
+      this.t = 0;
+      this.idx = -1;
+      this.playing = false;
+      this.stage = stage;
+      stage.innerHTML = this.scenes.map((c) => `<div class="cv" style="width:${c.w}px;height:${c.h}px"><img src="${c.img}" alt="" style="width:${c.w}px;height:${c.h}px"></div>`).join('')
+        + `<div class="hl"></div>${CURSOR}` + (captions ? '<div class="cap"></div>' : '');
+      this.cvs = [...stage.querySelectorAll('.cv')];
+      this.hl = stage.querySelector('.hl');
+      this.cur = stage.querySelector('.cur');
+      this.cap = stage.querySelector('.cap');
+      this.size();
+      this.ro = new ResizeObserver(() => { this.size(); this.render(); });
+      this.ro.observe(stage);
+      this.render();
+    }
+    size() { this.w = this.stage.clientWidth || 1; this.h = this.stage.clientHeight || 1; }
+    play() {
+      if (this.playing) return;
+      this.playing = true;
+      this.last = performance.now();
+      const loop = (now) => {
+        if (!this.playing) return;
+        this.t += Math.min(0.1, (now - this.last) / 1000);
+        this.last = now;
+        if (this.t >= this.dur) { this.t = 0; this.idx = -1; }
+        this.render();
+        requestAnimationFrame(loop);
+      };
+      requestAnimationFrame(loop);
+    }
+    pause() { this.playing = false; }
+    seek(t) { this.t = Math.max(0, Math.min(this.dur - 0.01, t)); this.idx = -1; this.render(); }
+    destroy() { this.pause(); this.ro.disconnect(); }
+    state(t) {
+      const S = this.steps;
+      let i = 0;
+      while (i < S.length - 1 && S[i + 1].t <= t) i++;
+      const a = S[i], b = S[i + 1];
+      let cam = a.cam, cur = a.cur, moving = false, sc = a.sc || 0;
+      if (b) {
+        const d = b.d || 1.1, start = b.t - d;
+        if (t > start) {
+          moving = true;
+          const p = (t - start) / d;
+          if ((b.sc || 0) !== sc) {
+            // Szenenwechsel: zur Hälfte auf das neue Bild umschalten (per CSS überblendet)
+            if (p > 0.5) { sc = b.sc || 0; cam = b.cam; cur = b.cur; }
+          } else {
+            cam = mix(a.cam, b.cam, ease(p));
+            cur = mix(a.cur, b.cur, ease(Math.min(1, p / 0.85)));
+          }
+        }
+      }
+      return { i, cam, cur, moving, sc };
+    }
+    render() {
+      const { i, cam, cur, moving, sc } = this.state(this.t);
+      if (sc !== this.sc) {
+        this.cvs.forEach((c, n) => c.classList.toggle('off', n !== sc));
+        this.cvs[sc].append(this.hl, this.cur);
+        this.sc = sc;
+      }
+      const S = this.scenes[sc], cv = this.cvs[sc];
+      const W = this.w, H = this.h;
+      const k = Math.max(W / S.w, H / S.h) * cam[2];
+      const hx = W / (2 * k), hy = H / (2 * k);
+      const cx = Math.min(Math.max(cam[0], hx), S.w - hx);
+      const cy = Math.min(Math.max(cam[1], hy), S.h - hy);
+      cv.style.transform = `translate(${W / 2 - cx * k}px, ${H / 2 - cy * k}px) scale(${k})`;
+      cv.style.setProperty('--bw', `${2.5 / k}px`);
+      const cs = Math.max(13, Math.min(24, W * 0.022)) / (24 * k);
+      this.cur.style.transform = `translate(${cur[0]}px, ${cur[1]}px) scale(${cs})`;
+      if (i !== this.idx) {
+        const s = this.steps[i];
+        if (s.hl) Object.assign(this.hl.style, { left: s.hl[0] + 'px', top: s.hl[1] + 'px', width: s.hl[2] + 'px', height: s.hl[3] + 'px' });
+        if (this.cap) {
+          if (s.cap) { this.cap.textContent = s.cap; this.cap.classList.add('on'); }
+          else if (!s.hl) this.cap.classList.remove('on');
+        }
+        if (s.click && this.idx !== -1) this.click(s.cur, k);
+        this.idx = i;
+      }
+      // Markierung nur zeigen, solange die Kamera steht (gleiche Markierung bleibt auch beim Fahren)
+      const s = this.steps[i], n = this.steps[i + 1];
+      const keep = n && n.hl && s.hl && n.hl.join() === s.hl.join();
+      this.hl.classList.toggle('on', !!s.hl && (!moving || keep));
+      this.onTick && this.onTick(this.t, this.dur);
+    }
+    click([x, y], k) {
+      const size = Math.max(26, this.w * 0.04) / k;
+      const r = document.createElement('div');
+      r.className = 'rip';
+      Object.assign(r.style, { left: x - size / 2 + 'px', top: y - size / 2 + 'px', width: size + 'px', height: size + 'px' });
+      this.cvs[this.sc].insertBefore(r, this.cur);
+      r.animate([{ transform: 'scale(.2)', opacity: 1 }, { transform: 'scale(1)', opacity: 0 }], { duration: 650, easing: 'ease-out' }).onfinish = () => r.remove();
+    }
+  }
+
+  // Fotokarten: die aktive Karte wird breit und spielt ihre Animation klein ab.
+  const track = document.getElementById('track');
+  const cards = [...track.querySelectorAll('.fcard')];
+  const dots = [...document.querySelectorAll('#dots button')];
+  const minis = cards.map((c) => new Demo(c.querySelector('.stage'), c.dataset.demo));
+  const mobile = matchMedia('(max-width: 900px)');
+  let active = 0, trackVisible = false;
+
+  const syncMinis = () => {
+    minis.forEach((m, i) => {
+      const run = trackVisible && !reduced && !modalDemo && i === active;
+      if (run) m.play(); else m.pause();
+    });
+    if (reduced) minis.forEach((m) => m.seek(4));
+  };
+  const setActive = (i) => {
+    if (i === active) return;
+    active = i;
+    cards.forEach((c, n) => c.classList.toggle('is-active', n === i));
+    dots.forEach((d, n) => d.classList.toggle('on', n === i));
+    minis[i].seek(0);
+    syncMinis();
+  };
+  cards.forEach((c, i) => {
+    c.addEventListener('mouseenter', () => { if (!mobile.matches) setActive(i); });
+    c.addEventListener('focus', () => { if (!mobile.matches) setActive(i); });
+    c.addEventListener('click', () => openModal(c.dataset.demo));
+  });
+  new IntersectionObserver(([e]) => { trackVisible = e.isIntersecting; syncMinis(); }, { threshold: 0.2 }).observe(track);
+  // Am Handy: die Karte in der Mitte ist die aktive.
+  const cardIO = new IntersectionObserver((entries) => entries.forEach((e) => {
+    if (e.isIntersecting && mobile.matches) setActive(cards.indexOf(e.target));
+  }), { root: track, threshold: 0.6 });
+  cards.forEach((c) => cardIO.observe(c));
+  dots.forEach((d, i) => d.addEventListener('click', () => cards[i].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })));
+
+  // Großes Fenster mit Steuerung wie bei einem Video
+  const modal = document.getElementById('modal');
+  const mStage = document.getElementById('m-stage');
+  const mPP = document.getElementById('m-pp');
+  const mProg = document.getElementById('m-prog');
+  const mFill = document.getElementById('m-fill');
+  const mTime = document.getElementById('m-time');
+  const mNext = document.getElementById('m-next');
+  const ICON_PAUSE = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>';
+  const ICON_PLAY = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l12-7.5z"/></svg>';
+  const fmt = (s) => `0:${String(Math.floor(s)).padStart(2, '0')}`;
+  let modalDemo = null, modalKey = null, lastFocus = null;
+
+  const setPP = () => {
+    const on = modalDemo && modalDemo.playing;
+    mPP.innerHTML = on ? ICON_PAUSE : ICON_PLAY;
+    mPP.setAttribute('aria-label', on ? 'Pause' : 'Abspielen');
+  };
+  function openModal(key) {
+    if (!modal.hidden && key === modalKey) return;
+    if (modal.hidden) lastFocus = document.activeElement;
+    if (modalDemo) modalDemo.destroy();
+    modalKey = key;
+    const def = DEMOS[key];
+    document.getElementById('m-title').textContent = def.title;
+    document.getElementById('m-text').textContent = def.text;
+    const next = ORDER[(ORDER.indexOf(key) + 1) % ORDER.length];
+    mNext.textContent = `Weiter: ${DEMOS[next].title} →`;
+    mNext.onclick = () => openModal(next);
+    modal.hidden = false;
+    requestAnimationFrame(() => modal.classList.add('is-open'));
+    document.body.style.overflow = 'hidden';
+    modalDemo = new Demo(mStage, key, { captions: true });
+    modalDemo.onTick = (t, d) => { mFill.style.width = `${(t / d) * 100}%`; mTime.textContent = `${fmt(t)} / ${fmt(d)}`; };
+    modalDemo.play();
+    setPP();
+    syncMinis();
+    document.getElementById('m-close').focus();
+  }
+  function closeModal() {
+    if (modal.hidden) return;
+    modal.classList.remove('is-open');
+    modalDemo.destroy();
+    modalDemo = null;
+    modalKey = null;
+    document.body.style.overflow = '';
+    setTimeout(() => { modal.hidden = true; }, 250);
+    syncMinis();
+    if (lastFocus) lastFocus.focus({ preventScroll: true });
+  }
+  mPP.addEventListener('click', () => { if (modalDemo.playing) modalDemo.pause(); else modalDemo.play(); setPP(); });
+  mProg.addEventListener('click', (e) => {
+    const r = mProg.getBoundingClientRect();
+    modalDemo.seek(((e.clientX - r.left) / r.width) * modalDemo.dur);
+  });
+  document.getElementById('m-close').addEventListener('click', closeModal);
+  modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+  addEventListener('keydown', (e) => {
+    if (modal.hidden) return;
+    if (e.key === 'Escape') closeModal();
+    if (e.key === ' ' && e.target === document.body) { e.preventDefault(); mPP.click(); }
+  });
+  document.querySelectorAll('[data-open]').forEach((b) => b.addEventListener('click', () => openModal(b.dataset.open)));
+
+  // Kalendereintrag (3.11.2026, 17:00 Berlin = 16:00 UTC; 60 Minuten)
+  const ics = [
+    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Liftpictures//Webinar//DE', 'BEGIN:VEVENT',
+    'UID:liftpictures-webinar-20261103@liftpictures.com', 'DTSTAMP:20261020T000000Z',
+    'DTSTART:20261103T160000Z', 'DTEND:20261103T170000Z',
+    'SUMMARY:Liftpictures Webinar: Ihr Fotosystem als Business-Tool',
+    'DESCRIPTION:Den Link zum Webinar erhalten Sie per E-Mail.', 'END:VEVENT', 'END:VCALENDAR',
+  ].join('\r\n');
+  document.getElementById('ics').href = 'data:text/calendar;charset=utf-8,' + encodeURIComponent(ics);
+
+  // Public endpoint saves the contact and linked webinar submission in the CRM.
+  const CRM_URL = 'https://kvpcwlcfgmsmarjtwpsx.supabase.co';
+  const CRM_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2cGN3bGNmZ21zbWFyanR3cHN4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA1MDczODEsImV4cCI6MjA4NjA4MzM4MX0.KiMNRutSws--fAxKnSRJgmoq3UiqoyfPowKiPWVs-A0";
+  const formEl = document.getElementById('form');
+  const errEl = document.getElementById('form-error');
+  formEl.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (formEl.querySelector('button[type=submit]').disabled) return;
+    if (!formEl.checkValidity()) { formEl.reportValidity(); return; }
+    const data = new FormData(formEl);
+    const showDone = () => { formEl.style.display = 'none'; document.getElementById('success').classList.add('is-on'); };
+    if (data.get('website')) { showDone(); return; } // Spam-Falle
+    const btn = formEl.querySelector('button[type=submit]');
+    btn.disabled = true; btn.textContent = 'Wird gesendet …'; errEl.hidden = true;
+    const name = String(data.get('name')).trim();
+    const email = String(data.get('email')).trim();
+    const park = String(data.get('park')).trim();
+    try {
+      const res = await fetch(`${CRM_URL}/functions/v1/webinar-register`, {
+        method: 'POST',
+        headers: { apikey: CRM_ANON, Authorization: `Bearer ${CRM_ANON}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, park, website: data.get('website') }),
+        signal: AbortSignal.timeout(20000),
+      });
+      if (!res.ok) throw new Error(String(res.status));
+      showDone();
+    } catch (err) {
+      btn.disabled = false; btn.textContent = 'Jetzt anmelden';
+      errEl.textContent = 'Das hat leider nicht geklappt. Bitte versuchen Sie es noch einmal oder schreiben Sie uns an info@liftpictures.com.';
+      errEl.hidden = false;
+    }
+  });
+</script>
+</body>
+</html>
