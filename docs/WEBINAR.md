@@ -9,3 +9,5 @@ Das Formular ruft die Supabase-Function webinar-register im gemeinsamen Liftpict
 Geprüft am 20.10.2026: check:i18n, typecheck und build erfolgreich; Aufruf /webinar ohne Anmeldung im Browser, Formular bis zur erfolgreichen Bestätigung, vorhandene Bildpfade und Kalendertermin geprüft. Lokale Vorschau während dieser Sitzung: http://127.0.0.1:5192/webinar (5180 war vom ursprünglichen eigenständigen Webinar-Projekt belegt).
 
 Hosting: Die Produktionsdomain antwortet über Netlify. Laut aktueller Projektanleitung kann zusätzlich ein Publish in Bolt nötig sein; nach einem GitHub-Push den Live-Inhalt prüfen und gegebenenfalls das verbundene Bolt-Projekt veröffentlichen.
+
+Live-Prüfung nach Veröffentlichung: /webinar führt per 301 auf /webinar/ und liefert dort die Landingpage (HTTP 200) mit dem neuen Anmelde-Endpunkt. Alle 21 Bildadressen erreichbar. Formular live erfolgreich abgesendet; schmale Darstellung bei 375 CSS-Pixeln ohne horizontalen Überlauf geprüft.
