@@ -86,3 +86,13 @@ verify_jwt = false
 
 [functions.admin-customer-overview]
 verify_jwt = false
+
+[functions.operator-page-settings]
+# Seiten-Einstellungen des Parks (Kamera-Seite) für Dashboard und App. Operator-Token aus dem
+# Operator-Projekt, geprüft in der Function über _shared/operatorAuth.ts.
+verify_jwt = false
+
+[functions.admin-park-page-settings]
+# Staff-CRM setzt die Seiten-Einstellungen je Park; prüft admin_users selbst
+# (requireAdminFromRequest), der Gateway darf die CORS-Vorabanfrage nicht blocken.
+verify_jwt = false

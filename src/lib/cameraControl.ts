@@ -21,6 +21,13 @@ export async function fetchCameraControlAvailable(parkId: string): Promise<boole
     data: { session },
   } = await getFunctionSession();
   if (!session?.access_token) return false;
+  const headers = { Authorization: `Bearer ${session.access_token}`, apikey: EXTERNAL_SUPABASE_ANON_KEY };
+  // Im CRM ausgeblendet (park_page_settings): dann gibt es die Seite für diesen Kunden nicht. Ist die
+  // Function noch nicht deployt oder nicht erreichbar, gilt das bisherige automatische Verhalten.
+  const page = await fetch(`${EXTERNAL_SUPABASE_URL}/functions/v1/operator-page-settings?park_id=${encodeURIComponent(parkId)}`, { headers })
+    .then((r) => (r.ok ? r.json() : null))
+    .catch(() => null);
+  if (page?.data?.camera_page === 'hidden') return false;
   const res = await fetch(
     `${EXTERNAL_SUPABASE_URL}/functions/v1/operator-liftpic-health?park_id=${encodeURIComponent(parkId)}`,
     { headers: { Authorization: `Bearer ${session.access_token}`, apikey: EXTERNAL_SUPABASE_ANON_KEY } },
