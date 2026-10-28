@@ -292,7 +292,7 @@ export default function PrivacyPolicy() {
               <div className="rounded-lg border border-orange-200 bg-orange-50 p-4">
                 <h3 className="mb-2 font-semibold text-slate-900">In-App Deletion:</h3>
                 <p className="text-sm text-slate-700">
-                  Visit your Settings page and select "Delete Account". This will permanently remove your account and associated data.
+                  In the iOS app, open Account (person icon) and select "Delete account". In the web dashboard, contact us as described below. This permanently removes your login, profile, park links, push tokens and notification settings; data belonging to your park (photos, sales, support history) stays with the park.
                 </p>
               </div>
               <div className="rounded-lg border border-orange-200 bg-orange-50 p-4">
