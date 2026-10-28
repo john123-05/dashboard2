@@ -142,6 +142,10 @@ const CLAIM_BASE_BY_PARK: Record<string, string> = {
   '56f864d0-1852-4baf-8167-a51fde746315': 'https://liftpictures-fotos.de/wingst', // Spielpark Wingst
   'fc83d745-b110-4b49-a54c-0190e6c7fb34': 'https://liftpictures-fotos.de/tomdertiger', // Tom der Tiger (Kinderachterbahn)
   '36b887eb-7c89-4b45-a23f-095a6e6251fa': 'https://liftpictures-fotos.de/weissenfels', // Allwetterrodelbahn Weißenfels
+  'd19fe7a0-2792-407c-b3d6-51ed574cf16c': 'https://liftpictures-fotos.de/doberan', // Sommerrodelbahn Bad Doberan
+  '76bf4501-b43b-49ca-8810-b83bcaaf2e55': 'https://liftpictures-fotos.de/edelwies', // Edelwies Erlebnispark
+  'cf1cec77-0a10-4f64-837b-4c4453e07011': 'https://liftpictures-fotos.de/oderwitz', // Rodelpark Oderwitz
+  '3eed6a5a-eca7-4097-90c2-45c64919e222': 'https://liftpictures-fotos.de/ruegen', // Inselrodelbahn Bergen
   '56ee64cf-a350-4010-8309-70412a5cf0bc': 'https://liftpictures-fotos.de/demo', // Demo Park (Liftbase-Demo)
 };
 

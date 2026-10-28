@@ -11,6 +11,10 @@ export const GUEST_ACTIVITY_PARK_IDS = new Set([
   '91902231-5950-471b-8cc9-a03833f2a318', // Serlesblitz Mieders
   '56f864d0-1852-4baf-8167-a51fde746315', // Spielpark Wingst
   '36b887eb-7c89-4b45-a23f-095a6e6251fa', // Allwetterrodelbahn Weissenfels
+  'd19fe7a0-2792-407c-b3d6-51ed574cf16c', // Sommerrodelbahn Bad Doberan
+  '76bf4501-b43b-49ca-8810-b83bcaaf2e55', // Edelwies Erlebnispark
+  'cf1cec77-0a10-4f64-837b-4c4453e07011', // Rodelpark Oderwitz
+  '3eed6a5a-eca7-4097-90c2-45c64919e222', // Inselrodelbahn Bergen
 ]);
 
 export function hasGuestActivity(parkId: string | null | undefined): boolean {

@@ -10,6 +10,10 @@ const PARK_ACCENT_COLOR: Record<string, string> = {
   '56f864d0-1852-4baf-8167-a51fde746315': '#3D5732', // Spielpark Wingst (Dunkelgruen)
   'fc83d745-b110-4b49-a54c-0190e6c7fb34': '#21902F', // Tom der Tiger (Dschungelgruen)
   '36b887eb-7c89-4b45-a23f-095a6e6251fa': '#326061', // Allwetterrodelbahn Weißenfels (Petrol)
+  'd19fe7a0-2792-407c-b3d6-51ed574cf16c': '#AC371F', // Sommerrodelbahn Bad Doberan (Rostrot)
+  '76bf4501-b43b-49ca-8810-b83bcaaf2e55': '#3E86A6', // Edelwies Erlebnispark (Blau)
+  'cf1cec77-0a10-4f64-837b-4c4453e07011': '#BE0A26', // Rodelpark Oderwitz (Rot)
+  '3eed6a5a-eca7-4097-90c2-45c64919e222': '#00403E', // Inselrodelbahn Bergen (Dunkelgrün)
 };
 
 const DEFAULT_ACCENT_COLOR = '#C6A233';
