@@ -32,15 +32,18 @@ export interface SpeedRow {
   hidden: boolean;
   displayName: string | null;
   avatarUrl: string | null;
-  /** Eingetragene Bilder dieses Gastes im Zeitraum (fehlt bei älterer Function). */
+  /** Eingetragene Bilder und getrennte Fahrten dieses Gastes im Zeitraum (fehlen bei älterer Function). */
   entries?: number;
+  rides?: number;
 }
 
-/** Gäste, die sich im Zeitraum mit mehreren Bildern (derselben E-Mail) eingetragen haben. */
+/** Wiederholungsfahrten: Gäste der Liste, die nochmal gefahren sind und ihr neues Bild wieder eingetragen haben. */
 export interface SpeedRepeatStats {
   guests: number;
+  entries: number;
   repeaters: number;
-  extraEntries: number;
+  extraRides: number;
+  extraPhotos: number;
 }
 
 export interface SpeedOverview {
@@ -53,6 +56,8 @@ export interface SpeedOverview {
   rows: SpeedRow[];
   total: number;
   repeat?: SpeedRepeatStats;
+  /** Verkaufte Fotos im Zeitraum und Fotopreis (Bezugsgröße). */
+  sales?: { photosSold: number; priceCents: number | null };
   stats: { count: number; fastest: number | null; slowest: number | null; average: number | null };
   settings: SpeedSettings;
 }

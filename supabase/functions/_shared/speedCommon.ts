@@ -123,12 +123,35 @@ export type RankedRow = {
   hidden: boolean;
   displayName: string | null;
   avatarUrl: string | null;
-  /** Anzahl eingetragener Bilder dieses Gastes im Zeitraum (mehrere Fahrten mit derselben E-Mail). */
+  /** Eingetragene Bilder dieses Gastes im Zeitraum. */
   entries: number;
+  /** Davon getrennte Fahrten (Bilder innerhalb von 5 Minuten zählen als eine Fahrt, z. B. Familie auf mehreren Schlitten). */
+  rides: number;
 };
 
-/** Gäste, die sich im Zeitraum mit mehreren Bildern eingetragen haben. */
-export type RepeatStats = { guests: number; repeaters: number; extraEntries: number };
+/** Wiederholungsfahrten im Zeitraum: Gäste der Liste, die nochmal gefahren sind und ihr neues Bild wieder eingetragen haben. */
+export type RepeatStats = {
+  guests: number;
+  entries: number;
+  repeaters: number;
+  extraRides: number;
+  extraPhotos: number;
+};
+
+const REPEAT_GAP_MS = 5 * 60_000;
+
+/** Bilder eines Gastes in Fahrten gruppieren; `extraPhotos` = Bilder ab der zweiten Fahrt. */
+function rideStats(times: number[] | undefined): { entries: number; rides: number; extraPhotos: number } {
+  const sorted = [...(times ?? [])].sort((a, b) => a - b);
+  let rides = sorted.length > 0 ? 1 : 0;
+  let secondRideAt = sorted.length;
+  for (let i = 1; i < sorted.length; i++) {
+    if (sorted[i] - sorted[i - 1] < REPEAT_GAP_MS) continue;
+    rides++;
+    if (secondRideAt === sorted.length) secondRideAt = i;
+  }
+  return { entries: sorted.length, rides, extraPhotos: sorted.length - secondRideAt };
+}
 
 /**
  * Rangliste eines Zeitraums: beste Fahrt je Gast, ohne abgemeldete Gäste, ohne Werte über dem Höchstwert.
@@ -156,7 +179,7 @@ export async function rankedRows(
 
   // Beste Fahrt je Gast (die Liste ist nach Tempo sortiert, also zählt der erste Treffer).
   const best = new Map<string, Record<string, unknown>>();
-  const entries = new Map<string, number>();
+  const times = new Map<string, number[]>();
   const hiddenRows: Array<Record<string, unknown>> = [];
   for (const row of all) {
     if (row.hidden) {
@@ -164,7 +187,7 @@ export async function rankedRows(
       continue;
     }
     const email = String(row.email);
-    entries.set(email, (entries.get(email) ?? 0) + 1);
+    times.set(email, [...(times.get(email) ?? []), Date.parse(String(row.captured_at))]);
     if (!best.has(email)) best.set(email, row);
   }
 
@@ -186,6 +209,7 @@ export async function rankedRows(
   const visible = [...best.values()].filter((row) => !profiles.get(String(row.email))?.optOut);
   const toRow = (row: Record<string, unknown>, rank: number): RankedRow => {
     const profile = profiles.get(String(row.email));
+    const stats = rideStats(times.get(String(row.email)));
     return {
       id: String(row.id),
       rank,
@@ -197,16 +221,19 @@ export async function rankedRows(
       hidden: row.hidden === true,
       displayName: profile?.displayName ?? null,
       avatarUrl: profile?.avatarUrl ?? null,
-      entries: entries.get(String(row.email)) ?? 1,
+      entries: Math.max(1, stats.entries),
+      rides: Math.max(1, stats.rides),
     };
   };
   const rows = visible.slice(0, opts.limit).map((row, index) => toRow(row, index + 1));
   if (opts.includeHidden) rows.push(...hiddenRows.slice(0, 20).map((row) => toRow(row, 0)));
-  const counts = visible.map((row) => entries.get(String(row.email)) ?? 1);
-  const repeat: RepeatStats = {
-    guests: visible.length,
-    repeaters: counts.filter((n) => n > 1).length,
-    extraEntries: counts.reduce((sum, n) => sum + n - 1, 0),
-  };
+  const repeat: RepeatStats = { guests: visible.length, entries: 0, repeaters: 0, extraRides: 0, extraPhotos: 0 };
+  for (const row of visible) {
+    const stats = rideStats(times.get(String(row.email)));
+    repeat.entries += stats.entries;
+    repeat.repeaters += stats.rides > 1 ? 1 : 0;
+    repeat.extraRides += Math.max(0, stats.rides - 1);
+    repeat.extraPhotos += stats.extraPhotos;
+  }
   return { rows, total: visible.length, repeat, from, to };
 }

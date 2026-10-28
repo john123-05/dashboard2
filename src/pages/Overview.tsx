@@ -144,17 +144,21 @@ export default function Overview() {
   const locale = useLocaleTag();
   const { has } = useEntitlements();
   const speedOn = hasGuestActivity(parkId) || has('speed');
-  // Speedmessung: Gäste mit mehreren Bildern in der Bestenliste (dieser Monat), ersetzt dann „Fotos insgesamt“.
-  const [speedRepeat, setSpeedRepeat] = useState<SpeedRepeatStats | null>(null);
+  // Speedmessung: Wiederholungsfahrten aus der Bestenliste (dieser Monat), ersetzt dann „Fotos insgesamt“.
+  const [speedRepeat, setSpeedRepeat] = useState<(SpeedRepeatStats & { priceCents: number | null }) | null>(null);
   useEffect(() => {
     setSpeedRepeat(null);
     if (!parkId || !speedOn) return;
     let cancelled = false;
     fetchSpeedOverview(parkId, 'month', '')
-      .then((data) => { if (!cancelled && data.enabled && data.repeat && data.repeat.guests > 0) setSpeedRepeat(data.repeat); })
+      .then((data) => {
+        if (!cancelled && data.enabled && data.repeat && data.repeat.guests > 0 && 'extraRides' in data.repeat) {
+          setSpeedRepeat({ ...data.repeat, priceCents: data.sales?.priceCents ?? kioskPriceCents ?? null });
+        }
+      })
       .catch(() => undefined);
     return () => { cancelled = true; };
-  }, [parkId, speedOn]);
+  }, [parkId, speedOn, kioskPriceCents]);
   const formatCurrency = (cents: number, currency = 'usd') => baseFormatCurrency(cents, currency, locale);
   const formatNumber = (value: number) => baseFormatNumber(value, locale);
   const formatPercent = (value: number) => baseFormatPercent(value, locale);
@@ -1031,12 +1035,11 @@ export default function Overview() {
           />
           {speedRepeat ? (
             <KPICard
-              title={t('overview.speed_repeat')}
-              value={t('spd.repeat_value', { count: formatNumber(speedRepeat.repeaters), total: formatNumber(speedRepeat.guests) })}
-              subtitle={t('overview.speed_repeat_sub', {
-                percent: Math.round((speedRepeat.repeaters / speedRepeat.guests) * 100),
-                extra: formatNumber(speedRepeat.extraEntries),
-              })}
+              title={t('overview.speed_rides')}
+              value={t('spd.rep_headline', { rides: formatNumber(speedRepeat.extraRides) })}
+              subtitle={speedRepeat.priceCents
+                ? t('overview.speed_rides_sub', { photos: formatNumber(speedRepeat.extraPhotos), amount: formatCurrency(speedRepeat.extraPhotos * speedRepeat.priceCents, 'eur') })
+                : t('spd.rep_photos', { photos: formatNumber(speedRepeat.extraPhotos) })}
               icon={Repeat2}
               iconColor="text-amber-600"
               iconBg="bg-amber-50"

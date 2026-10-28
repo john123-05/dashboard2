@@ -4,8 +4,9 @@ import { loadSettings, normalizeSettings, parkTimezone, PERIODS, rankedRows, spe
 
 /**
  * operator-speed (docs/AUSBAU_PLAN.md, SP3) – Speedmessung im Betreiber-Dashboard.
- *   GET  ?park_id=&period=&date=   -> { enabled, period, date, today, from, to, rows (mit id/email/claimId/hidden/entries), total,
- *                                       repeat: { guests, repeaters, extraEntries }, stats: { count, fastest, slowest, average }, settings }
+ *   GET  ?park_id=&period=&date=   -> { enabled, period, date, today, from, to, rows (mit id/email/claimId/hidden/entries/rides), total,
+ *                                       repeat: { guests, entries, repeaters, extraRides, extraPhotos }, sales: { photosSold, priceCents },
+ *                                       stats: { count, fastest, slowest, average }, settings }
  *   POST { park_id, action: 'save_settings', settings }
  *   POST { park_id, action: 'hide' | 'unhide', result_id }   (Messfehler aus allen Listen nehmen)
  */
@@ -30,6 +31,19 @@ async function dayStats(parkId: string, date: string, timezone: string) {
   };
 }
 
+/** Verkaufte Fotos im Zeitraum (dauerhafte Tageswerte) und Fotopreis – Bezugsgröße für die Wiederholungsfahrten. */
+async function salesFor(parkId: string, from: string | null, to: string | null) {
+  let query = supabaseService.from('park_photo_sales_daily').select('photos_sold_count').eq('park_id', parkId).limit(5000);
+  if (from && to) query = query.gte('business_date', from).lte('business_date', to);
+  const [{ data: days }, { data: park }] = await Promise.all([
+    query,
+    supabaseService.from('parks').select('price_per_photo_cents').eq('id', parkId).maybeSingle(),
+  ]);
+  const photosSold = ((days ?? []) as Array<{ photos_sold_count: number }>).reduce((sum, d) => sum + Number(d.photos_sold_count || 0), 0);
+  const price = Number(park?.price_per_photo_cents);
+  return { photosSold, priceCents: Number.isFinite(price) && price > 0 ? price : null };
+}
+
 export async function handler(req: Request): Promise<Response> {
   const preflight = handleOptions(req);
   if (preflight) return preflight;
@@ -51,11 +65,12 @@ export async function handler(req: Request): Promise<Response> {
       const enabled = await speedEnabled(auth.parkId);
       const result = enabled
         ? await rankedRows(auth.parkId, period, date, settings, { limit: 50, includeHidden: true })
-        : { rows: [], total: 0, repeat: { guests: 0, repeaters: 0, extraEntries: 0 }, ...{ from: date, to: date } };
+        : { rows: [], total: 0, repeat: { guests: 0, entries: 0, repeaters: 0, extraRides: 0, extraPhotos: 0 }, ...{ from: date, to: date } };
       return json({
         ok: true,
         data: {
           enabled, period, date, today, from: result.from, to: result.to, rows: result.rows, total: result.total, repeat: result.repeat,
+          sales: await salesFor(auth.parkId, result.from, result.to),
           stats: await dayStats(auth.parkId, date, timezone), settings,
         },
       });
