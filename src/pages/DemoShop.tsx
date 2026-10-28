@@ -70,6 +70,8 @@ export default function DemoShop() {
   const { token = '' } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const embedded = searchParams.get('embed') === '1';
+  // In der Dashboard-App (WebView) keine Kasse: dort nur Vorschau, getestet wird in der Browser-Version.
+  const inApp = embedded && typeof navigator !== 'undefined' && navigator.userAgent.includes('LiftpicturesDashboardApp');
   const checkoutResult = searchParams.get('checkout');
 
   const [data, setData] = useState<DemoShopData | null>(null);
@@ -155,7 +157,18 @@ export default function DemoShop() {
     );
   }
 
+  function openInBrowser() {
+    const target = window.location.href.replace(/([?&])embed=1&?/, '$1').replace(/[?&]$/, '');
+    const bridge = (window as unknown as { ReactNativeWebView?: { postMessage: (m: string) => void } }).ReactNativeWebView;
+    if (bridge) bridge.postMessage(JSON.stringify({ type: 'open-browser', url: target }));
+    else window.open(target, '_blank', 'noopener');
+  }
+
   async function checkout() {
+    if (inApp) {
+      openInBrowser();
+      return;
+    }
     setCheckingOut(true);
     setCheckoutError(null);
     try {
@@ -204,7 +217,9 @@ export default function DemoShop() {
   return (
     <div className="min-h-screen overflow-x-hidden bg-[#faf9f6] text-[#1a1a1a]" style={{ fontFamily: font.family }}>
       <div className="bg-[#1a1a1a] px-4 py-1.5 text-center text-[11px] text-white/75">
-        Vorschau im Testmodus – keine echten Bestellungen. Testkarte: 4242 4242 4242 4242, beliebiges Datum &amp; Prüfnummer.
+        {inApp
+          ? 'Vorschau – so sehen deine Gäste den Shop. Die Kasse testest du in der Browser-Version.'
+          : <>Vorschau im Testmodus – keine echten Bestellungen. Testkarte: 4242 4242 4242 4242, beliebiges Datum &amp; Prüfnummer.</>}
       </div>
 
       <header className="sticky top-0 z-30 border-b border-black/10 bg-white">
@@ -324,7 +339,7 @@ export default function DemoShop() {
               <ul className="mt-4 space-y-1.5 text-xs text-[#6b6a63]">
                 <li className="flex items-center gap-2"><Download className="h-3.5 w-3.5" /> Download sofort nach dem Kauf</li>
                 <li className="flex items-center gap-2"><Truck className="h-3.5 w-3.5" /> Gedrucktes kommt per Post zu dir nach Hause</li>
-                <li className="flex items-center gap-2"><Lock className="h-3.5 w-3.5" /> Sichere Zahlung über Stripe</li>
+                <li className="flex items-center gap-2"><Lock className="h-3.5 w-3.5" /> {inApp ? 'Sichere Zahlung' : 'Sichere Zahlung über Stripe'}</li>
               </ul>
             </div>
           </div>
@@ -551,10 +566,10 @@ export default function DemoShop() {
                 style={{ backgroundColor: accent, color: onAccent }}
               >
                 {checkingOut && <Loader2 className="h-4 w-4 animate-spin" />}
-                Zur Kasse
+                {inApp ? 'Kasse im Browser testen' : 'Zur Kasse'}
               </button>
               <p className="mt-2 flex items-center justify-center gap-1.5 text-[11px] text-[#6b6a63]">
-                <Lock className="h-3 w-3" /> Sichere Zahlung über Stripe · Testmodus
+                {inApp ? 'Die Kasse gibt es in der Browser-Version der Vorschau.' : <><Lock className="h-3 w-3" /> Sichere Zahlung über Stripe · Testmodus</>}
               </p>
             </div>
           </aside>
