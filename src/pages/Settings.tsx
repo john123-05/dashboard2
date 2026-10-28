@@ -63,6 +63,8 @@ interface OperatorNotificationSettings {
   paper_low_threshold: number;
   support_enabled: boolean;
   system_health_enabled: boolean;
+  updates_enabled: boolean;
+  news_enabled: boolean;
 }
 
 const DEFAULT_OPERATOR_NOTIFICATION_SETTINGS: OperatorNotificationSettings = {
@@ -73,6 +75,8 @@ const DEFAULT_OPERATOR_NOTIFICATION_SETTINGS: OperatorNotificationSettings = {
   paper_low_threshold: 20,
   support_enabled: true,
   system_health_enabled: true,
+  updates_enabled: true,
+  news_enabled: true,
 };
 
 const WEEKDAY_ORDER: WeekdayKey[] = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
@@ -1132,6 +1136,27 @@ export default function Settings() {
                       className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
                     />
                   </label>
+
+                  {([
+                    ['updates_enabled', 'settings.notifications.updates', 'settings.notifications.updates_hint'],
+                    ['news_enabled', 'settings.notifications.news', 'settings.notifications.news_hint'],
+                  ] as const).map(([key, label, hint]) => (
+                    <label key={key} className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 px-4 py-3">
+                      <div className="flex items-start gap-3">
+                        <Bell className="mt-0.5 h-4 w-4 text-slate-500" />
+                        <div>
+                          <p className="text-sm font-semibold text-slate-800">{t(label)}</p>
+                          <p className="text-xs text-slate-500">{t(hint)}</p>
+                        </div>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={notificationSettings[key]}
+                        onChange={(event) => patchNotificationSettings({ [key]: event.target.checked })}
+                        className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                      />
+                    </label>
+                  ))}
                 </div>
 
                 <div className="flex flex-wrap items-center justify-between gap-3 pt-1">

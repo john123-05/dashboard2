@@ -2523,6 +2523,10 @@ const dict: Record<string, string> = {
     'auth.back_to_parks': "Back to my parks",
     'auth.other_account': "Sign in with another account",
     'auth.register_park_hint': "Your park: connect it once with the park password. After that you sign in with just email and password.",
+    'settings.notifications.updates': "Updates",
+    'settings.notifications.updates_hint': "New version available and important changes",
+    'settings.notifications.news': "Information",
+    'settings.notifications.news_hint': "New products and offers from Liftpictures",
 };
 
 export default dict;

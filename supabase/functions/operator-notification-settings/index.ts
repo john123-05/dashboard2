@@ -9,6 +9,8 @@ const DEFAULT_SETTINGS = {
   paper_low_threshold: 20,
   support_enabled: true,
   system_health_enabled: true,
+  updates_enabled: true,
+  news_enabled: true,
 };
 
 function clampInteger(value: unknown, fallback: number, min: number, max: number): number {
@@ -37,14 +39,14 @@ Deno.serve(async (req: Request) => {
     const { data, error } = await supabaseService
       .from('operator_notification_preferences')
       .select(
-        'push_enabled, photo_inactivity_enabled, photo_inactivity_minutes, paper_low_enabled, paper_low_threshold, support_enabled, system_health_enabled',
+        'push_enabled, photo_inactivity_enabled, photo_inactivity_minutes, paper_low_enabled, paper_low_threshold, support_enabled, system_health_enabled, updates_enabled, news_enabled',
       )
       .eq('operator_user_id', auth.userId)
       .eq('park_id', auth.parkId)
       .maybeSingle();
 
     if (error) return json({ error: error.message }, 500);
-    return json({ settings: data ?? DEFAULT_SETTINGS });
+    return json({ settings: { ...DEFAULT_SETTINGS, ...(data ?? {}) } });
   }
 
   if (req.method === 'POST') {
@@ -78,6 +80,10 @@ Deno.serve(async (req: Request) => {
         typeof payload?.system_health_enabled === 'boolean'
           ? payload.system_health_enabled
           : DEFAULT_SETTINGS.system_health_enabled,
+      updates_enabled:
+        typeof payload?.updates_enabled === 'boolean' ? payload.updates_enabled : DEFAULT_SETTINGS.updates_enabled,
+      news_enabled:
+        typeof payload?.news_enabled === 'boolean' ? payload.news_enabled : DEFAULT_SETTINGS.news_enabled,
     };
 
     const { error } = await supabaseService.from('operator_notification_preferences').upsert(

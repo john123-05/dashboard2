@@ -2523,6 +2523,10 @@ const dict: Record<string, string> = {
     'auth.back_to_parks': "Volver a mis parques",
     'auth.other_account': "Iniciar sesión con otra cuenta",
     'auth.register_park_hint': "Tu parque: conéctalo una vez con la contraseña del parque. Después inicias sesión solo con correo y contraseña.",
+    'settings.notifications.updates': "Actualizaciones",
+    'settings.notifications.updates_hint': "Nueva versión disponible y cambios importantes",
+    'settings.notifications.news': "Información",
+    'settings.notifications.news_hint': "Nuevos productos y ofertas de Liftpictures",
 };
 
 export default dict;

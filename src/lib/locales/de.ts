@@ -2536,6 +2536,10 @@ const dict: Record<string, string> = {
     'auth.back_to_parks': "Zurück zu meinen Parks",
     'auth.other_account': "Mit anderem Konto anmelden",
     'auth.register_park_hint': "Dein Park: einmal mit dem Park-Passwort verbinden. Danach meldest du dich nur mit E-Mail und Passwort an.",
+    'settings.notifications.updates': "Updates",
+    'settings.notifications.updates_hint': "Neue Version verfügbar und wichtige Änderungen",
+    'settings.notifications.news': "Informationen",
+    'settings.notifications.news_hint': "Neue Produkte und Angebote von Liftpictures",
 };
 
 export default dict;

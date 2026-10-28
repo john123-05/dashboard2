@@ -2523,6 +2523,10 @@ const dict: Record<string, string> = {
     'auth.back_to_parks': "Atpakaļ pie maniem parkiem",
     'auth.other_account': "Pieteikties ar citu kontu",
     'auth.register_park_hint': "Tavs parks: savieno to vienreiz ar parka paroli. Pēc tam piesakies tikai ar e-pastu un paroli.",
+    'settings.notifications.updates': "Atjauninājumi",
+    'settings.notifications.updates_hint': "Pieejama jauna versija un svarīgas izmaiņas",
+    'settings.notifications.news': "Informācija",
+    'settings.notifications.news_hint': "Jauni Liftpictures produkti un piedāvājumi",
 };
 
 export default dict;

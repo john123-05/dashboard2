@@ -6,7 +6,8 @@ import { isExpoSubscription, sendPushToSubscriptions } from '../_shared/webpush.
  *   GET                                  -> { announcements: [… + seen, clicked, dismissed] }
  *   POST { action: 'save', announcement } -> anlegen/ändern
  *   POST { action: 'delete', id }
- *   POST { action: 'push', park_id | null, title, body, url? } -> Push an alle Geräte des Parks (oder aller Parks)
+ *   POST { action: 'push', park_id | null, title, body, url?, category? } -> Push an alle Geräte des Parks (oder aller Parks);
+ *        category 'update' | 'info' (Standard) – Benutzer, die diese Art abgeschaltet haben, bekommen nichts
  */
 const UUID = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
 const POSITIONS = ['bottom-right', 'bottom-left', 'top-right', 'top-left', 'center'];
@@ -121,12 +122,23 @@ export async function handler(req: Request): Promise<Response> {
       const userId = text(body.user_id, 40);
       if (!['all', 'app', 'web'].includes(channel)) return json({ error: 'Ungültiger Kanal.' }, 400);
       if (userId && !UUID.test(userId)) return json({ error: 'Ungültiger Benutzer.' }, 400);
-      let query = supabaseService.from('operator_push_subscriptions').select('endpoint, p256dh, auth_key');
+      const category = text(body.category, 10) || 'info';
+      if (!['update', 'info'].includes(category)) return json({ error: 'Ungültige Art.' }, 400);
+      let query = supabaseService.from('operator_push_subscriptions').select('endpoint, p256dh, auth_key, operator_user_id, park_id');
       if (parkId) query = query.eq('park_id', parkId);
       if (userId) query = query.eq('operator_user_id', userId);
       const { data: alle, error } = await query.limit(5000);
       if (error) return json({ error: error.message }, 500);
-      const subscriptions = (alle ?? []).filter((s) => channel === 'all' || (channel === 'app') === isExpoSubscription(s));
+      // Mitteilungsarten des Benutzers (Einstellungen in App/Dashboard): abgeschaltet = kein Push.
+      const column = category === 'update' ? 'updates_enabled' : 'news_enabled';
+      const { data: prefs } = await supabaseService.from('operator_notification_preferences')
+        .select(`operator_user_id, park_id, ${column}`)
+        .in('operator_user_id', [...new Set((alle ?? []).map((s) => s.operator_user_id))]);
+      const muted = new Set(((prefs ?? []) as Array<Record<string, unknown>>)
+        .filter((p) => p[column] === false).map((p) => `${p.operator_user_id}:${p.park_id}`));
+      const subscriptions = (alle ?? [])
+        .filter((s) => channel === 'all' || (channel === 'app') === isExpoSubscription(s))
+        .filter((s) => !muted.has(`${s.operator_user_id}:${s.park_id}`));
       if (!subscriptions || subscriptions.length === 0) return json({ ok: true, data: { sent: 0, devices: 0 } });
       const url = link(body.url);
       const payload = JSON.stringify({ title, body: text(body.body, 300), url: url && url.startsWith('/') ? url : '/' });
