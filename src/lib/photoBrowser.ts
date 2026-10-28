@@ -140,6 +140,7 @@ const CLAIM_BASE_BY_PARK: Record<string, string> = {
   '25c1022b-4e2e-4fc4-b54d-72a4ced2522b': 'https://liftpictures-fotos.de/gruenberg', // Gruenberg-Flitzer
   '91902231-5950-471b-8cc9-a03833f2a318': 'https://liftpictures-fotos.de/serles', // Serlesblitz Mieders
   '56f864d0-1852-4baf-8167-a51fde746315': 'https://liftpictures-fotos.de/wingst', // Spielpark Wingst
+  'fc83d745-b110-4b49-a54c-0190e6c7fb34': 'https://liftpictures-fotos.de/tomdertiger', // Tom der Tiger (Kinderachterbahn)
   '56ee64cf-a350-4010-8309-70412a5cf0bc': 'https://liftpictures-fotos.de/demo', // Demo Park (Liftbase-Demo)
 };
 
