@@ -2515,6 +2515,13 @@ const dict: Record<string, string> = {
     'revenue.multi_sub': "{count} de {total} visitantes · últimos {days} días",
     'revenue.family_title': "De ellos, familia o grupo",
     'revenue.family_sub': "{family} con varias fotos de un viaje · {again} repitieron",
+    'auth.pick_title': "¿Qué parque quieres abrir?",
+    'auth.link_another': "Conectar otro parque",
+    'auth.link_title': "Conecta tu cuenta con tu parque",
+    'auth.link_hint': "Solo hace falta una vez: después inicias sesión solo con correo y contraseña.",
+    'auth.link_submit': "Conectar parque",
+    'auth.back_to_parks': "Volver a mis parques",
+    'auth.other_account': "Iniciar sesión con otra cuenta",
 };
 
 export default dict;

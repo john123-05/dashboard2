@@ -2528,6 +2528,13 @@ const dict: Record<string, string> = {
     'revenue.multi_sub': "{count} von {total} Gästen · letzte {days} Tage",
     'revenue.family_title': "Davon Familie oder Gruppe",
     'revenue.family_sub': "{family} mit mehreren Bildern einer Fahrt · {again} nochmal gefahren",
+    'auth.pick_title': "Welchen Park möchtest du öffnen?",
+    'auth.link_another': "Weiteren Park verbinden",
+    'auth.link_title': "Konto mit deinem Park verbinden",
+    'auth.link_hint': "Nur einmal nötig: Danach meldest du dich nur noch mit E-Mail und Passwort an.",
+    'auth.link_submit': "Park verbinden",
+    'auth.back_to_parks': "Zurück zu meinen Parks",
+    'auth.other_account': "Mit anderem Konto anmelden",
 };
 
 export default dict;

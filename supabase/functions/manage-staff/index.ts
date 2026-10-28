@@ -134,6 +134,14 @@ Deno.serve(async (req) => {
         await admin.auth.admin.deleteUser(newId).catch(() => {});
         return json({ error: memErr.message }, 400);
       }
+      // Mitarbeiter sehen die Parks ihres Betreibers und melden sich nur mit E-Mail und Passwort an.
+      const { data: ownerParks } = await admin.from("operator_park_links").select("park_id").eq("user_id", user.id);
+      if (ownerParks?.length) {
+        await admin.from("operator_park_links").upsert(
+          ownerParks.map((p) => ({ user_id: newId, park_id: p.park_id })),
+          { onConflict: "user_id,park_id", ignoreDuplicates: true },
+        );
+      }
       return json({ ok: true, user_id: newId });
     }
 

@@ -17,7 +17,7 @@ const LAST_PARK_KEY = 'lp-last-park';
 const CALENDLY_URL = 'https://calendly.com/kontakt-liftpictures-fotosysteme/30min';
 
 export default function Login() {
-  const { user, loading, signIn } = useAuth();
+  const { user, loading, signIn, signOut } = useAuth();
   const { t } = useI18n();
   const { parkId: activeParkId, setPark } = usePark();
   // Park-Auswahl ohne Liste aller Kunden: man tippt die ersten Buchstaben, die Function `park-lookup` gibt
@@ -41,6 +41,10 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  // Mit dem Konto verknüpfte Parks (null = noch nicht geladen). Das Park-Passwort braucht man nur,
+  // solange das Konto noch mit keinem Park verknüpft ist oder ein weiterer Park dazukommen soll.
+  const [linkedParks, setLinkedParks] = useState<Array<{ id: string; name: string }> | null>(null);
+  const [linking, setLinking] = useState(false);
   // „Demo buchen“: statt der Anmeldung erst ein kurzes Formular, dann die Terminwahl bei Calendly.
   const [mode, setMode] = useState<'login' | 'demo' | 'calendar'>('login');
   const [demo, setDemo] = useState({ name: '', email: '', company: '', phone: '', website: '' });
@@ -91,6 +95,24 @@ export default function Login() {
     };
   }, [parkQuery, selectedPark]);
 
+  // Nach der Anmeldung: genau ein Park → direkt hinein; mehrere → Auswahl; keiner → einmalig verbinden.
+  useEffect(() => {
+    if (!user) { setLinkedParks(null); setLinking(false); return; }
+    if (activeParkId) return;
+    let cancelled = false;
+    void (async () => {
+      const { data, error: rpcError } = await supabase.rpc('my_parks');
+      if (cancelled) return;
+      const parks = rpcError ? [] : ((data ?? []) as Array<{ id: string; name: string | null }>).map((p) => ({ id: String(p.id), name: p.name || '' }));
+      setLinkedParks(parks);
+      if (parks.length === 1) setPark(parks[0].id, parks[0].name || null);
+      else if (parks.length === 0) setLinking(true);
+    })();
+    return () => { cancelled = true; };
+    // setPark ist nicht memoisiert; nur Konto und aktiver Park lösen das Laden aus.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, activeParkId]);
+
   function pickPark(park: { id: string; name: string }) {
     setSelectedPark(park);
     setParkQuery('');
@@ -117,11 +139,9 @@ export default function Login() {
     setSubmitting(true);
     if (!user) {
       const { error } = await signIn(email, password);
-      if (error) {
-        setError(t(authErrorKey(error)));
-        setSubmitting(false);
-        return;
-      }
+      if (error) setError(t(authErrorKey(error)));
+      setSubmitting(false);
+      return;
     }
 
     if (!parkId) {
@@ -135,10 +155,14 @@ export default function Login() {
       return;
     }
 
-    const { data: ok, error: parkError } = await supabase.rpc('verify_park_access', {
+    // Einmalig: Park-Passwort prüfen und das Konto dabei mit dem Park verknüpfen.
+    let { data: ok, error: parkError } = await supabase.rpc('link_park_access', {
       p_park_id: parkId,
       p_password: parkPassword,
     });
+    if (parkError && /link_park_access|function|schema cache/i.test(parkError.message)) {
+      ({ data: ok, error: parkError } = await supabase.rpc('verify_park_access', { p_park_id: parkId, p_password: parkPassword }));
+    }
 
     if (parkError || !ok) {
       setError(t('auth.park_error_invalid'));
@@ -147,6 +171,7 @@ export default function Login() {
     }
 
     setPark(parkId, selectedPark?.name || null);
+    setParkPassword('');
     setSubmitting(false);
   }
 
@@ -282,6 +307,38 @@ export default function Login() {
                 </>
               )}
 
+              {user && !linking && (linkedParks === null || linkedParks.length === 1) && (
+                <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-brand-500" /></div>
+              )}
+
+              {user && !linking && linkedParks && linkedParks.length > 1 && (
+                <div>
+                  <p className="mb-2 text-sm font-medium text-slate-700">{t('auth.pick_title')}</p>
+                  <div className="space-y-2">
+                    {linkedParks.map((park) => (
+                      <button
+                        key={park.id}
+                        type="button"
+                        onClick={() => setPark(park.id, park.name || null)}
+                        className="flex w-full items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-left text-sm font-medium text-slate-800 shadow-sm hover:border-brand-400"
+                      >
+                        <span className="min-w-0 flex-1 truncate">{park.name}</span>
+                        <ArrowRight className="h-4 w-4 shrink-0 text-slate-400" />
+                      </button>
+                    ))}
+                  </div>
+                  <button type="button" onClick={() => setLinking(true)} className="mt-3 text-sm font-semibold text-brand-600 hover:text-brand-700">
+                    {t('auth.link_another')}
+                  </button>
+                </div>
+              )}
+
+              {user && linking && (
+              <>
+              <div className="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                <p className="font-medium text-slate-800">{t('auth.link_title')}</p>
+                <p className="mt-0.5">{t('auth.link_hint')}</p>
+              </div>
               <div>
                 <label className="mb-1.5 block text-sm font-medium text-slate-700">{t('auth.park')}</label>
                 {selectedPark ? (
@@ -350,13 +407,30 @@ export default function Login() {
                 />
               </div>
 
+              </>
+              )}
+
+              {(!user || linking) && (
               <button
                 type="submit"
                 disabled={submitting}
                 className="glass-button-primary mt-2 w-full py-3"
               >
-                {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : t('auth.sign_in')}
+                {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : user ? t('auth.link_submit') : t('auth.sign_in')}
               </button>
+              )}
+              {user && (
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  {linking && linkedParks && linkedParks.length > 0 ? (
+                    <button type="button" onClick={() => { setLinking(false); setError(''); }} className="inline-flex items-center gap-1 text-slate-500 hover:text-slate-800">
+                      <ArrowLeft className="h-4 w-4" /> {t('auth.back_to_parks')}
+                    </button>
+                  ) : <span />}
+                  <button type="button" onClick={() => void signOut()} className="text-slate-500 hover:text-slate-800">
+                    {t('auth.other_account')}
+                  </button>
+                </div>
+              )}
             </form>
 
             <p className="mt-6 text-center text-sm text-slate-500">

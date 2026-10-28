@@ -2515,6 +2515,13 @@ const dict: Record<string, string> = {
     'revenue.multi_sub': "{count} no {total} viesiem · pēdējās {days} dienas",
     'revenue.family_title': "No tiem ģimene vai grupa",
     'revenue.family_sub': "{family} ar vairākiem viena brauciena foto · {again} brauca vēlreiz",
+    'auth.pick_title': "Kuru parku vēlies atvērt?",
+    'auth.link_another': "Pievienot vēl vienu parku",
+    'auth.link_title': "Savieno kontu ar savu parku",
+    'auth.link_hint': "Vajadzīgs tikai vienreiz: pēc tam piesakies tikai ar e-pastu un paroli.",
+    'auth.link_submit': "Pievienot parku",
+    'auth.back_to_parks': "Atpakaļ pie maniem parkiem",
+    'auth.other_account': "Pieteikties ar citu kontu",
 };
 
 export default dict;
