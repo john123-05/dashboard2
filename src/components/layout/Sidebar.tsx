@@ -38,6 +38,7 @@ import ProfileParkSwitcher from './ProfileParkSwitcher';
 import { CRM_TABS } from '../../lib/crmTabs';
 import { canSee, pageKeyForPath } from '../../lib/permissions';
 import { featureForPath, useEntitlements, PLAN_LABEL_KEY } from '../../lib/plans';
+import { hasGuestActivity } from '../GuestActivityAwareOverlay';
 import { useOnboarding } from '../../lib/onboarding';
 import ProgressRing from '../onboarding/ProgressRing';
 
@@ -205,11 +206,9 @@ export default function Sidebar({
     document.documentElement.setAttribute('data-operator-theme', theme);
     localStorage.setItem('lp-operator-theme', theme);
   }, [theme]);
-  // Same park-gate as GuestActivityAwareOverlay: the Benutzer page only has
-  // real content for CSS-ALPINE/Tarzans and Plose so far.
-  const isTarzansPark =
-    parkId === 'e2da6436-6a83-4c39-add3-5f99eb6bd897' || parkId === '3b08e092-beb5-46ec-9811-5698e86dd83a' ||
-    parkId === '25c1022b-4e2e-4fc4-b54d-72a4ced2522b' || parkId === '91902231-5950-471b-8cc9-a03833f2a318' || parkId === '56f864d0-1852-4baf-8167-a51fde746315';
+  // Same park-gate as GuestActivityAwareOverlay (parks with speed hardware), plus
+  // any park that has booked the speed add-on.
+  const isTarzansPark = hasGuestActivity(parkId) || (!entitlements.loading && entitlements.has('speed'));
   const showFull = !collapsed || mobileOpen;
 
   const visibleItemsDefaultOrder = navItems.filter((item) => {
