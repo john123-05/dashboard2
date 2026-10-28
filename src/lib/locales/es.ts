@@ -2522,6 +2522,7 @@ const dict: Record<string, string> = {
     'auth.link_submit': "Conectar parque",
     'auth.back_to_parks': "Volver a mis parques",
     'auth.other_account': "Iniciar sesión con otra cuenta",
+    'auth.register_park_hint': "Tu parque: conéctalo una vez con la contraseña del parque. Después inicias sesión solo con correo y contraseña.",
 };
 
 export default dict;

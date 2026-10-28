@@ -1,6 +1,9 @@
 import { useState } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { usePark } from '../contexts/ParkContext';
+import { supabase } from '../lib/supabase';
+import ParkLookupField, { type ParkChoice } from '../components/auth/ParkLookupField';
 import { useI18n } from '../lib/i18n';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import Footer from '../components/layout/Footer';
@@ -16,9 +19,14 @@ export default function Register() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  // Beim Erstellen gleich mit dem Park verbinden (einmalig Park-Passwort), danach reichen E-Mail und Passwort.
+  const { setPark } = usePark();
+  const navigate = useNavigate();
+  const [park, setParkChoice] = useState<ParkChoice | null>(null);
+  const [parkPassword, setParkPassword] = useState('');
 
   if (loading) return null;
-  if (user) return <Navigate to="/" replace />;
+  if (user && !submitting) return <Navigate to="/" replace />;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -27,10 +35,37 @@ export default function Register() {
       setError(t('auth.err_password_short'));
       return;
     }
+    if (!park) {
+      setError(t('auth.park_error_pick'));
+      return;
+    }
+    if (!parkPassword) {
+      setError(t('auth.park_error_missing'));
+      return;
+    }
     setSubmitting(true);
     const { error } = await signUp(email, password, fullName);
-    if (error) setError(t(authErrorKey(error)));
+    if (error) {
+      setError(t(authErrorKey(error)));
+      setSubmitting(false);
+      return;
+    }
+    // Ohne Sitzung (E-Mail muss erst bestätigt werden) verbindet man den Park bei der ersten Anmeldung.
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      const { data: ok } = await supabase.rpc('link_park_access', { p_park_id: park.id, p_password: parkPassword });
+      if (ok) {
+        setPark(park.id, park.name);
+        navigate('/', { replace: true });
+        return;
+      }
+      // Konto ist angelegt, aber das Park-Passwort stimmte nicht: auf der Anmeldeseite (Park schon gewählt) erneut verbinden.
+      try { localStorage.setItem('lp-last-park', JSON.stringify(park)); } catch { /* Park dort neu tippen */ }
+      navigate('/login', { replace: true });
+      return;
+    }
     setSubmitting(false);
+    navigate('/login', { replace: true });
   }
 
   return (
@@ -112,6 +147,23 @@ export default function Register() {
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
+              </div>
+
+              <div className="border-t border-slate-200 pt-4">
+                <p className="mb-3 text-xs text-slate-500">{t('auth.register_park_hint')}</p>
+                <ParkLookupField selected={park} onSelect={setParkChoice} />
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">{t('auth.park_password')}</label>
+                <input
+                  type="password"
+                  value={parkPassword}
+                  onChange={(e) => setParkPassword(e.target.value)}
+                  placeholder={t('auth.park_password_placeholder')}
+                  required
+                  className="glass-input"
+                />
               </div>
 
               <button

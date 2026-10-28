@@ -3,8 +3,7 @@ import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../lib/i18n';
 import { usePark } from '../contexts/ParkContext';
-import { invokeEdgeFunction } from '../lib/edgeFunctions';
-import { Check, X } from 'lucide-react';
+import ParkLookupField from '../components/auth/ParkLookupField';
 import { supabase, EXTERNAL_SUPABASE_URL, EXTERNAL_SUPABASE_ANON_KEY } from '../lib/supabase';
 import { ArrowLeft, ArrowRight, CalendarCheck, ExternalLink, Loader2, Eye, EyeOff } from 'lucide-react';
 import Footer from '../components/layout/Footer';
@@ -20,9 +19,7 @@ export default function Login() {
   const { user, loading, signIn, signOut } = useAuth();
   const { t } = useI18n();
   const { parkId: activeParkId, setPark } = usePark();
-  // Park-Auswahl ohne Liste aller Kunden: man tippt die ersten Buchstaben, die Function `park-lookup` gibt
-  // höchstens EINEN Park zurück (erst wenn die Eingabe eindeutig ist). Der zuletzt gewählte Park wird im
-  // Browser gemerkt, damit man ihn beim nächsten Mal nicht wieder tippen muss.
+  // Park-Suche in ParkLookupField; der zuletzt gewählte Park wird im Browser gemerkt.
   const [selectedPark, setSelectedPark] = useState<{ id: string; name: string } | null>(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(LAST_PARK_KEY) ?? 'null');
@@ -31,9 +28,6 @@ export default function Login() {
       return null;
     }
   });
-  const [parkQuery, setParkQuery] = useState('');
-  const [parkMatch, setParkMatch] = useState<{ id: string; name: string } | null>(null);
-  const [parkState, setParkState] = useState<'idle' | 'loading' | 'short' | 'none' | 'many' | 'one'>('idle');
   const parkId = selectedPark?.id ?? '';
   const [parkPassword, setParkPassword] = useState('');
   const [email, setEmail] = useState('');
@@ -73,28 +67,6 @@ export default function Login() {
     setMode('calendar');
   }
 
-  useEffect(() => {
-    const q = parkQuery.trim();
-    setParkMatch(null);
-    if (selectedPark || q.length === 0) { setParkState('idle'); return; }
-    if (q.length < 2) { setParkState('short'); return; }
-    setParkState('loading');
-    let cancelled = false;
-    const timer = window.setTimeout(async () => {
-      const { data, error } = await invokeEdgeFunction<{ park: { id: string; name: string } | null; state: 'short' | 'none' | 'many' | 'one' }>(
-        'park-lookup', { query: { q } },
-      );
-      if (cancelled) return;
-      if (error || !data) { setParkState('none'); return; }
-      setParkMatch(data.park);
-      setParkState(data.park ? 'one' : data.state);
-    }, 250);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timer);
-    };
-  }, [parkQuery, selectedPark]);
-
   // Nach der Anmeldung: genau ein Park → direkt hinein; mehrere → Auswahl; keiner → einmalig verbinden.
   useEffect(() => {
     if (!user) { setLinkedParks(null); setLinking(false); return; }
@@ -115,7 +87,6 @@ export default function Login() {
 
   function pickPark(park: { id: string; name: string }) {
     setSelectedPark(park);
-    setParkQuery('');
     setError('');
     try {
       localStorage.setItem(LAST_PARK_KEY, JSON.stringify(park));
@@ -339,61 +310,7 @@ export default function Login() {
                 <p className="font-medium text-slate-800">{t('auth.link_title')}</p>
                 <p className="mt-0.5">{t('auth.link_hint')}</p>
               </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-slate-700">{t('auth.park')}</label>
-                {selectedPark ? (
-                  <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5">
-                    <Check className="h-4 w-4 shrink-0 text-emerald-600" />
-                    <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-800">{selectedPark.name}</span>
-                    <button
-                      type="button"
-                      onClick={() => { setSelectedPark(null); setParkState('idle'); }}
-                      aria-label={t('auth.park_change')}
-                      title={t('auth.park_change')}
-                      className="rounded-md p-1 text-slate-500 hover:bg-white hover:text-slate-800"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    <input
-                      type="text"
-                      value={parkQuery}
-                      onChange={(e) => setParkQuery(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && parkMatch) { e.preventDefault(); pickPark(parkMatch); }
-                      }}
-                      placeholder={t('auth.park_search_placeholder')}
-                      autoComplete="off"
-                      autoCapitalize="none"
-                      spellCheck={false}
-                      aria-describedby="park-hint"
-                      className="glass-input"
-                    />
-                    <div id="park-hint" className="mt-1.5 min-h-[2.25rem] text-xs text-slate-500" aria-live="polite">
-                      {parkMatch ? (
-                        <button
-                          type="button"
-                          onClick={() => pickPark(parkMatch)}
-                          className="flex w-full items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-left text-sm font-medium text-slate-800 shadow-sm hover:border-brand-400"
-                        >
-                          <span className="min-w-0 flex-1 truncate">{parkMatch.name}</span>
-                          <span className="shrink-0 text-xs font-semibold text-brand-600">{t('auth.park_pick', { park: '' }).trim()}</span>
-                        </button>
-                      ) : parkState === 'loading' ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : parkState === 'many' ? (
-                        t('auth.park_many')
-                      ) : parkState === 'none' ? (
-                        t('auth.park_none')
-                      ) : (
-                        t('auth.park_hint')
-                      )}
-                    </div>
-                  </>
-                )}
-              </div>
+              <ParkLookupField selected={selectedPark} onSelect={(park) => (park ? pickPark(park) : setSelectedPark(null))} />
 
               <div>
                 <label className="mb-1.5 block text-sm font-medium text-slate-700">{t('auth.park_password')}</label>

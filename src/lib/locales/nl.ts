@@ -2522,6 +2522,7 @@ const dict: Record<string, string> = {
     'auth.link_submit': "Park koppelen",
     'auth.back_to_parks': "Terug naar mijn parken",
     'auth.other_account': "Inloggen met een ander account",
+    'auth.register_park_hint': "Je park: koppel het één keer met het parkwachtwoord. Daarna log je alleen in met e-mail en wachtwoord.",
 };
 
 export default dict;

@@ -2522,6 +2522,7 @@ const dict: Record<string, string> = {
     'auth.link_submit': "Pievienot parku",
     'auth.back_to_parks': "Atpakaļ pie maniem parkiem",
     'auth.other_account': "Pieteikties ar citu kontu",
+    'auth.register_park_hint': "Tavs parks: savieno to vienreiz ar parka paroli. Pēc tam piesakies tikai ar e-pastu un paroli.",
 };
 
 export default dict;
