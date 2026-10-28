@@ -79,7 +79,7 @@ import {
 import KPICard from '../components/ui/KPICard';
 import { hasGuestActivity } from '../components/GuestActivityAwareOverlay';
 import { useEntitlements } from '../lib/plans';
-import { fetchSpeedOverview, type SpeedRepeatStats } from '../lib/speed';
+import { fetchSpeedOverview } from '../lib/speed';
 import GlassCard from '../components/ui/GlassCard';
 import SetupCard from '../components/onboarding/SetupCard';
 
@@ -144,21 +144,21 @@ export default function Overview() {
   const locale = useLocaleTag();
   const { has } = useEntitlements();
   const speedOn = hasGuestActivity(parkId) || has('speed');
-  // Speedmessung: Wiederholungsfahrten aus der Bestenliste (dieser Monat), ersetzt dann „Fotos insgesamt“.
-  const [speedRepeat, setSpeedRepeat] = useState<(SpeedRepeatStats & { priceCents: number | null }) | null>(null);
+  // Speedmessung: Anteil der verkauften Fotos in der Bestenliste (dieser Monat), ersetzt dann „Fotos insgesamt“.
+  const [speedShare, setSpeedShare] = useState<{ entries: number; photosSold: number } | null>(null);
   useEffect(() => {
-    setSpeedRepeat(null);
+    setSpeedShare(null);
     if (!parkId || !speedOn) return;
     let cancelled = false;
     fetchSpeedOverview(parkId, 'month', '')
       .then((data) => {
-        if (!cancelled && data.enabled && data.repeat && data.repeat.guests > 0 && 'extraRides' in data.repeat) {
-          setSpeedRepeat({ ...data.repeat, priceCents: data.sales?.priceCents ?? kioskPriceCents ?? null });
+        if (!cancelled && data.enabled && data.repeat && 'entries' in data.repeat && data.sales && data.sales.photosSold > 0) {
+          setSpeedShare({ entries: data.repeat.entries, photosSold: data.sales.photosSold });
         }
       })
       .catch(() => undefined);
     return () => { cancelled = true; };
-  }, [parkId, speedOn, kioskPriceCents]);
+  }, [parkId, speedOn]);
   const formatCurrency = (cents: number, currency = 'usd') => baseFormatCurrency(cents, currency, locale);
   const formatNumber = (value: number) => baseFormatNumber(value, locale);
   const formatPercent = (value: number) => baseFormatPercent(value, locale);
@@ -1033,13 +1033,11 @@ export default function Overview() {
             iconColor="text-emerald-600"
             iconBg="bg-emerald-50"
           />
-          {speedRepeat ? (
+          {speedShare ? (
             <KPICard
-              title={t('overview.speed_rides')}
-              value={t('spd.rep_headline', { rides: formatNumber(speedRepeat.extraRides) })}
-              subtitle={speedRepeat.priceCents
-                ? t('overview.speed_rides_sub', { photos: formatNumber(speedRepeat.extraPhotos), amount: formatCurrency(speedRepeat.extraPhotos * speedRepeat.priceCents, 'eur') })
-                : t('spd.rep_photos', { photos: formatNumber(speedRepeat.extraPhotos) })}
+              title={t('overview.speed_share')}
+              value={`${(Math.round((speedShare.entries / speedShare.photosSold) * 1000) / 10).toLocaleString(locale)} %`}
+              subtitle={t('overview.speed_share_sub', { count: formatNumber(speedShare.entries), total: formatNumber(speedShare.photosSold) })}
               icon={Repeat2}
               iconColor="text-amber-600"
               iconBg="bg-amber-50"

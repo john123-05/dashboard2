@@ -224,16 +224,13 @@ export default function Users() {
   const hiddenRows = (speed?.rows ?? []).filter((row) => row.hidden);
   const repeat = speed?.repeat;
   const sales = speed?.sales;
-  const euro = (cents: number) => (cents / 100).toLocaleString(locale, { style: 'currency', currency: 'EUR' });
   const pct = (part: number, whole: number) =>
     whole > 0 ? `${((part / whole) * 100).toLocaleString(locale, { maximumFractionDigits: part / whole < 0.1 ? 1 : 0 })} %` : '–';
-  const repStat = (value: string, extra: string, label: string) => (
+  const numStat = (value: string, label: string, detail: string) => (
     <div className="rounded-xl bg-slate-50 px-4 py-3">
-      <p className="text-lg font-light tracking-tight text-[color:var(--ink)]">
-        {value}
-        {extra && <span className="ml-1.5 text-sm text-[color:var(--ink-3)]">{extra}</span>}
-      </p>
-      <p className="text-xs leading-snug text-[color:var(--ink-3)]">{label}</p>
+      <p className="text-[26px] font-light leading-tight tracking-tight text-[color:var(--ink)]">{value}</p>
+      <p className="mt-0.5 text-xs leading-snug text-[color:var(--ink-2)]">{label}</p>
+      <p className="mt-1 text-xs font-medium text-[color:var(--ink-3)]">{detail}</p>
     </div>
   );
   const shortDate = (value: string) =>
@@ -473,31 +470,19 @@ export default function Users() {
             </div>
           )}
 
-          {/* Wiederholungsfahrten: Gäste der Liste, die nochmal gefahren sind (egal ob schneller), mit Bezug auf alle Verkäufe. */}
-          {!locked && repeat && repeat.guests > 0 && (
+          {/* Bestenliste in Zahlen: Anteil der Gäste, die nochmal gefahren sind, und Bezug auf alle verkauften Fotos. */}
+          {!locked && repeat && repeat.guests > 0 && 'extraRides' in repeat && (
             <GlassCard className="p-5">
-              <div className="flex flex-wrap items-start gap-x-6 gap-y-3">
-                <div className="flex min-w-0 flex-1 items-start gap-3">
-                  <div className="rounded-lg bg-amber-50 p-2 text-amber-600">
-                    <Repeat2 className="h-4 w-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs text-[color:var(--ink-3)]">{t('spd.rep_title')}</p>
-                    <p className="text-[26px] font-light leading-tight tracking-tight text-[color:var(--ink)]">
-                      {t('spd.rep_headline', { rides: repeat.extraRides.toLocaleString(locale) })}
-                      <span className="ml-2 text-base text-[color:var(--ink-2)]">
-                        {t('spd.rep_photos', { photos: repeat.extraPhotos.toLocaleString(locale) })}
-                        {sales?.priceCents ? ` · ≈ ${euro(repeat.extraPhotos * sales.priceCents)}` : ''}
-                      </span>
-                    </p>
-                    <p className="mt-1 text-xs leading-snug text-[color:var(--ink-3)]">{t('spd.rep_explain')}</p>
-                  </div>
+              <div className="flex items-center gap-2">
+                <div className="rounded-lg bg-amber-50 p-2 text-amber-600">
+                  <Repeat2 className="h-4 w-4" />
                 </div>
+                <h3 className="text-base font-semibold text-[color:var(--ink)]">{t('spd.num_title')}</h3>
               </div>
               <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                {repStat(t('spd.rep_of', { count: repeat.repeaters.toLocaleString(locale), total: repeat.guests.toLocaleString(locale) }), pct(repeat.repeaters, repeat.guests), t('spd.rep_again'))}
-                {sales && sales.photosSold > 0 && repStat(t('spd.rep_of', { count: repeat.entries.toLocaleString(locale), total: sales.photosSold.toLocaleString(locale) }), pct(repeat.entries, sales.photosSold), t('spd.rep_entered'))}
-                {sales && sales.photosSold > 0 && repStat(t('spd.rep_of', { count: repeat.extraPhotos.toLocaleString(locale), total: sales.photosSold.toLocaleString(locale) }), pct(repeat.extraPhotos, sales.photosSold), t('spd.rep_share'))}
+                {numStat(pct(repeat.repeaters, repeat.guests), t('spd.num_again'), t('spd.num_guests', { count: repeat.repeaters.toLocaleString(locale), total: repeat.guests.toLocaleString(locale) }))}
+                {sales && sales.photosSold > 0 && numStat(pct(repeat.entries, sales.photosSold), t('spd.num_entered'), t('spd.num_photos', { count: repeat.entries.toLocaleString(locale), total: sales.photosSold.toLocaleString(locale) }))}
+                {sales && sales.photosSold > 0 && numStat(pct(repeat.extraPhotos, sales.photosSold), t('spd.num_repeat'), t('spd.num_photos', { count: repeat.extraPhotos.toLocaleString(locale), total: sales.photosSold.toLocaleString(locale) }))}
               </div>
               <p className="mt-3 text-[11px] leading-snug text-[color:var(--ink-3)]">{t('spd.rep_note')}</p>
             </GlassCard>
