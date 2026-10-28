@@ -2524,6 +2524,10 @@ const dict: Record<string, string> = {
     'spd.num_repeat': "der verkauften Fotos stammen von einer Wiederholungsfahrt",
     'overview.speed_share': "In der Bestenliste",
     'overview.speed_share_sub': "{count} von {total} verkauften Fotos diesen Monat",
+    'revenue.multi_title': "Mehrere Bilder gekauft",
+    'revenue.multi_sub': "{count} von {total} Gästen · letzte {days} Tage",
+    'revenue.family_title': "Davon Familie oder Gruppe",
+    'revenue.family_sub': "{family} mit mehreren Bildern einer Fahrt · {again} nochmal gefahren",
 };
 
 export default dict;

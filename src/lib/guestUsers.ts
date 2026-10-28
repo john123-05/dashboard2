@@ -53,6 +53,29 @@ export async function fetchGuestOverview(parkId: string): Promise<GuestOverview>
   return body.data as GuestOverview;
 }
 
+/** Gäste mit mehreren eingelösten Bildern (letzte `days` Tage): Familie/Gruppe oder nochmal gefahren. */
+export interface PhotoBuyerStats {
+  days: number;
+  guests: number;
+  photos: number;
+  multi: number;
+  family: number;
+  again: number;
+}
+
+export async function fetchPhotoBuyers(parkId: string): Promise<PhotoBuyerStats | null> {
+  const headers = await authHeaders();
+  if (!headers) return null;
+  const res = await fetch(
+    `${EXTERNAL_SUPABASE_URL}/functions/v1/operator-guest-users?park_id=${encodeURIComponent(parkId)}&view=buyers`,
+    { headers },
+  );
+  const body = await res.json().catch(() => null);
+  if (!res.ok) throw new Error(body?.error || `HTTP ${res.status}`);
+  // Ältere Function ohne `view=buyers` liefert die Gästeliste – dann nichts anzeigen.
+  return body?.data && typeof body.data.multi === 'number' ? (body.data as PhotoBuyerStats) : null;
+}
+
 // delete_profile: Profil weg (Name, Bild, Bestenliste), Freischaltungen bleiben.
 // delete_user:    zusaetzlich Name/E-Mail/Telefon/Adresse in den Freischaltungen
 //                 geleert und Marketing-Opt-in entzogen.

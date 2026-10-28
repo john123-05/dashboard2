@@ -7,6 +7,10 @@ import { requireOperatorForPark } from '../_shared/operatorAuth.ts';
  * Fuer die Benutzer-Seite im Betreiber-Dashboard:
  *  - GET  ?park_id=...  -> registrierte Gaeste (Profil mit Namen = "hat sich in die
  *    Tagesbestenliste eingetragen") und die Live-Bestenliste von heute.
+ *  - GET  ?park_id=...&view=buyers -> Kaeufer mit mehreren Bildern (letzte 30 Tage, eingeloeste
+ *    Bilder mit E-Mail): { days, guests, photos, multi, family, again }. Bilder derselben E-Mail
+ *    innerhalb von 5 Minuten gehoeren zu einer Fahrt (family = mehrere Bilder einer Fahrt,
+ *    again = mehr als eine Fahrt).
  *  - POST {park_id, email, action} -> Gast entfernen:
  *      delete_profile: loescht das Profil (Name, Profilbild, Bestenlisten-Eintrag).
  *                      Freischaltungen und Fotos bleiben unberuehrt.
@@ -175,6 +179,62 @@ async function loadOverview(parkId: string) {
   return { users, leaderboard: { date: today, totalToday, rows } };
 }
 
+const BUYER_DAYS = 30;
+const SAME_RIDE_MS = 5 * 60_000;
+
+/** Gaeste mit mehreren eingeloesten Bildern: fuer die Familie/Gruppe gekauft oder nochmal gefahren. */
+async function loadBuyers(parkId: string) {
+  const since = new Date(Date.now() - (BUYER_DAYS + 2) * 86_400_000).toISOString();
+  const { data: claims, error } = await supabaseService
+    .from('photo_claims')
+    .select('email, photo_id')
+    .eq('park_id', parkId)
+    .eq('status', 'claimed')
+    .not('email', 'is', null)
+    .gte('created_at', since)
+    .limit(10000);
+  if (error) throw new Error(error.message);
+  const rows = ((claims ?? []) as Array<{ email: string | null; photo_id: string | null }>)
+    .map((c) => ({ email: (c.email ?? '').trim().toLowerCase(), photoId: c.photo_id }))
+    .filter((c) => c.email && c.photoId) as Array<{ email: string; photoId: string }>;
+
+  // Aufnahmezeit der Fotos (nicht der Einloesung): danach richtet sich, ob es dieselbe Fahrt war.
+  const captured = new Map<string, number>();
+  const ids = [...new Set(rows.map((r) => r.photoId))];
+  const cutoff = Date.now() - BUYER_DAYS * 86_400_000;
+  for (let i = 0; i < ids.length; i += 200) {
+    const { data: photos } = await supabaseService
+      .from('photos').select('id, captured_at, is_test').in('id', ids.slice(i, i + 200));
+    for (const p of (photos ?? []) as Array<{ id: string; captured_at: string | null; is_test: boolean | null }>) {
+      const at = p.captured_at ? Date.parse(p.captured_at) : NaN;
+      if (!p.is_test && Number.isFinite(at) && at >= cutoff) captured.set(p.id, at);
+    }
+  }
+
+  // Je Gast jedes Foto nur einmal (dasselbe Bild kann mehrfach eingeloest sein).
+  const byGuest = new Map<string, Map<string, number>>();
+  for (const r of rows) {
+    const at = captured.get(r.photoId);
+    if (at === undefined) continue;
+    byGuest.set(r.email, (byGuest.get(r.email) ?? new Map()).set(r.photoId, at));
+  }
+  let photos = 0, multi = 0, family = 0, again = 0;
+  for (const guestPhotos of byGuest.values()) {
+    const times = [...guestPhotos.values()].sort((a, b) => a - b);
+    photos += times.length;
+    if (times.length < 2) continue;
+    multi += 1;
+    let sameRide = false, rides = 1;
+    for (let i = 1; i < times.length; i++) {
+      if (times[i] - times[i - 1] < SAME_RIDE_MS) sameRide = true;
+      else rides += 1;
+    }
+    if (sameRide) family += 1;
+    if (rides > 1) again += 1;
+  }
+  return { days: BUYER_DAYS, guests: byGuest.size, photos, multi, family, again };
+}
+
 Deno.serve(async (req) => {
   const preflight = handleOptions(req);
   if (preflight) return preflight;
@@ -185,6 +245,9 @@ Deno.serve(async (req) => {
     const auth = await requireOperatorForPark(req, parkId);
     if (!auth.ok) return json({ error: auth.message }, auth.status);
     try {
+      if (new URL(req.url).searchParams.get('view') === 'buyers') {
+        return json({ ok: true, data: await loadBuyers(auth.parkId) });
+      }
       return json({ ok: true, data: await loadOverview(auth.parkId) });
     } catch (error) {
       return json({ error: error instanceof Error ? error.message : 'Unbekannter Fehler' }, 500);

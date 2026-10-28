@@ -2511,6 +2511,10 @@ const dict: Record<string, string> = {
     'spd.num_repeat': "pārdoto foto ir no atkārtota brauciena",
     'overview.speed_share': "Rangu tabulā",
     'overview.speed_share_sub': "{count} no {total} pārdotajiem foto šomēnes",
+    'revenue.multi_title': "Nopirka vairākus foto",
+    'revenue.multi_sub': "{count} no {total} viesiem · pēdējās {days} dienas",
+    'revenue.family_title': "No tiem ģimene vai grupa",
+    'revenue.family_sub': "{family} ar vairākiem viena brauciena foto · {again} brauca vēlreiz",
 };
 
 export default dict;

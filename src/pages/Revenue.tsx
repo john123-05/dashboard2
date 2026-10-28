@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ComposedChart, Legend, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { Camera, ChevronDown, ChevronLeft, ChevronRight, CreditCard, Download, Gauge, Percent, Receipt, Ticket, Wallet } from 'lucide-react';
+import { Camera, ChevronDown, ChevronLeft, ChevronRight, CreditCard, Download, Gauge, Images, Percent, Receipt, Ticket, Users, Wallet } from 'lucide-react';
 import { getOptionalSourceWarning, invokeEdgeFunction } from '../lib/edgeFunctions';
 import {
   createEmptyParkDashboardData,
@@ -33,6 +33,7 @@ import AutomatenUebersicht, { AUTOMATEN_ZEITRAEUME, type Zeitraum as AutomatenZe
 import KPICard from '../components/ui/KPICard';
 import { useI18n, useLocaleTag } from '../lib/i18n';
 import { usePark } from '../contexts/ParkContext';
+import { fetchPhotoBuyers, type PhotoBuyerStats } from '../lib/guestUsers';
 
 function formatDateLabel(iso: string, locale: string): string {
   const date = new Date(`${iso}T00:00:00`);
@@ -84,6 +85,17 @@ export default function Revenue() {
     kioskCheckLoading,
   } = usePark();
   const [parkData, setParkData] = useState<ParkDashboardData | null>(null);
+  // Gäste mit mehreren eingelösten Bildern (Familie/Gruppe oder nochmal gefahren), letzte 30 Tage.
+  const [buyers, setBuyers] = useState<PhotoBuyerStats | null>(null);
+  useEffect(() => {
+    setBuyers(null);
+    if (!parkId) return;
+    let cancelled = false;
+    fetchPhotoBuyers(parkId)
+      .then((data) => { if (!cancelled && data && data.guests > 0) setBuyers(data); })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+  }, [parkId]);
   const [dailyRevenue, setDailyRevenue] = useState<RevenueSeriesRow[]>([]);
   const [onlinePaymentCount, setOnlinePaymentCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -584,6 +596,26 @@ export default function Revenue() {
               iconColor="text-fuchsia-600"
               iconBg="bg-fuchsia-50"
             />
+            {buyers && (
+              <KPICard
+                title={t('revenue.multi_title')}
+                value={formatPercent((buyers.multi / buyers.guests) * 100)}
+                subtitle={t('revenue.multi_sub', { count: formatNumber(buyers.multi), total: formatNumber(buyers.guests), days: buyers.days })}
+                icon={Images}
+                iconColor="text-amber-600"
+                iconBg="bg-amber-50"
+              />
+            )}
+            {buyers && buyers.multi > 0 && (
+              <KPICard
+                title={t('revenue.family_title')}
+                value={formatPercent((buyers.family / buyers.multi) * 100)}
+                subtitle={t('revenue.family_sub', { family: formatNumber(buyers.family), again: formatNumber(buyers.again) })}
+                icon={Users}
+                iconColor="text-teal-600"
+                iconBg="bg-teal-50"
+              />
+            )}
             {machineRevenue.length >= 2 && (
               <div className="col-span-2 hidden items-end justify-end sm:flex">
                 <div className="inline-flex rounded-md border border-[color:var(--line-strong)] p-0.5">
