@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Users as UsersIcon, Search, Trophy, Gauge, TrendingDown, TrendingUp, ExternalLink, Trash2, Upload,
-  ChevronDown, ChevronLeft, ChevronRight, Eye, EyeOff, Hash, Monitor, Check, Loader2,
+  ChevronDown, ChevronLeft, ChevronRight, Eye, EyeOff, Hash, Monitor, Check, Loader2, Repeat2,
 } from 'lucide-react';
 import {
   fetchSpeedOverview, saveSpeedSettings, setSpeedResultHidden, shiftDate,
@@ -222,6 +222,7 @@ export default function Users() {
   const stats = speed?.stats;
   const ranked = (speed?.rows ?? []).filter((row) => !row.hidden);
   const hiddenRows = (speed?.rows ?? []).filter((row) => row.hidden);
+  const repeat = speed?.repeat;
   const shortDate = (value: string) =>
     new Date(`${value}T12:00:00`).toLocaleDateString(locale, { day: 'numeric', month: 'long' });
   const rangeLabel = !speed
@@ -459,6 +460,25 @@ export default function Users() {
             </div>
           )}
 
+          {/* Gäste mit mehreren Bildern derselben E-Mail im Zeitraum, egal ob schneller oder langsamer. */}
+          {!locked && repeat && repeat.guests > 0 && (
+            <GlassCard className="p-4">
+              <div className="flex items-start gap-3">
+                <div className="rounded-lg bg-amber-50 p-2 text-amber-600">
+                  <Repeat2 className="h-4 w-4" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-[color:var(--ink-3)]">{t('spd.repeat_title')}</p>
+                  <p className="text-[22px] font-light leading-tight tracking-tight text-[color:var(--ink)]">
+                    {t('spd.repeat_value', { count: repeat.repeaters.toLocaleString(locale), total: repeat.guests.toLocaleString(locale) })}
+                    <span className="ml-2 text-base text-[color:var(--ink-3)]">{Math.round((repeat.repeaters / repeat.guests) * 100)} %</span>
+                  </p>
+                  <p className="mt-1 text-xs leading-snug text-[color:var(--ink-3)]">{t('spd.repeat_sub', { extra: repeat.extraEntries.toLocaleString(locale) })}</p>
+                </div>
+              </div>
+            </GlassCard>
+          )}
+
           {locked ? (
             <SpeedmessungOffer />
           ) : (
@@ -501,6 +521,7 @@ export default function Users() {
                       <span className="block truncate text-xs text-[color:var(--ink-3)]">
                         {row.email.startsWith('claim:') ? '' : `${row.email} · `}
                         {new Date(row.capturedAt).toLocaleString(locale, { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                        {(row.entries ?? 1) > 1 && <span className="ml-1.5 rounded bg-amber-50 px-1.5 py-0.5 font-medium text-amber-700">{t('spd.entries', { count: row.entries ?? 1 })}</span>}
                       </span>
                     </span>
                     <span className="shrink-0 text-base font-semibold tabular-nums text-[color:var(--ink)]">{formatSpeed(row.speedKmh, locale)}</span>

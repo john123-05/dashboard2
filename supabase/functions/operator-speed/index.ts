@@ -4,8 +4,8 @@ import { loadSettings, normalizeSettings, parkTimezone, PERIODS, rankedRows, spe
 
 /**
  * operator-speed (docs/AUSBAU_PLAN.md, SP3) – Speedmessung im Betreiber-Dashboard.
- *   GET  ?park_id=&period=&date=   -> { enabled, period, date, today, from, to, rows (mit id/email/claimId/hidden), total,
- *                                       stats: { count, fastest, slowest, average }, settings }
+ *   GET  ?park_id=&period=&date=   -> { enabled, period, date, today, from, to, rows (mit id/email/claimId/hidden/entries), total,
+ *                                       repeat: { guests, repeaters, extraEntries }, stats: { count, fastest, slowest, average }, settings }
  *   POST { park_id, action: 'save_settings', settings }
  *   POST { park_id, action: 'hide' | 'unhide', result_id }   (Messfehler aus allen Listen nehmen)
  */
@@ -51,11 +51,11 @@ export async function handler(req: Request): Promise<Response> {
       const enabled = await speedEnabled(auth.parkId);
       const result = enabled
         ? await rankedRows(auth.parkId, period, date, settings, { limit: 50, includeHidden: true })
-        : { rows: [], total: 0, ...{ from: date, to: date } };
+        : { rows: [], total: 0, repeat: { guests: 0, repeaters: 0, extraEntries: 0 }, ...{ from: date, to: date } };
       return json({
         ok: true,
         data: {
-          enabled, period, date, today, from: result.from, to: result.to, rows: result.rows, total: result.total,
+          enabled, period, date, today, from: result.from, to: result.to, rows: result.rows, total: result.total, repeat: result.repeat,
           stats: await dayStats(auth.parkId, date, timezone), settings,
         },
       });

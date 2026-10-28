@@ -123,7 +123,12 @@ export type RankedRow = {
   hidden: boolean;
   displayName: string | null;
   avatarUrl: string | null;
+  /** Anzahl eingetragener Bilder dieses Gastes im Zeitraum (mehrere Fahrten mit derselben E-Mail). */
+  entries: number;
 };
+
+/** Gäste, die sich im Zeitraum mit mehreren Bildern eingetragen haben. */
+export type RepeatStats = { guests: number; repeaters: number; extraEntries: number };
 
 /**
  * Rangliste eines Zeitraums: beste Fahrt je Gast, ohne abgemeldete Gäste, ohne Werte über dem Höchstwert.
@@ -135,7 +140,7 @@ export async function rankedRows(
   date: string,
   settings: SpeedSettings,
   opts: { limit: number; includeHidden?: boolean },
-): Promise<{ rows: RankedRow[]; total: number; from: string | null; to: string | null }> {
+): Promise<{ rows: RankedRow[]; total: number; repeat: RepeatStats; from: string | null; to: string | null }> {
   const { from, to } = rangeFor(period, date);
   let query = supabaseService.from('park_speed_results')
     .select('id, email, claim_id, speed_kmh, captured_at, day, hidden')
@@ -151,6 +156,7 @@ export async function rankedRows(
 
   // Beste Fahrt je Gast (die Liste ist nach Tempo sortiert, also zählt der erste Treffer).
   const best = new Map<string, Record<string, unknown>>();
+  const entries = new Map<string, number>();
   const hiddenRows: Array<Record<string, unknown>> = [];
   for (const row of all) {
     if (row.hidden) {
@@ -158,6 +164,7 @@ export async function rankedRows(
       continue;
     }
     const email = String(row.email);
+    entries.set(email, (entries.get(email) ?? 0) + 1);
     if (!best.has(email)) best.set(email, row);
   }
 
@@ -190,9 +197,16 @@ export async function rankedRows(
       hidden: row.hidden === true,
       displayName: profile?.displayName ?? null,
       avatarUrl: profile?.avatarUrl ?? null,
+      entries: entries.get(String(row.email)) ?? 1,
     };
   };
   const rows = visible.slice(0, opts.limit).map((row, index) => toRow(row, index + 1));
   if (opts.includeHidden) rows.push(...hiddenRows.slice(0, 20).map((row) => toRow(row, 0)));
-  return { rows, total: visible.length, from, to };
+  const counts = visible.map((row) => entries.get(String(row.email)) ?? 1);
+  const repeat: RepeatStats = {
+    guests: visible.length,
+    repeaters: counts.filter((n) => n > 1).length,
+    extraEntries: counts.reduce((sum, n) => sum + n - 1, 0),
+  };
+  return { rows, total: visible.length, repeat, from, to };
 }

@@ -2501,6 +2501,12 @@ const dict: Record<string, string> = {
     'pp.extra_free': "{months} mēneši dāvanā",
     'pp.extra_request': "Pieprasīt",
     'pp.compare_group_title': "Salīdzinājums: {name}",
+    'spd.repeat_title': "Ierakstījušies vairākkārt",
+    'spd.repeat_value': "{count} no {total} viesiem",
+    'spd.repeat_sub': "{extra} papildu foto: šie viesi brauca vairākkārt un atkal ierakstījās ar to pašu e-pastu.",
+    'spd.entries': "{count} foto",
+    'overview.speed_repeat': "Atkārtoti ieraksti rangu tabulā",
+    'overview.speed_repeat_sub': "{percent} % viesu šomēnes · {extra} papildu foto",
 };
 
 export default dict;

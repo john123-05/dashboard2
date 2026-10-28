@@ -12,6 +12,7 @@ import {
   Gauge,
   Percent,
   Receipt,
+  Repeat2,
   Ticket,
   Users,
   Wallet,
@@ -76,6 +77,9 @@ import {
   statusColor,
 } from '../lib/utils';
 import KPICard from '../components/ui/KPICard';
+import { hasGuestActivity } from '../components/GuestActivityAwareOverlay';
+import { useEntitlements } from '../lib/plans';
+import { fetchSpeedOverview, type SpeedRepeatStats } from '../lib/speed';
 import GlassCard from '../components/ui/GlassCard';
 import SetupCard from '../components/onboarding/SetupCard';
 
@@ -138,6 +142,19 @@ export default function Overview() {
   const { t } = useI18n();
   const feed = useNotifications();
   const locale = useLocaleTag();
+  const { has } = useEntitlements();
+  const speedOn = hasGuestActivity(parkId) || has('speed');
+  // Speedmessung: Gäste mit mehreren Bildern in der Bestenliste (dieser Monat), ersetzt dann „Fotos insgesamt“.
+  const [speedRepeat, setSpeedRepeat] = useState<SpeedRepeatStats | null>(null);
+  useEffect(() => {
+    setSpeedRepeat(null);
+    if (!parkId || !speedOn) return;
+    let cancelled = false;
+    fetchSpeedOverview(parkId, 'month', '')
+      .then((data) => { if (!cancelled && data.enabled && data.repeat && data.repeat.guests > 0) setSpeedRepeat(data.repeat); })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+  }, [parkId, speedOn]);
   const formatCurrency = (cents: number, currency = 'usd') => baseFormatCurrency(cents, currency, locale);
   const formatNumber = (value: number) => baseFormatNumber(value, locale);
   const formatPercent = (value: number) => baseFormatPercent(value, locale);
@@ -1012,13 +1029,27 @@ export default function Overview() {
             iconColor="text-emerald-600"
             iconBg="bg-emerald-50"
           />
-          <KPICard
-            title={t('overview.photos_sold_total')}
-            value={formatNumber(kioskDays.reduce((sum, day) => sum + day.soldCount, 0))}
-            icon={Camera}
-            iconColor="text-violet-600"
-            iconBg="bg-violet-50"
-          />
+          {speedRepeat ? (
+            <KPICard
+              title={t('overview.speed_repeat')}
+              value={t('spd.repeat_value', { count: formatNumber(speedRepeat.repeaters), total: formatNumber(speedRepeat.guests) })}
+              subtitle={t('overview.speed_repeat_sub', {
+                percent: Math.round((speedRepeat.repeaters / speedRepeat.guests) * 100),
+                extra: formatNumber(speedRepeat.extraEntries),
+              })}
+              icon={Repeat2}
+              iconColor="text-amber-600"
+              iconBg="bg-amber-50"
+            />
+          ) : (
+            <KPICard
+              title={t('overview.photos_sold_total')}
+              value={formatNumber(kioskDays.reduce((sum, day) => sum + day.soldCount, 0))}
+              icon={Camera}
+              iconColor="text-violet-600"
+              iconBg="bg-violet-50"
+            />
+          )}
         </div>
       )}
 

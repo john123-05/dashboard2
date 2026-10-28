@@ -2501,6 +2501,12 @@ const dict: Record<string, string> = {
     'pp.extra_free': "{months} meses gratis",
     'pp.extra_request': "Solicitar",
     'pp.compare_group_title': "Comparación: {name}",
+    'spd.repeat_title': "Inscritos varias veces",
+    'spd.repeat_value': "{count} de {total} visitantes",
+    'spd.repeat_sub': "{extra} fotos adicionales: estos visitantes repitieron el viaje y se inscribieron de nuevo con el mismo correo.",
+    'spd.entries': "{count} fotos",
+    'overview.speed_repeat': "Repetidores en la clasificación",
+    'overview.speed_repeat_sub': "{percent} % de los visitantes este mes · {extra} fotos adicionales",
 };
 
 export default dict;
