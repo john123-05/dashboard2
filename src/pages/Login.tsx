@@ -16,7 +16,7 @@ const LAST_PARK_KEY = 'lp-last-park';
 const CALENDLY_URL = 'https://calendly.com/kontakt-liftpictures-fotosysteme/30min';
 
 export default function Login() {
-  const { user, loading, signIn, signOut } = useAuth();
+  const { user, loading, signIn, signOut, refreshProfile } = useAuth();
   const { t } = useI18n();
   const { parkId: activeParkId, setPark } = usePark();
   // Park-Suche in ParkLookupField; der zuletzt gewählte Park wird im Browser gemerkt.
@@ -141,6 +141,9 @@ export default function Login() {
       return;
     }
 
+    // Neue Konten bekommen beim Verbinden ihre Organisation: Sitzung und Profil neu laden.
+    await supabase.auth.refreshSession().catch(() => undefined);
+    await refreshProfile();
     setPark(parkId, selectedPark?.name || null);
     setParkPassword('');
     setSubmitting(false);

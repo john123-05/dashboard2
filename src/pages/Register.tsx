@@ -11,7 +11,7 @@ import LanguagePicker from '../components/layout/LanguagePicker';
 import { authErrorKey } from '../lib/authErrors';
 
 export default function Register() {
-  const { user, loading, signUp } = useAuth();
+  const { user, loading, signUp, refreshProfile } = useAuth();
   const { t } = useI18n();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -55,6 +55,9 @@ export default function Register() {
     if (session) {
       const { data: ok } = await supabase.rpc('link_park_access', { p_park_id: park.id, p_password: parkPassword });
       if (ok) {
+        // Beim Verbinden bekommt das neue Konto seine Organisation: Sitzung und Profil neu laden.
+        await supabase.auth.refreshSession().catch(() => undefined);
+        await refreshProfile();
         setPark(park.id, park.name);
         navigate('/', { replace: true });
         return;

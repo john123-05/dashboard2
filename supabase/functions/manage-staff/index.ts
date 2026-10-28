@@ -64,6 +64,17 @@ Deno.serve(async (req) => {
     }
     const orgId = membership.organization_id as string;
 
+    // Betreiber mit festen Parks (app_metadata.allowed_park_ids) sehen und verwalten nur Mitarbeiter
+    // dieser Parks; ihre Mitarbeiter bekommen dieselbe Beschränkung. Ohne Liste wie bisher die ganze Organisation.
+    const ownerScope = Array.isArray(user.app_metadata?.allowed_park_ids)
+      ? (user.app_metadata.allowed_park_ids as unknown[]).map((v) => String(v)).filter(Boolean)
+      : [];
+    const inScope = async (userId: string) => {
+      if (ownerScope.length === 0) return true;
+      const { data } = await admin.from("operator_park_links").select("park_id").eq("user_id", userId).in("park_id", ownerScope);
+      return (data ?? []).length > 0;
+    };
+
     const body = await req.json().catch(() => ({})) as Record<string, unknown>;
     const action = String(body.action ?? "");
 
@@ -74,7 +85,9 @@ Deno.serve(async (req) => {
         .eq("organization_id", orgId)
         .eq("role", "staff")
         .order("created_at", { ascending: true });
-      const ids = (mems ?? []).map((m) => m.user_id);
+      const scoped = [];
+      for (const m of mems ?? []) if (await inScope(m.user_id)) scoped.push(m);
+      const ids = scoped.map((m) => m.user_id);
       let profiles: Array<{ id: string; email: string | null; full_name: string | null }> = [];
       if (ids.length) {
         const { data } = await admin
@@ -90,7 +103,7 @@ Deno.serve(async (req) => {
         lastSeen[id] = data?.user?.last_sign_in_at ?? null;
       }));
       return json({
-        staff: (mems ?? []).map((m) => ({
+        staff: scoped.map((m) => ({
           user_id: m.user_id,
           created_at: m.created_at,
           email: byId[m.user_id]?.email ?? null,
@@ -115,6 +128,7 @@ Deno.serve(async (req) => {
         password,
         email_confirm: true,
         user_metadata: { full_name: fullName },
+        ...(ownerScope.length > 0 ? { app_metadata: { allowed_park_ids: ownerScope } } : {}),
       });
       if (createErr || !created?.user) {
         return json({ error: createErr?.message ?? "Konnte Mitarbeiter nicht anlegen (E-Mail evtl. schon vergeben)." }, 400);
@@ -155,7 +169,7 @@ Deno.serve(async (req) => {
         .eq("user_id", targetId)
         .eq("organization_id", orgId)
         .maybeSingle();
-      if (!target || target.role !== "staff") {
+      if (!target || target.role !== "staff" || !(await inScope(targetId))) {
         return json({ error: "Kein Mitarbeiter dieser Organisation." }, 404);
       }
       await admin.from("organization_memberships").delete().eq("user_id", targetId).eq("organization_id", orgId);
@@ -172,7 +186,7 @@ Deno.serve(async (req) => {
         .eq("user_id", targetId)
         .eq("organization_id", orgId)
         .maybeSingle();
-      if (!target || target.role !== "staff") {
+      if (!target || target.role !== "staff" || !(await inScope(targetId))) {
         return json({ error: "Kein Mitarbeiter dieser Organisation." }, 404);
       }
       if (action === "update") {
