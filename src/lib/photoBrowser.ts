@@ -145,6 +145,7 @@ const CLAIM_BASE_BY_PARK: Record<string, string> = {
   'd19fe7a0-2792-407c-b3d6-51ed574cf16c': 'https://liftpictures-fotos.de/doberan', // Sommerrodelbahn Bad Doberan
   '76bf4501-b43b-49ca-8810-b83bcaaf2e55': 'https://liftpictures-fotos.de/edelwies', // Edelwies Erlebnispark
   'cf1cec77-0a10-4f64-837b-4c4453e07011': 'https://liftpictures-fotos.de/oderwitz', // Rodelpark Oderwitz
+  'bc8249b1-acb2-48f0-a736-f53f23e5edd6': 'https://liftpictures-fotos.de/fraekigaudi', // Rodelbahn Fräkigaudi (Wastra)
   '3eed6a5a-eca7-4097-90c2-45c64919e222': 'https://liftpictures-fotos.de/ruegen', // Inselrodelbahn Bergen
   '56ee64cf-a350-4010-8309-70412a5cf0bc': 'https://liftpictures-fotos.de/demo', // Demo Park (Liftbase-Demo)
 };

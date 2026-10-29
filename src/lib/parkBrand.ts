@@ -13,6 +13,7 @@ const PARK_ACCENT_COLOR: Record<string, string> = {
   'd19fe7a0-2792-407c-b3d6-51ed574cf16c': '#AC371F', // Sommerrodelbahn Bad Doberan (Rostrot)
   '76bf4501-b43b-49ca-8810-b83bcaaf2e55': '#3E86A6', // Edelwies Erlebnispark (Blau)
   'cf1cec77-0a10-4f64-837b-4c4453e07011': '#BE0A26', // Rodelpark Oderwitz (Rot)
+  'bc8249b1-acb2-48f0-a736-f53f23e5edd6': '#D3201F', // Rodelbahn Fräkigaudi (Rot)
   '3eed6a5a-eca7-4097-90c2-45c64919e222': '#00403E', // Inselrodelbahn Bergen (Dunkelgrün)
 };
 
