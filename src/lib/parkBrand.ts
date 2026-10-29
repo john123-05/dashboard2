@@ -14,7 +14,7 @@ const PARK_ACCENT_COLOR: Record<string, string> = {
   '76bf4501-b43b-49ca-8810-b83bcaaf2e55': '#3E86A6', // Edelwies Erlebnispark (Blau)
   'cf1cec77-0a10-4f64-837b-4c4453e07011': '#BE0A26', // Rodelpark Oderwitz (Rot)
   'bc8249b1-acb2-48f0-a736-f53f23e5edd6': '#D3201F', // Rodelbahn Fräkigaudi (Rot)
-  'e32d4cce-3cbc-4369-b9f5-87bbd214a3b5': '#0C5DA5', // TITLIS Engelberg (Cliff Walk & Ice Flyer)
+  'e32d4cce-3cbc-4369-b9f5-87bbd214a3b5': '#D20000', // TITLIS Engelberg (Cliff Walk & Ice Flyer)
   'ee06bce2-8ae1-4697-9793-305a4dc3dd0b': '#C8102E', // Eibl Jet Türnitz
   '31950db3-d48e-405c-bb30-fffcb39a5996': '#1F8A3B', // Calafell Slide (Spanien)
   '3eed6a5a-eca7-4097-90c2-45c64919e222': '#00403E', // Inselrodelbahn Bergen (Dunkelgrün)
