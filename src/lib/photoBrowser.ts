@@ -146,6 +146,9 @@ const CLAIM_BASE_BY_PARK: Record<string, string> = {
   '76bf4501-b43b-49ca-8810-b83bcaaf2e55': 'https://liftpictures-fotos.de/edelwies', // Edelwies Erlebnispark
   'cf1cec77-0a10-4f64-837b-4c4453e07011': 'https://liftpictures-fotos.de/oderwitz', // Rodelpark Oderwitz
   'bc8249b1-acb2-48f0-a736-f53f23e5edd6': 'https://liftpictures-fotos.de/fraekigaudi', // Rodelbahn Fräkigaudi (Wastra)
+  'e32d4cce-3cbc-4369-b9f5-87bbd214a3b5': 'https://liftpictures-fotos.de/titlis', // TITLIS Engelberg (Cliff Walk & Ice Flyer)
+  'ee06bce2-8ae1-4697-9793-305a4dc3dd0b': 'https://liftpictures-fotos.de/tuernitz', // Eibl Jet Türnitz
+  '31950db3-d48e-405c-bb30-fffcb39a5996': 'https://liftpictures-fotos.de/calafell', // Calafell Slide (Spanien)
   '3eed6a5a-eca7-4097-90c2-45c64919e222': 'https://liftpictures-fotos.de/ruegen', // Inselrodelbahn Bergen
   '56ee64cf-a350-4010-8309-70412a5cf0bc': 'https://liftpictures-fotos.de/demo', // Demo Park (Liftbase-Demo)
 };
