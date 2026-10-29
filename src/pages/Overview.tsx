@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import ParkPhotoImg from '../components/ParkPhotoImg';
 import { useNavigate } from 'react-router-dom';
 import {
   Activity,
@@ -1379,7 +1380,7 @@ export default function Overview() {
               {recentPhotos.map((photo) => (
                 <div key={photo.id} className="relative aspect-square overflow-hidden rounded-xl bg-slate-100">
                   {photo.imageUrl && (
-                    <img src={photo.imageUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
+                    <ParkPhotoImg src={photo.imageUrl} parkId={parkId} className="h-full w-full object-cover" boxClassName="h-full w-full" loading="lazy" />
                   )}
                   {photo.speedKmh !== null && (
                     <span className="absolute bottom-1 right-1 rounded-md bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white">

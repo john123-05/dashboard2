@@ -159,6 +159,17 @@ export function claimSiteBaseFor(parkId: string | null): string | null {
 // Claim link a guest can open to get their photo (via email) - the DB code is
 // correct even when the printed QR was mis-assigned, so this rescues the
 // "Foto nicht gefunden" case at the kiosk.
+// Kameras, die quer eingebaut sind: das gespeicherte Foto liegt auf der Seite und wird nur in der
+// Anzeige aufrecht gedreht (gleiche Werte wie ROTATION_DEGREES der Claim-Seiten, 270° = -90°).
+const PHOTO_ROTATION_BY_PARK: Record<string, number> = {
+  'e2da6436-6a83-4c39-add3-5f99eb6bd897': -90, // CSS-Alpine / Tarzans
+  'cf1cec77-0a10-4f64-837b-4c4453e07011': -90, // Rodelpark Oderwitz (Axis-Kamera)
+};
+
+export function photoRotationForPark(parkId: string | null | undefined): number {
+  return parkId ? PHOTO_ROTATION_BY_PARK[parkId] ?? 0 : 0;
+}
+
 export function claimLinkFor(parkId: string | null, externalCode: string | null): string | null {
   if (!parkId || !externalCode) return null;
   const base = CLAIM_BASE_BY_PARK[parkId];

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
+import ParkPhotoImg from '../components/ParkPhotoImg';
 import { Camera, ShoppingBag, Eye, Clock, RefreshCw, Search, CalendarClock, ChevronLeft, ChevronRight, X, RotateCw } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { getOptionalSourceWarning, invokeEdgeFunction, isEdgeSourceUnavailable } from '../lib/edgeFunctions';
@@ -343,10 +344,13 @@ export default function Photos() {
     return (
       <div ref={selectedPhotoCardRef} className="rounded-xl bg-slate-50 p-3 sm:p-4">
         {selectedPhoto.imageUrl && (
-          <img
+          <ParkPhotoImg
             src={selectedPhoto.imageUrl}
+            parkId={parkId}
             alt="Ausgewähltes Foto"
             className="w-full rounded-lg object-cover"
+            boxClassName="aspect-[3/4] w-full rounded-lg bg-slate-900"
+            fit="contain"
           />
         )}
         <p className="mt-3 text-center text-sm font-semibold text-slate-800">
@@ -1022,10 +1026,12 @@ export default function Photos() {
               >
                 <div className="relative aspect-[4/3] overflow-hidden">
                   {p.imageUrl && (
-                    <img
+                    <ParkPhotoImg
                       src={p.imageUrl}
+                      parkId={parkId}
                       alt="Photo"
                       className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      boxClassName="h-full w-full"
                       loading="lazy"
                     />
                   )}
