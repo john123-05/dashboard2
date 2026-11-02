@@ -1,3 +1,4 @@
+import {claimConfigFor} from './claimConfig';
 // Akzentfarbe je Park für Dashboard-Vorschauen (CRM Umfrage/Social), damit die
 // Vorschau nicht immer wie Imst (Gold) aussieht, auch wenn der gewählte Park
 // (z.B. Tarzans) auf seiner echten Claim-Seite eine andere Markenfarbe hat.
@@ -24,7 +25,8 @@ const DEFAULT_ACCENT_COLOR = '#C6A233';
 
 export function accentColorForPark(parkId: string | null | undefined): string {
   if (!parkId) return DEFAULT_ACCENT_COLOR;
-  return PARK_ACCENT_COLOR[parkId] ?? DEFAULT_ACCENT_COLOR;
+  const dynamic=claimConfigFor(parkId)?.accent;
+  return dynamic&&/^#[a-f0-9]{6}$/i.test(dynamic)?dynamic:PARK_ACCENT_COLOR[parkId] ?? DEFAULT_ACCENT_COLOR;
 }
 
 // Gold/Hellblau brauchen dunklen Text, ein dunkles Navy (Plose) braucht

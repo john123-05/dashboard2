@@ -1,3 +1,4 @@
+import {claimConfigFor} from './claimConfig';
 import { externalSupabase } from './supabase';
 import { todayInTimezone } from './kioskSales';
 
@@ -157,7 +158,8 @@ const CLAIM_BASE_BY_PARK: Record<string, string> = {
 // live unlock page" link. null for a park with no registered claim site.
 export function claimSiteBaseFor(parkId: string | null): string | null {
   if (!parkId) return null;
-  return CLAIM_BASE_BY_PARK[parkId] ?? null;
+  const dynamic=claimConfigFor(parkId);
+  return dynamic?`https://liftpictures-fotos.de/${dynamic.path}`:CLAIM_BASE_BY_PARK[parkId] ?? null;
 }
 
 // Claim link a guest can open to get their photo (via email) - the DB code is
@@ -171,12 +173,13 @@ const PHOTO_ROTATION_BY_PARK: Record<string, number> = {
 };
 
 export function photoRotationForPark(parkId: string | null | undefined): number {
-  return parkId ? PHOTO_ROTATION_BY_PARK[parkId] ?? 0 : 0;
+  return parkId ? claimConfigFor(parkId)?.rotation ?? PHOTO_ROTATION_BY_PARK[parkId] ?? 0 : 0;
 }
 
 export function claimLinkFor(parkId: string | null, externalCode: string | null): string | null {
   if (!parkId || !externalCode) return null;
-  const base = CLAIM_BASE_BY_PARK[parkId];
+  const dynamic=claimConfigFor(parkId);
+  const base = dynamic?`https://liftpictures-fotos.de/${dynamic.path}`:CLAIM_BASE_BY_PARK[parkId];
   if (!base) return null;
   return `${base}/claim?code=${encodeURIComponent(externalCode)}`;
 }
