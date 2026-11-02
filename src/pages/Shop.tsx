@@ -1,3 +1,4 @@
+import OnlinePhotoShop from '../components/OnlinePhotoShop';
 import { Link, useLocation } from 'react-router-dom';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import QRCode from '../lib/vendor/qrcode.bundle.js';
@@ -106,7 +107,8 @@ function PreviewFrame({ src, mode }: { src: string; mode: 'phone' | 'desktop' })
   );
 }
 
-export default function Shop() {
+export default function Shop(){const {parkId}=usePark();return parkId==='cd65690a-3e83-414a-8e38-5482cfe1c482'?<OnlinePhotoShop key={parkId} parkId={parkId}/>:<LegacyShop/>;}
+function LegacyShop() {
   const { t } = useI18n();
   const locale = useLocaleTag();
   const { parkId, parkName, isKioskPark, kioskPriceCents } = usePark();

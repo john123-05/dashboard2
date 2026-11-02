@@ -2552,6 +2552,17 @@ const dict: Record<string, string> = {
     'online_photos.screen': "Bildschirmgalerie öffnen",
     'online_photos.claim': "Fotoseite für Gäste öffnen",
     'online_photos.empty': "Noch keine Fotos von heute. Neue Bilder erscheinen automatisch.",
+    'photo_shop.title': "Foto-Webshop",
+    'photo_shop.note': "Bildnummer oder Besuchszeit suchen. Neue Fotos erscheinen automatisch.",
+    'photo_shop.mode': "Foto freischalten mit",
+    'photo_shop.paid': "Stripe-Zahlung",
+    'photo_shop.email': "Kostenlos gegen E-Mail",
+    'photo_shop.consent': "Newsletter-Einwilligung bleibt freiwillig.",
+    'photo_shop.existing': "Gilt sofort für neue Freischaltungen. Bereits freigeschaltete Fotos bleiben verfügbar.",
+    'photo_shop.open': "Webshop öffnen",
+    'photo_shop.screen': "Bildschirmgalerie öffnen",
+    'photo_shop.error': "Einstellungen konnten nicht geladen oder gespeichert werden. Parkinhaber-Zugang erforderlich.",
+    'photo_shop.saved': "Freischaltmodus gespeichert.",
 };
 
 export default dict;

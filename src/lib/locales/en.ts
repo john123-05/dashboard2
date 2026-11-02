@@ -2539,6 +2539,17 @@ const dict: Record<string, string> = {
     'online_photos.screen': "Open photo screen",
     'online_photos.claim': "Open guest photo page",
     'online_photos.empty': "No photos from today yet. New photos appear automatically.",
+    'photo_shop.title': "Photo shop",
+    'photo_shop.note': "Search by photo number or visit time. New photos appear automatically.",
+    'photo_shop.mode': "Unlock photos with",
+    'photo_shop.paid': "Stripe payment",
+    'photo_shop.email': "Free with email",
+    'photo_shop.consent': "Newsletter consent stays optional.",
+    'photo_shop.existing': "Applies immediately to new unlocks. Previously unlocked photos remain available.",
+    'photo_shop.open': "Open photo shop",
+    'photo_shop.screen': "Open photo screen",
+    'photo_shop.error': "Settings could not be loaded or saved. Park owner access required.",
+    'photo_shop.saved': "Unlock mode saved.",
 };
 
 export default dict;

@@ -86,7 +86,10 @@ async function deleteClaims(req: Request) {
     return jsonResponse({ error: "Löschen fehlgeschlagen", details: await res.text() }, 502);
   }
   const deleted = await res.json().catch(() => []) as Array<{ id: string }>;
-  return jsonResponse({ deletedIds: deleted.map((r) => r.id) });
+  const online=await fetch(`${APP_SUPABASE_URL}/rest/v1/online_photo_unlocks?park_id=eq.${parkId}&id=in.(${ids.join(',')})`,{method:'DELETE',headers:{apikey:APP_SUPABASE_SERVICE_KEY as string,Authorization:`Bearer ${APP_SUPABASE_SERVICE_KEY}`,Prefer:'return=representation'}});
+  if(!online.ok)return jsonResponse({error:'Löschen fehlgeschlagen'},502);
+  const onlineDeleted=await online.json();
+  return jsonResponse({ deletedIds: [...deleted,...onlineDeleted].map((r) => r.id) });
 }
 
 Deno.serve(async (req: Request) => {
@@ -107,7 +110,7 @@ Deno.serve(async (req: Request) => {
     if (denied) return denied;
     const parkFilter = `&park_id=eq.${parkId}`;
 
-    const [usersRes, purchasesRes, parksRes, photoClaimsRes] = await Promise.all([
+    const [usersRes, purchasesRes, parksRes, photoClaimsRes, onlineRes] = await Promise.all([
       fetchExternal(`users?select=id,email,vorname,nachname,created_at,park_id&order=created_at.desc${parkFilter}`),
       fetchExternal(`purchases?select=user_id,amount_cents,total_amount_cents,status,paid_at,park_id${parkFilter}`),
       fetchExternal(`parks?select=id,name`),
@@ -115,6 +118,7 @@ Deno.serve(async (req: Request) => {
       // claiming a photo there only ever writes to `photo_claims` (service-role
       // only table, by design). Without this, those leads never show up here.
       fetchExternal(`photo_claims?select=id,full_name,email,phone,social_entry_id,park_id,marketing_opt_in,claimed_at,created_at,locale,country_code&order=created_at.desc${parkFilter}`),
+      fetchExternal(`online_photo_unlocks?select=id,full_name,email,park_id,marketing_opt_in,created_at&is_test=eq.false&order=created_at.desc${parkFilter}`),
     ]);
 
     if (!usersRes.ok) {
@@ -208,7 +212,8 @@ Deno.serve(async (req: Request) => {
         })
       : [];
 
-    const leads = [...userLeads, ...photoClaimLeads].sort(
+    const onlineLeads=onlineRes.ok?onlineRes.data.map((c:any)=>({...c,source:'photo_claim',opted_in:Boolean(c.marketing_opt_in),park_name:parkNames.get(c.park_id)||'Unknown',park:{name:parkNames.get(c.park_id)||'Unknown'}})):[];
+    const leads = [...userLeads, ...photoClaimLeads,...onlineLeads].sort(
       (a, b) => new Date(b.created_at as string).getTime() - new Date(a.created_at as string).getTime()
     );
 
