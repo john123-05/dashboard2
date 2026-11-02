@@ -68,6 +68,12 @@ function saveCart(token: string, cart: DemoCartItem[]) {
 
 export default function DemoShop() {
   const { token = '' } = useParams();
+  if(token==='a675c745-91a0-4ae3-be49-c15c6a37967e')return <iframe title="Plosebob Foto-Shop" src={'https://liftpictures-fotos.de/plose/shop'+window.location.search} className="min-h-screen w-full border-0"/>;
+  return <LegacyDemoShop/>;
+}
+
+function LegacyDemoShop() {
+  const { token = '' } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const embedded = searchParams.get('embed') === '1';
   // In der Dashboard-App (WebView) keine Kasse: dort nur Vorschau, getestet wird in der Browser-Version.

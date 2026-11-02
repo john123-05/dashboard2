@@ -326,6 +326,7 @@ export default function Sidebar({
   }
 
   function badgeFor(item: NavItem) {
+    if(item.to==='/shop'&&parkId==='3b08e092-beb5-46ec-9811-5698e86dd83a')return null;
     // Demo-Park: alles ist offen, bezahlte Bereiche tragen stattdessen „kostet extra“.
     if (entitlements.isDemo) return featureForPath(item.to) || item.to === '/leads' ? t('demo.paid') : null;
     const showComingSoon =
