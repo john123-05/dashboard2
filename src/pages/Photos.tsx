@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
+import OnlinePhotos from '../components/OnlinePhotos';
 import ParkPhotoImg from '../components/ParkPhotoImg';
 import { Camera, ShoppingBag, Eye, Clock, RefreshCw, Search, CalendarClock, ChevronLeft, ChevronRight, X, RotateCw } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
@@ -55,6 +56,10 @@ function qrImageUrlFor(value: string): string {
 }
 
 export default function Photos() {
+  const {parkId}=usePark();
+  return parkId==='cd65690a-3e83-414a-8e38-5482cfe1c482'?<OnlinePhotos/>:<LegacyPhotos/>;
+}
+function LegacyPhotos() {
   const { t } = useI18n();
   const { parkId, isKioskPark, parkName, kioskTimezone } = usePark();
   // Staff must not see purchase/conversion numbers (sales data).

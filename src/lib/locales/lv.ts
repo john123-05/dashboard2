@@ -2535,6 +2535,10 @@ const dict: Record<string, string> = {
     'online_sales.count': "{count} maksājumi · Kopā",
     'online_sales.error': "Tiešsaistes maksājumi īslaicīgi nav pieejami",
     'online_sales.asof': "Dati uz: {date}",
+    'online_photos.note': "Šodienas kameras foto · Pārdošana ar QR · Stripe TEST",
+    'online_photos.screen': "Atvērt foto ekrānu",
+    'online_photos.claim': "Atvērt viesu foto lapu",
+    'online_photos.empty': "Šodienas foto vēl nav. Jauni foto parādās automātiski.",
 };
 
 export default dict;

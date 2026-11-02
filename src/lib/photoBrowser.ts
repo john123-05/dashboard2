@@ -132,6 +132,7 @@ export async function searchPhotosByDateTime(
 // Per-park claim page. First a fixed mapping (Imst, Tarzans); can become a
 // per-park setting later.
 const CLAIM_BASE_BY_PARK: Record<string, string> = {
+  'cd65690a-3e83-414a-8e38-5482cfe1c482': 'https://liftpictures-fotos.de/kalahari-virginia',
   '85c77b81-9f9b-4b4e-9f70-9c6ffa0b9b14': 'https://liftpictures-fotos.de', // Imster Bergbahnen
   // liftpictures-fotos-tarzans.de wurde nie registriert; Tarzans laeuft
   // stattdessen unter /tarzans auf der Imst-Domain (selber bolt.new-Build).

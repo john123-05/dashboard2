@@ -3,6 +3,7 @@ import {claimConfigFor} from './claimConfig';
 // Vorschau nicht immer wie Imst (Gold) aussieht, auch wenn der gewählte Park
 // (z.B. Tarzans) auf seiner echten Claim-Seite eine andere Markenfarbe hat.
 const PARK_ACCENT_COLOR: Record<string, string> = {
+  'cd65690a-3e83-414a-8e38-5482cfe1c482': '#002858',
   '85c77b81-9f9b-4b4e-9f70-9c6ffa0b9b14': '#C6A233', // Imster Bergbahnen (Gold)
   'e2da6436-6a83-4c39-add3-5f99eb6bd897': '#0099CC', // CSS-Alpine / Tarzans (Blau)
   '3b08e092-beb5-46ec-9811-5698e86dd83a': '#0B2545', // Plose (Navy)
