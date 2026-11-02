@@ -34,6 +34,7 @@ import KPICard from '../components/ui/KPICard';
 import { useI18n, useLocaleTag } from '../lib/i18n';
 import { usePark } from '../contexts/ParkContext';
 import { fetchPhotoBuyers, type PhotoBuyerStats } from '../lib/guestUsers';
+import OnlinePhotoRevenue from '../components/OnlinePhotoRevenue';
 
 function formatDateLabel(iso: string, locale: string): string {
   const date = new Date(`${iso}T00:00:00`);
@@ -69,6 +70,12 @@ interface RevenueSeriesRow {
 }
 
 export default function Revenue() {
+  const {parkId}=usePark();
+  if(parkId==='cd65690a-3e83-414a-8e38-5482cfe1c482')return <OnlinePhotoRevenue key={parkId} parkId={parkId}/>;
+  return <LegacyRevenue/>;
+}
+
+function LegacyRevenue() {
   const { t } = useI18n();
   const locale = useLocaleTag();
   const formatCurrency = (cents: number, currency = 'usd') => baseFormatCurrency(cents, currency, locale);

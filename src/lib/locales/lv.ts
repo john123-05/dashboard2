@@ -2527,6 +2527,14 @@ const dict: Record<string, string> = {
     'settings.notifications.updates_hint': "Pieejama jauna versija un svarīgas izmaiņas",
     'settings.notifications.news': "Informācija",
     'settings.notifications.news_hint': "Jauni Liftpictures produkti un piedāvājumi",
+    'online_sales.title': "Stripe tiešsaistes pārdošana",
+    'online_sales.mode': "Testa režīms",
+    'online_sales.real': "Reālie tiešsaistes ieņēmumi",
+    'online_sales.tests': "Testa ieņēmumi (atsevišķi)",
+    'online_sales.note': "Testa maksājumi netiek ieskaitīti reālajos ieņēmumos. Foto augšupielādes nav pārdošana.",
+    'online_sales.count': "{count} maksājumi · Kopā",
+    'online_sales.error': "Tiešsaistes maksājumi īslaicīgi nav pieejami",
+    'online_sales.asof': "Dati uz: {date}",
 };
 
 export default dict;

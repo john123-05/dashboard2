@@ -2540,6 +2540,14 @@ const dict: Record<string, string> = {
     'settings.notifications.updates_hint': "Neue Version verfügbar und wichtige Änderungen",
     'settings.notifications.news': "Informationen",
     'settings.notifications.news_hint': "Neue Produkte und Angebote von Liftpictures",
+    'online_sales.title': "Stripe-Onlineverkauf",
+    'online_sales.mode': "Testmodus",
+    'online_sales.real': "Echte Onlineumsätze",
+    'online_sales.tests': "Testumsatz (separat)",
+    'online_sales.note': "Testzahlungen zählen nicht zum echten Umsatz. Foto-Uploads sind keine Verkäufe.",
+    'online_sales.count': "{count} Zahlungen · Gesamt",
+    'online_sales.error': "Onlinezahlungen vorübergehend nicht verfügbar",
+    'online_sales.asof': "Datenstand: {date}",
 };
 
 export default dict;
