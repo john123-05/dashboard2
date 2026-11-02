@@ -59,10 +59,15 @@ export default function ProfileParkSwitcher({ onSwitched }: { onSwitched?: () =>
   useEffect(() => {
     if (!open || parks || !user) return;
     let active = true;
-    const raw = user.app_metadata?.allowed_park_ids;
-    const allowed = Array.isArray(raw) ? raw.map(String) : [];
+
     setError(null);
-    loadSwitchableParks(allowed)
+    (async()=>{
+      const {data}=await supabase.auth.getUser();
+      const raw=data.user?.app_metadata?.allowed_park_ids??user.app_metadata?.allowed_park_ids;
+      const allowed=Array.isArray(raw)?raw.map(String):[];
+      if(JSON.stringify(raw)!==JSON.stringify(user.app_metadata?.allowed_park_ids))await supabase.auth.refreshSession();
+      return loadSwitchableParks(allowed);
+    })()
       .then((list) => active && setParks(list))
       .catch((err: unknown) => active && setError(err instanceof Error ? err.message : 'Fehler beim Laden'));
     return () => {

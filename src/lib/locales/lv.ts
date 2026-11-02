@@ -2539,6 +2539,17 @@ const dict: Record<string, string> = {
     'online_photos.screen': "Atvērt foto ekrānu",
     'online_photos.claim': "Atvērt viesu foto lapu",
     'online_photos.empty': "Šodienas foto vēl nav. Jauni foto parādās automātiski.",
+    'photo_shop.title': "Foto veikals",
+    'photo_shop.note': "Meklējiet pēc foto numura vai apmeklējuma laika. Jaunie foto parādās automātiski.",
+    'photo_shop.mode': "Atbloķēt foto ar",
+    'photo_shop.paid': "Stripe maksājums",
+    'photo_shop.email': "Bezmaksas ar e-pastu",
+    'photo_shop.consent': "Piekrišana jaunumiem ir brīvprātīga.",
+    'photo_shop.existing': "Attiecas uz jaunām atbloķēšanām. Iepriekšējie foto paliek pieejami.",
+    'photo_shop.open': "Atvērt foto veikalu",
+    'photo_shop.screen': "Atvērt foto ekrānu",
+    'photo_shop.error': "Neizdevās saglabāt. Nepieciešama īpašnieka piekļuve.",
+    'photo_shop.saved': "Režīms saglabāts.",
 };
 
 export default dict;

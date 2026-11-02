@@ -2539,6 +2539,17 @@ const dict: Record<string, string> = {
     'online_photos.screen': "Fotoscherm openen",
     'online_photos.claim': "Fotopagina voor gasten openen",
     'online_photos.empty': "Nog geen foto’s van vandaag. Nieuwe foto’s verschijnen automatisch.",
+    'photo_shop.title': "Fotowinkel",
+    'photo_shop.note': "Zoek op fotonummer of bezoektijd. Nieuwe foto’s verschijnen automatisch.",
+    'photo_shop.mode': "Foto’s ontgrendelen met",
+    'photo_shop.paid': "Stripe-betaling",
+    'photo_shop.email': "Gratis met e-mail",
+    'photo_shop.consent': "Nieuwsbrief blijft optioneel.",
+    'photo_shop.existing': "Geldt direct voor nieuwe ontgrendelingen. Eerdere foto’s blijven beschikbaar.",
+    'photo_shop.open': "Fotowinkel openen",
+    'photo_shop.screen': "Fotoscherm openen",
+    'photo_shop.error': "Laden of opslaan mislukt. Toegang als eigenaar vereist.",
+    'photo_shop.saved': "Modus opgeslagen.",
 };
 
 export default dict;

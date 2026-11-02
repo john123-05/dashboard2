@@ -2539,6 +2539,17 @@ const dict: Record<string, string> = {
     'online_photos.screen': "Ouvrir la galerie écran",
     'online_photos.claim': "Ouvrir la page photo",
     'online_photos.empty': "Aucune photo aujourd’hui. Les nouvelles photos apparaissent automatiquement.",
+    'photo_shop.title': "Boutique photo",
+    'photo_shop.note': "Recherche par numéro ou heure. Les nouvelles photos apparaissent automatiquement.",
+    'photo_shop.mode': "Débloquer avec",
+    'photo_shop.paid': "Paiement Stripe",
+    'photo_shop.email': "Gratuit avec e-mail",
+    'photo_shop.consent': "Le consentement à la newsletter reste facultatif.",
+    'photo_shop.existing': "S’applique aux nouveaux déblocages. Les photos déjà débloquées restent disponibles.",
+    'photo_shop.open': "Ouvrir la boutique",
+    'photo_shop.screen': "Ouvrir l’écran",
+    'photo_shop.error': "Impossible de charger ou enregistrer. Accès propriétaire requis.",
+    'photo_shop.saved': "Mode enregistré.",
 };
 
 export default dict;
