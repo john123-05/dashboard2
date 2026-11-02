@@ -2535,6 +2535,10 @@ const dict: Record<string, string> = {
     'online_sales.count': "{count} betalingen · Totaal",
     'online_sales.error': "Onlinebetalingen tijdelijk niet beschikbaar",
     'online_sales.asof': "Gegevens van: {date}",
+    'online_photos.note': "Camerafoto’s van vandaag · QR-verkoop · Stripe TEST",
+    'online_photos.screen': "Fotoscherm openen",
+    'online_photos.claim': "Fotopagina voor gasten openen",
+    'online_photos.empty': "Nog geen foto’s van vandaag. Nieuwe foto’s verschijnen automatisch.",
 };
 
 export default dict;
