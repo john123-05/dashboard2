@@ -1,4 +1,5 @@
 import OnlinePhotoShop from '../components/OnlinePhotoShop';
+import PloseProductShop from '../components/PloseProductShop';
 import { Link, useLocation } from 'react-router-dom';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import QRCode from '../lib/vendor/qrcode.bundle.js';
@@ -107,7 +108,7 @@ function PreviewFrame({ src, mode }: { src: string; mode: 'phone' | 'desktop' })
   );
 }
 
-export default function Shop(){const {parkId}=usePark();return parkId==='cd65690a-3e83-414a-8e38-5482cfe1c482'?<OnlinePhotoShop key={parkId} parkId={parkId}/>:<LegacyShop/>;}
+export default function Shop(){const {parkId}=usePark();if(parkId==='3b08e092-beb5-46ec-9811-5698e86dd83a')return <PloseProductShop/>;return parkId==='cd65690a-3e83-414a-8e38-5482cfe1c482'?<OnlinePhotoShop key={parkId} parkId={parkId}/>:<LegacyShop/>;}
 function LegacyShop() {
   const { t } = useI18n();
   const locale = useLocaleTag();

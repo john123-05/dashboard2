@@ -11,6 +11,8 @@ export type OperatorAuthResult =
 
 type OperatorUser = {
   id: string;
+  email?: string;
+  email_confirmed_at?: string;
   app_metadata?: Record<string, unknown> | null;
 };
 
@@ -37,8 +39,19 @@ async function fetchOperatorUser(token: string): Promise<OperatorUser | null> {
   if (!response.ok) return null;
   const user = await response.json().catch(() => null);
   return user?.id
-    ? { id: String(user.id), app_metadata: user.app_metadata ?? null }
+    ? { id: String(user.id), email:user.email, email_confirmed_at:user.email_confirmed_at, app_metadata: user.app_metadata ?? null }
     : null;
+}
+
+/** Internal financial reports are separate from park ownership. The same
+ * verified Liftpictures accounts used by the dashboard park switcher qualify;
+ * shared-project staff must pass admin_users authorization. */
+export async function canViewInternalCosts(req:Request):Promise<boolean>{
+  const token=(req.headers.get('authorization')||'').replace(/^Bearer /,'');
+  if(!token)return false;
+  const user=await fetchOperatorUser(token);
+  if(user)return !!user.email_confirmed_at&&['tomnotes.tn@gmail.com','john.m.nolting@gmail.com'].includes((user.email||'').toLowerCase());
+  return (await requireAdminFromRequest(req)).ok;
 }
 
 async function fetchAccessiblePark(
