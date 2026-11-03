@@ -1,4 +1,4 @@
-import OnlinePhotoRevenue from '../components/OnlinePhotoRevenue';
+import OnlineOverview from '../components/OnlineOverview';
 import OnlinePhotos from '../components/OnlinePhotos';
 import { useEffect, useMemo, useState } from 'react';
 import ParkPhotoImg from '../components/ParkPhotoImg';
@@ -129,7 +129,7 @@ interface RecentSupportMessage {
   ticket_subject: string | null;
 }
 
-export default function Overview(){const {parkId}=usePark();return parkId==='cd65690a-3e83-414a-8e38-5482cfe1c482'?<div className="space-y-8"><OnlinePhotoRevenue parkId={parkId}/><OnlinePhotos/></div>:<LegacyOverview/>;}
+export default function Overview(){const {parkId}=usePark();return parkId==='cd65690a-3e83-414a-8e38-5482cfe1c482'?<div className="space-y-8"><OnlineOverview parkId={parkId}/><OnlinePhotos/></div>:<LegacyOverview/>;}
 function LegacyOverview() {
   const navigate = useNavigate();
   const { profile } = useAuth();
