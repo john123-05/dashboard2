@@ -2998,6 +2998,21 @@ const dict: Record<string, string> = {
     'pres.o.watermark.none': "Ninguna",
     'pres.o.ticker_position.bottom': "Abajo",
     'pres.o.ticker_position.top': "Arriba",
+    'pres.live': "En vivo",
+    'pres.locked': "Bloqueado",
+    'pres.live_note': "Así se ve la pantalla ahora mismo, con tus fotos más recientes.",
+    'pres.schedule_active': "{name} activo",
+    'pres.photos_on_screen': "Fotos en pantalla",
+    'pres.edit_hint': "Los cambios aparecen en la máquina en pocos minutos.",
+    'perso.mobile_title': "Versión móvil",
+    'perso.mobile_sub': "Los visitantes compran sus fotos con el código QR y las descargan en el móvil. Elige aquí qué overlay (p. ej. un marco con tu logo) aparece en ellas. Se añade a la foto al descargarla.",
+    'perso.mobile_studio_title': "Diseñar un nuevo overlay",
+    'perso.mobile_studio_sub': "Marco, logo y texto arrastrando. Con “usar al instante” estará en vivo en las fotos del móvil.",
+    'perso.mobile_gallery_title': "Overlay en las fotos del móvil",
+    'perso.mobile_gallery_sub': "Toca un overlay guardado para activarlo. Se aplica de inmediato a todas las fotos que se compren o descarguen.",
+    'perso.mobile_preview_sub': "Así se ve una foto que los visitantes compran y descargan.",
+    'perso.mobile_no_overlay': "Ahora sin overlay: los visitantes reciben la foto sin marco.",
+    'perso.mobile_remove': "Sin overlay",
 };
 
 export default dict;

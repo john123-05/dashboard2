@@ -2998,6 +2998,21 @@ const dict: Record<string, string> = {
     'pres.o.watermark.none': "Geen",
     'pres.o.ticker_position.bottom': "Onder",
     'pres.o.ticker_position.top': "Boven",
+    'pres.live': "Live",
+    'pres.locked': "Geblokkeerd",
+    'pres.live_note': "Zo ziet het scherm er nu uit, met je nieuwste foto’s.",
+    'pres.schedule_active': "{name} actief",
+    'pres.photos_on_screen': "Foto’s op het scherm",
+    'pres.edit_hint': "Wijzigingen verschijnen binnen enkele minuten op de automaat.",
+    'perso.mobile_title': "Mobiele versie",
+    'perso.mobile_sub': "Gasten kopen hun foto’s via de QR-code en downloaden ze op hun telefoon. Kies hier welke overlay (bijv. kader met logo) op deze foto’s staat. Die wordt bij het downloaden in de foto gezet.",
+    'perso.mobile_studio_title': "Nieuwe overlay ontwerpen",
+    'perso.mobile_studio_sub': "Kader, logo en tekst met slepen. Met “direct gebruiken” staat het meteen live op de telefoonfoto’s.",
+    'perso.mobile_gallery_title': "Overlay op telefoonfoto’s",
+    'perso.mobile_gallery_sub': "Tik op een opgeslagen overlay om hem live te zetten. Hij geldt meteen voor alle foto’s die gasten kopen of downloaden.",
+    'perso.mobile_preview_sub': "Zo ziet een foto eruit die gasten kopen en downloaden.",
+    'perso.mobile_no_overlay': "Op dit moment geen overlay – gasten krijgen de foto zonder kader.",
+    'perso.mobile_remove': "Zonder overlay",
 };
 
 export default dict;

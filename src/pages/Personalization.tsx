@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Image as ImageIcon, Upload, Loader2, Trash2, PencilRuler, CheckCircle2, RefreshCw } from 'lucide-react';
+import { Image as ImageIcon, Upload, Loader2, Trash2, PencilRuler, CheckCircle2, RefreshCw, Smartphone, Ban } from 'lucide-react';
 import { invokeEdgeFunction } from '../lib/edgeFunctions';
 import { supabase } from '../lib/supabase';
 import GlassCard from '../components/ui/GlassCard';
@@ -7,7 +7,7 @@ import OverlayBuilder, { type OpenRequest } from '../components/OverlayBuilder';
 import { UpgradePageHeader } from '../components/upgrade/UpgradeHero';
 import AutomatBranding from '../components/AutomatBranding';
 import PresentationScreenCard from '../components/presentation/PresentationScreenCard';
-import { ONLINE_PARKS } from '../lib/onlinePark';
+import { ONLINE_PARKS, isOnlinePark } from '../lib/onlinePark';
 import { useI18n } from '../lib/i18n';
 import { usePark } from '../contexts/ParkContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -115,10 +115,31 @@ export default function Personalization() {
     return map;
   }, [assets]);
 
+  // Online-Parks (Kalahari): Gäste laden die Fotos aufs Handy - dort gilt das GERADE aktive Overlay
+  // (wie resolve-overlays: höchste Priorität, dann neuester Start). Kein Automaten-Branding, kein Druck.
+  const online = isOnlinePark(parkId);
+  const liveCampaign = useMemo(() => {
+    const now = Date.now();
+    return [...campaigns]
+      .filter((c) => c.status === 'active' && Date.parse(c.starts_at) <= now && (!c.ends_at || Date.parse(c.ends_at) >= now))
+      .sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0) || Date.parse(b.starts_at) - Date.parse(a.starts_at))[0] ?? null;
+  }, [campaigns]);
+  const shownCampaign = online ? liveCampaign : selectedCampaign;
+  const [removingOverlay, setRemovingOverlay] = useState(false);
+  async function removeLiveOverlay() {
+    if (!parkId) return;
+    setRemovingOverlay(true);
+    setActionError(null);
+    const { error } = await supabase.from('overlay_campaigns').update({ status: 'archived' }).eq('park_id', parkId).eq('status', 'active').like('name', 'Sofort Overlay:%');
+    if (error) setActionError(error.message);
+    await loadOverlayData();
+    setRemovingOverlay(false);
+  }
+
   const selectedLayers = useMemo(() => {
-    if (!selectedCampaign) return [];
-    return [...(selectedCampaign.layers || [])].sort((a, b) => a.z_index - b.z_index);
-  }, [selectedCampaign]);
+    if (!shownCampaign) return [];
+    return [...(shownCampaign.layers || [])].sort((a, b) => a.z_index - b.z_index);
+  }, [shownCampaign]);
 
   const selectedAssetIds = useMemo(
     () => new Set(selectedLayers.map((layer) => layer.asset_id)),
@@ -457,32 +478,26 @@ export default function Personalization() {
 
       <PresentationScreenCard parkId={parkId} parkSlug={parkId ? ONLINE_PARKS[parkId]?.path ?? null : null} />
 
-      <AutomatBranding onOpenInEditor={openInEditor} />
+      {!online && <AutomatBranding onOpenInEditor={openInEditor} />}
 
-      <section className="space-y-3">
-        <div>
-          <h3 className="text-base font-semibold text-[color:var(--ink)]">{t('perso.studio_title')}</h3>
-          <p className="mt-0.5 text-sm text-[color:var(--ink-3)]">{t('perso.edit_sub')}</p>
+      {online && (
+        <div className="flex items-start gap-3 pt-2">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-[color:var(--ink-2)]"><Smartphone className="h-5 w-5" /></span>
+          <div>
+            <h2 className="text-lg font-semibold text-[color:var(--ink)]">{t('perso.mobile_title')}</h2>
+            <p className="mt-0.5 max-w-3xl text-sm text-[color:var(--ink-3)]">{t('perso.mobile_sub')}</p>
+          </div>
         </div>
-        <OverlayBuilder
-          onSave={handleBuilderSave}
-          saving={builderSaving}
-          previewUrl={baseImage}
-          onGenerate={handleGenerate}
-          generating={generating}
-          generateError={generateError}
-          parkId={parkId}
-          brandName={parkName}
-          openRequest={openRequest}
-        />
-      </section>
+      )}
 
+      {online ? (
+        <>
       <div ref={galleryRef}>
         <GlassCard className="p-5 sm:p-6">
           <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <h3 className="text-base font-semibold text-[color:var(--ink)]">{t('perso.saved_overlays')}</h3>
-              <p className="mt-0.5 text-sm text-[color:var(--ink-3)]">{t('perso.gallery_sub')}</p>
+              <h3 className="text-base font-semibold text-[color:var(--ink)]">{online ? t('perso.mobile_gallery_title') : t('perso.saved_overlays')}</h3>
+              <p className="mt-0.5 text-sm text-[color:var(--ink-3)]">{online ? t('perso.mobile_gallery_sub') : t('perso.gallery_sub')}</p>
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <label className="flex items-center gap-2 text-xs text-[color:var(--ink-2)]">
@@ -500,6 +515,12 @@ export default function Personalization() {
                   e.target.value = '';
                 }}
               />
+              {online && liveCampaign && (
+                <button onClick={() => void removeLiveOverlay()} className="glass-button-secondary py-1.5 text-sm" disabled={removingOverlay}>
+                  {removingOverlay ? <Loader2 className="h-4 w-4 animate-spin" /> : <Ban className="h-4 w-4" />}
+                  {t('perso.mobile_remove')}
+                </button>
+              )}
               <button onClick={() => fileInputRef.current?.click()} className="glass-button-secondary py-1.5 text-sm" disabled={!parkId || uploading}>
                 {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                 {uploading ? t('perso.uploading') : t('perso.upload_ready')}
@@ -548,7 +569,7 @@ export default function Personalization() {
                   );
                 })}
               </div>
-              <p className="mt-2 text-xs text-[color:var(--ink-3)]">{t('perso.preview_sub')}</p>
+              <p className="mt-2 text-xs text-[color:var(--ink-3)]">{online ? (liveCampaign ? t('perso.mobile_preview_sub') : t('perso.mobile_no_overlay')) : t('perso.preview_sub')}</p>
             </div>
 
             <div>
@@ -627,6 +648,203 @@ export default function Personalization() {
           </div>
         </GlassCard>
       </div>
+      <section className="space-y-3">
+        <div>
+          <h3 className="text-base font-semibold text-[color:var(--ink)]">{online ? t('perso.mobile_studio_title') : t('perso.studio_title')}</h3>
+          <p className="mt-0.5 text-sm text-[color:var(--ink-3)]">{online ? t('perso.mobile_studio_sub') : t('perso.edit_sub')}</p>
+        </div>
+        <OverlayBuilder
+          onSave={handleBuilderSave}
+          saving={builderSaving}
+          previewUrl={baseImage}
+          onGenerate={handleGenerate}
+          generating={generating}
+          generateError={generateError}
+          parkId={parkId}
+          brandName={parkName}
+          openRequest={openRequest}
+        />
+      </section>
+
+        </>
+      ) : (
+        <>
+      <section className="space-y-3">
+        <div>
+          <h3 className="text-base font-semibold text-[color:var(--ink)]">{online ? t('perso.mobile_studio_title') : t('perso.studio_title')}</h3>
+          <p className="mt-0.5 text-sm text-[color:var(--ink-3)]">{online ? t('perso.mobile_studio_sub') : t('perso.edit_sub')}</p>
+        </div>
+        <OverlayBuilder
+          onSave={handleBuilderSave}
+          saving={builderSaving}
+          previewUrl={baseImage}
+          onGenerate={handleGenerate}
+          generating={generating}
+          generateError={generateError}
+          parkId={parkId}
+          brandName={parkName}
+          openRequest={openRequest}
+        />
+      </section>
+
+      <div ref={galleryRef}>
+        <GlassCard className="p-5 sm:p-6">
+          <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h3 className="text-base font-semibold text-[color:var(--ink)]">{online ? t('perso.mobile_gallery_title') : t('perso.saved_overlays')}</h3>
+              <p className="mt-0.5 text-sm text-[color:var(--ink-3)]">{online ? t('perso.mobile_gallery_sub') : t('perso.gallery_sub')}</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <label className="flex items-center gap-2 text-xs text-[color:var(--ink-2)]">
+                <input type="checkbox" checked={autoApplyUpload} onChange={(e) => setAutoApplyUpload(e.target.checked)} className="accent-[#c2410c]" />
+                {t('perso.use_on_save')}
+              </label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  void handleAddOverlay(e.target.files);
+                  e.target.value = '';
+                }}
+              />
+              {online && liveCampaign && (
+                <button onClick={() => void removeLiveOverlay()} className="glass-button-secondary py-1.5 text-sm" disabled={removingOverlay}>
+                  {removingOverlay ? <Loader2 className="h-4 w-4 animate-spin" /> : <Ban className="h-4 w-4" />}
+                  {t('perso.mobile_remove')}
+                </button>
+              )}
+              <button onClick={() => fileInputRef.current?.click()} className="glass-button-secondary py-1.5 text-sm" disabled={!parkId || uploading}>
+                {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                {uploading ? t('perso.uploading') : t('perso.upload_ready')}
+              </button>
+            </div>
+          </div>
+
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+            <div>
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-xs font-semibold text-[color:var(--ink-2)]">{t('perso.preview')}</p>
+                <button onClick={loadRecent} className="inline-flex items-center gap-1 text-xs text-[color:var(--ink-3)] hover:text-[color:var(--ink)]">
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  {t('app.refresh')}
+                </button>
+              </div>
+              <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg bg-slate-100">
+                {loading ? (
+                  <div className="absolute inset-0 animate-pulse bg-slate-100" />
+                ) : baseImage ? (
+                  <img src={baseImage} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-slate-400">
+                    <ImageIcon className="h-6 w-6" />
+                    <span className="ml-2 text-sm">{t('personalization.no_recent_photo')}</span>
+                  </div>
+                )}
+                {selectedLayers.map((layer) => {
+                  const preview = assetById.get(layer.asset_id)?.preview_url;
+                  if (!preview) return null;
+                  return (
+                    <img
+                      key={layer.id}
+                      src={preview}
+                      alt=""
+                      className="pointer-events-none absolute inset-0 h-full w-full"
+                      style={{
+                        zIndex: layer.z_index,
+                        opacity: layer.opacity,
+                        mixBlendMode: layer.blend_mode,
+                        objectFit: layer.fit === 'fill' ? 'fill' : layer.fit,
+                        objectPosition: anchorToObjectPosition(layer.anchor),
+                        transform: `scale(${layer.scale})`,
+                      }}
+                    />
+                  );
+                })}
+              </div>
+              <p className="mt-2 text-xs text-[color:var(--ink-3)]">{online ? (liveCampaign ? t('perso.mobile_preview_sub') : t('perso.mobile_no_overlay')) : t('perso.preview_sub')}</p>
+            </div>
+
+            <div>
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-xs font-semibold text-[color:var(--ink-2)]">{t('perso.click_to_apply')}</p>
+                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">{assets.length}</span>
+              </div>
+              {assets.length > 0 ? (
+                <div className="grid max-h-[34rem] grid-cols-2 gap-3 overflow-y-auto pr-1 sm:grid-cols-3 xl:grid-cols-2 2xl:grid-cols-3">
+                  {assets.map((asset) => {
+                    const isDeleting = deletingAssetId === asset.id;
+                    const isActivating = activatingAssetId === asset.id;
+                    const isActive = selectedAssetIds.has(asset.id);
+                    return (
+                      <div
+                        key={asset.id}
+                        className={`group overflow-hidden rounded-lg border bg-white transition ${
+                          isActive ? 'border-brand-600 ring-1 ring-brand-600' : 'border-[color:var(--line)] hover:border-[color:var(--line-strong)]'
+                        }`}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => !isActive && void handleActivateAsset(asset)}
+                          disabled={isActivating}
+                          className="relative flex aspect-[4/3] w-full items-center justify-center overflow-hidden"
+                          style={{ background: checker }}
+                          title={t('perso.click_to_apply')}
+                        >
+                          {asset.preview_url ? (
+                            <img src={asset.preview_url} alt={pathBasename(asset.path)} className="h-full w-full object-contain" />
+                          ) : (
+                            <ImageIcon className="h-5 w-5 text-slate-300" />
+                          )}
+                          {(isActive || isActivating) && (
+                            <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1 rounded-full bg-brand-600 px-2 py-0.5 text-[10px] font-semibold text-white">
+                              {isActivating ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
+                              {isActivating ? t('perso.activating') : t('perso.active')}
+                            </span>
+                          )}
+                        </button>
+                        <div className="flex items-center gap-1 border-t border-[color:var(--line)] px-2 py-1.5">
+                          <p className="min-w-0 flex-1 truncate text-[11px] text-[color:var(--ink-3)]">
+                            {new Date(asset.created_at).toLocaleDateString()}
+                          </p>
+                          {asset.preview_url && (
+                            <button
+                              type="button"
+                              onClick={() => openInEditor(asset.preview_url!)}
+                              title={t('branding.open_in_editor')}
+                              aria-label={t('branding.open_in_editor')}
+                              className="rounded p-1 text-[color:var(--ink-3)] hover:bg-slate-100 hover:text-brand-700"
+                            >
+                              <PencilRuler className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => void handleDeleteAsset(asset)}
+                            aria-label={t('perso.delete_asset', { name: pathBasename(asset.path) })}
+                            title={t('builder.delete')}
+                            className="rounded p-1 text-[color:var(--ink-3)] hover:bg-rose-50 hover:text-rose-600"
+                          >
+                            {isDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="rounded-lg border border-dashed border-[color:var(--line-strong)] px-4 py-6 text-center text-sm text-[color:var(--ink-3)]">
+                  {t('perso.no_overlays')}
+                </p>
+              )}
+            </div>
+          </div>
+        </GlassCard>
+      </div>
+        </>
+      )}
     </div>
   );
 }

@@ -2998,6 +2998,21 @@ const dict: Record<string, string> = {
     'pres.o.watermark.none': "Nav",
     'pres.o.ticker_position.bottom': "Apakšā",
     'pres.o.ticker_position.top': "Augšā",
+    'pres.live': "Tiešraidē",
+    'pres.locked': "Bloķēts",
+    'pres.live_note': "Tā ekrāns izskatās tagad – ar jūsu jaunākajām foto.",
+    'pres.schedule_active': "{name} aktīvs",
+    'pres.photos_on_screen': "Foto ekrānā",
+    'pres.edit_hint': "Izmaiņas iekārtā parādās pēc dažām minūtēm.",
+    'perso.mobile_title': "Mobilā versija",
+    'perso.mobile_sub': "Viesi pērk foto ar QR kodu un lejupielādē tās telefonā. Šeit izvēlieties, kurš pārklājums (piem., rāmis ar logo) būs uz šīm foto. Tas tiek pievienots lejupielādējot.",
+    'perso.mobile_studio_title': "Veidot jaunu pārklājumu",
+    'perso.mobile_studio_sub': "Rāmis, logo un teksts ar vilkšanu. Ar “izmantot uzreiz” tas uzreiz ir redzams telefona foto.",
+    'perso.mobile_gallery_title': "Pārklājums telefona foto",
+    'perso.mobile_gallery_sub': "Pieskarieties saglabātam pārklājumam, lai to aktivizētu. Tas uzreiz attiecas uz visām pērkamajām vai lejupielādējamām foto.",
+    'perso.mobile_preview_sub': "Tā izskatās foto, ko viesi nopērk un lejupielādē.",
+    'perso.mobile_no_overlay': "Pašlaik bez pārklājuma – viesi saņem foto bez rāmja.",
+    'perso.mobile_remove': "Bez pārklājuma",
 };
 
 export default dict;

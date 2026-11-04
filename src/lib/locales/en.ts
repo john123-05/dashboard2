@@ -2998,6 +2998,21 @@ const dict: Record<string, string> = {
     'pres.o.watermark.none': "None",
     'pres.o.ticker_position.bottom': "Bottom",
     'pres.o.ticker_position.top': "Top",
+    'pres.live': "Live",
+    'pres.locked': "Locked",
+    'pres.live_note': "This is how the screen looks right now – with your latest photos.",
+    'pres.schedule_active': "{name} active",
+    'pres.photos_on_screen': "Photos on screen",
+    'pres.edit_hint': "Changes appear on the machine within a few minutes.",
+    'perso.mobile_title': "Mobile version",
+    'perso.mobile_sub': "Guests buy their photos via QR code and download them to their phone. Choose which overlay (e.g. a frame with your logo) appears on these photos. It is added to the photo on download.",
+    'perso.mobile_studio_title': "Design a new overlay",
+    'perso.mobile_studio_sub': "Frame, logo and text by drag & drop. With “use immediately” it goes live on the phone photos right away.",
+    'perso.mobile_gallery_title': "Overlay on phone photos",
+    'perso.mobile_gallery_sub': "Tap a saved overlay to make it live. It applies immediately to every photo guests buy or download from now on.",
+    'perso.mobile_preview_sub': "This is how a photo looks when guests buy and download it.",
+    'perso.mobile_no_overlay': "No overlay right now – guests get the photo without a frame.",
+    'perso.mobile_remove': "No overlay",
 };
 
 export default dict;

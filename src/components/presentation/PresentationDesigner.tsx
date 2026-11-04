@@ -14,7 +14,7 @@ type Field = { kind: string; default: unknown; limits: unknown };
 export type Design = Record<string, unknown>;
 const FIELDS = PRESENTATION_FIELDS as unknown as Record<string, Field>;
 
-const INHERIT = ['logo_url', 'header_title', 'header_subtitle', 'ticker_messages', 'qr_caption', 'touch_text', 'empty_text', 'time_format', 'orientation'];
+export const INHERIT = ['logo_url', 'header_title', 'header_subtitle', 'ticker_messages', 'qr_caption', 'touch_text', 'empty_text', 'time_format', 'orientation'];
 const KEEP_ON_PRESET = ['header_title', 'header_subtitle', 'ticker_messages', 'logo_url', 'qr_caption', 'touch_text', 'empty_text', 'orientation', 'layout', 'columns', 'rows', 'order', 'time_format'];
 type Plan = { name?: string; from: string; to: string; days?: number[]; design: Design };
 
@@ -72,7 +72,7 @@ function classicFromViewer(v: Record<string, string> | null): Design {
   };
 }
 
-function mergeDesign(viewer: Record<string, string> | null, design: Design): Design {
+export function mergeDesign(viewer: Record<string, string> | null, design: Design): Design {
   const out: Design = {};
   for (const [k, f] of Object.entries(FIELDS)) out[k] = f.default;
   Object.assign(out, classicFromViewer(viewer));
@@ -84,18 +84,18 @@ function mergeDesign(viewer: Record<string, string> | null, design: Design): Des
   return out;
 }
 
-type Sample = { key: string; src: string; number: string; ts: number; url: string; qr?: string };
+export type Sample = { key: string; src: string; number: string; ts: number; url: string; qr?: string };
 const PLACEHOLDER = (i: number) =>
   'data:image/svg+xml;utf8,' + encodeURIComponent(
     `<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="1000"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#${['5b7c99', '7a6a58', '4f6b5a', '6b5b7a'][i % 4]}"/><stop offset="1" stop-color="#1f2933"/></linearGradient></defs><rect width="1500" height="1000" fill="url(#g)"/></svg>`);
-const VIEWER_MARK = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+export const VIEWER_MARK = 'data:image/svg+xml;utf8,' + encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" fill="none" stroke="#ff7a1a" stroke-width="10"/><path d="M22 78 78 22" stroke="#ff7a1a" stroke-width="10"/></svg>');
 
 function numberFromCode(code: string): string {
   return code.length === 16 ? code[10] + code[5] + code[2] + code[15] : code.slice(-4);
 }
 
-async function loadSamples(parkSlug?: string | null): Promise<Sample[]> {
+export async function loadSamples(parkSlug?: string | null): Promise<Sample[]> {
   let list: Sample[] = [];
   if (parkSlug) {
     try {
