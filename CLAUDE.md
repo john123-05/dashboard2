@@ -78,7 +78,7 @@ a staff form silently does nothing, check the function actually exists.
 - The Supabase SQL editor caps results at 100 rows by default - for big
   exports have John raise the limit dropdown, export CSV, read the file
   from `~/Downloads`.
-- Verification: `npx tsc --noEmit` in repo root.
+- Verification: `npx tsc --noEmit -p tsconfig.app.json` (plain `npx tsc --noEmit` checks NOTHING: root tsconfig has `files: []` + references).
 
 ## Staff dashboard - current state (July 2026)
 
