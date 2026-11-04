@@ -157,6 +157,20 @@ export default function Settings() {
   // Online-Foto-Park (Kalahari): kein Automatenpreis, keine Stripe-Produkte – Preis und Stripe stehen im Online-Shop.
   const { parkId, parkName, refreshKioskState } = usePark();
   const online = isOnlinePark(parkId);
+  // Organisation des GEWÄHLTEN Parks (wer mehreren Organisationen angehört, z. B. Tom, sieht sonst immer die erste).
+  const [parkOrgId, setParkOrgId] = useState<string | null>(null);
+  useEffect(() => {
+    setParkOrgId(null);
+    if (!parkId) return;
+    let cancelled = false;
+    void supabase.from('parks').select('organization_id').eq('id', parkId).maybeSingle()
+      .then(({ data }) => { if (!cancelled) setParkOrgId((data?.organization_id as string | undefined) ?? null); });
+    return () => { cancelled = true; };
+  }, [parkId]);
+  const displayOrg =
+    memberships.find((m) => m.organization_id === parkOrgId)?.organization ??
+    memberships.find((m) => parkName && m.organization?.name && parkName.startsWith(m.organization.name))?.organization ??
+    currentOrg;
   const { language, setLanguage, t } = useI18n();
   const [fullName, setFullName] = useState(profile?.full_name || '');
   const [saving, setSaving] = useState(false);
@@ -854,10 +868,10 @@ export default function Settings() {
           {parksToRender.length > 0 ? (
             <div className="space-y-4">
               <div className="flex items-center gap-3 rounded-xl bg-slate-50 p-4">
-                {currentOrg?.logo_url ? (
+                {displayOrg?.logo_url ? (
                   // Logo der Organisation (z. B. weißes Kalahari-Logo): auf der Markenfarbe, damit helle Logos lesbar sind.
                   <div className="flex h-14 w-24 shrink-0 items-center justify-center rounded-xl p-2" style={{ background: accentColorForPark(selectedPark?.id) }}>
-                    <img src={currentOrg.logo_url} alt={currentOrg.name} className="max-h-full max-w-full object-contain" />
+                    <img src={displayOrg.logo_url} alt={displayOrg.name} className="max-h-full max-w-full object-contain" />
                   </div>
                 ) : (
                 <div className="rounded-xl bg-brand-100 p-3">
