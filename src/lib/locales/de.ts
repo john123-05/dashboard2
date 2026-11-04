@@ -249,6 +249,7 @@ const dict: Record<string, string> = {
     'overview.sold_per_ride': "Verkauft je Fahrt",
     'overview.rides_today': "Fahrten heute",
     'online.photos_today': "Fotos heute",
+    'online.stripe_link_ready': "Dein Stripe-Link ist da: Auszahlung jetzt einrichten",
     'shopx.page_shop': "Fotoshop",
     'shopx.page_screen': "Bildschirm",
     'shopx.page_unlocked': "Nach dem Kauf",

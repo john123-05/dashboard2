@@ -15,7 +15,8 @@ export default function SetupCard() {
   const { parkId } = usePark();
   const { data: online } = useOnlineSummary(parkId);
   const install = installationLine(online);
-  if ((hidden || complete || !next || total === 0) && !install) return null;
+  const stripeLink = online?.shop && !online.shop.stripe_connected ? online.shop.stripe_onboarding_url ?? null : null;
+  if ((hidden || complete || !next || total === 0) && !install && !stripeLink) return null;
   const NextIcon = next?.icon;
   return (
     <section className="relative flex flex-wrap items-center gap-4 rounded-xl border border-[color:var(--line)] bg-white p-4 sm:p-5" aria-label={t('ob.card_title')}>
@@ -31,6 +32,12 @@ export default function SetupCard() {
             <span className="shrink-0 rounded-full bg-brand-600 px-1.5 py-px text-[10px] font-semibold text-white">{install.done}/{install.total}</span>
             <span className="truncate">{t('online.install_line', { title: install.title })}</span>
           </button>
+        )}
+        {stripeLink && (
+          <Link to="/start#stripe" className="mt-0.5 flex min-w-0 max-w-full items-center gap-1.5 text-sm font-medium text-brand-700 hover:underline">
+            <span className="shrink-0 rounded-full bg-brand-600 px-1.5 py-px text-[10px] font-semibold text-white">Stripe</span>
+            <span className="truncate">{t('online.stripe_link_ready')}</span>
+          </Link>
         )}
         {next && NextIcon && !hidden && !complete && (
         <p className="mt-0.5 flex min-w-0 items-center gap-1.5 text-sm text-[color:var(--ink-2)]">

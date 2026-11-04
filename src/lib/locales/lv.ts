@@ -247,6 +247,7 @@ const dict: Record<string, string> = {
     'overview.sold_per_ride': "Pārdots katrā braucienā",
     'overview.rides_today': "Braucieni šodien",
     'online.photos_today': "Foto šodien",
+    'online.stripe_link_ready': "Your Stripe link is ready: set up payouts now",
     'shopx.page_shop': "Photo shop",
     'shopx.page_screen': "Screen",
     'shopx.page_unlocked': "After purchase",

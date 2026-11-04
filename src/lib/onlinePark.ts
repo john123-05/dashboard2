@@ -40,6 +40,8 @@ export interface OnlineSummary {
     enabled: boolean;
     path: string;
     stripe_connected: boolean;
+    stripe_onboarding_url?: string | null;
+    stripe_onboarding_updated_at?: string | null;
     shop_url: string;
     screen_url: string;
   } | null;

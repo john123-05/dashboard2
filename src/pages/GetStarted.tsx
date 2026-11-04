@@ -4,7 +4,7 @@ import { ArrowRight, Check, ChevronDown, Clock, Download, LifeBuoy, BookOpen, Pl
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../lib/i18n';
 import { APP_STORE_URL, useOnboarding, type VisibleGuideItem } from '../lib/onboarding';
-import { InstallationSection } from '../components/online/OnlinePark';
+import { InstallationSection, StripeSetupCard } from '../components/online/OnlinePark';
 import GlassCard from '../components/ui/GlassCard';
 import ProgressRing from '../components/onboarding/ProgressRing';
 import AppSetupGuide from '../components/onboarding/AppSetupGuide';
@@ -179,6 +179,9 @@ export default function GetStarted() {
 
       {/* Online-Foto-Park (Kalahari): Installation und Stripe-Einrichtung gehören zu den ersten Schritten. */}
       <InstallationSection />
+
+      {/* Online-Foto-Park: Stripe-Auszahlung als eigener Schritt, vor „Liftbase als App“ */}
+      <StripeSetupCard />
 
       {/* Als App hinzufügen + Benachrichtigungen */}
       <GlassCard className="scroll-mt-6 overflow-hidden p-0" >

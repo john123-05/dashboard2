@@ -1,11 +1,10 @@
-// Bausteine für Online-Foto-Parks (Kalahari): Lieferverlauf als Fenster über der Übersicht, Knopf oben
-// rechts zum Wiederöffnen, eigene Seite /installation, Stripe-Anleitung, FAQ und die Gästeseiten.
+// Bausteine für Online-Foto-Parks (Kalahari): Installationsfenster (öffnet sich bei neuem Stand), Abschnitt
+// „Installation“ und Karte „Stripe payouts“ in „Erste Schritte“, Stripe-Anleitung mit Link, FAQ, Gästeseiten.
 // Bewusst englisch: der Kunde sitzt in den USA. Stil wie „Erste Schritte“ (weiß, --ink, Orange-Akzent).
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  Check, CheckCircle2, Copy, CreditCard, ExternalLink, Landmark, ListChecks,
-  Mail, Monitor, ShieldCheck, ShoppingBag, Truck, X,
+  Check, CheckCircle2, ChevronDown, Copy, CreditCard, ExternalLink, Monitor, ShoppingBag, Truck, X,
 } from 'lucide-react';
 import { usePark } from '../../contexts/ParkContext';
 import { useI18n } from '../../lib/i18n';
@@ -104,46 +103,209 @@ function Steps({ steps }: { steps: DeliveryStep[] }) {
 
 /* ------------------------------------------------------------------ Stripe */
 
-const STRIPE_STEPS: { icon: typeof Mail; title: string; text: string }[] = [
-  { icon: Mail, title: 'Open the link we send you', text: 'You get a secure link from us that opens Stripe directly. Nothing to install.' },
-  { icon: ShieldCheck, title: 'Sign in or create your Stripe account', text: 'Use your business email. If Kalahari already uses Stripe, simply sign in to that account.' },
-  { icon: ListChecks, title: 'Enter your business details', text: 'Legal business name, EIN, address and one representative. Stripe asks this by law to verify the business.' },
-  { icon: Landmark, title: 'Add the bank account for payouts', text: 'This is where Stripe sends the money from photo sales.' },
-  { icon: CheckCircle2, title: 'Done – it switches to “Connected” here', text: 'From then on every guest payment goes straight into your Stripe account.' },
+type StripeScene = 'link' | 'signin' | 'business' | 'bank' | 'done';
+const STRIPE_STEPS: { scene: StripeScene; title: string; text: string }[] = [
+  { scene: 'link', title: 'Open your Stripe link', text: 'As soon as we have created it, your secure link appears right here. Tap “Open Stripe setup”. Nothing to install.' },
+  { scene: 'signin', title: 'Sign in or create your Stripe account', text: 'Use your business email. If Kalahari already uses Stripe, simply sign in to that account.' },
+  { scene: 'business', title: 'Enter your business details', text: 'Legal business name, EIN, address and one representative. Stripe asks this by law to verify the business.' },
+  { scene: 'bank', title: 'Add the bank account for payouts', text: 'This is where Stripe sends the money from photo sales, usually within 2 business days.' },
+  { scene: 'done', title: 'Done – it switches to “Connected”', text: 'From then on every guest payment goes straight into your own Stripe account. Liftpictures takes no commission.' },
 ];
 
-export function StripeGuide({ connected, testMode }: { connected: boolean; testMode: boolean }) {
+/** Markiertes Ziel wie in der App-Anleitung: Rahmen pulsiert, ein Zeiger „tippt“. */
+function Hot({ children, className = '' }: { children: ReactNode; className?: string }) {
+  return (
+    <span className={`relative inline-flex items-center ${className}`}>
+      <span className="absolute -inset-1 animate-pulse rounded-md ring-2 ring-brand-500" aria-hidden />
+      {children}
+      <span className="lp-pointer pointer-events-none absolute -bottom-3 -right-2 h-4 w-4 rounded-full border-2 border-white bg-brand-600 shadow-md" aria-hidden />
+    </span>
+  );
+}
+const bar = (w: string) => <span className={`block h-1.5 rounded-full bg-slate-200 ${w}`} />;
+function StripeWindow({ address, children }: { address: string; children: ReactNode }) {
+  return (
+    <div className="mx-auto w-full max-w-[380px] text-[9px] text-slate-600">
+      <div className="relative h-[190px] overflow-hidden rounded-lg border border-slate-300 bg-white shadow-md">
+        <div className="flex h-7 items-center gap-1.5 border-b border-slate-200 bg-slate-100 px-2">
+          <span className="h-2 w-2 rounded-full bg-rose-300" /><span className="h-2 w-2 rounded-full bg-amber-300" /><span className="h-2 w-2 rounded-full bg-emerald-300" />
+          <span className="ml-1 flex h-4 min-w-0 flex-1 items-center rounded bg-white px-1.5"><span className="truncate">{address}</span></span>
+        </div>
+        <div className="p-3">{children}</div>
+      </div>
+    </div>
+  );
+}
+function StripeSketch({ scene }: { scene: StripeScene }) {
+  const stripe = <span className="font-bold tracking-tight text-[#635bff]">stripe</span>;
+  const field = (label: string) => (
+    <div className="space-y-0.5"><span className="text-slate-500">{label}</span><span className="block h-4 rounded border border-slate-200 bg-white" /></div>
+  );
+  switch (scene) {
+    case 'link':
+      return (
+        <StripeWindow address="dashboard-liftpictures.com/start">
+          <div className="space-y-2">
+            <p className="font-semibold text-slate-800">Stripe payouts</p>
+            <div className="rounded-md border border-emerald-200 bg-emerald-50 p-2 text-emerald-800">Your Stripe link is ready</div>
+            <Hot><span className="rounded-md bg-brand-600 px-2 py-1 font-semibold text-white">Open Stripe setup ↗</span></Hot>
+          </div>
+        </StripeWindow>
+      );
+    case 'signin':
+      return (
+        <StripeWindow address="connect.stripe.com">
+          <div className="mx-auto max-w-[220px] space-y-2">
+            <p className="text-center text-[11px]">{stripe}</p>
+            {field('Email')}
+            <Hot className="w-full"><span className="block w-full rounded bg-[#635bff] py-1 text-center font-semibold text-white">Continue</span></Hot>
+          </div>
+        </StripeWindow>
+      );
+    case 'business':
+      return (
+        <StripeWindow address="connect.stripe.com">
+          <div className="mx-auto max-w-[240px] space-y-1.5">
+            <p className="font-semibold text-slate-800">Tell us about your business</p>
+            {field('Legal business name')}
+            <div className="grid grid-cols-2 gap-1.5">{field('EIN')}{field('Address')}</div>
+            <div className="flex justify-end"><Hot><span className="rounded bg-[#635bff] px-2 py-0.5 font-semibold text-white">Continue</span></Hot></div>
+          </div>
+        </StripeWindow>
+      );
+    case 'bank':
+      return (
+        <StripeWindow address="connect.stripe.com">
+          <div className="mx-auto max-w-[240px] space-y-1.5">
+            <p className="font-semibold text-slate-800">Add a bank account for payouts</p>
+            <div className="grid grid-cols-2 gap-1.5">{field('Routing number')}{field('Account number')}</div>
+            {bar('w-2/3')}
+            <div className="flex justify-end"><Hot><span className="rounded bg-[#635bff] px-2 py-0.5 font-semibold text-white">Save</span></Hot></div>
+          </div>
+        </StripeWindow>
+      );
+    case 'done':
+      return (
+        <StripeWindow address="dashboard-liftpictures.com/start">
+          <div className="space-y-2">
+            <p className="font-semibold text-slate-800">Stripe payouts</p>
+            <Hot><span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 font-semibold text-emerald-700 ring-1 ring-emerald-200"><Check className="h-3 w-3" /> Connected</span></Hot>
+            {bar('w-3/4')}{bar('w-1/2')}
+          </div>
+        </StripeWindow>
+      );
+  }
+}
+
+/** Stand + Link + bewegte Schritt-für-Schritt-Anleitung (wie „Liftbase als App“). */
+export function StripeGuide({ connected, testMode, link }: { connected: boolean; testMode: boolean; link?: string | null }) {
+  const [index, setIndex] = useState(link ? 0 : 0);
+  const [auto, setAuto] = useState(true);
+  useEffect(() => {
+    if (!auto || index >= STRIPE_STEPS.length - 1) return;
+    const timer = window.setTimeout(() => setIndex((i) => Math.min(STRIPE_STEPS.length - 1, i + 1)), 4500);
+    return () => window.clearTimeout(timer);
+  }, [auto, index]);
+  const go = (n: number) => { setAuto(false); setIndex(Math.max(0, Math.min(STRIPE_STEPS.length - 1, n))); };
+  const step = STRIPE_STEPS[index];
   return (
     <div className="space-y-4">
-      <div className={`flex items-start gap-3 rounded-lg border p-3 text-sm ${connected ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-[color:var(--line)] bg-[color:var(--canvas,#f5f8fa)] text-[color:var(--ink-2)]'}`}>
-        <CreditCard className="mt-0.5 h-4 w-4 shrink-0" />
-        <p>
-          {connected
-            ? 'Your Stripe account is connected. Guest payments go directly to you.'
-            : 'Not connected yet. It takes about 10 minutes – you only need it before going live.'}
-          {testMode && !connected && ' Until then the shop runs in test mode: no real money is charged.'}
-        </p>
+      {connected ? (
+        <div className="flex items-start gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+          <p>Your Stripe account is connected. Guest payments go directly to you.</p>
+        </div>
+      ) : link ? (
+        <div className="flex flex-col gap-3 rounded-lg border border-brand-200 bg-brand-50/70 p-4 sm:flex-row sm:items-center">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-[color:var(--ink)]">Your Stripe link is ready</p>
+            <p className="text-sm text-[color:var(--ink-2)]">Open it now and follow the steps below. It takes about 10 minutes.</p>
+          </div>
+          <a href={link} target="_blank" rel="noreferrer" className="glass-button-primary justify-center">
+            Open Stripe setup <ExternalLink className="h-3.5 w-3.5" />
+          </a>
+        </div>
+      ) : (
+        <div className="flex items-start gap-3 rounded-lg border border-[color:var(--line)] bg-slate-50 p-3 text-sm text-[color:var(--ink-2)]">
+          <CreditCard className="mt-0.5 h-4 w-4 shrink-0" />
+          <p>
+            We will create a secure Stripe link for you. It will appear right here, together with a notice in your dashboard.
+            {testMode && ' Until then the shop runs in test mode: no real money is charged.'}
+          </p>
+        </div>
+      )}
+
+      <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] sm:items-center">
+        <div className="flex min-h-[230px] items-center justify-center rounded-xl bg-slate-50 p-4">
+          <div key={step.scene} className="lp-scene-in w-full"><StripeSketch scene={step.scene} /></div>
+        </div>
+        <div>
+          <p className="text-xs font-semibold text-brand-700">Stripe payouts</p>
+          <p className="mt-0.5 text-xs text-[color:var(--ink-3)]">Step {index + 1} of {STRIPE_STEPS.length}</p>
+          <p className="mt-2 text-base font-semibold text-[color:var(--ink)]">{step.title}</p>
+          <p className="mt-1 text-sm leading-relaxed text-[color:var(--ink-2)]">{step.text}</p>
+          <div className="mt-4 flex items-center gap-2">
+            <button type="button" onClick={() => go(index - 1)} disabled={index === 0} className="glass-button-secondary disabled:opacity-40">‹ Back</button>
+            {index < STRIPE_STEPS.length - 1
+              ? <button type="button" onClick={() => go(index + 1)} className="glass-button-secondary">Next ›</button>
+              : <button type="button" onClick={() => { setIndex(0); setAuto(true); }} className="glass-button-secondary">Show again</button>}
+          </div>
+          <div className="mt-3 flex gap-1.5" aria-hidden>
+            {STRIPE_STEPS.map((s, i) => (
+              <button key={s.scene} type="button" tabIndex={-1} onClick={() => go(i)} className={`h-1.5 rounded-full transition-all ${i === index ? 'w-6 bg-brand-600' : 'w-3 bg-slate-200'}`} />
+            ))}
+          </div>
+        </div>
       </div>
-      <ol className="space-y-3">
-        {STRIPE_STEPS.map((s, i) => (
-          <li key={s.title} className="flex gap-3">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[color:var(--line-strong)] bg-white text-xs font-semibold text-[color:var(--ink)]">{i + 1}</span>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-[color:var(--ink)]">{s.title}</p>
-              <p className="text-sm text-[color:var(--ink-2)]">{s.text}</p>
-            </div>
-          </li>
-        ))}
-      </ol>
+
       <div className="rounded-lg border border-[color:var(--line)] p-3 text-sm text-[color:var(--ink-2)]">
         <p className="font-semibold text-[color:var(--ink)]">Good to know</p>
         <ul className="mt-1.5 list-disc space-y-1 pl-5">
           <li>Liftpictures takes no commission on photo sales. All revenue is yours.</li>
           <li>Stripe charges its usual card fee directly to your account (standard US pricing: 2.9% + 30¢ per payment).</li>
-          <li>Stripe pays out to your bank automatically, usually within 2 business days.</li>
           <li>We never see your bank or tax details. Stripe stores them.</li>
         </ul>
       </div>
+    </div>
+  );
+}
+
+/** Karte „Stripe payouts“ in „Erste Schritte“ – gleiche Machart wie „Liftbase als App“, steht davor. */
+export function StripeSetupCard() {
+  const { parkId } = usePark();
+  const { data } = useOnlineSummary(parkId);
+  const connected = Boolean(data?.shop?.stripe_connected);
+  const link = data?.shop?.stripe_onboarding_url ?? null;
+  const [open, setOpen] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (window.location.hash === '#stripe') {
+      setOpen(true);
+      window.setTimeout(() => document.getElementById('stripe')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
+    }
+  }, [data]);
+  if (!data?.shop) return null;
+  const show = open ?? !connected;
+  return (
+    <div className="glass-panel animate-slide-up scroll-mt-6 overflow-hidden rounded-2xl p-0">
+      <div id="stripe" />
+      <button type="button" onClick={() => setOpen(!show)} aria-expanded={show} className="flex w-full items-center gap-4 px-4 py-4 text-left sm:px-5">
+        <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${connected ? 'bg-brand-600 text-white' : 'bg-brand-50 text-brand-700'}`}>
+          {connected ? <Check className="h-4 w-4" strokeWidth={3} /> : <CreditCard className="h-4 w-4" />}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="flex flex-wrap items-center gap-2 text-base font-semibold text-[color:var(--ink)]">
+            Stripe payouts – get paid directly
+            {!connected && link && <span className="rounded-full bg-brand-600 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">Link ready</span>}
+          </span>
+          <span className="block text-xs text-[color:var(--ink-3)]">About 10 minutes: connect your Stripe account, guest payments go straight to your bank.</span>
+        </span>
+        <ChevronDown className={`h-4 w-4 shrink-0 text-[color:var(--ink-3)] transition-transform ${show ? 'rotate-180' : ''}`} />
+      </button>
+      {show && (
+        <div className="border-t border-[color:var(--line)] p-4 sm:p-5">
+          <StripeGuide connected={connected} testMode={Boolean(data.shop.is_test)} link={link} />
+        </div>
+      )}
     </div>
   );
 }
@@ -179,8 +341,8 @@ export function OnlineFaq() {
 
 /* ------------------------------------------------------------------ Inhalt (Fenster und Seite) */
 
-function Tabs({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
-  const items: [Tab, string][] = [['progress', 'Installation'], ['stripe', 'Stripe payouts'], ['faq', 'Questions']];
+function Tabs({ tab, setTab, withStripe = true }: { tab: Tab; setTab: (t: Tab) => void; withStripe?: boolean }) {
+  const items: [Tab, string][] = [['progress', 'Installation'], ...(withStripe ? [['stripe', 'Stripe payouts'] as [Tab, string]] : []), ['faq', 'Questions']];
   return (
     <div className="inline-flex rounded-md border border-[color:var(--line-strong)] p-0.5" role="tablist">
       {items.map(([id, label]) => (
@@ -195,7 +357,7 @@ function Tabs({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
 
 function InstallationBody({ data, tab }: { data: OnlineSummary; tab: Tab }) {
   const steps = data.delivery.steps;
-  if (tab === 'stripe') return <StripeGuide connected={Boolean(data.shop?.stripe_connected)} testMode={Boolean(data.shop?.is_test)} />;
+  if (tab === 'stripe') return <StripeGuide connected={Boolean(data.shop?.stripe_connected)} testMode={Boolean(data.shop?.is_test)} link={data.shop?.stripe_onboarding_url} />;
   if (tab === 'faq') return <OnlineFaq />;
   return (
     <div className="space-y-4">
@@ -261,7 +423,10 @@ export function InstallationHost() {
   const { data } = useOnlineSummary(parkId);
   const [open, setOpen] = useState<Tab | null>(null);
   const [hint, setHint] = useState(false);
-  const signature = useMemo(() => data ? data.delivery.steps.map((s) => `${s.id}:${s.status}`).join('|') : '', [data]);
+  // Neuer Stand = Schritt geändert ODER Stripe-Link erschienen/verbunden – dann öffnet sich das Fenster einmal.
+  const signature = useMemo(() => data
+    ? `${data.delivery.steps.map((s) => `${s.id}:${s.status}`).join('|')}|link:${data.shop?.stripe_onboarding_url ? 1 : 0}|conn:${data.shop?.stripe_connected ? 1 : 0}`
+    : '', [data]);
 
   useEffect(() => {
     const onOpen = (e: Event) => setOpen(((e as CustomEvent).detail as Tab) || 'progress');
@@ -273,7 +438,12 @@ export function InstallationHost() {
     if (!data || !parkId || !signature) return;
     const key = `installation-seen:${parkId}`;
     try {
-      if (localStorage.getItem(key) !== signature) { setOpen('progress'); localStorage.setItem(key, signature); }
+      const before = localStorage.getItem(key);
+      if (before !== signature) {
+        const linkNew = signature.includes('link:1') && !(before ?? '').includes('link:1') && !signature.includes('conn:1');
+        setOpen(linkNew ? 'stripe' : 'progress');
+        localStorage.setItem(key, signature);
+      }
     } catch { /* ohne Speicher kein automatisches Öffnen */ }
   }, [data, parkId, signature]);
 
@@ -464,7 +634,7 @@ export function InstallationSection() {
     <section id="installation" className="scroll-mt-6 rounded-xl border border-[color:var(--line)] bg-white p-5 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Header data={data} />
-        <Tabs tab={tab} setTab={setTab} />
+        <Tabs tab={tab} setTab={setTab} withStripe={false} />
       </div>
       <div className="mt-5"><InstallationBody data={data} tab={tab} /></div>
     </section>
