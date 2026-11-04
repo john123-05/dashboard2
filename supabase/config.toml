@@ -100,3 +100,6 @@ verify_jwt = false
 [functions.welcome-link]
 # Oeffentlicher Willkommens-Link; prueft den Token selbst.
 verify_jwt = false
+
+[functions.operator-presentation]
+verify_jwt = false

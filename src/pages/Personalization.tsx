@@ -6,6 +6,8 @@ import GlassCard from '../components/ui/GlassCard';
 import OverlayBuilder, { type OpenRequest } from '../components/OverlayBuilder';
 import { UpgradePageHeader } from '../components/upgrade/UpgradeHero';
 import AutomatBranding from '../components/AutomatBranding';
+import PresentationScreenCard from '../components/presentation/PresentationScreenCard';
+import { ONLINE_PARKS } from '../lib/onlinePark';
 import { useI18n } from '../lib/i18n';
 import { usePark } from '../contexts/ParkContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -452,6 +454,8 @@ export default function Personalization() {
       {actionError && (
         <div className="rounded-lg bg-rose-50 px-4 py-3 text-sm text-rose-700">{actionError}</div>
       )}
+
+      <PresentationScreenCard parkId={parkId} parkSlug={parkId ? ONLINE_PARKS[parkId]?.path ?? null : null} />
 
       <AutomatBranding onOpenInEditor={openInEditor} />
 
