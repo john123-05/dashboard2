@@ -94,6 +94,8 @@ type Machine = {
   probes: Probe[]; devices: Device[];
   /** Geräte, die für diesen Automaten nichts bedeuten (Klarnamen). */
   ausgeblendet?: string[];
+  /** Online-Foto-PC: Verkauf per QR-Code online (Stripe), kein Kassenautomat. */
+  online_sales?: boolean;
   restartable?: Neustartbar[];
   /** Kann der Automat auf Zuruf ein Testfoto machen? */
   can_test_photo?: boolean;
@@ -312,6 +314,17 @@ function zusammenfuehren(m: Machine): Eintrag[] {
   // Für diesen Automaten ausgeblendete Geräte (nicht eingebaut / andere
   // Software). Sie zählen weder als Kachel noch für das Urteil oben.
   const aus = new Set((m.ausgeblendet ?? []).map((n) => n.toLowerCase()));
+
+  // Online-Foto-PC (z. B. Kalahari): PhotoViewer verkauft dort nichts, er zeigt die Fotos mit
+  // QR-Code am Bildschirm. Gekauft wird online.
+  if (m.online_sales) {
+    for (const e of nach.values()) {
+      if (e.name === 'Verkaufsprogramm') {
+        e.name = t('health.presentation');
+        e.purpose = t('health.presentation_text');
+      }
+    }
+  }
 
   return [...nach.values()]
     .filter((e) => !aus.has(e.name.toLowerCase()))

@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useOnlineSummary } from '../components/online/OnlinePark';
+import { isOnlinePark, soldOf } from '../lib/onlinePark';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { CheckCircle2, AlertTriangle, XCircle, RefreshCw, Download, HelpCircle } from 'lucide-react';
 import { getOptionalSourceWarning, invokeEdgeFunction, isEdgeSourceUnavailable } from '../lib/edgeFunctions';
 import {
@@ -132,6 +134,13 @@ export default function SystemHealth() {
   const { t } = useI18n();
   const locale = useLocaleTag();
   const { parkId } = usePark();
+  const online = isOnlinePark(parkId);
+  const { data: onlineData } = useOnlineSummary(parkId);
+  const onlineToday = useMemo(() => {
+    if (!onlineData) return null;
+    const d = onlineData.days.find((x) => x.day === onlineData.today);
+    return { photos: d?.photos ?? 0, sold: d ? soldOf(d, Boolean(onlineData.shop?.is_test)) : 0 };
+  }, [onlineData]);
   const [urteil, setUrteil] = useState<Urteil | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [checkedAt, setCheckedAt] = useState<Date | null>(null);
@@ -419,6 +428,14 @@ export default function SystemHealth() {
           </div>
           {/* Papier und Drucke stehen je Automat auf dessen Karte. */}
           <div className="flex shrink-0 gap-8 lg:border-l lg:border-[color:var(--line)] lg:pl-8">
+            {online ? (
+              // Online-Foto-Park: keine Fahrten-/Kassenzähler, sondern Fotos und Käufe (Stripe + E-Mail) von heute.
+              <>
+                <Kennzahl label={t('online.photos_today')} wert={onlineToday ? formatNumber(onlineToday.photos, locale) : '-'} />
+                <Kennzahl label={t('overview.photos_sold_today')} wert={onlineToday ? formatNumber(onlineToday.sold, locale) : '-'} />
+              </>
+            ) : (
+            <>
             <Kennzahl
               label={t('health.rides_total')}
               wert={data.summary.rides_total !== null && data.summary.rides_total !== undefined ? formatNumber(data.summary.rides_total, locale) : '-'}
@@ -427,6 +444,8 @@ export default function SystemHealth() {
               label={t('health.sold_total')}
               wert={data.summary.photos_sold_total !== null && data.summary.photos_sold_total !== undefined ? formatNumber(data.summary.photos_sold_total, locale) : '-'}
             />
+            </>
+            )}
           </div>
         </div>
       </GlassCard>

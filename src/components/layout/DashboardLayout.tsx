@@ -9,6 +9,7 @@ import { useOnboardingTracker } from '../../lib/onboarding';
 import { PageGuideStrip } from '../onboarding/PageGuide';
 import DemoBanner from './DemoBanner';
 import TopBar from './TopBar';
+import { InstallationHost } from '../online/OnlinePark';
 import { NotificationsProvider } from '../../contexts/NotificationsContext';
 import { Loader2, Mountain, ArrowRight } from 'lucide-react';
 import { useI18n } from '../../lib/i18n';
@@ -140,6 +141,7 @@ export default function DashboardLayout() {
         </div>
       </main>
       {!IN_APP && <TopBar onOpenNav={() => setMobileNavOpen(true)} />}
+      <InstallationHost />
       {!IN_APP && <AnnouncementHost sidebarWidth={collapsed ? 72 : 256} />}
       {!IN_APP && <WelcomeTour />}
     </div>

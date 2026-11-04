@@ -34,7 +34,7 @@ import KPICard from '../components/ui/KPICard';
 import { useI18n, useLocaleTag } from '../lib/i18n';
 import { usePark } from '../contexts/ParkContext';
 import { fetchPhotoBuyers, type PhotoBuyerStats } from '../lib/guestUsers';
-import OnlinePhotoRevenue from '../components/OnlinePhotoRevenue';
+import { parkCurrency } from '../lib/onlinePark';
 
 function formatDateLabel(iso: string, locale: string): string {
   const date = new Date(`${iso}T00:00:00`);
@@ -70,12 +70,6 @@ interface RevenueSeriesRow {
 }
 
 export default function Revenue() {
-  const {parkId}=usePark();
-  if(parkId==='cd65690a-3e83-414a-8e38-5482cfe1c482')return <OnlinePhotoRevenue key={parkId} parkId={parkId}/>;
-  return <LegacyRevenue/>;
-}
-
-function LegacyRevenue() {
   const { t } = useI18n();
   const locale = useLocaleTag();
   const formatCurrency = (cents: number, currency = 'usd') => baseFormatCurrency(cents, currency, locale);
@@ -91,6 +85,8 @@ function LegacyRevenue() {
     kioskOpeningHoursConfig,
     kioskCheckLoading,
   } = usePark();
+  // Online-Foto-Parks (Kalahari) rechnen in ihrer Shop-Währung (Stripe), Automaten in Euro.
+  const currency = parkCurrency(parkId);
   const [parkData, setParkData] = useState<ParkDashboardData | null>(null);
   // Gäste mit mehreren eingelösten Bildern (Familie/Gruppe oder nochmal gefahren), letzte 30 Tage.
   const [buyers, setBuyers] = useState<PhotoBuyerStats | null>(null);
@@ -511,7 +507,7 @@ function LegacyRevenue() {
             <div className="flex items-center gap-2 rounded-xl border border-slate-200/70 bg-slate-50 px-3 py-1.5 text-xs">
               <div>
                 <p className="text-slate-400">{t('revenue.current_price')}</p>
-                <p className="font-semibold text-slate-800">{formatCurrency(kioskPriceCents ?? 0, 'eur')}</p>
+                <p className="font-semibold text-slate-800">{formatCurrency(kioskPriceCents ?? 0, currency)}</p>
               </div>
               <button
                 type="button"
@@ -550,7 +546,7 @@ function LegacyRevenue() {
           <div className="grid grid-cols-2 gap-4 sm:gap-6 xl:grid-cols-4">
             <KPICard
               title={t('overview.today')}
-              value={formatCurrency(kioskKpis.today.revenueCents, 'eur')}
+              value={formatCurrency(kioskKpis.today.revenueCents, currency)}
               subtitle={formatSoldRideSubtitle(kioskKpis.today.sold, kioskKpis.today.expected, locale, t)}
               icon={Ticket}
               iconColor="text-brand-600"
@@ -558,7 +554,7 @@ function LegacyRevenue() {
             />
             <KPICard
               title={t('revenue.last_7_days')}
-              value={formatCurrency(kioskKpis.week.revenueCents, 'eur')}
+              value={formatCurrency(kioskKpis.week.revenueCents, currency)}
               subtitle={formatSoldRideSubtitle(kioskKpis.week.sold, kioskKpis.week.expected, locale, t)}
               icon={Camera}
               iconColor="text-sky-600"
@@ -566,7 +562,7 @@ function LegacyRevenue() {
             />
             <KPICard
               title={t('revenue.this_month')}
-              value={formatCurrency(kioskKpis.month.revenueCents, 'eur')}
+              value={formatCurrency(kioskKpis.month.revenueCents, currency)}
               subtitle={formatSoldRideSubtitle(kioskKpis.month.sold, kioskKpis.month.expected, locale, t)}
               icon={Receipt}
               iconColor="text-emerald-600"
@@ -574,7 +570,7 @@ function LegacyRevenue() {
             />
             <KPICard
               title={t('revenue.all_time')}
-              value={formatCurrency(kioskKpis.total.revenueCents, 'eur')}
+              value={formatCurrency(kioskKpis.total.revenueCents, currency)}
               subtitle={formatSoldRideSubtitle(kioskKpis.total.sold, kioskKpis.total.expected, locale, t)}
               icon={Wallet}
               iconColor="text-slate-700"
@@ -735,7 +731,7 @@ function LegacyRevenue() {
                         axisLine={false}
                         tickLine={false}
                         tick={chartYAxisTick}
-                        tickFormatter={(value) => formatCurrency(Math.round(Number(value) * 100), 'eur')}
+                        tickFormatter={(value) => formatCurrency(Math.round(Number(value) * 100), currency)}
                       />
                       <YAxis yAxisId="rides" orientation="right" hide domain={[0, 'auto']} />
                       <Tooltip
@@ -749,7 +745,7 @@ function LegacyRevenue() {
                         formatter={(value, name) =>
                           name === t('overview.rides')
                             ? [formatNumber(Number(value ?? 0)), t('overview.rides')]
-                            : [formatCurrency(Math.round(Number(value ?? 0) * 100), 'eur'), t('nav.revenue')]
+                            : [formatCurrency(Math.round(Number(value ?? 0) * 100), currency), t('nav.revenue')]
                         }
                       />
                       {hasTrendRideData && <Legend wrapperStyle={{ fontSize: 12 }} />}
@@ -825,7 +821,7 @@ function LegacyRevenue() {
                       {t('revenue.earned_on', { date: selectedDateLabel })}
                     </p>
                     <p className="text-2xl font-light text-[color:var(--ink)]">
-                      {formatCurrency(dayTotalRevenueCents, 'eur')}
+                      {formatCurrency(dayTotalRevenueCents, currency)}
                     </p>
                     <p className="text-xs text-slate-500">{t('revenue.photos_sold', { count: dayPurchases.length })}</p>
                   </div>
@@ -866,7 +862,7 @@ function LegacyRevenue() {
                             axisLine={false}
                             tickLine={false}
                             tick={chartYAxisTick}
-                            tickFormatter={(value) => formatCurrency(Math.round(Number(value) * 100), 'eur')}
+                            tickFormatter={(value) => formatCurrency(Math.round(Number(value) * 100), currency)}
                           />
                           <YAxis yAxisId="rides" orientation="right" hide domain={[0, 'auto']} />
                           <Tooltip
@@ -880,7 +876,7 @@ function LegacyRevenue() {
                             formatter={(value, name) =>
                               name === t('overview.rides')
                                 ? [formatNumber(Number(value ?? 0)), t('overview.rides')]
-                                : [formatCurrency(Math.round(Number(value ?? 0) * 100), 'eur'), t('nav.revenue')]
+                                : [formatCurrency(Math.round(Number(value ?? 0) * 100), currency), t('nav.revenue')]
                             }
                           />
                           {hasRideData && <Legend wrapperStyle={{ fontSize: 12 }} />}
@@ -947,7 +943,7 @@ function LegacyRevenue() {
                         <td className="py-2 pr-4 text-slate-700">
                           {day.conversionRate !== null ? formatPercent(day.conversionRate * 100) : '-'}
                         </td>
-                        <td className="py-2 font-medium text-slate-800">{formatCurrency(day.revenueCents, 'eur')}</td>
+                        <td className="py-2 font-medium text-slate-800">{formatCurrency(day.revenueCents, currency)}</td>
                       </tr>
                     ))}
                   </tbody>

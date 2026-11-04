@@ -1,6 +1,7 @@
 import {claimConfigFor} from './claimConfig';
 import { externalSupabase } from './supabase';
 import { todayInTimezone } from './kioskSales';
+import { callOnlinePark, isOnlinePark, type OnlinePhoto } from './onlinePark';
 
 export interface BrowsablePhoto {
   id: string;
@@ -42,7 +43,17 @@ function toBrowsablePhoto(row: Record<string, unknown>): BrowsablePhoto {
   };
 }
 
+// Online-Parks: Fotos liegen in online_photo_assets (privat), Vorschau kommt signiert von operator-online-park.
+async function onlinePhotos(parkId: string, body: Record<string, unknown>): Promise<BrowsablePhoto[]> {
+  const data = await callOnlinePark<{ photos: OnlinePhoto[] }>(parkId, { view: 'photos', ...body });
+  return data.photos.map((p) => ({
+    id: p.id, externalCode: p.code, imageUrl: p.image_url, capturedAt: p.captured_at,
+    isPaid: p.is_paid, speedKmh: null, isTest: p.is_test,
+  }));
+}
+
 export async function fetchRecentPhotos(parkId: string, limit = 24): Promise<BrowsablePhoto[]> {
+  if (isOnlinePark(parkId)) return onlinePhotos(parkId, { mode: 'recent', limit });
   const { data, error } = await externalSupabase
     .from('photos')
     .select(SELECT_COLUMNS)
@@ -59,6 +70,7 @@ export async function fetchRecentPhotos(parkId: string, limit = 24): Promise<Bro
 // Fotos zaehlen). "Heute" ist das Kalenderdatum in der Park-Zeitzone.
 export async function fetchTodaysSpeeds(parkId: string, timezone: string): Promise<number[]> {
   const today = todayInTimezone(timezone);
+  if (isOnlinePark(parkId)) return [];
   const { data, error } = await externalSupabase
     .from('photos')
     .select('captured_at, created_at, speed_kmh')
@@ -81,6 +93,7 @@ export async function fetchTodaysSpeeds(parkId: string, timezone: string): Promi
 export async function searchPhotosByCode(parkId: string, code: string): Promise<BrowsablePhoto[]> {
   const trimmed = code.trim();
   if (!trimmed) return [];
+  if (isOnlinePark(parkId)) return onlinePhotos(parkId, { mode: 'code', code: trimmed });
 
   const { data, error } = await externalSupabase
     .from('photos')
@@ -103,6 +116,7 @@ export async function searchPhotosByDateTime(
 ): Promise<BrowsablePhoto[]> {
   const center = new Date(isoDateTime);
   if (Number.isNaN(center.getTime())) return [];
+  if (isOnlinePark(parkId)) return onlinePhotos(parkId, { mode: 'around', at: center.toISOString() });
 
   const windowMinutes = opts?.windowMinutes ?? 10;
   const limit = opts?.limit ?? 4;

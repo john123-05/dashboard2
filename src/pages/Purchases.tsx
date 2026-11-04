@@ -8,6 +8,7 @@ import {
   type ParkDashboardEvent,
 } from '../lib/parkDashboard';
 import { fetchKioskPurchasesLedger } from '../lib/kioskSales';
+import { isOnlinePark, parkCurrency } from '../lib/onlinePark';
 import { formatCurrency as baseFormatCurrency, formatDateTime as baseFormatDateTime, statusColor, exportToCSV } from '../lib/utils';
 import DataTable, { type DataTableColumn } from '../components/ui/DataTable';
 import Drawer, { DrawerRow } from '../components/ui/Drawer';
@@ -121,7 +122,27 @@ export default function Purchases() {
         setAutomaten(ledger.machines ?? []);
         const preis = ledger.priceCents ?? 0;
 
+        const online = isOnlinePark(parkId);
         const kioskRows: PurchaseRow[] = ledger.purchases.map((p) => {
+          // Online-Foto-Park (Kalahari): Stripe-Kauf oder kostenlose Freischaltung per E-Mail.
+          if (online) {
+            const email = p.method === 'email';
+            return {
+              id: `${p.method}-${p.sold_at}-${p.bild_nr ?? ''}`,
+              source: 'kiosk' as const,
+              machine_id: p.machine_id,
+              machine_label: p.machine_label,
+              amount_cents: p.amount_cents ?? 0,
+              amount_kind: 'confirmed' as const,
+              currency: parkCurrency(parkId).toUpperCase(),
+              status: email ? 'claimed' : 'completed',
+              payment_method: email ? t('online.pay_email') : p.card_scheme ? `${t('online.pay_stripe')} · ${p.card_scheme.replace('Stripe · ', '')}`.replace(' · Stripe', '') : t('online.pay_stripe'),
+              reference: p.bild_nr ? t('purchases.photo_ref', { no: p.bild_nr }) : '–',
+              purchased_at: p.sold_at,
+              customer_or_device: p.claimed_email || p.claimed_name || t('online.paid_stripe'),
+              description: email ? t('online.unlock_desc') : t('online.sold_desc'),
+            };
+          }
           const marke = p.method === 'karte' ? p.card_scheme : null;
           const abgeholt = p.claimed_email
             ? `, ${t('purchases.picked_up_by_qr', { email: p.claimed_email })}`

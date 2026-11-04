@@ -103,9 +103,14 @@ Deno.serve(async (req) => {
   // Software liefert dort keinen Betrag je Kauf. Solange amount_cents leer ist,
   // gilt der Parkpreis je Foto - dieselbe Rechnung wie park_machine_revenue().
   const cardOnly = new Set<string>();
+  // Online-Foto-PCs (settings.online_sales, z. B. Kalahari): kein Kassenautomat. Gäste kaufen per
+  // QR-Code online (Stripe). Es gibt weder Münzprüfer noch Kartenterminal noch Drucker; das
+  // PhotoViewer-Programm ist dort nur die Präsentation am Bildschirm.
+  const onlineSales = new Set<string>();
   for (const m of machines ?? []) {
     const s = ((m as { settings?: unknown }).settings ?? {}) as Record<string, unknown>;
     if (s.card_only === true) cardOnly.add(text((m as { machine_id: unknown }).machine_id));
+    if (s.online_sales === true) onlineSales.add(text((m as { machine_id: unknown }).machine_id));
   }
   let fotoPreisCent = 500;
   try {
@@ -263,6 +268,19 @@ Deno.serve(async (req) => {
   // Kaeufe".
   const parkHatLedger = ledgerByMachine.size > 0;
 
+  let onlineSoldToday: number | null = null;
+  if (onlineSales.size) {
+    try {
+      const { data: pk } = await supabaseService.from('parks').select('timezone').eq('id', auth.parkId).maybeSingle();
+      const tz = (pk?.timezone as string | null) || 'UTC';
+      const today = new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(new Date());
+      const { data: rows } = await supabaseService.rpc('online_photo_daily', { p_park: auth.parkId, p_tz: tz, p_since: today });
+      const { data: shop } = await supabaseService.from('online_photo_shops').select('is_test').eq('park_id', auth.parkId).maybeSingle();
+      const r = (rows ?? [])[0] as Record<string, number> | undefined;
+      onlineSoldToday = r ? Number(r.sales) + Number(r.unlocks) + (shop?.is_test ? Number(r.test_sales) : 0) : 0;
+    } catch { onlineSoldToday = null; }
+  }
+
   const result = (machines || []).map((m: Record<string, unknown>) => {
     const status = (m.last_status ?? {}) as Record<string, unknown>;
     const settings = (m.settings ?? {}) as Record<string, unknown>;
@@ -290,8 +308,11 @@ Deno.serve(async (req) => {
       // Münzprüfer noch Münz-Anschlüsse.
       ausgeblendet: [...new Set([
         ...list(settings.hide_devices).map((n) => String(n)),
-        ...(cardOnly.has(text(m.machine_id))
+        ...(cardOnly.has(text(m.machine_id)) || onlineSales.has(text(m.machine_id))
           ? ['Münzprüfer', 'Münzeinnahmen', 'Anschlüsse']
+          : []),
+        ...(onlineSales.has(text(m.machine_id))
+          ? ['Kartenterminal', 'Kartenterminal-Prüfung', 'Drucker']
           : []),
       ])],
       restartable: list(status.restartable),
@@ -316,16 +337,17 @@ Deno.serve(async (req) => {
       // Bestand. Ein altes CoinStats.txt (z. B. vom Klon-Quell-PC) soll dort
       // nicht als Bestand erscheinen.
       card_only: cardOnly.has(text(m.machine_id)),
+      online_sales: onlineSales.has(text(m.machine_id)),
       hardware_version: m.hardware_version ?? null,
       video_enabled: m.video_enabled === true,
       speed_enabled: m.speed_enabled !== false,
       coin_inventory:
-        cardOnly.has(text(m.machine_id)) ||
+        cardOnly.has(text(m.machine_id)) || onlineSales.has(text(m.machine_id)) ||
         (parkHatLedger && !ledgerByMachine.has(text(m.machine_id)))
           ? null
           : status.coin_inventory ?? null,
       coin_warnings:
-        cardOnly.has(text(m.machine_id)) ||
+        cardOnly.has(text(m.machine_id)) || onlineSales.has(text(m.machine_id)) ||
         (parkHatLedger && !ledgerByMachine.has(text(m.machine_id)))
           ? []
           : list(status.coin_warnings),
@@ -353,17 +375,26 @@ Deno.serve(async (req) => {
       agent_version: status.agent_version ?? null,
       queue_count: status.queue_count ?? null,
       disk_free_mb: status.disk_free_mb ?? null,
-      paper_remaining: status.paper_remaining ?? null,
+      paper_remaining: onlineSales.has(text(m.machine_id)) ? null : status.paper_remaining ?? null,
       // Fassungsvermögen und Warnschwelle der Papierrolle (aus der Automaten-Konfiguration)
       paper_capacity: typeof m.paper_capacity === 'number' ? m.paper_capacity : null,
       paper_warn_remaining: typeof m.paper_warn_remaining === 'number' ? m.paper_warn_remaining : null,
       photos_taken_today: status.photos_taken_today ?? null,
-      photos_sold_today: status.photos_sold_today ?? null,
+      // Online-PC: „verkauft“ sind Stripe-Käufe + E-Mail-Freischaltungen von heute (Parkzeit),
+      // nicht der Uploadzähler des Agents.
+      photos_sold_today: onlineSales.has(text(m.machine_id)) ? onlineSoldToday : status.photos_sold_today ?? null,
       photo_conversion_today: status.photo_conversion_today ?? null,
       pending_restart: settings.pending_restart ?? null,
       last_restart_at: settings.last_restart_at ?? null,
     };
   });
+
+  // Online-PC: Der PhotoViewer versucht dort einen FTP-Upload, den es nicht gibt (hochgeladen
+  // wird vom Agent). Diese Meldungen sind Rauschen und gehören nicht in den Verlauf.
+  if (onlineSales.size) {
+    history = (history as Record<string, unknown>[]).filter((h) =>
+      !(onlineSales.has(text(h.machine_id)) && /ftp error/i.test(`${h.summary ?? ''} ${h.detail ?? ''}`)));
+  }
 
   return json({
     ok: true,

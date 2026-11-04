@@ -1,5 +1,5 @@
-import OnlineOverview from '../components/OnlineOverview';
-import OnlinePhotos from '../components/OnlinePhotos';
+import { GuestPagesCard, InstallationStrip, OnlinePayoutsCard, useOnlineSummary } from '../components/online/OnlinePark';
+import { isOnlinePark, parkCurrency } from '../lib/onlinePark';
 import { useEffect, useMemo, useState } from 'react';
 import ParkPhotoImg from '../components/ParkPhotoImg';
 import { useNavigate } from 'react-router-dom';
@@ -129,8 +129,7 @@ interface RecentSupportMessage {
   ticket_subject: string | null;
 }
 
-export default function Overview(){const {parkId}=usePark();return parkId==='cd65690a-3e83-414a-8e38-5482cfe1c482'?<div className="space-y-8"><OnlineOverview parkId={parkId}/><OnlinePhotos/></div>:<LegacyOverview/>;}
-function LegacyOverview() {
+export default function Overview() {
   const navigate = useNavigate();
   const { profile } = useAuth();
   const {
@@ -147,6 +146,11 @@ function LegacyOverview() {
   const feed = useNotifications();
   const locale = useLocaleTag();
   const { has } = useEntitlements();
+  // Online-Foto-Park (Kalahari): dieselbe Übersicht, Umsatz aus Stripe statt Kasse, kein Drucker.
+  const online = isOnlinePark(parkId);
+  const currency = parkCurrency(parkId);
+  const { data: onlineData } = useOnlineSummary(parkId);
+  const currencySymbol = (0).toLocaleString(locale, { style: 'currency', currency, maximumFractionDigits: 0 }).replace(/[\d\s.,]/g, '');
   const speedOn = hasGuestActivity(parkId) || has('speed');
   // Speedmessung: Anteil der verkauften Fotos in der Bestenliste (dieser Monat), ersetzt dann „Fotos insgesamt“.
   const [speedShare, setSpeedShare] = useState<{ entries: number; photosSold: number } | null>(null);
@@ -293,8 +297,10 @@ function LegacyOverview() {
           .map((purchase) => ({
             id: `kiosk-${purchase.id}`,
             source: 'kiosk' as const,
-            title: t('overview.kiosk_sold'),
-            description: purchase.email ? t('overview.picked_up_later', { email: purchase.email }) : t('overview.no_pickup_status'),
+            title: online ? (purchase.email ? t('online.unlocked_email') : t('online.sold_online')) : t('overview.kiosk_sold'),
+            description: online
+              ? purchase.email || t('online.paid_stripe')
+              : purchase.email ? t('overview.picked_up_later', { email: purchase.email }) : t('overview.no_pickup_status'),
             created_at: purchase.capturedAt,
           }));
         setRecentTransactions(kioskActivity);
@@ -904,7 +910,7 @@ function LegacyOverview() {
               kioskKpis.today.expected && kioskKpis.today.expected > 0
                 ? formatPercent((kioskKpis.today.sold / kioskKpis.today.expected) * 100)
                 : '-',
-            helper: t('overview.sold_per_ride'),
+            helper: online ? t('online.sold_per_photo') : t('overview.sold_per_ride'),
             route: '/revenue',
             icon: Percent,
             iconColor: 'text-fuchsia-600',
@@ -912,7 +918,7 @@ function LegacyOverview() {
           },
           {
             id: 'rides-today',
-            label: t('overview.rides_today'),
+            label: online ? t('online.photos_today') : t('overview.rides_today'),
             value: kioskKpis.today.expected !== null ? formatNumber(kioskKpis.today.expected) : '-',
             helper: '',
             route: '/revenue',
@@ -944,6 +950,7 @@ function LegacyOverview() {
   return (
     <div className="space-y-6 overflow-x-clip">
       <SetupCard />
+      {online && onlineData && <InstallationStrip data={onlineData} />}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-xs font-medium text-slate-400">
@@ -954,6 +961,9 @@ function LegacyOverview() {
               {greeting}{firstName ? `, ${firstName}` : ''}
             </h2>
             {!isKioskPark && <span className={`status-badge ${statusTone}`}>{systemStatusLabel}</span>}
+            {online && onlineData?.shop?.is_test && (
+              <span className="status-badge bg-amber-50 text-amber-800 ring-amber-200">{t('online.test_mode')}</span>
+            )}
             {parkOpenStatus && (
               <span className="inline-flex items-center gap-1.5 text-sm text-slate-500">
                 <span
@@ -1000,7 +1010,7 @@ function LegacyOverview() {
         <div className="grid grid-cols-2 gap-4 md:grid-cols-3 min-[1700px]:grid-cols-6">
           <KPICard
             title={t('overview.revenue_today')}
-            value={formatCurrency(kioskKpis.today.revenueCents, 'eur')}
+            value={formatCurrency(kioskKpis.today.revenueCents, currency)}
             icon={CreditCard}
             iconColor="text-sky-600"
             iconBg="bg-sky-50"
@@ -1012,6 +1022,15 @@ function LegacyOverview() {
             iconColor="text-amber-600"
             iconBg="bg-amber-50"
           />
+          {online ? (
+            <KPICard
+              title={t('online.photos_today')}
+              value={kioskKpis.today.expected !== null ? formatNumber(kioskKpis.today.expected) : '-'}
+              icon={Camera}
+              iconColor="text-cyan-600"
+              iconBg="bg-cyan-50"
+            />
+          ) : (
           <KPICard
             title={t('config.photo_paper')}
             value={
@@ -1023,6 +1042,7 @@ function LegacyOverview() {
             iconColor="text-cyan-600"
             iconBg="bg-cyan-50"
           />
+          )}
           <KPICard
             title={t('overview.photos_sold_month')}
             value={formatNumber(kioskKpis.month.sold)}
@@ -1032,7 +1052,7 @@ function LegacyOverview() {
           />
           <KPICard
             title={t('overview.revenue_month')}
-            value={formatCurrency(kioskKpis.month.revenueCents, 'eur')}
+            value={formatCurrency(kioskKpis.month.revenueCents, currency)}
             icon={Wallet}
             iconColor="text-emerald-600"
             iconBg="bg-emerald-50"
@@ -1110,6 +1130,9 @@ function LegacyOverview() {
             </div>
           </GlassCard>
 
+          {online ? (
+            onlineData ? <OnlinePayoutsCard data={onlineData} /> : <GlassCard className="p-5 sm:p-6"><div className="h-40 animate-pulse rounded-lg bg-slate-100" /></GlassCard>
+          ) : (
           <GlassCard className="p-5 sm:p-6">
             <h3 className="text-base font-semibold text-slate-800">{t('overview.visitor_data')}</h3>
             {unlockMode && (
@@ -1190,6 +1213,7 @@ function LegacyOverview() {
               </dl>
             )}
           </GlassCard>
+          )}
 
           <GlassCard className="overflow-hidden p-5 sm:p-6">
             <h3 className="text-base font-semibold text-slate-800">{t('overview.notifications_activity')}</h3>
@@ -1349,7 +1373,7 @@ function LegacyOverview() {
                     axisLine={false}
                     tickLine={false}
                     tick={{ fontSize: 11, fill: '#94a3b8' }}
-                    tickFormatter={(value) => `€${value}`}
+                    tickFormatter={(value) => `${currencySymbol}${value}`}
                   />
                   <Tooltip
                     contentStyle={{
@@ -1359,7 +1383,7 @@ function LegacyOverview() {
                       borderRadius: '12px',
                       boxShadow: '0 8px 32px rgba(15,23,42,0.08)',
                     }}
-                    formatter={(value) => [`€${Number(value ?? 0).toFixed(2)}`, 'Umsatz']}
+                    formatter={(value) => [formatCurrency(Math.round(Number(value ?? 0) * 100), currency), t('nav.revenue')]}
                   />
                   <Area
                     type="monotone"
@@ -1529,6 +1553,8 @@ function LegacyOverview() {
         </GlassCard>
       </div>
       )}
+
+      {online && onlineData && <GuestPagesCard data={onlineData} />}
 
       <GlassCard className="p-6">
         <h3 className="mb-4 text-base font-semibold text-slate-800">{t('overview.recent_transactions')}</h3>

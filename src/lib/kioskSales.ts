@@ -8,6 +8,15 @@ import type {
   WeekdayKey,
 } from './types';
 import { getFunctionSession } from './functionAuth';
+import {
+  callOnlinePark,
+  fetchOnlineSummary,
+  isOnlinePark,
+  revenueOf,
+  soldOf,
+  type OnlineOrder,
+  type OnlineUnlock,
+} from './onlinePark';
 
 export interface DailySalesRow {
   camera_code: string;
@@ -16,6 +25,8 @@ export interface DailySalesRow {
   photos_taken_count: number | null;
   min_file_code: number | null;
   max_file_code: number | null;
+  /** Echter Umsatz des Tages (Online-Parks: Stripe). Fehlt er, gilt verkauft × Fotopreis. */
+  revenue_cents?: number;
 }
 
 // Keyed by 3-letter weekday (mon..sun); each value is [open, close] as
@@ -42,6 +53,26 @@ export interface AggregatedDay {
 }
 
 export async function fetchKioskSales(parkId: string): Promise<KioskSalesResponse> {
+  if (isOnlinePark(parkId)) {
+    const summary = await fetchOnlineSummary(parkId);
+    const testMode = summary.shop?.is_test ?? false;
+    return {
+      isKioskPark: true,
+      priceCents: summary.shop?.price_cents ?? null,
+      timezone: summary.park.timezone,
+      openingHours: null,
+      openingHoursConfig: null,
+      days: summary.days.map((d) => ({
+        camera_code: 'online',
+        business_date: d.day,
+        photos_sold_count: soldOf(d, testMode),
+        photos_taken_count: d.photos,
+        min_file_code: null,
+        max_file_code: null,
+        revenue_cents: revenueOf(d, testMode),
+      })),
+    };
+  }
   const { data, error } = await invokeEdgeFunction<KioskSalesResponse>('kiosk-photo-sales', {
     useSessionAuth: true,
     query: { park_id: parkId },
@@ -77,6 +108,7 @@ export interface KioskPurchasesResponse {
 // after that) for the Käufe/Purchases page, as opposed to fetchKioskSales'
 // permanent daily rollup used for long-term revenue trends.
 export async function fetchKioskPurchases(parkId: string): Promise<KioskPurchasesResponse> {
+  if (isOnlinePark(parkId)) return onlinePurchases(parkId, { view: 'orders' });
   const { data, error } = await invokeEdgeFunction<KioskPurchasesResponse>('kiosk-photo-purchases', {
     useSessionAuth: true,
     query: { park_id: parkId },
@@ -148,6 +180,7 @@ export interface MachineRevenue {
 }
 
 export async function fetchMachineRevenue(parkId: string): Promise<MachineRevenue[]> {
+  if (isOnlinePark(parkId)) return []; // ein Online-Shop, keine Automaten zu vergleichen
   const {
     data: { session },
   } = await getFunctionSession();
@@ -170,6 +203,7 @@ export async function fetchKioskPurchasesLedger(
   parkId: string,
   opts: { from?: string; to?: string } = {},
 ): Promise<KioskLedgerResponse> {
+  if (isOnlinePark(parkId)) return onlineLedger(parkId, opts);
   const {
     data: { session },
   } = await getFunctionSession();
@@ -201,6 +235,7 @@ export async function fetchKioskPurchasesLedger(
 // per-day hourly breakdown. Still only reaches back ~30 days (photos are
 // hard-deleted after that).
 export async function fetchKioskPhotosForDay(parkId: string, businessDate: string): Promise<KioskPurchasesResponse> {
+  if (isOnlinePark(parkId)) return onlinePurchases(parkId, { view: 'day', date: businessDate });
   const { data, error } = await invokeEdgeFunction<KioskPurchasesResponse>('kiosk-photo-purchases', {
     useSessionAuth: true,
     query: { park_id: parkId, date: businessDate },
@@ -231,6 +266,7 @@ export interface RideSnapshot {
 // server-side by the liftpic-status heartbeat, so no PC change is needed - but
 // only from the day snapshot logging was switched on onward.
 export async function fetchRideSnapshots(parkId: string, businessDate: string): Promise<RideSnapshot[]> {
+  if (isOnlinePark(parkId)) return onlinePhotoSnapshots(parkId, businessDate);
   const { data, error } = await invokeEdgeFunction<{ snapshots: RideSnapshot[] }>('kiosk-ride-snapshots', {
     query: { park_id: parkId, date: businessDate },
   });
@@ -518,11 +554,12 @@ export function bucketPurchasesByHour(
 // uploader's real ride/photo-taken telemetry; fall back to the old max-min+1
 // estimate when older parks have not rolled out liftpic-sync counters yet.
 export function aggregateByDate(rows: DailySalesRow[], priceCents: number): AggregatedDay[] {
-  const byDate = new Map<string, { sold: number; expected: number; hasExpected: boolean }>();
+  const byDate = new Map<string, { sold: number; expected: number; hasExpected: boolean; revenue: number | null }>();
 
   for (const row of rows) {
-    const bucket = byDate.get(row.business_date) ?? { sold: 0, expected: 0, hasExpected: false };
+    const bucket = byDate.get(row.business_date) ?? { sold: 0, expected: 0, hasExpected: false, revenue: null };
     bucket.sold += row.photos_sold_count;
+    if (typeof row.revenue_cents === 'number') bucket.revenue = (bucket.revenue ?? 0) + row.revenue_cents;
     if (typeof row.photos_taken_count === 'number' && row.photos_taken_count >= 0) {
       bucket.expected += row.photos_taken_count;
       bucket.hasExpected = true;
@@ -539,7 +576,7 @@ export function aggregateByDate(rows: DailySalesRow[], priceCents: number): Aggr
       soldCount: v.sold,
       expectedCount: v.hasExpected ? v.expected : null,
       conversionRate: v.hasExpected && v.expected > 0 ? v.sold / v.expected : null,
-      revenueCents: v.sold * priceCents,
+      revenueCents: v.revenue ?? v.sold * priceCents,
     }))
     .sort((a, b) => b.businessDate.localeCompare(a.businessDate));
 }
@@ -597,4 +634,70 @@ export function sumDays(days: AggregatedDay[]): { sold: number; expected: number
     }
   }
   return { sold, expected: hasExpected ? expected : null, revenueCents };
+}
+
+/* ------------------------------------------------------------------ Online-Parks
+ * Käufe (Stripe) und E-Mail-Freischaltungen in den Formen, die die Automatenseiten erwarten.
+ * capturedAt ist hier der Kaufzeitpunkt, damit Stoßzeiten die Verkaufsstunde zeigen.
+ */
+async function onlineTestMode(parkId: string) {
+  return (await fetchOnlineSummary(parkId)).shop?.is_test ?? false;
+}
+
+async function onlinePurchases(parkId: string, body: Record<string, unknown>): Promise<KioskPurchasesResponse> {
+  const [testMode, data, summary] = await Promise.all([
+    onlineTestMode(parkId),
+    callOnlinePark<{ orders: OnlineOrder[]; unlocks: OnlineUnlock[] }>(parkId, body),
+    fetchOnlineSummary(parkId),
+  ]);
+  const purchases: KioskPurchaseRow[] = [
+    ...data.orders.filter((o) => testMode || !o.is_test).map((o) => ({
+      id: o.id, capturedAt: o.paid_at, cameraCode: 'online', fileCode: o.asset?.photo_number ?? null, email: null, fullName: null,
+    })),
+    ...data.unlocks.filter((u) => testMode || !u.is_test).map((u) => ({
+      id: u.id, capturedAt: u.created_at, cameraCode: 'online', fileCode: u.asset?.photo_number ?? null, email: u.email, fullName: u.full_name,
+    })),
+  ].sort((a, b) => b.capturedAt.localeCompare(a.capturedAt));
+  return { isKioskPark: true, priceCents: summary.shop?.price_cents ?? null, purchases };
+}
+
+/** Fotos je Stunde als laufender Tageszähler – die Form, aus der ridesByHour „Fahrten“ macht. */
+async function onlinePhotoSnapshots(parkId: string, businessDate: string): Promise<RideSnapshot[]> {
+  const day = await callOnlinePark<{ timezone: string; hours: { hour: number; photos: number }[] }>(parkId, { view: 'day', date: businessDate });
+  const startOfHour = (hour: number) => {
+    // Erste Minute der Stunde in Parkzeit; die Stunde der Messung zählt, nicht der genaue Zeitpunkt.
+    const guess = new Date(`${businessDate}T12:00:00Z`);
+    const localNoon = Number(new Intl.DateTimeFormat('en-US', { timeZone: day.timezone, hour: '2-digit', hourCycle: 'h23' }).format(guess));
+    return new Date(Date.parse(`${businessDate}T00:30:00Z`) + (hour - (localNoon - 12)) * 3_600_000).toISOString();
+  };
+  const snapshots: RideSnapshot[] = [{ captured_at: startOfHour(0).replace(':30:', ':00:'), rides_today: 0 }];
+  let total = 0;
+  for (const h of day.hours) {
+    if (!h.photos) continue;
+    total += h.photos;
+    snapshots.push({ captured_at: startOfHour(h.hour), rides_today: total });
+  }
+  return snapshots.length > 1 ? snapshots : [];
+}
+
+async function onlineLedger(parkId: string, opts: { from?: string; to?: string }): Promise<KioskLedgerResponse> {
+  const [testMode, data, summary] = await Promise.all([
+    onlineTestMode(parkId),
+    callOnlinePark<{ from: string; to: string; truncated: boolean; orders: OnlineOrder[]; unlocks: OnlineUnlock[] }>(parkId, { view: 'orders', ...opts }),
+    fetchOnlineSummary(parkId),
+  ]);
+  const machine = { machine_id: 'online', machine_label: 'Online-Shop (Stripe)', card_only: true };
+  const base = { machine_id: machine.machine_id, machine_label: machine.machine_label, print_count: null, method_source: 'online', receipt_no: null, auth_code: null, claimed_name: null };
+  const purchases: KioskLedgerPurchase[] = [
+    ...data.orders.filter((o) => testMode || !o.is_test).map((o) => ({
+      ...base, sold_at: o.paid_at, sold_local: null, bild_nr: o.asset?.photo_number ?? null, method: 'online',
+      card_scheme: o.is_test ? 'Stripe · Test' : 'Stripe', amount_cents: o.amount_cents - o.refunded_cents,
+      claimed_email: null, photo_captured_at: o.asset?.captured_at ?? null,
+    })),
+    ...data.unlocks.filter((u) => testMode || !u.is_test).map((u) => ({
+      ...base, sold_at: u.created_at, sold_local: null, bild_nr: u.asset?.photo_number ?? null, method: 'email',
+      card_scheme: null, amount_cents: 0, claimed_email: u.email, claimed_name: u.full_name, photo_captured_at: u.asset?.captured_at ?? null,
+    })),
+  ].sort((a, b) => b.sold_at.localeCompare(a.sold_at));
+  return { purchases, machines: [machine], priceCents: summary.shop?.price_cents ?? null, truncated: data.truncated, from: data.from, to: data.to };
 }

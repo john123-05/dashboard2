@@ -1,3 +1,4 @@
+import { isOnlinePark } from '../../lib/onlinePark';
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { NavLink, useLocation } from 'react-router-dom';
@@ -213,6 +214,8 @@ export default function Sidebar({
 
   const visibleItemsDefaultOrder = navItems.filter((item) => {
     if (item.to === '/kamera' && cameraControlAvailable !== true) return false;
+    // Online-Foto-Park (Kalahari): keine Geschwindigkeitsmessung an der Anlage.
+    if (item.to === '/users' && isOnlinePark(parkId)) return false;
     if (!canSee(pageKeyForPath(item.to), { isOwner, isStaff, allowedPages })) return false;
     if (isStaff && !allowedPages) return item.staffAllowed;
     if (item.ownerOnly) return isOwner;
@@ -327,6 +330,8 @@ export default function Sidebar({
 
   function badgeFor(item: NavItem) {
     if(item.to==='/shop'&&parkId==='3b08e092-beb5-46ec-9811-5698e86dd83a')return null;
+    // Online-Foto-Park: der Online-Shop ist sein Verkaufsweg, kein Zusatzpaket.
+    if (item.to === '/shop' && isOnlinePark(parkId)) return null;
     // Demo-Park: alles ist offen, bezahlte Bereiche tragen stattdessen „kostet extra“.
     if (entitlements.isDemo) return featureForPath(item.to) || item.to === '/leads' ? t('demo.paid') : null;
     const showComingSoon =
