@@ -18,6 +18,11 @@ export const EXTERNAL_SUPABASE_ANON_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2cGN3bGNmZ21zbWFyanR3cHN4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA1MDczODEsImV4cCI6MjA4NjA4MzM4MX0.KiMNRutSws--fAxKnSRJgmoq3UiqoyfPowKiPWVs-A0";
 
 // Der Client, der die Anmeldung fuehrt. Nur dieser darf eine Sitzung halten.
+// Kam der Nutzer über einen „Passwort festlegen“-Link (Supabase recovery/invite)? Muss VOR createClient
+// gelesen werden, weil supabase-js den Adress-Anker nach dem Anmelden entfernt.
+export const ARRIVED_WITH_PASSWORD_LINK =
+  typeof window !== 'undefined' && /type=(recovery|invite)/.test(window.location.hash);
+
 export const supabase = createClient(
   SUPABASE_URL,
   SUPABASE_ANON_KEY,

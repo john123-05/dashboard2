@@ -1,6 +1,7 @@
 import { Suspense, useEffect } from 'react';
 import { seiteNachladen, NachladeGrenze } from './lib/seiteNachladen';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { supabase, ARRIVED_WITH_PASSWORD_LINK } from './lib/supabase';
 import { AuthProvider } from './contexts/AuthContext';
 import DashboardLayout from './components/layout/DashboardLayout';
 import Login from './pages/Login';
@@ -17,6 +18,7 @@ const Leads = seiteNachladen(() => import('./pages/Leads'));
 const Personalization = seiteNachladen(() => import('./pages/Personalization'));
 const Support = seiteNachladen(() => import('./pages/Support'));
 const SystemHealth = seiteNachladen(() => import('./pages/SystemHealth'));
+const SetPassword = seiteNachladen(() => import('./pages/SetPassword'));
 const Kamera = seiteNachladen(() => import('./pages/Kamera'));
 const Configuration = seiteNachladen(() => import('./pages/Configuration'));
 const ConfigurationProduct = seiteNachladen(() => import('./pages/ConfigurationProduct'));
@@ -72,10 +74,35 @@ function Ladeanzeige() {
   );
 }
 
+/** Wer über einen „Passwort festlegen“-Link kommt, landet auf /set-password – egal auf welcher Adresse Supabase ihn abliefert. */
+function PasswordLinkRedirect() {
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+  useEffect(() => {
+    if (ARRIVED_WITH_PASSWORD_LINK && pathname !== '/set-password') navigate('/set-password', { replace: true });
+    const { data } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY' && window.location.pathname !== '/set-password') navigate('/set-password', { replace: true });
+    });
+    return () => data.subscription.unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return null;
+}
+
+/** Kurzer Willkommens-Link aus der Onboarding-Mail: dashboard-liftpictures.com/welcome?t=… */
+function WelcomeForward() {
+  useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get('t') ?? '';
+    window.location.replace(`https://xcrxltiiovpoladpaewd.supabase.co/functions/v1/welcome-link?t=${encodeURIComponent(t)}`);
+  }, []);
+  return <Ladeanzeige />;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <AppShellMetaController />
+      <PasswordLinkRedirect />
       <I18nProvider>
         <AuthProvider>
           <ParkProvider>
@@ -84,6 +111,8 @@ export default function App() {
             <Routes>
               <Route path="/webinar" element={<WebinarRedirect />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/set-password" element={<SetPassword />} />
+              <Route path="/welcome" element={<WelcomeForward />} />
               <Route path="/register" element={<Register />} />
               <Route path="/privacy-policy" element={<PrivacyPolicy />} />
               <Route path="/support" element={<LegalSupport />} />

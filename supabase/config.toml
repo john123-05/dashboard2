@@ -96,3 +96,7 @@ verify_jwt = false
 # Staff-CRM setzt die Seiten-Einstellungen je Park; prüft admin_users selbst
 # (requireAdminFromRequest), der Gateway darf die CORS-Vorabanfrage nicht blocken.
 verify_jwt = false
+
+[functions.welcome-link]
+# Oeffentlicher Willkommens-Link; prueft den Token selbst.
+verify_jwt = false
