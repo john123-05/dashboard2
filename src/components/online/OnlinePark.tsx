@@ -4,10 +4,11 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  ArrowRight, Check, CheckCircle2, Copy, CreditCard, ExternalLink, HelpCircle, Landmark, ListChecks,
+  Check, CheckCircle2, Copy, CreditCard, ExternalLink, Landmark, ListChecks,
   Mail, Monitor, ShieldCheck, ShoppingBag, Truck, X,
 } from 'lucide-react';
 import { usePark } from '../../contexts/ParkContext';
+import { useI18n } from '../../lib/i18n';
 import { fetchOnlineSummary, isOnlinePark, type DeliveryStep, type OnlineSummary } from '../../lib/onlinePark';
 import Modal from '../ui/Modal';
 import ProgressRing from '../onboarding/ProgressRing';
@@ -227,6 +228,7 @@ function Header({ data }: { data: OnlineSummary }) {
 }
 
 export function InstallationDialog({ data, initialTab, onClose }: { data: OnlineSummary; initialTab: Tab; onClose: () => void }) {
+  const { t } = useI18n();
   const [tab, setTab] = useState<Tab>(initialTab);
   return (
     <Modal onClose={onClose} labelledBy="installation-title" panelClassName="flex max-h-[90vh] w-full max-w-xl flex-col overflow-hidden rounded-xl border border-[color:var(--line)] bg-white shadow-2xl">
@@ -239,9 +241,9 @@ export function InstallationDialog({ data, initialTab, onClose }: { data: Online
       <div className="px-5 pt-4"><Tabs tab={tab} setTab={setTab} /></div>
       <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4"><InstallationBody data={data} tab={tab} /></div>
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[color:var(--line)] bg-slate-50 px-5 py-3">
-        <p className="text-xs text-[color:var(--ink-3)]">Reopen this any time with “Installation” at the top right.</p>
+        <p className="text-xs text-[color:var(--ink-3)]">You find this any time under “{t('ob.card_title')}” in the menu.</p>
         <div className="flex gap-2">
-          <Link to="/installation" onClick={onClose} className="glass-button-secondary">Open as page</Link>
+          <Link to="/start#installation" onClick={onClose} className="glass-button-secondary">{t('ob.card_title')}</Link>
           <button type="button" onClick={onClose} className="glass-button-primary">Got it</button>
         </div>
       </div>
@@ -275,54 +277,6 @@ export function InstallationHost() {
 
   if (!data || !open) return null;
   return <InstallationDialog data={data} initialTab={open} onClose={() => setOpen(null)} />;
-}
-
-/** Knopf in der Kopfleiste (oben rechts): Fortschritt auf einen Blick, öffnet das Fenster. */
-export function InstallationPill({ dark = true }: { dark?: boolean }) {
-  const { parkId } = usePark();
-  const { data } = useOnlineSummary(parkId);
-  if (!data) return null;
-  const p = progressOf(data.delivery.steps);
-  if (!p.total) return null;
-  return (
-    <button type="button" onClick={() => openInstallation()} title="Installation status"
-      className={`flex h-9 items-center gap-2 rounded-md px-2 text-[13px] font-medium ${dark ? 'text-white/85 hover:bg-white/10 hover:text-white' : 'text-[color:var(--ink)] hover:bg-slate-100'}`}>
-      <ProgressRing percent={p.live ? 100 : p.percent} size={20} stroke={3} />
-      <span className="max-[1100px]:hidden">Installation</span>
-      <span className={dark ? 'text-white/60' : 'text-[color:var(--ink-3)]'}>{p.done}/{p.total}</span>
-    </button>
-  );
-}
-
-/** Schmale Karte oben auf der Übersicht – gleiche Machart wie „Erste Schritte“. */
-export function InstallationStrip({ data }: { data: OnlineSummary }) {
-  const p = progressOf(data.delivery.steps);
-  if (!p.total || p.live) return null;
-  return (
-    <section className="flex flex-wrap items-center gap-4 rounded-xl border border-[color:var(--line)] bg-white p-4 sm:p-5" aria-label="Installation">
-      <ProgressRing percent={p.percent} size={52}>
-        <span className="text-[11px] font-semibold text-[color:var(--ink)]">{p.done}/{p.total}</span>
-      </ProgressRing>
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-[color:var(--ink)]">
-          Your installation <span className="ml-1 font-normal text-[color:var(--ink-3)]">Step {Math.min(p.done + 1, p.total)} of {p.total}</span>
-        </p>
-        <p className="mt-0.5 truncate text-sm text-[color:var(--ink-2)]">
-          Now: {p.current?.title ?? '–'}{p.current?.description ? ` · ${p.current.description}` : ''}
-        </p>
-      </div>
-      <div className="flex w-full gap-2 sm:w-auto">
-        {!data.shop?.stripe_connected && (
-          <button type="button" onClick={() => openInstallation('stripe')} className="glass-button-secondary flex-1 justify-center sm:flex-none">
-            <CreditCard className="h-4 w-4" /> Set up payouts
-          </button>
-        )}
-        <button type="button" onClick={() => openInstallation()} className="glass-button-primary flex-1 justify-center sm:flex-none">
-          View progress <ArrowRight className="h-4 w-4" />
-        </button>
-      </div>
-    </section>
-  );
 }
 
 /* ------------------------------------------------------------------ Stripe-Karte (Übersicht) */
@@ -441,45 +395,34 @@ export function GuestPagesCard({ data, settingsLink = true }: { data: OnlineSumm
   );
 }
 
-/* ------------------------------------------------------------------ Seite /installation */
+/* ------------------------------------------------------------------ Abschnitt in „Erste Schritte“ */
 
-export default function InstallationPage() {
+/** Installation als erster Abschnitt der Seite „Erste Schritte“ – eine Stelle für alles, was der Kunde tun muss. */
+export function InstallationSection() {
   const { parkId } = usePark();
-  const { data, error } = useOnlineSummary(parkId);
+  const { data } = useOnlineSummary(parkId);
   const [tab, setTab] = useState<Tab>('progress');
-  if (!isOnlinePark(parkId)) {
-    return <p className="text-sm text-[color:var(--ink-3)]">This page is only available for online photo shops.</p>;
-  }
-  if (error) return <p role="alert" className="text-sm text-rose-700">The installation status is not available right now. Please try again later.</p>;
-  if (!data) return <div className="h-80 animate-pulse rounded-xl bg-slate-100" />;
+  useEffect(() => {
+    if (window.location.hash === '#installation') {
+      window.setTimeout(() => document.getElementById('installation')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
+    }
+  }, [data]);
+  if (!data || !data.delivery.steps.length) return null;
   return (
-    <div className="space-y-6">
-      <div>
-        <p className="text-xs font-medium text-slate-400">Installation · {data.park.name}</p>
-        <h2 className="mt-1 text-[28px] font-light tracking-tight text-[color:var(--ink)] sm:text-[32px]">Your photo system</h2>
+    <section id="installation" className="scroll-mt-6 rounded-xl border border-[color:var(--line)] bg-white p-5 sm:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Header data={data} />
+        <Tabs tab={tab} setTab={setTab} />
       </div>
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-        <section className="rounded-xl border border-[color:var(--line)] bg-white p-5">
-          <Header data={data} />
-          <div className="mt-4"><Tabs tab={tab} setTab={setTab} /></div>
-          <div className="mt-4"><InstallationBody data={data} tab={tab} /></div>
-        </section>
-        <aside className="space-y-4">
-          <section className="rounded-xl border border-[color:var(--line)] bg-white p-5">
-            <p className="flex items-center gap-2 text-sm font-semibold text-[color:var(--ink)]"><CreditCard className="h-4 w-4 text-[color:var(--ink-3)]" />Stripe payouts</p>
-            <p className="mt-1 text-sm text-[color:var(--ink-2)]">
-              {data.shop?.stripe_connected ? 'Connected. Guest payments go straight to your Stripe account.' : 'Not connected yet. We will send you a secure Stripe link.'}
-            </p>
-            <button type="button" onClick={() => setTab('stripe')} className="glass-button-secondary mt-3">How it works</button>
-          </section>
-          <section className="rounded-xl border border-[color:var(--line)] bg-white p-5">
-            <p className="flex items-center gap-2 text-sm font-semibold text-[color:var(--ink)]"><HelpCircle className="h-4 w-4 text-[color:var(--ink-3)]" />Questions?</p>
-            <p className="mt-1 text-sm text-[color:var(--ink-2)]">Write to us any time. We usually answer within one business day.</p>
-            <Link to="/tickets" className="glass-button-secondary mt-3">Contact support</Link>
-          </section>
-        </aside>
-      </div>
-      <GuestPagesCard data={data} />
-    </div>
+      <div className="mt-5"><InstallationBody data={data} tab={tab} /></div>
+    </section>
   );
+}
+
+/** Kurzfassung für die Karte „Erste Schritte“ auf der Übersicht. */
+export function installationLine(data: OnlineSummary | null) {
+  if (!data) return null;
+  const p = progressOf(data.delivery.steps);
+  if (!p.total || p.live) return null;
+  return { done: p.done, total: p.total, title: p.current?.title ?? '' };
 }

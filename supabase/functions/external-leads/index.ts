@@ -110,7 +110,7 @@ Deno.serve(async (req: Request) => {
     if (denied) return denied;
     const parkFilter = `&park_id=eq.${parkId}`;
 
-    const [usersRes, purchasesRes, parksRes, photoClaimsRes, onlineRes] = await Promise.all([
+    const [usersRes, purchasesRes, parksRes, photoClaimsRes, onlineRes, onlineBuyersRes] = await Promise.all([
       fetchExternal(`users?select=id,email,vorname,nachname,created_at,park_id&order=created_at.desc${parkFilter}`),
       fetchExternal(`purchases?select=user_id,amount_cents,total_amount_cents,status,paid_at,park_id${parkFilter}`),
       fetchExternal(`parks?select=id,name`),
@@ -119,6 +119,8 @@ Deno.serve(async (req: Request) => {
       // only table, by design). Without this, those leads never show up here.
       fetchExternal(`photo_claims?select=id,full_name,email,phone,social_entry_id,park_id,marketing_opt_in,claimed_at,created_at,locale,country_code&order=created_at.desc${parkFilter}`),
       fetchExternal(`online_photo_unlocks?select=id,full_name,email,park_id,marketing_opt_in,created_at&is_test=eq.false&order=created_at.desc${parkFilter}`),
+      // Online-Foto-Käufe über Stripe (Kalahari): E-Mail aus der Checkout-Sitzung, Einwilligung nur per Häkchen.
+      fetchExternal(`online_photo_orders?select=id,buyer_name,buyer_email,park_id,marketing_opt_in,paid_at,amount_cents,is_test&status=eq.paid&buyer_email=not.is.null&order=paid_at.desc${parkFilter}`),
     ]);
 
     if (!usersRes.ok) {
@@ -213,7 +215,20 @@ Deno.serve(async (req: Request) => {
       : [];
 
     const onlineLeads=onlineRes.ok?onlineRes.data.map((c:any)=>({...c,source:'photo_claim',opted_in:Boolean(c.marketing_opt_in),park_name:parkNames.get(c.park_id)||'Unknown',park:{name:parkNames.get(c.park_id)||'Unknown'}})):[];
-    const leads = [...userLeads, ...photoClaimLeads,...onlineLeads].sort(
+    // Ein Käufer mehrerer Fotos erscheint einmal (neuester Kauf, Einwilligung wenn je gegeben).
+    const buyers = new Map<string, Record<string, unknown>>();
+    for (const o of (onlineBuyersRes.ok ? onlineBuyersRes.data : []) as Record<string, unknown>[]) {
+      const email = String(o.buyer_email ?? '').toLowerCase();
+      const seen = buyers.get(email);
+      if (seen) { if (o.marketing_opt_in === true) seen.opted_in = true; continue; }
+      const parkName = parkNames.get(o.park_id as string) || 'Unknown';
+      buyers.set(email, {
+        id: o.id, email, full_name: o.buyer_name ?? '', source: 'purchase', opted_in: o.marketing_opt_in === true,
+        created_at: o.paid_at, park_name: parkName, park: { name: parkName }, is_test: o.is_test === true,
+      });
+    }
+    const onlineBuyerLeads = [...buyers.values()];
+    const leads = [...userLeads, ...photoClaimLeads,...onlineLeads,...onlineBuyerLeads].sort(
       (a, b) => new Date(b.created_at as string).getTime() - new Date(a.created_at as string).getTime()
     );
 

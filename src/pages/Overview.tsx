@@ -1,4 +1,4 @@
-import { GuestPagesCard, InstallationStrip, OnlinePayoutsCard, useOnlineSummary } from '../components/online/OnlinePark';
+import { useOnlineSummary } from '../components/online/OnlinePark';
 import { isOnlinePark, parkCurrency } from '../lib/onlinePark';
 import { useEffect, useMemo, useState } from 'react';
 import ParkPhotoImg from '../components/ParkPhotoImg';
@@ -950,7 +950,6 @@ export default function Overview() {
   return (
     <div className="space-y-6 overflow-x-clip">
       <SetupCard />
-      {online && onlineData && <InstallationStrip data={onlineData} />}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-xs font-medium text-slate-400">
@@ -1130,9 +1129,6 @@ export default function Overview() {
             </div>
           </GlassCard>
 
-          {online ? (
-            onlineData ? <OnlinePayoutsCard data={onlineData} /> : <GlassCard className="p-5 sm:p-6"><div className="h-40 animate-pulse rounded-lg bg-slate-100" /></GlassCard>
-          ) : (
           <GlassCard className="p-5 sm:p-6">
             <h3 className="text-base font-semibold text-slate-800">{t('overview.visitor_data')}</h3>
             {unlockMode && (
@@ -1213,7 +1209,6 @@ export default function Overview() {
               </dl>
             )}
           </GlassCard>
-          )}
 
           <GlassCard className="overflow-hidden p-5 sm:p-6">
             <h3 className="text-base font-semibold text-slate-800">{t('overview.notifications_activity')}</h3>
@@ -1553,8 +1548,6 @@ export default function Overview() {
         </GlassCard>
       </div>
       )}
-
-      {online && onlineData && <GuestPagesCard data={onlineData} />}
 
       <GlassCard className="p-6">
         <h3 className="mb-4 text-base font-semibold text-slate-800">{t('overview.recent_transactions')}</h3>

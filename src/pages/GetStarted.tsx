@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ArrowRight, Check, ChevronDown, Clock, LifeBuoy, BookOpen, PlayCircle, RotateCcw, Smartphone } from 'lucide-react';
+import { ArrowRight, Check, ChevronDown, Clock, Download, ExternalLink, LifeBuoy, BookOpen, PlayCircle, RotateCcw, Smartphone } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../lib/i18n';
-import { useOnboarding, type VisibleGuideItem } from '../lib/onboarding';
+import { APP_STORE_URL, useOnboarding, type VisibleGuideItem } from '../lib/onboarding';
+import { InstallationSection } from '../components/online/OnlinePark';
 import GlassCard from '../components/ui/GlassCard';
 import ProgressRing from '../components/onboarding/ProgressRing';
 import AppSetupGuide from '../components/onboarding/AppSetupGuide';
@@ -13,7 +14,7 @@ import AppSetupGuide from '../components/onboarding/AppSetupGuide';
 export default function GetStarted() {
   const { t } = useI18n();
   const { profile } = useAuth();
-  const { sections, next, doneCount, total, percent, complete, hidden, toggle, setHidden, reset } = useOnboarding();
+  const { sections, next, doneCount, total, percent, complete, hidden, toggle, setHidden, reset, markDone } = useOnboarding();
   const firstName = (profile?.full_name ?? '').trim().split(/\s+/)[0] ?? '';
 
   // Offen ist der Abschnitt mit dem nächsten Schritt; aufgeklappt genau dieser Schritt.
@@ -46,6 +47,10 @@ export default function GetStarted() {
       <button type="button" onClick={startTour} className={className}>
         <PlayCircle className="h-4 w-4" /> {t('ob.start_tour')}
       </button>
+    ) : item.action === 'appstore' ? (
+      <a href={APP_STORE_URL} target="_blank" rel="noreferrer" onClick={() => markDone('appstore')} className={className}>
+        <Download className="h-4 w-4" /> {t('appstore.button')}
+      </a>
     ) : item.action === 'app' ? (
       <button type="button" onClick={openApp} className={className}>
         <Smartphone className="h-4 w-4" /> {t('app.open_guide')}
@@ -171,6 +176,31 @@ export default function GetStarted() {
           </div>
         </div>
       </div>
+
+      {/* Online-Foto-Park (Kalahari): Installation und Stripe-Einrichtung gehören zu den ersten Schritten. */}
+      <InstallationSection />
+
+      {/* Die Liftpictures-App aus dem App Store */}
+      <GlassCard className="overflow-hidden p-0">
+        <div className="flex flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:px-5">
+          <img src="/icon-512.png" alt="" className="h-12 w-12 shrink-0 rounded-xl border border-[color:var(--line)]" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+          <div className="min-w-0 flex-1">
+            <p className="text-base font-semibold text-[color:var(--ink)]">{t('appstore.title')}</p>
+            <p className="text-sm text-[color:var(--ink-2)]">{t('appstore.text')}</p>
+          </div>
+          <div className="flex items-center gap-4">
+            <img
+              src={`https://api.qrserver.com/v1/create-qr-code/?size=168x168&margin=8&data=${encodeURIComponent(APP_STORE_URL)}`}
+              alt={t('appstore.qr')}
+              className="hidden h-20 w-20 rounded-md border border-[color:var(--line)] lg:block"
+              loading="lazy"
+            />
+            <a href={APP_STORE_URL} target="_blank" rel="noreferrer" onClick={() => markDone('appstore')} className="glass-button-primary">
+              <Download className="h-4 w-4" /> {t('appstore.button')} <ExternalLink className="h-3.5 w-3.5" />
+            </a>
+          </div>
+        </div>
+      </GlassCard>
 
       {/* Als App hinzufügen + Benachrichtigungen */}
       <GlassCard className="scroll-mt-6 overflow-hidden p-0" >

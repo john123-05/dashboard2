@@ -11,6 +11,8 @@ import { CRM_TABS, crmTabForPath, type TabKey } from '../../lib/crmTabs';
 import PageGuide from '../onboarding/PageGuide';
 import { PlanBadge } from '../upgrade/PlanGate';
 import { useI18n } from '../../lib/i18n';
+import { isOnlinePark } from '../../lib/onlinePark';
+import OnlineUnlockSwitch from './OnlineUnlockSwitch';
 
 export type { TabKey };
 
@@ -67,6 +69,9 @@ export default function UnlockCenter({
   }
 
   const active = config?.settings.mode;
+  // Online-Foto-Park (Kalahari): Gäste bekommen das Foto per Stripe-Kauf oder kostenlos gegen E-Mail.
+  // Das steuert der eigene Umschalter; Umfrage und Social Media gibt es im Online-Shop (noch) nicht.
+  const online = isOnlinePark(parkId);
   const shown = TABS.find((t) => t.key === tab);
 
   return (
@@ -83,7 +88,7 @@ export default function UnlockCenter({
               {t('shop.view_plans')}
             </Link>
           )}
-          {shown?.mode && active !== shown.mode && (
+          {!online && shown?.mode && active !== shown.mode && (
             <button
               type="button"
               onClick={() => { if (shown.mode) void activate(shown.mode); }}
@@ -111,7 +116,7 @@ export default function UnlockCenter({
                   : 'border-transparent text-[color:var(--ink-3)] hover:text-[color:var(--ink)]'
               }`}
             >
-              {active === tabItem.mode && <span className="h-2 w-2 rounded-full bg-emerald-500" title={t('crm.active_for_guests')} />}
+              {active === tabItem.mode && (!online || tabItem.mode === 'email') && <span className="h-2 w-2 rounded-full bg-emerald-500" title={t('crm.active_for_guests')} />}
               {t(tabItem.labelKey)}
             </button>
           ))}
@@ -119,6 +124,11 @@ export default function UnlockCenter({
       </div>
       {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
       {tab !== 'overview' && <PageGuide id={{ allContacts: 'contacts', email: 'email', social: 'social', survey: 'survey', tracking: 'tracking' }[tab]} />}
+
+      {online && (tab === 'overview' || tab === 'email') && <OnlineUnlockSwitch parkId={parkId} onChanged={() => void load()} />}
+      {online && (tab === 'survey' || tab === 'social') && (
+        <p className="rounded-lg border border-[color:var(--line)] bg-slate-50 px-3 py-2 text-sm text-[color:var(--ink-2)]">{t('online.unlock_not_yet')}</p>
+      )}
 
       {tab === 'overview' && <div className="space-y-5">{children('overview')}</div>}
       {tab === 'allContacts' && <div className="space-y-5">{children('list')}</div>}

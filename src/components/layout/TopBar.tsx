@@ -1,4 +1,3 @@
-import { InstallationPill } from '../online/OnlinePark';
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { showPageGuide } from '../onboarding/PageGuide';
@@ -104,7 +103,6 @@ export default function TopBar({ onOpenNav }: { onOpenNav?: () => void }) {
   return (
     <>
       <div className="operator-topbar fixed right-0 top-0 z-[70] hidden items-center gap-0.5 rounded-bl-xl bg-[var(--sidebar-bg)] py-1 pl-2 pr-2 shadow-[0_2px_10px_rgba(0,0,0,0.12)] min-[901px]:flex">
-        <InstallationPill />
         <BarButton label={t('top.help')} active={panel === 'help'} onClick={() => toggle('help')}>
           <HelpCircle className="h-[18px] w-[18px]" />
         </BarButton>
@@ -137,7 +135,6 @@ export default function TopBar({ onOpenNav }: { onOpenNav?: () => void }) {
       {/* Handy (< 901 px): schmale Leiste oben und feste Tab-Leiste unten; dieselben Fenster wie am Desktop. */}
       <div className="operator-topbar-mobile fixed inset-x-0 top-0 z-[70] flex h-12 items-center gap-1 bg-[var(--sidebar-bg)] pl-4 pr-2 shadow-[0_2px_10px_rgba(0,0,0,0.12)] min-[901px]:hidden">
         <p className="min-w-0 flex-1 truncate text-sm font-medium text-white/90">{parkName ?? ''}</p>
-        <InstallationPill />
         <BarButton label={t('top.help')} active={panel === 'help'} onClick={() => toggle('help')}>
           <HelpCircle className="h-[18px] w-[18px]" />
         </BarButton>

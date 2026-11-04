@@ -17,7 +17,6 @@ const Leads = seiteNachladen(() => import('./pages/Leads'));
 const Personalization = seiteNachladen(() => import('./pages/Personalization'));
 const Support = seiteNachladen(() => import('./pages/Support'));
 const SystemHealth = seiteNachladen(() => import('./pages/SystemHealth'));
-const InstallationPage = seiteNachladen(() => import('./components/online/OnlinePark'));
 const Kamera = seiteNachladen(() => import('./pages/Kamera'));
 const Configuration = seiteNachladen(() => import('./pages/Configuration'));
 const ConfigurationProduct = seiteNachladen(() => import('./pages/ConfigurationProduct'));
@@ -148,7 +147,7 @@ export default function App() {
                 <Route path="/personalization" element={<Personalization />} />
                 <Route path="/tickets" element={<Support />} />
                 <Route path="/health" element={<SystemHealth />} />
-                <Route path="/installation" element={<InstallationPage />} />
+                <Route path="/installation" element={<Navigate to="/start#installation" replace />} />
                 <Route path="/kamera" element={<CameraAvailableOnly><Kamera /></CameraAvailableOnly>} />
                 <Route path="/start" element={<GetStarted />} />
                 <Route path="/ratgeber" element={<Ratgeber />} />

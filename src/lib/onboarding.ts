@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Activity, Aperture, BookOpen, ClipboardList, DollarSign, Gauge, LayoutDashboard, LifeBuoy, Mail, Package, Send,
-  Settings, Share2, ShoppingCart, Smartphone, Sparkles, Store, Tags, Target, UserCog, Users, Wand2, Camera,
+  Download, Settings, Share2, ShoppingCart, Smartphone, Sparkles, Store, Tags, Target, UserCog, Users, Wand2, Camera,
   type LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -13,6 +13,10 @@ import { usePark } from '../contexts/ParkContext';
 import { hasGuestActivity } from '../components/GuestActivityAwareOverlay';
 import { canSee, pageKeyForPath } from './permissions';
 import { featureForPath, useEntitlements } from './plans';
+import { isOnlinePark } from './onlinePark';
+
+/** Die Liftpictures-App im App Store (iPhone, iPad, Mac mit Apple-Chip). */
+export const APP_STORE_URL = 'https://apps.apple.com/app/id6759672569';
 
 export type GuideItem = {
   id: string;
@@ -23,7 +27,7 @@ export type GuideItem = {
   /** Nur sichtbar, wenn die Kamera-Steuerung für den Park verfügbar ist. */
   needsCamera?: boolean;
   /** Kein Seitenbesuch, sondern eine Aktion (Rundgang). */
-  action?: 'tour' | 'app';
+  action?: 'tour' | 'app' | 'appstore';
 };
 export type GuideSection = { id: string; titleKey: string; subKey: string; items: GuideItem[] };
 
@@ -31,6 +35,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
   {
     id: 'start', titleKey: 'ob.section_start', subKey: 'ob.section_start_sub',
     items: [
+      { id: 'appstore', path: '/start', icon: Download, minutes: 2, action: 'appstore' },
       { id: 'app', path: '/start', icon: Smartphone, minutes: 2, action: 'app' },
       { id: 'tour', path: '/start', icon: Sparkles, minutes: 2, action: 'tour' },
     ],
@@ -133,6 +138,8 @@ export function useOnboarding() {
       ...section,
       items: section.items
         .filter((item) => (item.needsCamera ? cameraControlAvailable === true : true))
+        // Online-Foto-Park (Kalahari): keine Geschwindigkeitsmessung an der Anlage.
+        .filter((item) => !(item.id === 'speed' && isOnlinePark(parkId)))
         .filter((item) => item.action || canSee(pageKeyForPath(item.path), viewer))
         .map((item): VisibleGuideItem => {
           const feature = featureForPath(item.path);

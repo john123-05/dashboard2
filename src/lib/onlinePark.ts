@@ -95,3 +95,41 @@ export function soldOf(day: OnlineSummary['days'][number], testMode: boolean) {
 export function revenueOf(day: OnlineSummary['days'][number], testMode: boolean) {
   return day.revenue_cents + (testMode ? day.test_revenue_cents : 0);
 }
+
+/* ------------------------------------------------------------------ Shop-Einstellungen */
+
+export interface OnlineCustomization {
+  shop?: { eyebrow?: string; title?: string; text?: string };
+  screen?: { eyebrow?: string; headline?: string; qr_label_buy?: string; qr_label_free?: string; speed?: 'slow' | 'normal' | 'fast'; rows?: 1 | 2; show_price?: boolean };
+  after?: { enabled?: boolean; title?: string; text?: string; button_label?: string; button_url?: string };
+}
+export interface OnlineShopSettings {
+  name: string;
+  path: string;
+  unlock_mode: 'purchase' | 'email';
+  price_cents: number;
+  currency: string;
+  is_test: boolean;
+  enabled: boolean;
+  customization: OnlineCustomization;
+  shop_url: string;
+  screen_url: string;
+}
+
+/** Lesen (ohne patch) oder ändern (nur Parkinhaber): Freischaltart, Preis, Texte der Gästeseiten. */
+export async function onlineShopSettings(
+  parkId: string,
+  patch?: { unlock_mode?: 'purchase' | 'email'; price_cents?: number; customization?: OnlineCustomization },
+): Promise<OnlineShopSettings> {
+  const { data: { session } } = await getFunctionSession();
+  if (!session?.access_token) throw new Error('Authentication required');
+  const res = await fetch(`${EXTERNAL_SUPABASE_URL}/functions/v1/operator-online-photo-settings`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}`, apikey: EXTERNAL_SUPABASE_ANON_KEY },
+    body: JSON.stringify({ park_id: parkId, ...(patch ?? {}) }),
+  });
+  const json = await res.json().catch(() => null);
+  if (!res.ok || !json?.data) throw new Error(json?.error || `HTTP ${res.status}`);
+  if (patch) void fetchOnlineSummary(parkId, true).catch(() => undefined);
+  return { ...json.data, customization: json.data.customization ?? {} } as OnlineShopSettings;
+}
