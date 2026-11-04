@@ -2,7 +2,7 @@
 // rechts zum Wiederöffnen, eigene Seite /installation, Stripe-Anleitung, FAQ und die Gästeseiten.
 // Bewusst englisch: der Kunde sitzt in den USA. Stil wie „Erste Schritte“ (weiß, --ink, Orange-Akzent).
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Check, CheckCircle2, Copy, CreditCard, ExternalLink, Landmark, ListChecks,
   Mail, Monitor, ShieldCheck, ShoppingBag, Truck, X,
@@ -252,13 +252,15 @@ export function InstallationDialog({ data, initialTab, onClose }: { data: Online
 }
 
 /**
- * Im Layout eingehängt: öffnet das Fenster, wenn der Knopf oben rechts gedrückt wird, und von selbst
- * einmal, sobald sich der aktuelle Schritt geändert hat (je Browser gemerkt).
+ * Im Layout eingehängt: öffnet das Fenster beim ersten Besuch und von selbst einmal, sobald sich ein Schritt
+ * geändert hat (je Browser gemerkt). Nach dem Schließen zeigt ein kleiner Hinweis an der Seitenleiste, dass der
+ * Stand immer unter „Erste Schritte“ steht – mit Knopf direkt dorthin.
  */
 export function InstallationHost() {
   const { parkId } = usePark();
   const { data } = useOnlineSummary(parkId);
   const [open, setOpen] = useState<Tab | null>(null);
+  const [hint, setHint] = useState(false);
   const signature = useMemo(() => data ? data.delivery.steps.map((s) => `${s.id}:${s.status}`).join('|') : '', [data]);
 
   useEffect(() => {
@@ -275,8 +277,58 @@ export function InstallationHost() {
     } catch { /* ohne Speicher kein automatisches Öffnen */ }
   }, [data, parkId, signature]);
 
-  if (!data || !open) return null;
-  return <InstallationDialog data={data} initialTab={open} onClose={() => setOpen(null)} />;
+  function close() {
+    setOpen(null);
+    // Den Hinweis nur zeigen, bis der Kunde ihn einmal bestätigt hat.
+    try { if (parkId && !localStorage.getItem(`installation-hint:${parkId}`)) setHint(true); } catch { setHint(true); }
+  }
+  function dismissHint() {
+    setHint(false);
+    try { if (parkId) localStorage.setItem(`installation-hint:${parkId}`, '1'); } catch { /* egal */ }
+  }
+
+  if (!data) return null;
+  return (
+    <>
+      {open && <InstallationDialog data={data} initialTab={open} onClose={close} />}
+      {hint && !open && <WhereToFind onDone={dismissHint} />}
+    </>
+  );
+}
+
+/** Zeigt auf „Erste Schritte“ in der Seitenleiste (oder unten mittig, wenn die Leiste zu ist). */
+function WhereToFind({ onDone }: { onDone: () => void }) {
+  const { t } = useI18n();
+  const navigate = useNavigate();
+  const [rect, setRect] = useState<DOMRect | null>(null);
+  useEffect(() => {
+    const el = document.querySelector<HTMLElement>('[data-nav="start"]');
+    const measure = () => {
+      const r = el?.getBoundingClientRect();
+      setRect(r && r.width > 0 && r.right < window.innerWidth / 2 ? r : null);
+    };
+    measure();
+    el?.classList.add('lp-nav-pulse');
+    window.addEventListener('resize', measure);
+    return () => { window.removeEventListener('resize', measure); el?.classList.remove('lp-nav-pulse'); };
+  }, []);
+  const style = rect
+    ? { left: rect.right + 14, top: Math.max(12, rect.top + rect.height / 2 - 70) }
+    : { left: '50%', bottom: 96, transform: 'translateX(-50%)' };
+  return (
+    <div role="dialog" aria-label={t('ob.card_title')} style={style}
+      className="fixed z-[96] w-[min(320px,calc(100vw-2rem))] rounded-xl border border-[color:var(--line-strong)] bg-white p-4 shadow-[0_16px_48px_rgba(16,24,40,0.22)]">
+      {rect && <span aria-hidden className="absolute -left-[7px] top-[62px] h-3 w-3 rotate-45 border-b border-l border-[color:var(--line-strong)] bg-white" />}
+      <p className="text-sm font-semibold text-[color:var(--ink)]">Your status is always here</p>
+      <p className="mt-1 text-sm text-[color:var(--ink-2)]">
+        Open “{t('ob.card_title')}” in the menu any time to see where your installation stands, track the shipment and set up Stripe payouts.
+      </p>
+      <div className="mt-3 flex gap-2">
+        <button type="button" className="glass-button-primary" onClick={() => { onDone(); navigate('/start#installation'); }}>Show me</button>
+        <button type="button" className="glass-button-secondary" onClick={onDone}>Got it</button>
+      </div>
+    </div>
+  );
 }
 
 /* ------------------------------------------------------------------ Stripe-Karte (Übersicht) */

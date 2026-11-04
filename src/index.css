@@ -341,3 +341,7 @@ body[data-lp-tour] .lp-corner-card {
 @media (prefers-reduced-motion: reduce) {
   .lp-pointer, .lp-scene-in { animation: none; }
 }
+
+/* Hinweis „Hier findest du deinen Stand“: Menüpunkt kurz hervorheben. */
+@keyframes lp-nav-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(234, 122, 63, 0.55); } 50% { box-shadow: 0 0 0 6px rgba(234, 122, 63, 0); } }
+.lp-nav-pulse { animation: lp-nav-pulse 1.6s ease-in-out infinite; outline: 2px solid #ea7a3f; outline-offset: 1px; }

@@ -9,7 +9,7 @@ import {
   BROWSERS, canPromptInstall, detectDevice, isStandalone, onInstallPromptChange, promptInstall, type Browser, type Device,
 } from '../../lib/installPrompt';
 import { getCurrentOperatorPushSubscription, isOperatorPushSupported, subscribeOperatorPush } from '../../lib/operatorPushNotifications';
-import { useOnboarding } from '../../lib/onboarding';
+import { APP_STORE_URL, useOnboarding } from '../../lib/onboarding';
 
 // Anleitung „Liftbase als App hinzufügen und Benachrichtigungen einschalten“ – für iPhone, Android, Mac und Windows,
 // passend zum Browser. Links eine kleine bewegte Skizze (wohin tippen/klicken), rechts der Schritt in Worten.
@@ -19,7 +19,8 @@ type Scene =
   | 'ios-share-bottom' | 'ios-share-top' | 'ios-sheet' | 'ios-add' | 'home-icon'
   | 'android-dots' | 'android-menu' | 'install-dialog'
   | 'desk-address' | 'desk-edge' | 'desk-dialog' | 'safari-file' | 'safari-dock' | 'ff-note'
-  | 'notify-button' | 'notify-prompt';
+  | 'notify-button' | 'notify-prompt'
+  | 'store-page' | 'store-home' | 'store-login' | 'store-allow';
 type Step = { part: 'install' | 'notify'; scene: Scene; textKey: string };
 
 const DEVICE_KEY = 'lp-app-device';
@@ -32,12 +33,10 @@ function stepsFor(device: Device, browser: Browser): Step[] {
   ];
   const install = (items: [Scene, string][]): Step[] => items.map(([scene, textKey]) => ({ part: 'install', scene, textKey }));
   if (device === 'iphone') {
+    // iPhone und iPad: die echte App aus dem App Store statt „Zum Home-Bildschirm“. Mitteilungen erlaubt man in der App.
     return [
-      ...install([
-        browser === 'chrome' ? ['ios-share-top', 'app.ios_c1'] : ['ios-share-bottom', 'app.ios_s1'],
-        ['ios-sheet', 'app.ios_2'], ['ios-add', 'app.ios_3'], ['home-icon', 'app.home_4'],
-      ]),
-      ...notify,
+      ...install([['store-page', 'app.store_1'], ['store-home', 'app.store_2'], ['store-login', 'app.store_3']]),
+      { part: 'notify', scene: 'store-allow', textKey: 'app.store_4' },
     ];
   }
   if (device === 'android') {
@@ -240,6 +239,56 @@ function SceneView({ scene, device }: { scene: Scene; device: Device }) {
       );
       return <Desk menuBar={menuBar}><Lines rows={5} /></Desk>;
     }
+    case 'store-page':
+      return (
+        <Phone>
+          <div className="flex items-center gap-2.5 p-3 pt-5">
+            <AppIcon size={40} />
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold text-slate-800">Liftpictures</p>
+              <p className="text-slate-400">Ride-Fotoanlagen</p>
+              <div className="mt-1.5"><Hot><span className="rounded-full bg-sky-600 px-3 py-0.5 font-semibold text-white">{t('app.ui_get')}</span></Hot></div>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-1.5 px-3"><span className="h-16 rounded-md bg-slate-100" /><span className="h-16 rounded-md bg-slate-100" /><span className="h-16 rounded-md bg-slate-100" /></div>
+        </Phone>
+      );
+    case 'store-home':
+      return (
+        <Phone>
+          <div className="grid h-full grid-cols-3 content-start gap-x-2 gap-y-3 bg-gradient-to-b from-slate-200 to-slate-300 p-3">
+            {Array.from({ length: 7 }).map((_, i) => <span key={i} className="mx-auto h-7 w-7 rounded-[22%] bg-white/70" />)}
+            <span className="flex flex-col items-center gap-0.5">
+              <Hot><AppIcon size={28} /></Hot>
+              <span className="mt-1 font-medium text-slate-800">Liftpictures</span>
+            </span>
+          </div>
+        </Phone>
+      );
+    case 'store-login':
+      return (
+        <Phone>
+          <div className="flex flex-col items-center gap-2 p-3 pt-6">
+            <AppIcon size={28} />
+            <span className="h-5 w-full rounded border border-slate-200 bg-white" />
+            <span className="h-5 w-full rounded border border-slate-200 bg-white" />
+            <Hot className="w-full"><span className="block w-full rounded bg-brand-600 py-1 text-center font-semibold text-white">{t('app.ui_login')}</span></Hot>
+          </div>
+        </Phone>
+      );
+    case 'store-allow':
+      return (
+        <Phone>
+          <div className="absolute inset-0 bg-slate-900/30" />
+          <div className="absolute inset-x-2 top-1/3 rounded-md bg-white p-2.5 text-center shadow-lg ring-1 ring-black/10">
+            <p className="leading-snug text-slate-800"><span className="font-semibold">„Liftpictures“</span> {t('app.ui_wants')}</p>
+            <div className="mt-2.5 flex justify-center gap-2">
+              <span className="rounded border border-slate-300 px-2 py-0.5 text-slate-500">{t('app.ui_block')}</span>
+              <Hot><span className="rounded bg-sky-600 px-2 py-0.5 font-semibold text-white">{t('app.ui_allow')}</span></Hot>
+            </div>
+          </div>
+        </Phone>
+      );
     case 'notify-button': {
       const body = (
         <div className="space-y-2">
@@ -343,6 +392,7 @@ export default function AppSetupGuide({ onDone }: { onDone?: () => void }) {
       active ? 'border-[color:var(--ink)] bg-[color:var(--ink)] text-white' : 'border-[color:var(--line-strong)] bg-white text-[color:var(--ink-2)] hover:bg-slate-50'
     }`;
   const hintKey = `app.hint_${device === 'iphone' ? 'ios' : device}`;
+  const ios = device === 'iphone';
 
   return (
     <div>
@@ -356,7 +406,7 @@ export default function AppSetupGuide({ onDone }: { onDone?: () => void }) {
           </button>
         ))}
       </div>
-      {BROWSERS[device].length > 1 && (
+      {device !== 'iphone' && BROWSERS[device].length > 1 && (
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <span className="text-xs text-[color:var(--ink-3)]">{t('app.q_browser')}</span>
           {BROWSERS[device].map((b) => (
@@ -368,6 +418,12 @@ export default function AppSetupGuide({ onDone }: { onDone?: () => void }) {
         </div>
       )}
 
+      {!ios && (
+        <p className="mt-3 text-xs text-[color:var(--ink-3)]">
+          {t('app.store_tip')}{' '}
+          <button type="button" className="font-medium text-brand-700 hover:underline" onClick={() => chooseDevice('iphone')}>{t('app.store_tip_link')}</button>
+        </p>
+      )}
       <div className="mt-4 grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] sm:items-center">
         <div className="flex min-h-[284px] items-center justify-center rounded-xl bg-slate-50 p-4">
           <div key={`${device}-${browser}-${index}`} className="lp-scene-in w-full">
@@ -377,22 +433,34 @@ export default function AppSetupGuide({ onDone }: { onDone?: () => void }) {
 
         <div>
           <p className="text-xs font-semibold text-brand-700">
-            {step.part === 'install' ? `1 · ${t('app.part_install')}` : `2 · ${t('app.part_notify')}`}
+            {step.part === 'install' ? `1 · ${t(ios ? 'app.part_store' : 'app.part_install')}` : `2 · ${t('app.part_notify')}`}
           </p>
           <p className="mt-0.5 text-xs text-[color:var(--ink-3)]">{t('app.step', { index: index + 1, total: steps.length })}</p>
           <p className="mt-2 text-base leading-relaxed text-[color:var(--ink)]">{t(step.textKey)}</p>
-          {step.part === 'notify' && <p className="mt-2 text-xs leading-relaxed text-[color:var(--ink-3)]">{t(hintKey)}</p>}
+          {step.part === 'notify' && !ios && <p className="mt-2 text-xs leading-relaxed text-[color:var(--ink-3)]">{t(hintKey)}</p>}
 
           <div className="mt-4 space-y-2">
-            {step.part === 'install' && installed && onThisDevice && (
+            {ios && (
+              <div className="flex flex-wrap items-center gap-3">
+                <a href={APP_STORE_URL} target="_blank" rel="noreferrer" onClick={() => markDone('app')} className="glass-button-primary">
+                  <Download className="h-4 w-4" /> {t('appstore.button')}
+                </a>
+                {!onThisDevice && (
+                  <img src={`https://api.qrserver.com/v1/create-qr-code/?size=168x168&margin=8&data=${encodeURIComponent(APP_STORE_URL)}`}
+                    alt={t('appstore.qr')} className="h-20 w-20 rounded-md border border-[color:var(--line)]" loading="lazy" />
+                )}
+                {!onThisDevice && <span className="text-xs text-[color:var(--ink-3)]">{t('app.store_scan')}</span>}
+              </div>
+            )}
+            {!ios && step.part === 'install' && installed && onThisDevice && (
               <p className="flex items-center gap-2 text-sm text-emerald-700"><CheckCircle2 className="h-4 w-4" /> {t('app.installed')}</p>
             )}
-            {step.part === 'install' && installable && !installed && onThisDevice && (
+            {!ios && step.part === 'install' && installable && !installed && onThisDevice && (
               <button type="button" onClick={() => void install()} className="glass-button-primary">
                 <Download className="h-4 w-4" /> {t('app.install_now')}
               </button>
             )}
-            {step.part === 'notify' && onThisDevice && (
+            {!ios && step.part === 'notify' && onThisDevice && (
               pushOn ? (
                 <p className="flex items-center gap-2 text-sm text-emerald-700"><CheckCircle2 className="h-4 w-4" /> {t('app.push_on')}</p>
               ) : isOperatorPushSupported() ? (

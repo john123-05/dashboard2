@@ -99,6 +99,7 @@ export function revenueOf(day: OnlineSummary['days'][number], testMode: boolean)
 /* ------------------------------------------------------------------ Shop-Einstellungen */
 
 export interface OnlineCustomization {
+  brand?: { navy?: string; blue?: string; gold?: string; logo_url?: string };
   shop?: { eyebrow?: string; title?: string; text?: string };
   screen?: { eyebrow?: string; headline?: string; qr_label_buy?: string; qr_label_free?: string; speed?: 'slow' | 'normal' | 'fast'; rows?: 1 | 2; show_price?: boolean };
   after?: { enabled?: boolean; title?: string; text?: string; button_label?: string; button_url?: string };
@@ -132,4 +133,23 @@ export async function onlineShopSettings(
   if (!res.ok || !json?.data) throw new Error(json?.error || `HTTP ${res.status}`);
   if (patch) void fetchOnlineSummary(parkId, true).catch(() => undefined);
   return { ...json.data, customization: json.data.customization ?? {} } as OnlineShopSettings;
+}
+
+/** Logo hochladen (PNG/JPEG/WebP bis 1 MB). Liefert die öffentliche Adresse für customization.brand.logo_url. */
+export async function uploadOnlineLogo(parkId: string, file: File): Promise<string> {
+  if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) throw new Error('type');
+  if (file.size > 1_048_576) throw new Error('size');
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += 8192) binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
+  const { data: { session } } = await getFunctionSession();
+  if (!session?.access_token) throw new Error('Authentication required');
+  const res = await fetch(`${EXTERNAL_SUPABASE_URL}/functions/v1/operator-online-photo-settings`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}`, apikey: EXTERNAL_SUPABASE_ANON_KEY },
+    body: JSON.stringify({ park_id: parkId, upload_logo: { type: file.type, data: btoa(binary) } }),
+  });
+  const json = await res.json().catch(() => null);
+  if (!res.ok || !json?.data?.logo_url) throw new Error(json?.error || `HTTP ${res.status}`);
+  return json.data.logo_url as string;
 }

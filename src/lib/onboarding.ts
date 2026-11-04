@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Activity, Aperture, BookOpen, ClipboardList, DollarSign, Gauge, LayoutDashboard, LifeBuoy, Mail, Package, Send,
-  Download, Settings, Share2, ShoppingCart, Smartphone, Sparkles, Store, Tags, Target, UserCog, Users, Wand2, Camera,
+  Settings, Share2, ShoppingCart, Smartphone, Sparkles, Store, Tags, Target, UserCog, Users, Wand2, Camera,
   type LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -35,7 +35,6 @@ export const GUIDE_SECTIONS: GuideSection[] = [
   {
     id: 'start', titleKey: 'ob.section_start', subKey: 'ob.section_start_sub',
     items: [
-      { id: 'appstore', path: '/start', icon: Download, minutes: 2, action: 'appstore' },
       { id: 'app', path: '/start', icon: Smartphone, minutes: 2, action: 'app' },
       { id: 'tour', path: '/start', icon: Sparkles, minutes: 2, action: 'tour' },
     ],

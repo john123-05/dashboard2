@@ -625,6 +625,7 @@ export default function Sidebar({
         {onboarding.total > 0 && (
           <NavLink
             to="/start"
+            data-nav="start"
             onClick={onCloseMobile}
             title={showFull ? undefined : t('ob.nav')}
             className={({ isActive }) =>
