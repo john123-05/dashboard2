@@ -118,7 +118,7 @@ Deno.serve(async (req: Request) => {
       // claiming a photo there only ever writes to `photo_claims` (service-role
       // only table, by design). Without this, those leads never show up here.
       fetchExternal(`photo_claims?select=id,full_name,email,phone,social_entry_id,park_id,marketing_opt_in,claimed_at,created_at,locale,country_code&order=created_at.desc${parkFilter}`),
-      fetchExternal(`online_photo_unlocks?select=id,full_name,email,park_id,marketing_opt_in,created_at&is_test=eq.false&order=created_at.desc${parkFilter}`),
+      fetchExternal(`online_photo_unlocks?select=id,full_name,email,park_id,marketing_opt_in,created_at&is_test=eq.false&email=not.is.null&order=created_at.desc${parkFilter}`),
       // Online-Foto-Käufe über Stripe (Kalahari): E-Mail aus der Checkout-Sitzung, Einwilligung nur per Häkchen.
       fetchExternal(`online_photo_orders?select=id,buyer_name,buyer_email,park_id,marketing_opt_in,paid_at,amount_cents,is_test&status=eq.paid&buyer_email=not.is.null&order=paid_at.desc${parkFilter}`),
     ]);

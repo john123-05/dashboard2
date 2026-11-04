@@ -126,7 +126,8 @@ export default function Purchases() {
         const kioskRows: PurchaseRow[] = ledger.purchases.map((p) => {
           // Online-Foto-Park (Kalahari): Stripe-Kauf oder kostenlose Freischaltung per E-Mail.
           if (online) {
-            const email = p.method === 'email';
+            const email = p.method === 'email' || p.method === 'voucher';
+            const voucher = p.method === 'voucher';
             return {
               id: `${p.method}-${p.sold_at}-${p.bild_nr ?? ''}`,
               source: 'kiosk' as const,
@@ -136,11 +137,11 @@ export default function Purchases() {
               amount_kind: 'confirmed' as const,
               currency: parkCurrency(parkId).toUpperCase(),
               status: email ? 'claimed' : 'completed',
-              payment_method: email ? t('online.pay_email') : p.card_scheme ? `${t('online.pay_stripe')} · ${p.card_scheme.replace('Stripe · ', '')}`.replace(' · Stripe', '') : t('online.pay_stripe'),
+              payment_method: voucher ? t('online.pay_voucher') : email ? t('online.pay_email') : p.card_scheme ? `${t('online.pay_stripe')} · ${p.card_scheme.replace('Stripe · ', '')}`.replace(' · Stripe', '') : t('online.pay_stripe'),
               reference: p.bild_nr ? t('purchases.photo_ref', { no: p.bild_nr }) : '–',
               purchased_at: p.sold_at,
-              customer_or_device: p.claimed_email || p.claimed_name || t('online.paid_stripe'),
-              description: email ? t('online.unlock_desc') : t('online.sold_desc'),
+              customer_or_device: p.claimed_email || p.claimed_name || (voucher ? t('online.pay_voucher') : t('online.paid_stripe')),
+              description: voucher ? t('online.voucher_desc') : email ? t('online.unlock_desc') : t('online.sold_desc'),
             };
           }
           const marke = p.method === 'karte' ? p.card_scheme : null;

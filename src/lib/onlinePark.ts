@@ -40,8 +40,9 @@ export interface OnlineSummary {
     enabled: boolean;
     path: string;
     stripe_connected: boolean;
-    stripe_onboarding_url?: string | null;
-    stripe_onboarding_updated_at?: string | null;
+    stripe_key_hint?: string | null;
+    stripe_key_set_at?: string | null;
+    offers?: OnlineOffers;
     shop_url: string;
     screen_url: string;
   } | null;
@@ -59,8 +60,8 @@ export interface OnlineSummary {
 }
 
 type AssetRef = { claim_code: string; photo_number?: string | null; captured_at: string } | null;
-export interface OnlineOrder { id: string; paid_at: string; amount_cents: number; refunded_cents: number; currency?: string; is_test: boolean; asset: AssetRef }
-export interface OnlineUnlock { id: string; created_at: string; email: string | null; full_name: string | null; is_test: boolean; asset: AssetRef }
+export interface OnlineOrder { id: string; paid_at: string; amount_cents: number; refunded_cents: number; currency?: string; is_test: boolean; photo_count?: number; offer_label?: string | null; asset: AssetRef }
+export interface OnlineUnlock { id: string; created_at: string; email: string | null; full_name: string | null; is_test: boolean; source?: 'email' | 'voucher'; asset: AssetRef }
 export interface OnlinePhoto { id: string; code: string; number: string | null; captured_at: string; is_test: boolean; image_url: string | null; is_paid: boolean; claim_url: string }
 
 export async function callOnlinePark<T>(parkId: string, body: Record<string, unknown> = {}): Promise<T> {
@@ -106,6 +107,11 @@ export interface OnlineCustomization {
   screen?: { eyebrow?: string; headline?: string; qr_label_buy?: string; qr_label_free?: string; speed?: 'slow' | 'normal' | 'fast'; rows?: 1 | 2; show_price?: boolean };
   after?: { enabled?: boolean; title?: string; text?: string; button_label?: string; button_url?: string };
 }
+export interface OnlinePack { photos: number; price_cents: number }
+/** Verkaufsarten: Einzelfoto, Pakete („3 Fotos für 12 $“), Codes (z. B. mit der Eintrittskarte verkauft). */
+export interface OnlineOffers { single: boolean; packages: OnlinePack[]; codes: boolean }
+export const DEFAULT_OFFERS: OnlineOffers = { single: true, packages: [], codes: false };
+
 export interface OnlineShopSettings {
   name: string;
   path: string;
@@ -115,6 +121,10 @@ export interface OnlineShopSettings {
   is_test: boolean;
   enabled: boolean;
   customization: OnlineCustomization;
+  offers: OnlineOffers;
+  stripe_connected: boolean;
+  stripe_key_hint: string | null;
+  stripe_key_set_at: string | null;
   shop_url: string;
   screen_url: string;
 }
@@ -122,7 +132,7 @@ export interface OnlineShopSettings {
 /** Lesen (ohne patch) oder ändern (nur Parkinhaber): Freischaltart, Preis, Texte der Gästeseiten. */
 export async function onlineShopSettings(
   parkId: string,
-  patch?: { unlock_mode?: 'purchase' | 'email'; price_cents?: number; customization?: OnlineCustomization },
+  patch?: { unlock_mode?: 'purchase' | 'email'; price_cents?: number; customization?: OnlineCustomization; offers?: OnlineOffers; stripe_key?: string | null },
 ): Promise<OnlineShopSettings> {
   const { data: { session } } = await getFunctionSession();
   if (!session?.access_token) throw new Error('Authentication required');
@@ -134,7 +144,7 @@ export async function onlineShopSettings(
   const json = await res.json().catch(() => null);
   if (!res.ok || !json?.data) throw new Error(json?.error || `HTTP ${res.status}`);
   if (patch) void fetchOnlineSummary(parkId, true).catch(() => undefined);
-  return { ...json.data, customization: json.data.customization ?? {} } as OnlineShopSettings;
+  return { ...json.data, customization: json.data.customization ?? {}, offers: json.data.offers ?? DEFAULT_OFFERS } as OnlineShopSettings;
 }
 
 /** Logo hochladen (PNG/JPEG/WebP bis 1 MB). Liefert die öffentliche Adresse für customization.brand.logo_url. */
@@ -154,4 +164,30 @@ export async function uploadOnlineLogo(parkId: string, file: File): Promise<stri
   const json = await res.json().catch(() => null);
   if (!res.ok || !json?.data?.logo_url) throw new Error(json?.error || `HTTP ${res.status}`);
   return json.data.logo_url as string;
+}
+
+/* ------------------------------------------------------------------ Codes / Gutscheine */
+
+export interface VoucherBatch {
+  id: string; label: string; kind: 'photos' | 'day'; photos: number | null;
+  valid_from: string | null; valid_until: string | null; created_at: string;
+  total: number; used: number; redeemed_photos: number;
+}
+export type VoucherRequest =
+  | { action: 'list' }
+  | { action: 'create'; label: string; kind: 'photos' | 'day'; photos?: number; count: number; valid_from?: string; valid_until?: string }
+  | { action: 'export'; batch_id: string }
+  | { action: 'delete'; batch_id: string };
+
+export async function voucherCall<T>(parkId: string, codes: VoucherRequest): Promise<T> {
+  const { data: { session } } = await getFunctionSession();
+  if (!session?.access_token) throw new Error('Authentication required');
+  const res = await fetch(`${EXTERNAL_SUPABASE_URL}/functions/v1/operator-online-photo-settings`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}`, apikey: EXTERNAL_SUPABASE_ANON_KEY },
+    body: JSON.stringify({ park_id: parkId, codes }),
+  });
+  const json = await res.json().catch(() => null);
+  if (!res.ok || !json?.data) throw new Error(json?.error || `HTTP ${res.status}`);
+  return json.data as T;
 }

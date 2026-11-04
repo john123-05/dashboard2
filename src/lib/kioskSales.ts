@@ -690,12 +690,12 @@ async function onlineLedger(parkId: string, opts: { from?: string; to?: string }
   const base = { machine_id: machine.machine_id, machine_label: machine.machine_label, print_count: null, method_source: 'online', receipt_no: null, auth_code: null, claimed_name: null };
   const purchases: KioskLedgerPurchase[] = [
     ...data.orders.filter((o) => testMode || !o.is_test).map((o) => ({
-      ...base, sold_at: o.paid_at, sold_local: null, bild_nr: o.asset?.photo_number ?? null, method: 'online',
-      card_scheme: o.is_test ? 'Stripe · Test' : 'Stripe', amount_cents: o.amount_cents - o.refunded_cents,
+      ...base, sold_at: o.paid_at, sold_local: null, bild_nr: o.asset?.photo_number ?? null, method: 'online', print_count: o.photo_count ?? 1,
+      card_scheme: `${o.is_test ? 'Stripe · Test' : 'Stripe'}${(o.photo_count ?? 1) > 1 ? ` · ${o.photo_count} photos` : ''}`, amount_cents: o.amount_cents - o.refunded_cents,
       claimed_email: null, photo_captured_at: o.asset?.captured_at ?? null,
     })),
     ...data.unlocks.filter((u) => testMode || !u.is_test).map((u) => ({
-      ...base, sold_at: u.created_at, sold_local: null, bild_nr: u.asset?.photo_number ?? null, method: 'email',
+      ...base, sold_at: u.created_at, sold_local: null, bild_nr: u.asset?.photo_number ?? null, method: u.source === 'voucher' ? 'voucher' : 'email',
       card_scheme: null, amount_cents: 0, claimed_email: u.email, claimed_name: u.full_name, photo_captured_at: u.asset?.captured_at ?? null,
     })),
   ].sort((a, b) => b.sold_at.localeCompare(a.sold_at));

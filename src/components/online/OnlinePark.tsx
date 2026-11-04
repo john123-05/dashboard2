@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { usePark } from '../../contexts/ParkContext';
 import { useI18n } from '../../lib/i18n';
-import { fetchOnlineSummary, isOnlinePark, type DeliveryStep, type OnlineSummary } from '../../lib/onlinePark';
+import { fetchOnlineSummary, isOnlinePark, onlineShopSettings, type DeliveryStep, type OnlineSummary } from '../../lib/onlinePark';
 import Modal from '../ui/Modal';
 import ProgressRing from '../onboarding/ProgressRing';
 
@@ -103,13 +103,13 @@ function Steps({ steps }: { steps: DeliveryStep[] }) {
 
 /* ------------------------------------------------------------------ Stripe */
 
-type StripeScene = 'link' | 'signin' | 'business' | 'bank' | 'done';
+type StripeScene = 'open' | 'create' | 'perms' | 'copy' | 'done';
 const STRIPE_STEPS: { scene: StripeScene; title: string; text: string }[] = [
-  { scene: 'link', title: 'Open your Stripe link', text: 'As soon as we have created it, your secure link appears right here. Tap “Open Stripe setup”. Nothing to install.' },
-  { scene: 'signin', title: 'Sign in or create your Stripe account', text: 'Use your business email. If Kalahari already uses Stripe, simply sign in to that account.' },
-  { scene: 'business', title: 'Enter your business details', text: 'Legal business name, EIN, address and one representative. Stripe asks this by law to verify the business.' },
-  { scene: 'bank', title: 'Add the bank account for payouts', text: 'This is where Stripe sends the money from photo sales, usually within 2 business days.' },
-  { scene: 'done', title: 'Done – it switches to “Connected”', text: 'From then on every guest payment goes straight into your own Stripe account. Liftpictures takes no commission.' },
+  { scene: 'open', title: 'Open Stripe → Developers → API keys', text: 'Sign in to your own Stripe account (or create one for Kalahari). The button below opens the right page.' },
+  { scene: 'create', title: 'Create a restricted key', text: 'Click “Create restricted key”. Name it “Liftpictures photos” so you can find it later.' },
+  { scene: 'perms', title: 'Allow three things, nothing else', text: 'Checkout Sessions: Write · PaymentIntents: Read · Charges: Read. Everything else stays “None”.' },
+  { scene: 'copy', title: 'Copy the key and paste it here', text: 'It starts with rk_live_. Paste it into the field below and save. We check it with Stripe right away.' },
+  { scene: 'done', title: 'Done – it switches to “Connected”', text: 'Every guest payment now goes straight into your Stripe account. Liftpictures takes no commission and never sees your bank details.' },
 ];
 
 /** Markiertes Ziel wie in der App-Anleitung: Rahmen pulsiert, ein Zeiger „tippt“. */
@@ -137,50 +137,48 @@ function StripeWindow({ address, children }: { address: string; children: ReactN
   );
 }
 function StripeSketch({ scene }: { scene: StripeScene }) {
-  const stripe = <span className="font-bold tracking-tight text-[#635bff]">stripe</span>;
-  const field = (label: string) => (
-    <div className="space-y-0.5"><span className="text-slate-500">{label}</span><span className="block h-4 rounded border border-slate-200 bg-white" /></div>
-  );
+  const purple = 'bg-[#635bff] text-white';
+  const row = (label: string, value: string, hot?: boolean) => {
+    const v = <span className={`rounded px-1.5 py-0.5 ${value === 'None' ? 'bg-slate-100 text-slate-500' : purple}`}>{value}</span>;
+    return <div className="flex items-center justify-between border-b border-slate-100 py-1"><span>{label}</span>{hot ? <Hot>{v}</Hot> : v}</div>;
+  };
   switch (scene) {
-    case 'link':
+    case 'open':
+      return (
+        <StripeWindow address="dashboard.stripe.com">
+          <div className="flex gap-3">
+            <div className="w-20 space-y-1.5">{bar('w-full')}{bar('w-3/4')}{bar('w-5/6')}<Hot><span className="font-semibold text-slate-800">Developers</span></Hot></div>
+            <div className="flex-1 space-y-1.5"><p className="font-semibold text-slate-800">API keys</p>{bar('w-full')}{bar('w-2/3')}</div>
+          </div>
+        </StripeWindow>
+      );
+    case 'create':
+      return (
+        <StripeWindow address="dashboard.stripe.com/apikeys">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between"><p className="font-semibold text-slate-800">Restricted keys</p><Hot><span className={`rounded px-2 py-0.5 font-semibold ${purple}`}>+ Create restricted key</span></Hot></div>
+            {bar('w-full')}{bar('w-3/4')}
+          </div>
+        </StripeWindow>
+      );
+    case 'perms':
+      return (
+        <StripeWindow address="dashboard.stripe.com/apikeys/create">
+          <div className="space-y-0.5">
+            {row('Checkout Sessions', 'Write', true)}
+            {row('PaymentIntents', 'Read')}
+            {row('Charges', 'Read')}
+            {row('Customers', 'None')}
+          </div>
+        </StripeWindow>
+      );
+    case 'copy':
       return (
         <StripeWindow address="dashboard-liftpictures.com/start">
           <div className="space-y-2">
-            <p className="font-semibold text-slate-800">Stripe payouts</p>
-            <div className="rounded-md border border-emerald-200 bg-emerald-50 p-2 text-emerald-800">Your Stripe link is ready</div>
-            <Hot><span className="rounded-md bg-brand-600 px-2 py-1 font-semibold text-white">Open Stripe setup ↗</span></Hot>
-          </div>
-        </StripeWindow>
-      );
-    case 'signin':
-      return (
-        <StripeWindow address="connect.stripe.com">
-          <div className="mx-auto max-w-[220px] space-y-2">
-            <p className="text-center text-[11px]">{stripe}</p>
-            {field('Email')}
-            <Hot className="w-full"><span className="block w-full rounded bg-[#635bff] py-1 text-center font-semibold text-white">Continue</span></Hot>
-          </div>
-        </StripeWindow>
-      );
-    case 'business':
-      return (
-        <StripeWindow address="connect.stripe.com">
-          <div className="mx-auto max-w-[240px] space-y-1.5">
-            <p className="font-semibold text-slate-800">Tell us about your business</p>
-            {field('Legal business name')}
-            <div className="grid grid-cols-2 gap-1.5">{field('EIN')}{field('Address')}</div>
-            <div className="flex justify-end"><Hot><span className="rounded bg-[#635bff] px-2 py-0.5 font-semibold text-white">Continue</span></Hot></div>
-          </div>
-        </StripeWindow>
-      );
-    case 'bank':
-      return (
-        <StripeWindow address="connect.stripe.com">
-          <div className="mx-auto max-w-[240px] space-y-1.5">
-            <p className="font-semibold text-slate-800">Add a bank account for payouts</p>
-            <div className="grid grid-cols-2 gap-1.5">{field('Routing number')}{field('Account number')}</div>
-            {bar('w-2/3')}
-            <div className="flex justify-end"><Hot><span className="rounded bg-[#635bff] px-2 py-0.5 font-semibold text-white">Save</span></Hot></div>
+            <p className="font-semibold text-slate-800">Your Stripe key</p>
+            <span className="block h-5 rounded border border-slate-300 bg-white px-1.5 font-mono leading-5 text-slate-500">rk_live_51Q…</span>
+            <Hot><span className="rounded-md bg-brand-600 px-2 py-1 font-semibold text-white">Save & connect</span></Hot>
           </div>
         </StripeWindow>
       );
@@ -197,10 +195,15 @@ function StripeSketch({ scene }: { scene: StripeScene }) {
   }
 }
 
-/** Stand + Link + bewegte Schritt-für-Schritt-Anleitung (wie „Liftbase als App“). */
-export function StripeGuide({ connected, testMode, link }: { connected: boolean; testMode: boolean; link?: string | null }) {
-  const [index, setIndex] = useState(link ? 0 : 0);
+/** Stand + Schlüssel-Feld + bewegte Schritt-für-Schritt-Anleitung (wie „Liftbase als App“). */
+export function StripeGuide({ parkId, connected, testMode, keyHint }: { parkId: string | null; connected: boolean; testMode: boolean; keyHint?: string | null }) {
+  const [index, setIndex] = useState(0);
   const [auto, setAuto] = useState(true);
+  const [key, setKey] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [state, setState] = useState({ connected, testMode, keyHint: keyHint ?? null });
+  useEffect(() => { setState({ connected, testMode, keyHint: keyHint ?? null }); }, [connected, testMode, keyHint]);
   useEffect(() => {
     if (!auto || index >= STRIPE_STEPS.length - 1) return;
     const timer = window.setTimeout(() => setIndex((i) => Math.min(STRIPE_STEPS.length - 1, i + 1)), 4500);
@@ -208,32 +211,50 @@ export function StripeGuide({ connected, testMode, link }: { connected: boolean;
   }, [auto, index]);
   const go = (n: number) => { setAuto(false); setIndex(Math.max(0, Math.min(STRIPE_STEPS.length - 1, n))); };
   const step = STRIPE_STEPS[index];
+
+  async function save(next: string | null) {
+    if (!parkId) return;
+    setBusy(true); setMsg(null);
+    try {
+      const r = await onlineShopSettings(parkId, { stripe_key: next });
+      setState({ connected: r.stripe_connected, testMode: r.is_test, keyHint: r.stripe_key_hint });
+      setKey('');
+      setMsg({ ok: true, text: next ? 'Connected. Guest payments now go to your Stripe account.' : 'Disconnected. The shop is back in test mode.' });
+    } catch (e) {
+      setMsg({ ok: false, text: e instanceof Error && !/^HTTP/.test(e.message) ? (e.message === 'Park owner required' ? 'Only the park owner can connect Stripe.' : e.message) : 'Could not save. Please try again.' });
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="space-y-4">
-      {connected ? (
-        <div className="flex items-start gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
-          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
-          <p>Your Stripe account is connected. Guest payments go directly to you.</p>
-        </div>
-      ) : link ? (
-        <div className="flex flex-col gap-3 rounded-lg border border-brand-200 bg-brand-50/70 p-4 sm:flex-row sm:items-center">
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-[color:var(--ink)]">Your Stripe link is ready</p>
-            <p className="text-sm text-[color:var(--ink-2)]">Open it now and follow the steps below. It takes about 10 minutes.</p>
-          </div>
-          <a href={link} target="_blank" rel="noreferrer" className="glass-button-primary justify-center">
-            Open Stripe setup <ExternalLink className="h-3.5 w-3.5" />
-          </a>
+      {state.connected ? (
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
+          <p className="min-w-0 flex-1">
+            Connected to your Stripe account <span className="font-mono">{state.keyHint}</span>.
+            {state.testMode ? ' This is a test key: no real money is charged.' : ' Live: guests pay real money straight to you.'}
+          </p>
+          <button type="button" disabled={busy} onClick={() => { if (window.confirm('Disconnect Stripe? The shop goes back to test mode.')) void save(null); }} className="text-xs font-medium underline">Disconnect</button>
         </div>
       ) : (
-        <div className="flex items-start gap-3 rounded-lg border border-[color:var(--line)] bg-slate-50 p-3 text-sm text-[color:var(--ink-2)]">
-          <CreditCard className="mt-0.5 h-4 w-4 shrink-0" />
-          <p>
-            We will create a secure Stripe link for you. It will appear right here, together with a notice in your dashboard.
+        <div className="rounded-lg border border-brand-200 bg-brand-50/60 p-4">
+          <p className="text-sm font-semibold text-[color:var(--ink)]">Connect your own Stripe account</p>
+          <p className="mt-0.5 text-sm text-[color:var(--ink-2)]">
+            About 5 minutes. Follow the steps below, then paste your restricted key here.
             {testMode && ' Until then the shop runs in test mode: no real money is charged.'}
           </p>
+          <form className="mt-3 flex flex-col gap-2 sm:flex-row" onSubmit={(e) => { e.preventDefault(); if (key.trim()) void save(key.trim()); }}>
+            <input className="glass-input min-w-0 flex-1 font-mono text-sm" value={key} onChange={(e) => setKey(e.target.value)} placeholder="rk_live_…" autoComplete="off" spellCheck={false} aria-label="Stripe restricted key" />
+            <button className="glass-button-primary justify-center" disabled={busy || !key.trim()}>{busy ? 'Checking with Stripe…' : 'Save & connect'}</button>
+          </form>
+          <a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-brand-700 hover:underline">
+            Open Stripe API keys <ExternalLink className="h-3 w-3" />
+          </a>
         </div>
       )}
+      {msg && <p role="status" className={`rounded-lg px-3 py-2 text-sm ${msg.ok ? 'bg-emerald-50 text-emerald-800' : 'bg-rose-50 text-rose-700'}`}>{msg.text}</p>}
 
       <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] sm:items-center">
         <div className="flex min-h-[230px] items-center justify-center rounded-xl bg-slate-50 p-4">
@@ -275,7 +296,6 @@ export function StripeSetupCard() {
   const { parkId } = usePark();
   const { data } = useOnlineSummary(parkId);
   const connected = Boolean(data?.shop?.stripe_connected);
-  const link = data?.shop?.stripe_onboarding_url ?? null;
   const [open, setOpen] = useState<boolean | null>(null);
   useEffect(() => {
     if (window.location.hash === '#stripe') {
@@ -295,15 +315,15 @@ export function StripeSetupCard() {
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-2 text-base font-semibold text-[color:var(--ink)]">
             Stripe payouts – get paid directly
-            {!connected && link && <span className="rounded-full bg-brand-600 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">Link ready</span>}
+            {connected && <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700 ring-1 ring-emerald-200">Connected</span>}
           </span>
-          <span className="block text-xs text-[color:var(--ink-3)]">About 10 minutes: connect your Stripe account, guest payments go straight to your bank.</span>
+          <span className="block text-xs text-[color:var(--ink-3)]">About 5 minutes: connect your own Stripe account, guest payments go straight to your bank.</span>
         </span>
         <ChevronDown className={`h-4 w-4 shrink-0 text-[color:var(--ink-3)] transition-transform ${show ? 'rotate-180' : ''}`} />
       </button>
       {show && (
         <div className="border-t border-[color:var(--line)] p-4 sm:p-5">
-          <StripeGuide connected={connected} testMode={Boolean(data.shop.is_test)} link={link} />
+          <StripeGuide parkId={parkId} connected={connected} testMode={Boolean(data.shop.is_test)} keyHint={data.shop.stripe_key_hint} />
         </div>
       )}
     </div>
@@ -356,8 +376,9 @@ function Tabs({ tab, setTab, withStripe = true }: { tab: Tab; setTab: (t: Tab) =
 }
 
 function InstallationBody({ data, tab }: { data: OnlineSummary; tab: Tab }) {
+  const { parkId } = usePark();
   const steps = data.delivery.steps;
-  if (tab === 'stripe') return <StripeGuide connected={Boolean(data.shop?.stripe_connected)} testMode={Boolean(data.shop?.is_test)} link={data.shop?.stripe_onboarding_url} />;
+  if (tab === 'stripe') return <StripeGuide parkId={parkId} connected={Boolean(data.shop?.stripe_connected)} testMode={Boolean(data.shop?.is_test)} keyHint={data.shop?.stripe_key_hint} />;
   if (tab === 'faq') return <OnlineFaq />;
   return (
     <div className="space-y-4">
@@ -425,7 +446,7 @@ export function InstallationHost() {
   const [hint, setHint] = useState(false);
   // Neuer Stand = Schritt geändert ODER Stripe-Link erschienen/verbunden – dann öffnet sich das Fenster einmal.
   const signature = useMemo(() => data
-    ? `${data.delivery.steps.map((s) => `${s.id}:${s.status}`).join('|')}|link:${data.shop?.stripe_onboarding_url ? 1 : 0}|conn:${data.shop?.stripe_connected ? 1 : 0}`
+    ? `${data.delivery.steps.map((s) => `${s.id}:${s.status}`).join('|')}|conn:${data.shop?.stripe_connected ? 1 : 0}`
     : '', [data]);
 
   useEffect(() => {
@@ -440,8 +461,7 @@ export function InstallationHost() {
     try {
       const before = localStorage.getItem(key);
       if (before !== signature) {
-        const linkNew = signature.includes('link:1') && !(before ?? '').includes('link:1') && !signature.includes('conn:1');
-        setOpen(linkNew ? 'stripe' : 'progress');
+        setOpen('progress');
         localStorage.setItem(key, signature);
       }
     } catch { /* ohne Speicher kein automatisches Öffnen */ }

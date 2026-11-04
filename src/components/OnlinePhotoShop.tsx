@@ -9,12 +9,13 @@ import {
   ShoppingBag, Smartphone, Sparkles, Tv, Type, Upload,
 } from 'lucide-react';
 import { useI18n, useLocaleTag } from '../lib/i18n';
-import { onlineShopSettings, uploadOnlineLogo, type OnlineCustomization, type OnlineShopSettings } from '../lib/onlinePark';
+import { DEFAULT_OFFERS, onlineShopSettings, uploadOnlineLogo, type OnlineCustomization, type OnlineOffers, type OnlineShopSettings } from '../lib/onlinePark';
+import VoucherManager from './online/VoucherManager';
 
 type Page = 'shop' | 'screen' | 'unlocked';
 type Device = 'desktop' | 'mobile';
 type Section = 'sale' | 'brand' | 'shop' | 'screen' | 'after';
-type Draft = { unlock_mode: 'purchase' | 'email'; price_cents: number; customization: OnlineCustomization };
+type Draft = { unlock_mode: 'purchase' | 'email'; price_cents: number; customization: OnlineCustomization; offers: OnlineOffers };
 
 // Lokal testbar mit VITE_GUEST_SITE=http://localhost:5193 (Gästeseiten-Repo im Dev-Modus).
 const SITE = (import.meta.env.VITE_GUEST_SITE as string | undefined) ?? 'https://liftpictures-fotos.de';
@@ -41,7 +42,7 @@ function PreviewFrame({ path, page, device, draft }: { path: string; page: Page;
 
   const send = useCallback(() => {
     const d = draftRef.current;
-    frame.current?.contentWindow?.postMessage({ type: 'lp-online-preview', payload: { custom: d.customization, unlock_mode: d.unlock_mode, price_cents: d.price_cents } }, SITE);
+    frame.current?.contentWindow?.postMessage({ type: 'lp-online-preview', payload: { custom: d.customization, unlock_mode: d.unlock_mode, price_cents: d.price_cents, offers: d.offers } }, SITE);
   }, []);
   useEffect(() => { send(); }, [draft, send]);
   useEffect(() => {
@@ -182,7 +183,7 @@ export default function OnlinePhotoShop({ parkId }: { parkId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
 
-  const fromSettings = (d: OnlineShopSettings): Draft => ({ unlock_mode: d.unlock_mode, price_cents: d.price_cents, customization: d.customization ?? {} });
+  const fromSettings = (d: OnlineShopSettings): Draft => ({ unlock_mode: d.unlock_mode, price_cents: d.price_cents, customization: d.customization ?? {}, offers: d.offers ?? DEFAULT_OFFERS });
   useEffect(() => {
     let cancelled = false;
     onlineShopSettings(parkId)
@@ -198,6 +199,14 @@ export default function OnlinePhotoShop({ parkId }: { parkId: string }) {
     setDraft((d) => d && ({ ...d, customization: { ...d.customization, [sectionKey]: { ...(d.customization[sectionKey] ?? {}), [key]: value === '' ? undefined : value } } }));
     setSaved(null);
   }
+  function setOffers(patch: Partial<OnlineOffers>) {
+    setDraft((d) => d && ({ ...d, offers: { ...d.offers, ...patch } }));
+    setSaved(null);
+  }
+  function setPack(i: number, patch: Partial<OnlineOffers['packages'][number]>) {
+    setDraft((d) => d && ({ ...d, offers: { ...d.offers, packages: d.offers.packages.map((p, k) => (k === i ? { ...p, ...patch } : p)) } }));
+    setSaved(null);
+  }
   function openSection(s: Section | null) {
     setSection(s);
     const p = s ? PAGE_FOR[s] : null;
@@ -209,9 +218,11 @@ export default function OnlinePhotoShop({ parkId }: { parkId: string }) {
     if (!draft || !data) return;
     const cents = Math.round(Number(priceText.replace(',', '.')) * 100);
     if (!(cents >= 100 && cents <= 10000)) { setError(t('shopx.price_range')); openSection('sale'); return; }
+    if (draft.offers.packages.some((p) => p.photos < 2 || p.photos > 20 || p.price_cents < 100 || p.price_cents > 50000)) { setError(t('shopx.pack_invalid_full')); openSection('sale'); return; }
+    if (draft.unlock_mode === 'purchase' && !draft.offers.single && !draft.offers.packages.length) { setError(t('shopx.nothing_to_sell')); openSection('sale'); return; }
     setBusy(true); setError(null);
     try {
-      const next = await onlineShopSettings(parkId, { unlock_mode: draft.unlock_mode, price_cents: cents, customization: draft.customization });
+      const next = await onlineShopSettings(parkId, { unlock_mode: draft.unlock_mode, price_cents: cents, customization: draft.customization, offers: draft.offers });
       setData(next); setDraft(fromSettings(next)); setPriceText((next.price_cents / 100).toFixed(2));
       setSaved(t('shopx.published'));
     } catch (e) {
@@ -245,7 +256,11 @@ export default function OnlinePhotoShop({ parkId }: { parkId: string }) {
   const input = 'glass-input w-full';
   const free = draft.unlock_mode === 'email';
   const summaries: Record<Section, string> = {
-    sale: free ? t('photo_shop.email') : `${t('photo_shop.paid')} · ${money(draft.price_cents)}`,
+    sale: [
+      free ? t('photo_shop.email') : draft.offers.single ? `${t('photo_shop.paid')} · ${money(draft.price_cents)}` : t('photo_shop.paid'),
+      !free && draft.offers.packages.length ? t('shopx.n_packages', { n: draft.offers.packages.length }) : '',
+      draft.offers.codes ? t('shopx.codes_on') : '',
+    ].filter(Boolean).join(' · '),
     brand: brand.logo_url || brand.navy || brand.blue || brand.gold ? t('shopx.brand_custom') : t('shopx.brand_default'),
     shop: shop.title ?? DEFAULTS.shop.title,
     screen: `${t(`shopx.speed_${screen.speed ?? 'normal'}`)} · ${t('shopx.rows')} ${screen.rows ?? 2}`,
@@ -269,15 +284,54 @@ export default function OnlinePhotoShop({ parkId }: { parkId: string }) {
           })}
         </div>
         {!free && (
-          <Field label={`${t('photo_shop.price_label')} (${data.currency})`}>
-            <input className="glass-input w-32" inputMode="decimal" value={priceText}
-              onChange={(e) => {
-                setPriceText(e.target.value);
-                const v = Math.round(Number(e.target.value.replace(',', '.')) * 100);
-                if (v >= 100 && v <= 10000) setDraft({ ...draft, price_cents: v });
-              }} />
-          </Field>
+          <div className="space-y-3 rounded-lg border border-[color:var(--line)] p-3">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-semibold text-[color:var(--ink)]">{t('shopx.single')}</p>
+              <Segmented value={draft.offers.single ? 'on' : 'off'} onChange={(v) => setOffers({ single: v === 'on' })} options={[['off', t('shopx.off')], ['on', t('shopx.on')]]} />
+            </div>
+            <Field label={`${t('photo_shop.price_label')} (${data.currency})`}>
+              <input className="glass-input w-32" inputMode="decimal" value={priceText}
+                onChange={(e) => {
+                  setPriceText(e.target.value);
+                  const v = Math.round(Number(e.target.value.replace(',', '.')) * 100);
+                  if (v >= 100 && v <= 10000) setDraft({ ...draft, price_cents: v });
+                }} />
+            </Field>
+          </div>
         )}
+        {!free && (
+          <div className="space-y-2 rounded-lg border border-[color:var(--line)] p-3">
+            <p className="text-sm font-semibold text-[color:var(--ink)]">{t('shopx.packages')}</p>
+            <p className="text-xs text-[color:var(--ink-3)]">{t('shopx.packages_hint')}</p>
+            {draft.offers.packages.map((pk, i) => (
+              <div key={i} className="flex flex-wrap items-center gap-2 text-sm">
+                <input className="glass-input w-16" inputMode="numeric" value={pk.photos || ''} aria-label={t('shopx.pack_photos')}
+                  onChange={(e) => setPack(i, { photos: Math.max(0, Math.min(20, Number(e.target.value.replace(/\D/g, '')) || 0)) })} />
+                <span className="text-[color:var(--ink-2)]">{t('shopx.pack_for')}</span>
+                <input className="glass-input w-24" inputMode="decimal" defaultValue={(pk.price_cents / 100).toFixed(2)} aria-label={t('shopx.pack_price')}
+                  onChange={(e) => setPack(i, { price_cents: Math.round(Number(e.target.value.replace(',', '.')) * 100) || 0 })} />
+                <span className="text-xs text-[color:var(--ink-3)]">
+                  {pk.photos >= 2 && pk.price_cents >= 100 ? `${money(Math.round(pk.price_cents / pk.photos))} ${t('shopx.per_photo')}` : t('shopx.pack_invalid')}
+                </span>
+                <button type="button" className="ml-auto text-xs text-[color:var(--ink-3)] hover:text-rose-700" onClick={() => setOffers({ packages: draft.offers.packages.filter((_, k) => k !== i) })}>{t('shopx.remove')}</button>
+              </div>
+            ))}
+            {draft.offers.packages.length < 4 && (
+              <button type="button" className="text-xs font-medium text-brand-700 hover:underline"
+                onClick={() => {
+                  const n = (draft.offers.packages[draft.offers.packages.length - 1]?.photos ?? 1) + 2;
+                  setOffers({ packages: [...draft.offers.packages, { photos: Math.min(n, 20), price_cents: Math.round(Math.min(n, 20) * draft.price_cents * 0.8) }] });
+                }}>+ {t('shopx.add_package')}</button>
+            )}
+          </div>
+        )}
+        <div className="space-y-2 rounded-lg border border-[color:var(--line)] p-3">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-semibold text-[color:var(--ink)]">{t('shopx.codes')}</p>
+            <Segmented value={draft.offers.codes ? 'on' : 'off'} onChange={(v) => setOffers({ codes: v === 'on' })} options={[['off', t('shopx.off')], ['on', t('shopx.on')]]} />
+          </div>
+          <p className="text-xs text-[color:var(--ink-3)]">{t('shopx.codes_hint')}</p>
+        </div>
         <p className="text-xs text-[color:var(--ink-3)]">{t('shopx.price_stripe')}</p>
       </Panel>
 
@@ -430,6 +484,7 @@ export default function OnlinePhotoShop({ parkId }: { parkId: string }) {
           </div>
         </section>
       </div>
+      <VoucherManager parkId={parkId} codesOn={data.offers.codes} shopPath={data.path} photoPrice={money(data.price_cents)} onEnable={() => startEditing('sale')} />
     </div>
   );
 }

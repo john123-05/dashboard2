@@ -15,7 +15,8 @@ export default function SetupCard() {
   const { parkId } = usePark();
   const { data: online } = useOnlineSummary(parkId);
   const install = installationLine(online);
-  const stripeLink = online?.shop && !online.shop.stripe_connected ? online.shop.stripe_onboarding_url ?? null : null;
+  // Online-Shop mit Verkauf, aber noch ohne eigenes Stripe-Konto: als nächster wichtiger Schritt zeigen.
+  const stripeLink = online?.shop && !online.shop.stripe_connected && online.shop.unlock_mode === 'purchase' ? '/start#stripe' : null;
   if ((hidden || complete || !next || total === 0) && !install && !stripeLink) return null;
   const NextIcon = next?.icon;
   return (
