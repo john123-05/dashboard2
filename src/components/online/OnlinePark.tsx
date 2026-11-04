@@ -103,8 +103,9 @@ function Steps({ steps }: { steps: DeliveryStep[] }) {
 
 /* ------------------------------------------------------------------ Stripe */
 
-type StripeScene = 'open' | 'create' | 'perms' | 'copy' | 'done';
+type StripeScene = 'signup' | 'open' | 'create' | 'perms' | 'copy' | 'done';
 const STRIPE_STEPS: { scene: StripeScene; title: string; text: string }[] = [
+  { scene: 'signup', title: 'Create your Stripe account (or sign in)', text: 'No Stripe account yet? Create one for Kalahari at stripe.com: business email, legal business name, EIN, address and the bank account for payouts. Takes about 10 minutes. Already using Stripe? Just sign in.' },
   { scene: 'open', title: 'Open Stripe → Developers → API keys', text: 'Sign in to your own Stripe account (or create one for Kalahari). The button below opens the right page.' },
   { scene: 'create', title: 'Create a restricted key', text: 'Click “Create restricted key”. Name it “Liftpictures photos” so you can find it later.' },
   { scene: 'perms', title: 'Allow three things, nothing else', text: 'Checkout Sessions: Write · PaymentIntents: Read · Charges: Read. Everything else stays “None”.' },
@@ -143,6 +144,19 @@ function StripeSketch({ scene }: { scene: StripeScene }) {
     return <div className="flex items-center justify-between border-b border-slate-100 py-1"><span>{label}</span>{hot ? <Hot>{v}</Hot> : v}</div>;
   };
   switch (scene) {
+    case 'signup':
+      return (
+        <StripeWindow address="dashboard.stripe.com/register">
+          <div className="mx-auto max-w-[230px] space-y-1.5">
+            <p className="text-center text-[11px] font-bold tracking-tight text-[#635bff]">stripe</p>
+            <p className="font-semibold text-slate-800">Create your Stripe account</p>
+            {['Email', 'Full name', 'Country: United States'].map((l) => (
+              <div key={l} className="space-y-0.5"><span className="text-slate-500">{l}</span><span className="block h-3.5 rounded border border-slate-200 bg-white" /></div>
+            ))}
+            <Hot className="w-full"><span className={`block w-full rounded py-1 text-center font-semibold ${purple}`}>Create account</span></Hot>
+          </div>
+        </StripeWindow>
+      );
     case 'open':
       return (
         <StripeWindow address="dashboard.stripe.com">
@@ -242,16 +256,21 @@ export function StripeGuide({ parkId, connected, testMode, keyHint }: { parkId: 
         <div className="rounded-lg border border-brand-200 bg-brand-50/60 p-4">
           <p className="text-sm font-semibold text-[color:var(--ink)]">Connect your own Stripe account</p>
           <p className="mt-0.5 text-sm text-[color:var(--ink-2)]">
-            About 5 minutes. Follow the steps below, then paste your restricted key here.
+            About 15 minutes including a new Stripe account. Follow the steps below, then paste your restricted key here.
             {testMode && ' Until then the shop runs in test mode: no real money is charged.'}
           </p>
           <form className="mt-3 flex flex-col gap-2 sm:flex-row" onSubmit={(e) => { e.preventDefault(); if (key.trim()) void save(key.trim()); }}>
             <input className="glass-input min-w-0 flex-1 font-mono text-sm" value={key} onChange={(e) => setKey(e.target.value)} placeholder="rk_live_…" autoComplete="off" spellCheck={false} aria-label="Stripe restricted key" />
             <button className="glass-button-primary justify-center" disabled={busy || !key.trim()}>{busy ? 'Checking with Stripe…' : 'Save & connect'}</button>
           </form>
-          <a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-brand-700 hover:underline">
-            Open Stripe API keys <ExternalLink className="h-3 w-3" />
-          </a>
+          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+            <a href="https://dashboard.stripe.com/register" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-medium text-brand-700 hover:underline">
+              No Stripe account yet? Create one <ExternalLink className="h-3 w-3" />
+            </a>
+            <a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-medium text-brand-700 hover:underline">
+              Open Stripe API keys <ExternalLink className="h-3 w-3" />
+            </a>
+          </div>
         </div>
       )}
       {msg && <p role="status" className={`rounded-lg px-3 py-2 text-sm ${msg.ok ? 'bg-emerald-50 text-emerald-800' : 'bg-rose-50 text-rose-700'}`}>{msg.text}</p>}
@@ -317,7 +336,7 @@ export function StripeSetupCard() {
             Stripe payouts – get paid directly
             {connected && <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700 ring-1 ring-emerald-200">Connected</span>}
           </span>
-          <span className="block text-xs text-[color:var(--ink-3)]">About 5 minutes: connect your own Stripe account, guest payments go straight to your bank.</span>
+          <span className="block text-xs text-[color:var(--ink-3)]">Create or connect your own Stripe account, guest payments go straight to your bank.</span>
         </span>
         <ChevronDown className={`h-4 w-4 shrink-0 text-[color:var(--ink-3)] transition-transform ${show ? 'rotate-180' : ''}`} />
       </button>

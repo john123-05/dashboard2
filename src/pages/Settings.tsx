@@ -4,6 +4,8 @@ import { Save, Loader2, Building2, MapPin, Mountain, Package, Bell, Smartphone, 
 import { supabase } from '../lib/supabase';
 import { getOptionalSourceWarning, invokeEdgeFunction, isEdgeSourceUnavailable } from '../lib/edgeFunctions';
 import { useAuth } from '../contexts/AuthContext';
+import { accentColorForPark } from '../lib/parkBrand';
+import { isOnlinePark } from '../lib/onlinePark';
 import { usePark } from '../contexts/ParkContext';
 import GlassCard from '../components/ui/GlassCard';
 import Modal from '../components/ui/Modal';
@@ -152,7 +154,9 @@ export default function Settings() {
   }, [hash]);
 
   const { profile, currentOrg, memberships, refreshProfile } = useAuth();
+  // Online-Foto-Park (Kalahari): kein Automatenpreis, keine Stripe-Produkte – Preis und Stripe stehen im Online-Shop.
   const { parkId, parkName, refreshKioskState } = usePark();
+  const online = isOnlinePark(parkId);
   const { language, setLanguage, t } = useI18n();
   const [fullName, setFullName] = useState(profile?.full_name || '');
   const [saving, setSaving] = useState(false);
@@ -740,7 +744,7 @@ export default function Settings() {
       <div className="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-10">
         <nav aria-label={t('settings.title')} className="lg:sticky lg:top-6 lg:self-start">
           <div className="flex gap-2 overflow-x-auto pb-1 lg:flex-col lg:gap-0 lg:overflow-visible lg:border-l lg:border-[color:var(--line)] lg:pb-0">
-            {SETTINGS_SECTIONS.map((section) => (
+            {SETTINGS_SECTIONS.filter((section) => !online || !['einstellungen-bildpreis', 'einstellungen-stripe'].includes(section.id)).map((section) => (
               <button
                 key={section.id}
                 type="button"
@@ -783,6 +787,7 @@ export default function Settings() {
           </select>
         </GlassCard>
         </section>
+        {!online && (
         <section id="einstellungen-stripe" className="order-7 scroll-mt-6">
         <GlassCard className="p-6">
           <h3 className="mb-4 text-base font-semibold text-slate-800">{t('settings.stripe_products')}</h3>
@@ -795,6 +800,7 @@ export default function Settings() {
           </button>
         </GlassCard>
         </section>
+        )}
         <section id="einstellungen-profil" className="order-1 scroll-mt-6">
         <GlassCard className="p-6">
           <h3 className="mb-4 text-base font-semibold text-slate-800">{t('settings.profile')}</h3>
@@ -848,9 +854,16 @@ export default function Settings() {
           {parksToRender.length > 0 ? (
             <div className="space-y-4">
               <div className="flex items-center gap-3 rounded-xl bg-slate-50 p-4">
+                {currentOrg?.logo_url ? (
+                  // Logo der Organisation (z. B. weißes Kalahari-Logo): auf der Markenfarbe, damit helle Logos lesbar sind.
+                  <div className="flex h-14 w-24 shrink-0 items-center justify-center rounded-xl p-2" style={{ background: accentColorForPark(selectedPark?.id) }}>
+                    <img src={currentOrg.logo_url} alt={currentOrg.name} className="max-h-full max-w-full object-contain" />
+                  </div>
+                ) : (
                 <div className="rounded-xl bg-brand-100 p-3">
                   <Building2 className="h-5 w-5 text-brand-600" />
                 </div>
+                )}
                 <div>
                   <p className="font-semibold text-slate-800">{selectedPark?.name || t('app.none')}</p>
                   <p className="text-xs text-slate-500">{t('settings.slug')}: {selectedPark?.slug || '-'}</p>
@@ -902,6 +915,7 @@ export default function Settings() {
         </GlassCard>
         </section>
 
+        {!online && (
         <section id="einstellungen-bildpreis" className="order-4 scroll-mt-6">
         <GlassCard className="p-5">
           <div className="flex flex-wrap items-start justify-between gap-4">
@@ -984,6 +998,7 @@ export default function Settings() {
           </div>
         </GlassCard>
         </section>
+        )}
 
         <section id="benachrichtigungen" className="order-6 scroll-mt-6">
         <GlassCard className="p-5">
