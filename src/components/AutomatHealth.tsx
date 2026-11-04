@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import GlassCard from './ui/GlassCard';
 import { usePark } from '../contexts/ParkContext';
-import { benenne } from '../lib/geraeteNamen';
+import { benenne, deviceLabel, devicePurpose } from '../lib/geraeteNamen';
 import { automatFarbe } from '../lib/automatFarben';
 import { EXTERNAL_SUPABASE_URL, EXTERNAL_SUPABASE_ANON_KEY } from '../lib/supabase';
 import { getFunctionSession } from '../lib/functionAuth';
@@ -944,7 +944,7 @@ function Automat({ m, farbe, mehrere, detailed, busyKey, laufend, jetzt, onResta
                   <button
                     type="button"
                     onClick={() => umschalten(e.name)}
-                    title={`${e.name} · ${z.label}`}
+                    title={`${deviceLabel(e.name)} · ${z.label}`}
                     className="group flex w-24 flex-col items-center gap-1.5 text-center"
                   >
                     <span
@@ -955,7 +955,7 @@ function Automat({ m, farbe, mehrere, detailed, busyKey, laufend, jetzt, onResta
                       <Icon className="h-4 w-4" />
                       <span className={`absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full ring-2 ring-white ${z.punkt}`} />
                     </span>
-                    <span className="line-clamp-2 text-[11px] leading-tight text-[color:var(--ink-2)] group-hover:text-[color:var(--ink)]">{e.name}</span>
+                    <span className="line-clamp-2 text-[11px] leading-tight text-[color:var(--ink-2)] group-hover:text-[color:var(--ink)]">{deviceLabel(e.name)}</span>
                     <span className="text-[10px] text-[color:var(--ink-3)]">{z.label}</span>
                   </button>
                 </li>,
@@ -1128,8 +1128,8 @@ function Zeile({
         <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${z.punkt}`} />
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-baseline gap-x-1.5">
-            <span className="text-sm font-semibold text-[color:var(--ink)]">{e.name}</span>
-            {e.tech && <span className="text-[11px] text-[color:var(--ink-3)]">{e.tech}</span>}
+            <span className="text-sm font-semibold text-[color:var(--ink)]">{deviceLabel(e.name)}</span>
+            {e.tech && <span className="text-[11px] text-[color:var(--ink-3)]">{deviceLabel(e.tech)}</span>}
           </span>
           <span className="mt-0.5 block truncate text-xs text-[color:var(--ink-3)]">
             {kurzText(e)}
@@ -1159,7 +1159,7 @@ function Zeile({
 
       {offen && (
         <div className="space-y-2 border-t border-[color:var(--line)] bg-slate-50 px-3.5 py-3 text-xs">
-          {e.purpose && <p className="text-[color:var(--ink-2)]">{e.purpose}</p>}
+          {e.purpose && <p className="text-[color:var(--ink-2)]">{devicePurpose(e.purpose)}</p>}
           {/* Beim Bargeld interessiert nicht die letzte Protokollzeile, sondern
               wie viel Wechselgeld noch da ist und wie bezahlt wurde. */}
           {geld?.bestand && (

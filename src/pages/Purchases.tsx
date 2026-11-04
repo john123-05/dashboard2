@@ -354,7 +354,7 @@ export default function Purchases() {
     },
     {
       key: 'source',
-      label: isKioskPark ? 'Automat' : t('purch2.col_source'),
+      label: isKioskPark ? t('px.machine') : t('purch2.col_source'),
       render: (item: PurchaseRow) => (
         <span
           className={`status-badge ${
@@ -368,7 +368,7 @@ export default function Purchases() {
           {item.source === 'online'
             ? 'Online'
             : item.source === 'kiosk'
-              ? item.machine_label || 'Automat'
+              ? item.machine_label || t('px.machine')
               : t('purch2.source_local')}
         </span>
       ),
@@ -545,8 +545,7 @@ export default function Purchases() {
       />
       {isKioskPark && monatGekuerzt && (
         <p className="text-xs text-amber-600">
-          Dieser Monat hat sehr viele Käufe – es werden die neuesten angezeigt. Für die
-          restlichen einen früheren Monat wählen.
+          {t('px.month_truncated')}
         </p>
       )}
       {detail && (
@@ -563,8 +562,8 @@ export default function Purchases() {
               <span className={`status-badge ${statusColor(detail.status)}`}>{detail.status}</span>
             </DrawerRow>
             <DrawerRow label={t('purchases.f_payment')}>{detail.payment_method || '–'}</DrawerRow>
-            <DrawerRow label={isKioskPark ? 'Automat' : 'Source'}>
-              {detail.source === 'kiosk' ? detail.machine_label || 'Automat' : detail.source === 'online' ? 'Online' : 'Local'}
+            <DrawerRow label={isKioskPark ? t('px.machine') : t('purch2.col_source')}>
+              {detail.source === 'kiosk' ? detail.machine_label || t('px.machine') : detail.source === 'online' ? 'Online' : 'Local'}
             </DrawerRow>
             <DrawerRow label={t('purchases.f_customer')}>{detail.customer_or_device || '–'}</DrawerRow>
             <DrawerRow label={t('purchases.f_reference')}>{detail.reference || '–'}</DrawerRow>

@@ -6,10 +6,12 @@ import { useArticles } from '../lib/ratgeber';
 
 // Ratgeber: Artikelraster (Titelbild + Überschrift), Klick öffnet den Artikel (docs/PRODUKT_PLAN.md, G3).
 export default function Ratgeber() {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const locale = useLocaleTag();
   const { articles: list } = useArticles();
-  const articles = [...list].sort((a, b) => b.date.localeCompare(a.date));
+  // Artikel in der eigenen Sprache zuerst (alle außer Deutsch: Englisch), dann nach Datum.
+  const own = language === 'de' ? 'de' : 'en';
+  const articles = [...list].sort((a, b) => Number(b.lang === own) - Number(a.lang === own) || b.date.localeCompare(a.date));
   return (
     <div className="space-y-8">
       <div>

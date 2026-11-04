@@ -45,7 +45,7 @@ export default function ConfigurationOrders() {
       <div>
         <Link to="/configuration" className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700">
           <ArrowLeft className="h-3.5 w-3.5" />
-          Zurück zur Konfiguration
+          {t('px.back_to_config')}
         </Link>
         <h2 className="mt-2 text-[28px] font-light tracking-tight text-[color:var(--ink)] sm:text-[32px]">{t('orders.title')}</h2>
         <p className="mt-1 text-sm text-slate-500">{t('orders.subtitle')}</p>

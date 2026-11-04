@@ -1418,7 +1418,7 @@ export default function Overview() {
             onClick={() => navigate('/photos')}
             className="glass-button-secondary mt-4 w-full justify-center"
           >
-            Zu den Fotos
+            {t('px.to_photos')}
           </button>
         </GlassCard>
       </div>

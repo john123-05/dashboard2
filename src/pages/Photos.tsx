@@ -65,7 +65,7 @@ export default function Photos() {
   const [kioskConv, setKioskConv] = useState<{ sold: number; taken: number; soldLifetime: number } | null>(null);
   const [kioskDays, setKioskDays] = useState<AggregatedDay[]>([]);
   const [soldLifetime, setSoldLifetime] = useState(0);
-  const [attrName, setAttrName] = useState('Automat');
+  const [attrName, setAttrName] = useState(t('px.machine'));
   const [selectedDate, setSelectedDate] = useState('');
   // Kiosk-only: of the day's buyers, how many completed whatever the park's
   // currently active unlock mode is (email/survey/social) - shown as
@@ -128,16 +128,14 @@ export default function Photos() {
    */
   async function automatAuftrag(automat: Automat, ziel: 'testphoto' | 'camera') {
     const frage = ziel === 'testphoto'
-      ? 'Der Automat nimmt jetzt ein Foto auf und schickt es durch die ganze Kette.\n\nFortfahren?'
-      : 'Die Kamera-Software wird beendet und neu gestartet.\n\n'
-        + 'Waehrenddessen entstehen fuer einige Sekunden keine Fotos. Nur ausfuehren, '
-        + 'wenn gerade niemand faehrt.\n\nFortfahren?';
+      ? t('camera.confirm_test_photo')
+      : t('px.confirm_camera_restart');
     if (!confirm(frage)) return;
 
     setAutomatBusy(`${automat.id}:${ziel}`);
     setBrowseError(null);
     const h = await operatorKopfzeilen();
-    if (!h) { setBrowseError('Deine Sitzung ist abgelaufen. Bitte melde dich neu an.'); setAutomatBusy(null); return; }
+    if (!h) { setBrowseError(t('camera.session_expired_relogin')); setAutomatBusy(null); return; }
 
     try {
       const res = await fetch(ASSETS_URL, {
@@ -150,11 +148,11 @@ export default function Photos() {
         setBrowseError(body?.error || `HTTP ${res.status}`);
       } else {
         setNotice(ziel === 'testphoto'
-          ? 'Testfoto beauftragt. Es dauert bis zu einer Minute, bis es hier erscheint - dann auf "Aktualisieren" tippen. Das Ergebnis steht im Systemzustand, auch wenn kein Bild zustande kam.'
-          : 'Neustart der Kamera-Software beauftragt. Das Ergebnis steht gleich im Systemzustand im Verlauf - auch ein Fehlschlag.');
+          ? t('px.test_ordered')
+          : t('px.restart_ordered'));
       }
     } catch (e) {
-      setBrowseError(e instanceof Error ? e.message : 'Auftrag fehlgeschlagen.');
+      setBrowseError(e instanceof Error ? e.message : t('px.order_failed'));
     }
     setAutomatBusy(null);
   }
@@ -333,7 +331,7 @@ export default function Photos() {
     if (!selectedPhoto) {
       return (
         <div className="flex h-full min-h-[220px] items-center justify-center rounded-xl bg-white/20 p-6 text-center text-sm text-slate-400">
-          Foto auswählen, um es hier groß anzuzeigen.
+          {t('px.pick_photo')}
         </div>
       );
     }
@@ -347,7 +345,7 @@ export default function Photos() {
           <ParkPhotoImg
             src={selectedPhoto.imageUrl}
             parkId={parkId}
-            alt="Ausgewähltes Foto"
+            alt={t('px.selected_photo')}
             className="w-full rounded-lg object-cover"
             boxClassName="aspect-[3/4] w-full rounded-lg bg-slate-900"
             fit="contain"
@@ -393,7 +391,7 @@ export default function Photos() {
               <div className="rounded-2xl bg-white p-3 shadow-sm">
                 <img
                   src={qrImageUrlFor(claimLink)}
-                  alt="QR-Code zum Claim-Link"
+                  alt={t('photos.qr_for_photo')}
                   className="h-[168px] w-[168px] max-w-full"
                   loading="lazy"
                 />
@@ -401,7 +399,7 @@ export default function Photos() {
               <div className="space-y-1 text-center">
                 <p className="text-sm font-semibold text-slate-800">{t('photos.qr_for_photo')}</p>
                 <p className="text-xs leading-relaxed text-slate-500">
-                  Der Gast scannt den Code und landet direkt auf der passenden Claim-Seite mit dem korrekten Bildcode.
+                  {t('px.qr_hint')}
                 </p>
                 {selectedPhoto.externalCode && (
                   <p className="text-[11px] font-medium text-slate-400">
@@ -414,8 +412,7 @@ export default function Photos() {
         )}
 
         <p className="mt-3 text-center text-[11px] leading-relaxed text-slate-400">
-          Claim-Link: der Kunde öffnet ihn und holt sein Foto per E-Mail, auch wenn der gedruckte QR vorher nicht
-          funktioniert hat. Bild-Link: direkter Download.
+          {t('px.links_hint')}
         </p>
       </div>
     );
@@ -435,7 +432,7 @@ export default function Photos() {
         setKioskDays(days);
         setSoldLifetime(days.reduce((sum, d) => sum + d.soldCount, 0));
 
-        let name = parkName || 'Automat';
+        let name = parkName || t('px.machine');
         const attrRes = await invokeEdgeFunction<{ attractions: { name: string; is_active?: boolean }[] }>(
           'external-attractions',
           { query: { park_id: parkId } },
@@ -532,9 +529,9 @@ export default function Photos() {
         ]
       : [{ key: 'empty', value: 1, fill: '#e2e8f0' }];
   const pieData = [
-    { name: 'Gekauft', value: stats.purchased },
-    { name: 'Verfügbar', value: stats.available },
-    { name: 'Abgelaufen', value: stats.expired },
+    { name: t('photos.purchased'), value: stats.purchased },
+    { name: t('photos.available'), value: stats.available },
+    { name: t('px.expired'), value: stats.expired },
   ].filter((d) => d.value > 0);
 
   if (loading) {
@@ -582,7 +579,7 @@ export default function Photos() {
       {isKioskPark && !isStaff && selectedDate && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[color:var(--line)] bg-slate-50 px-4 py-3 backdrop-blur-xl">
           <div>
-            <p className="text-sm font-semibold text-slate-700">Auswertung für {selectedDateLabel}</p>
+            <p className="text-sm font-semibold text-slate-700">{t('px.analysis_for', { date: selectedDateLabel })}</p>
             <p className="text-xs text-slate-400">{t('photos.stats_day_note')}</p>
           </div>
           <div className="flex items-center gap-2">
@@ -617,19 +614,15 @@ export default function Photos() {
       {aufnahmenUnvollstaendig && (
         <div className="rounded-2xl border border-amber-200/70 bg-amber-50/70 p-4 sm:p-5">
           <p className="text-sm font-semibold text-amber-900">
-            Für diesen Tag fehlen Aufnahmen
+            {t('px.missing_title')}
           </p>
           <p className="mt-1 text-sm leading-relaxed text-amber-800">
-            Es sind mehr Fotos verkauft als aufgenommen gemeldet worden — das kann nicht
-            stimmen. Der Automat war an diesem Tag zeitweise ohne Verbindung. Die
-            verkauften Fotos liegen als Dateien vor und wurden vollständig nachgeliefert,
-            die Zahl der Aufnahmen lässt sich nachträglich nicht mehr ermitteln.
+            {t('px.missing_text')}
           </p>
           <p className="mt-2 text-sm text-amber-800">
-            <span className="font-medium">Verlässlich ist:</span>{' '}
-            {formatNumber(stats.purchased)} verkaufte Fotos.{' '}
-            <span className="font-medium">Nicht verlässlich:</span> Aufnahmen, Verfügbar
-            und Conversion — sie werden deshalb nicht angezeigt.
+            <span className="font-medium">{t('px.reliable')}</span>{' '}
+            {t('px.sold_photos', { n: formatNumber(stats.purchased) })}{' '}
+            <span className="font-medium">{t('px.not_reliable')}</span> {t('px.not_reliable_text')}
           </p>
         </div>
       )}
@@ -640,9 +633,9 @@ export default function Photos() {
           value={aufnahmenUnvollstaendig ? '—' : formatNumber(stats.total)}
           subtitle={
             aufnahmenUnvollstaendig
-              ? 'nicht vollständig gemeldet'
+              ? t('px.not_fully_reported')
               : kioskConv
-                ? `Aufnahmen · ${selectedDateLabel}`
+                ? t('px.captures_on', { date: selectedDateLabel })
                 : undefined
           }
           icon={Camera}
@@ -694,10 +687,9 @@ export default function Photos() {
                 // Segment "Gekauft" und saehe damit aus, als waere jede Fahrt
                 // gekauft worden. Lieber die eine Zahl nennen, die stimmt.
                 <div className="rounded-xl bg-slate-50 p-4 text-sm leading-relaxed text-slate-500">
-                  Ohne die Zahl der Aufnahmen lässt sich die Verteilung nicht
-                  darstellen. Gesichert ist nur:{' '}
+                  {t('px.no_distribution')}{' '}
                   <span className="font-medium text-slate-700">
-                    {formatNumber(stats.purchased)} verkaufte Fotos
+                    {t('px.sold_photos', { n: formatNumber(stats.purchased) })}
                   </span>
                   .
                 </div>
@@ -736,9 +728,7 @@ export default function Photos() {
               <div>
                 <h3 className="mb-4 text-base font-semibold text-slate-800">Conversion</h3>
                 <div className="rounded-xl bg-slate-50 p-4 text-sm leading-relaxed text-slate-500">
-                  Für diesen Tag nicht berechenbar. Die Conversion setzt die verkauften
-                  Fotos ins Verhältnis zu den Aufnahmen — und die Aufnahmen wurden an
-                  diesem Tag nicht vollständig gemeldet.
+                  {t('px.no_conversion')}
                 </div>
               </div>
             )}
@@ -875,11 +865,11 @@ export default function Photos() {
                   <p className="mt-1 text-xs text-slate-400">
                     {emailDay.total > 0
                       ? unlockMode === 'survey'
-                        ? `${formatNumber(emailDay.given)} von ${formatNumber(emailDay.total)} Käufern haben die Umfrage ausgefüllt`
+                        ? t('px.buyers_survey', { given: formatNumber(emailDay.given), total: formatNumber(emailDay.total) })
                         : unlockMode === 'social'
-                          ? `${formatNumber(emailDay.given)} von ${formatNumber(emailDay.total)} Käufern freigeschaltet`
-                          : `${formatNumber(emailDay.given)} von ${formatNumber(emailDay.total)} Käufern`
-                      : 'Keine Käufe an diesem Tag'}
+                          ? t('px.buyers_unlocked', { given: formatNumber(emailDay.given), total: formatNumber(emailDay.total) })
+                          : t('px.buyers_of', { given: formatNumber(emailDay.given), total: formatNumber(emailDay.total) })
+                      : t('px.no_purchases_day')}
                   </p>
                 </div>
                 <div className="relative h-16 w-16 shrink-0 sm:h-20 sm:w-20">
@@ -998,7 +988,7 @@ export default function Photos() {
               className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm text-slate-500 hover:text-slate-700"
             >
               <X className="h-4 w-4" />
-              Suche zurücksetzen
+              {t('px.reset_search')}
             </button>
           )}
         </div>
@@ -1013,7 +1003,7 @@ export default function Photos() {
           <div className="order-2 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:order-1 xl:grid-cols-4">
             {!browseLoading && browsePhotos.length === 0 && (
               <div className="col-span-full rounded-xl bg-slate-50 p-6 text-center text-sm text-slate-500">
-                Keine Fotos gefunden.
+                {t('px.no_photos_found')}
               </div>
             )}
             {browsePhotos.map((p) => (
@@ -1054,7 +1044,7 @@ export default function Photos() {
                             : 'bg-sky-50 text-sky-700'
                       }`}
                     >
-                      {p.isTest ? 'kein Umsatz' : p.isPaid ? 'purchased' : 'available'}
+                      {p.isTest ? t('px.no_revenue') : p.isPaid ? t('photos.purchased') : t('photos.available')}
                     </span>
                   </div>
                   {p.speedKmh !== null && (

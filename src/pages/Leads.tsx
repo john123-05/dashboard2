@@ -1259,8 +1259,7 @@ function LeadsContacts({ view }: { view: 'overview' | 'list' }) {
   async function deleteLeadIds(ids: string[]) {
     if (!parkId || ids.length === 0) return;
     const plural = ids.length > 1;
-    const hinweis = '\n\nHinweis: Das löscht den Eintrag der Foto-Freischaltung. Der Freischalt-Link dieses Gastes für das zugehörige Foto funktioniert danach nicht mehr.';
-    if (!confirm((plural ? `${ids.length} E-Mail-Leads wirklich löschen?` : 'Diesen E-Mail-Lead wirklich löschen?') + hinweis)) {
+    if (!confirm((plural ? t('px.delete_leads', { n: ids.length }) : t('px.delete_lead')) + '\n\n' + t('px.delete_lead_note'))) {
       return;
     }
 
@@ -1732,7 +1731,7 @@ function LeadsContacts({ view }: { view: 'overview' | 'list' }) {
         {claimSiteBaseFor(parkId) && (
           <GlassCard className="flex h-[760px] max-h-[calc(100vh-3rem)] flex-col overflow-hidden p-0 xl:sticky xl:top-6 xl:self-start">
             <div className="shrink-0 border-b border-slate-100/90 px-4 py-3">
-              <p className="text-sm font-semibold text-slate-800">Live-Vorschau</p>
+              <p className="text-sm font-semibold text-slate-800">{t('px.live_preview')}</p>
               <p className="text-xs text-slate-500">
                 {t('leads.claim_preview_desc')}
               </p>
@@ -1856,9 +1855,9 @@ function LeadsContacts({ view }: { view: 'overview' | 'list' }) {
             >
               <option value="all">{t('leads.all_periods')}</option>
               <option value="1">{t('leads.today')}</option>
-              <option value="7">7 Tage</option>
-              <option value="30">30 Tage</option>
-              <option value="90">90 Tage</option>
+              <option value="7">{t('px.n_days', { n: 7 })}</option>
+              <option value="30">{t('px.n_days', { n: 30 })}</option>
+              <option value="90">{t('px.n_days', { n: 90 })}</option>
             </select>
             <select
               value={countryFilter}

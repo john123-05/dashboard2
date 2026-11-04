@@ -14,7 +14,7 @@ import GlassCard from '../components/ui/GlassCard';
 import DataTable, { type DataTableColumn } from '../components/ui/DataTable';
 import AutomatHealth, { type HistoryEntry, type Urteil } from '../components/AutomatHealth';
 import { UpgradePageHeader } from '../components/upgrade/UpgradeHero';
-import { benenne, stehtAmAutomaten } from '../lib/geraeteNamen';
+import { benenne, stehtAmAutomaten, historyText } from '../lib/geraeteNamen';
 import { useI18n, useLocaleTag } from '../lib/i18n';
 import { usePark } from '../contexts/ParkContext';
 
@@ -579,8 +579,8 @@ export default function SystemHealth() {
                       h.severity === 'error' ? 'bg-rose-500' : h.severity === 'warning' ? 'bg-amber-500' : 'bg-slate-300'
                     }`} />
                     <div className="min-w-0 flex-1">
-                      <p className="text-[color:var(--ink)]">{h.summary}</p>
-                      {h.detail && <p className="mt-0.5 break-words font-mono text-xs text-[color:var(--ink-3)]">{h.detail}</p>}
+                      <p className="text-[color:var(--ink)]">{historyText(h.summary)}</p>
+                      {h.detail && <p className="mt-0.5 break-words font-mono text-xs text-[color:var(--ink-3)]">{historyText(h.detail)}</p>}
                     </div>
                     <span className="shrink-0 text-xs tabular-nums text-[color:var(--ink-3)]">{formatDateTime(h.occurred_at, locale)}</span>
                   </li>

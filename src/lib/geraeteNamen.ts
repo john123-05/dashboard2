@@ -14,6 +14,8 @@
  * Name ist das, was ein Techniker am Telefon hören will.
  */
 
+import { translate } from './i18n';
+
 export type Quelle = 'automat' | 'server' | 'unbekannt';
 
 export type Benennung = {
@@ -185,4 +187,70 @@ export function benenne(rohname: string | null | undefined): Benennung {
 /** Steht dieses Ding am Automaten? Entscheidet, wo es angezeigt gehört. */
 export function stehtAmAutomaten(name: string | null | undefined): boolean {
   return benenne(name).quelle === 'automat';
+}
+
+/* ------------------------------------------------------------------ Anzeige in anderen Sprachen
+ * Die Namen oben bleiben die internen (deutschen) Schlüssel – der Server blendet z. B. Geräte über diese
+ * Namen aus. Übersetzt wird erst beim Anzeigen. Unbekanntes bleibt, wie es ist.
+ */
+
+const NAME_KEY: Record<string, string> = {
+  'Kamera-Software': 'camera_sw', 'Lichtschranke': 'light_barrier', 'Verkaufsprogramm': 'sales_program',
+  'Münzeinnahmen': 'coin_income', 'Münzprüfer': 'coin_acceptor', 'Kartenterminal-Prüfung': 'terminal_check',
+  'Kartenterminal': 'card_terminal', 'Drucker': 'printer', 'Uploader': 'uploader', 'Statistik-E-Mail': 'stats_mail',
+  'Abholcode': 'pickup_code', 'Internetverbindung': 'internet', 'Anschlüsse': 'ports', 'Speicherplatz': 'disk',
+  'Arbeitsspeicher': 'ram', 'PC-Laufzeit': 'uptime', 'Uhrzeit': 'clock', 'Datenbank': 'database', 'Foto-Ablage': 'photo_storage',
+  'Zahlungsabwicklung': 'payments', 'Bild-Auslieferung': 'delivery', 'Online-Bezahlung': 'online_pay', 'Unbenannt': 'unnamed',
+  'Sonstige Protokolle': 'other_logs', 'Testfoto': 'test_photo', 'Kamera eingestellt': 'camera_set',
+  'Wechselgeld stimmt nicht': 'change_wrong', 'Wechselgeld': 'change', 'Kamera / Lichtschranke': 'camera_barrier',
+  'Neustart fehlgeschlagen': 'restart_failed', 'Testfoto fehlgeschlagen': 'test_failed',
+  'Verkaufsprogramm (Fehler)': 'sales_error', 'Verkaufsprogramm (Ablauf)': 'sales_flow',
+  'Fehlerprotokoll': 'error_log', 'Windows-Drucker': 'win_printer', 'Netzwerk': 'network', 'COM-Schnittstellen': 'com_ports',
+  'Festplatte': 'harddisk', 'Windows-Zeitdienst': 'time_service', 'Tagesbericht': 'daily_report',
+};
+const PURPOSE_KEY: Record<string, string> = Object.fromEntries(
+  VERZEICHNIS.filter((e) => e.zweck && NAME_KEY[e.klar]).map((e) => [e.zweck, `${NAME_KEY[e.klar]}_p`]),
+);
+function tr(key: string, fallback: string, params?: Record<string, string | number>) {
+  const v = translate(`dev.${key}`, params);
+  return v === `dev.${key}` ? fallback : v;
+}
+
+/** Gerätename in der Sprache des Nutzers (auch zusammengesetzte wie „PhotoViewer, Fehlerprotokoll“). */
+export function deviceLabel(name: string | null | undefined): string {
+  const n = (name ?? '').trim();
+  if (!n) return '';
+  if (NAME_KEY[n]) return tr(NAME_KEY[n], n);
+  if (n.includes(', ')) return n.split(', ').map((p) => (NAME_KEY[p] ? tr(NAME_KEY[p], p) : p)).join(', ');
+  return n;
+}
+
+/** Beschreibung („Nimmt das Foto auf …“) in der Sprache des Nutzers. */
+export function devicePurpose(text: string | null | undefined): string {
+  const s = (text ?? '').trim();
+  return PURPOSE_KEY[s] ? tr(PURPOSE_KEY[s], s) : s;
+}
+
+/** Verlaufseintrag des Automaten („Uploader: Stoerung“, „Verbindung nach 31 Minuten …“) übersetzen. */
+export function historyText(text: string | null | undefined): string {
+  let s = (text ?? '').trim();
+  if (!s) return s;
+  let m: RegExpMatchArray | null;
+  if ((m = s.match(/^Verbindung nach (\d+) Minuten wiederhergestellt$/))) return tr('h_reconnected', s, { n: m[1] });
+  if (s === 'Verbindung zum Server verloren') return tr('h_server_lost', s);
+  if (/^Keine Verbindung zum Server/.test(s)) return tr('h_no_server', s);
+  if (s === 'Ein neues Bild wartet auf einen Neustart des Verkaufsprogramms') return tr('h_new_image', s);
+  if ((m = s.match(/^(.+) neu gestartet$/))) return tr('h_restarted', s, { name: deviceLabel(m[1]) });
+  s = s.replace(/^Ursache des Ausfalls:/, tr('h_cause', 'Ursache des Ausfalls:'));
+  if ((m = s.match(/^([^:]+): (.*)$/s))) {
+    const head = deviceLabel(m[1]);
+    let rest = m[2];
+    if (/^St(oe|ö)rung$/.test(rest)) rest = tr('h_fault', rest);
+    else if (rest === 'Warnung') rest = tr('h_warning', rest);
+    else if (rest === 'Verkaufsprogramm ist nicht wieder hochgekommen') rest = tr('h_not_back', rest);
+    else if (/^Kein Bild entstanden\./.test(rest)) rest = tr('h_no_image', rest);
+    else if (/^Testfoto aufgenommen und hochgeladen/.test(rest)) rest = rest.replace(/^Testfoto aufgenommen und hochgeladen/, tr('h_test_ok', 'Testfoto aufgenommen und hochgeladen'));
+    return `${head}: ${rest}`;
+  }
+  return s;
 }
