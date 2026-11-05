@@ -95,7 +95,7 @@ export default function KioskCustomerCard({ parkId, parkName }: { parkId: string
   const [selected, setSelected] = useState(0);
   const m = machines?.[Math.min(selected, (machines?.length ?? 1) - 1)] ?? null;
   const [cfg, setCfg] = useState<KioskConfig>(DEFAULT_CONFIG);
-  const [screen, setScreen] = useState('home');
+  const [screen, setScreen] = useState('gallery');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
   const [vKind, setVKind] = useState<'day' | 'photos'>('day');
@@ -257,7 +257,7 @@ export default function KioskCustomerCard({ parkId, parkName }: { parkId: string
                 <label className="block text-sm text-[color:var(--ink-3)]">{t('kio.park_name')}<input className="glass-input mt-1 py-1.5" maxLength={60} value={cfg.park_name} onChange={(e) => set({ park_name: e.target.value })} /></label>
                 <label className="block text-sm text-[color:var(--ink-3)]">{t('kio.headline')}<input className="glass-input mt-1 py-1.5" maxLength={80} placeholder={t('kio.default_hint')} value={cfg.attract.headline} onChange={(e) => set({ attract: { ...cfg.attract, headline: e.target.value } })} /></label>
                 <label className="block text-sm text-[color:var(--ink-3)]">{t('kio.message_language')}
-                  <select className="glass-input mt-1 py-1.5" value={messageLang} onChange={(e) => setMessageLang(e.target.value as Lang)}>
+                  <select className="glass-input mt-1 py-1.5" aria-label={t('kio.message_language')} value={messageLang} onChange={(e) => setMessageLang(e.target.value as Lang)}>
                     {LANGS.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
                   </select>
                 </label>
