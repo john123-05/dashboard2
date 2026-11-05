@@ -8,6 +8,7 @@ import { accentColorForPark } from '../lib/parkBrand';
 import { isOnlinePark } from '../lib/onlinePark';
 import { usePark } from '../contexts/ParkContext';
 import GlassCard from '../components/ui/GlassCard';
+import ChangePasswordCard from '../components/settings/ChangePasswordCard';
 import Modal from '../components/ui/Modal';
 import { useI18n } from '../lib/i18n';
 import {
@@ -860,6 +861,7 @@ export default function Settings() {
             </button>
           </form>
         </GlassCard>
+        <div className="mt-6"><ChangePasswordCard email={profile?.email} /></div>
         </section>
 
         <section id="einstellungen-organisation" className="order-2 scroll-mt-6">
