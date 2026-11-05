@@ -7,6 +7,7 @@ import OverlayBuilder, { type OpenRequest } from '../components/OverlayBuilder';
 import { UpgradePageHeader } from '../components/upgrade/UpgradeHero';
 import AutomatBranding from '../components/AutomatBranding';
 import PresentationScreenCard from '../components/presentation/PresentationScreenCard';
+import KioskCustomerCard from '../components/kiosk/KioskCustomerCard';
 import { ONLINE_PARKS, isOnlinePark } from '../lib/onlinePark';
 import { useI18n } from '../lib/i18n';
 import { usePark } from '../contexts/ParkContext';
@@ -477,6 +478,7 @@ export default function Personalization() {
       )}
 
       <PresentationScreenCard parkId={parkId} parkSlug={parkId ? ONLINE_PARKS[parkId]?.path ?? null : null} />
+      <KioskCustomerCard parkId={parkId} parkName={parkName} />
 
       {!online && <AutomatBranding onOpenInEditor={openInEditor} />}
 

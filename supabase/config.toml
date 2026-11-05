@@ -103,3 +103,7 @@ verify_jwt = false
 
 [functions.operator-presentation]
 verify_jwt = false
+
+[functions.operator-kiosk]
+# Verkaufsprogramm (Liftpictures Kiosk): Betreiber aendert freigegebene Teile. Operator-Token aus dem anderen Projekt, selbst geprueft.
+verify_jwt = false
