@@ -207,8 +207,15 @@ Deno.serve(async(req)=>{
    return json({park_id:PLOSE_ID,name:settings.shop_name||'Plosebob Foto-Shop',logo:settings.logo_url||'/shop-brands/plose-logo.png',accent:settings.accent_color||'#0B2545',products:products(s).map(publicProduct),countries:COUNTRIES,mode:'sandbox',stripe_ready:testKey,fulfillment_ready:!!Deno.env.get('PRODIGI_SANDBOX_API_KEY')});
   }
   if(action==='photos'){
-   await shop();const date=typeof body.date==='string'?body.date:'';must(!date||/^\d{4}-\d{2}-\d{2}$/.test(date),'Ungültiges Datum.');
+   await shop();
    let q=db.from('photos').select('id,captured_at,source_file_code').eq('park_id',PLOSE_ID).eq('is_test',false);
+   const publicPhoto=(p:any)=>({id:p.id,number:photoNumber(p),capturedAt:p.captured_at,thumb:base+'/preview?id='+p.id});
+   if(body.code!==undefined){
+    must(req.method==='POST'&&typeof body.code==='string'&&/^\d{16}$/.test(body.code),'Ungültiger Bildcode.');
+    const rows=checked(await q.eq('external_code',body.code).limit(2));
+    return json({photos:rows.length===1?rows.map(publicPhoto):[],next:null});
+   }
+   const date=typeof body.date==='string'?body.date:'';must(!date||/^\d{4}-\d{2}-\d{2}$/.test(date),'Ungültiges Datum.');
    if(date){const start=new Date(date+'T00:00:00Z');must(!isNaN(+start)&&start.toISOString().slice(0,10)===date,'Ungültiges Datum.');
     // Resolve Europe/Rome midnight independently at both boundaries (DST).
     const next=new Date(+start+86400000).toISOString().slice(0,10);let from=parkTime(date),to=parkTime(next);
@@ -219,7 +226,7 @@ Deno.serve(async(req)=>{
    if(body.number){must(/^\d{1,8}$/.test(String(body.number)),'Ungültige Bildnummer.');q=q.eq('source_file_code',String(body.number).padStart(4,'0'));}
    if(body.before){must(UUID.test(String(body.before)),'Ungültige Seite.');const cursor=await photo(body.before);q=q.or(`captured_at.lt.${cursor.captured_at},and(captured_at.eq.${cursor.captured_at},id.lt.${cursor.id})`);}
    const rows=checked(await q.order('captured_at',{ascending:false}).order('id',{ascending:false}).limit(25));
-   return json({photos:rows.slice(0,24).map((p:any)=>({id:p.id,number:photoNumber(p),capturedAt:p.captured_at,thumb:base+'/preview?id='+p.id})),next:rows.length>24?rows[23].id:null});
+   return json({photos:rows.slice(0,24).map(publicPhoto),next:rows.length>24?rows[23].id:null});
   }
   must(req.method==='POST','Methode nicht erlaubt.',405);
   if(action==='quote')return json(await makeQuote(req,body));

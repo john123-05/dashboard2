@@ -3076,6 +3076,13 @@ const dict: Record<string, string> = {
     'kio.saved': "Saved – the kiosk picks it up within a few minutes.",
     'kio.save_failed': "Saving failed.",
     'kio.nothing_allowed': "Liftpictures manages these settings for you. Write to us if you would like something changed.",
+    'kio.message_language': "Advert language",
+    'kio.messages': "Advert messages (one per line, up to 30)",
+    'kio.s.scan': "Scan a code",
+    'kio.s.detail': "Photo",
+    'kio.s.print_home': "Delivery",
+    'kio.s.card': "Card",
+    'kio.s.cash': "Cash",
 };
 
 export default dict;

@@ -58,7 +58,7 @@ function diffConfig(base: unknown, value: unknown): unknown {
   return Object.keys(out).length ? out : undefined;
 }
 
-const SCREENS = ['attract', 'home', 'gallery', 'products', 'cart', 'method', 'success'];
+const SCREENS = ['attract', 'gallery', 'scan', 'detail', 'products', 'print_home', 'cart', 'method', 'card', 'cash', 'success'];
 const euro = (c: number) => (c / 100).toFixed(2).replace('.', ',');
 
 function Price({ label, value, onChange }: { label: string; value: number; onChange: (c: number) => void }) {
@@ -101,6 +101,7 @@ export default function KioskCustomerCard({ parkId, parkName }: { parkId: string
   const [vKind, setVKind] = useState<'day' | 'photos'>('day');
   const [vDay, setVDay] = useState(() => new Date().toISOString().slice(0, 10));
   const [vPhotos, setVPhotos] = useState(1);
+  const [messageLang, setMessageLang] = useState<Lang>('de');
   const [vCount, setVCount] = useState(20);
   const [codes, setCodes] = useState<string[]>([]);
   const frame = useRef<HTMLIFrameElement>(null);
@@ -109,15 +110,15 @@ export default function KioskCustomerCard({ parkId, parkName }: { parkId: string
 
   const base = useMemo(() => ({ park_name: parkName || DEFAULT_CONFIG.park_name }), [parkName]);
   useEffect(() => { if (m) { setCfg(mergeConfig(base, m.config)); setMsg(''); setCodes([]); } }, [m, base]);
-  const stored = useMemo(() => (diffConfig(DEFAULT_CONFIG, cfg) ?? {}) as Obj, [cfg]);
+  const stored = useMemo(() => (diffConfig(DEFAULT_CONFIG, mergeConfig(cfg)) ?? {}) as Obj, [cfg]);
   const original = useMemo(() => (m ? (diffConfig(DEFAULT_CONFIG, mergeConfig(base, m.config)) ?? {}) : {}), [m, base]);
   const changed = JSON.stringify(stored) !== JSON.stringify(original);
   const set = (patch: Partial<KioskConfig>) => setCfg((c) => mergeConfig(diffConfig(DEFAULT_CONFIG, c), patch));
 
-  const post = () => frame.current?.contentWindow?.postMessage({ type: 'kiosk-preview', config: cfg }, '*');
+  const post = () => frame.current?.contentWindow?.postMessage({ type: 'kiosk-preview', config: cfg }, location.origin);
   useEffect(() => { post(); }, [cfg]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
-    const on = (e: MessageEvent) => { if ((e.data as { type?: string })?.type === 'kiosk-preview-ready') post(); };
+    const on = (e: MessageEvent) => { if (e.source === frame.current?.contentWindow && e.origin === location.origin && (e.data as { type?: string })?.type === 'kiosk-preview-ready') post(); };
     window.addEventListener('message', on);
     return () => window.removeEventListener('message', on);
   });
@@ -177,7 +178,7 @@ export default function KioskCustomerCard({ parkId, parkName }: { parkId: string
     URL.revokeObjectURL(a.href);
   }
 
-  const th = THEMES[cfg.theme.preset] ?? THEMES.alpine;
+  const th = THEMES[cfg.theme.preset] ?? THEMES.clean;
   const setPack = (i: number, p: Partial<Package>) => set({ packages: cfg.packages.map((x, j) => (j === i ? { ...x, ...p } : x)) });
   const anyAllowed = m.allowed.length > 0;
 
@@ -213,7 +214,7 @@ export default function KioskCustomerCard({ parkId, parkName }: { parkId: string
           <div ref={box} className="w-full">
             <div className="overflow-hidden rounded-xl bg-black shadow-[0_0_0_8px_#1f2933,0_18px_40px_rgba(16,24,40,.3)]" style={{ height: 1080 * scale }}>
               <iframe ref={frame} key={screen} title={t('kio.card_title')} onLoad={post}
-                src={`/kiosk/index.html?preview&nopanel&tier=high&screen=${screen}&lang=${cfg.language}`}
+                src={`/kiosk/index.html?preview&nopanel&tier=high&screen=${screen}&lang=${screen === 'attract' ? messageLang : cfg.language}`}
                 style={{ width: 1920, height: 1080, border: 0, transform: `scale(${scale})`, transformOrigin: '0 0' }} />
             </div>
           </div>
@@ -255,6 +256,17 @@ export default function KioskCustomerCard({ parkId, parkName }: { parkId: string
               <Section title={t('kio.texts')}>
                 <label className="block text-sm text-[color:var(--ink-3)]">{t('kio.park_name')}<input className="glass-input mt-1 py-1.5" maxLength={60} value={cfg.park_name} onChange={(e) => set({ park_name: e.target.value })} /></label>
                 <label className="block text-sm text-[color:var(--ink-3)]">{t('kio.headline')}<input className="glass-input mt-1 py-1.5" maxLength={80} placeholder={t('kio.default_hint')} value={cfg.attract.headline} onChange={(e) => set({ attract: { ...cfg.attract, headline: e.target.value } })} /></label>
+                <label className="block text-sm text-[color:var(--ink-3)]">{t('kio.message_language')}
+                  <select className="glass-input mt-1 py-1.5" value={messageLang} onChange={(e) => setMessageLang(e.target.value as Lang)}>
+                    {LANGS.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+                  </select>
+                </label>
+                <label className="block text-sm text-[color:var(--ink-3)]">{t('kio.messages')}
+                  <textarea className="glass-input mt-1 py-1.5" rows={4} value={cfg.attract.messages[messageLang].join('\n')} onChange={(e) => {
+                    const messages = e.target.value.split('\n').slice(0, 30).map((line) => line.slice(0, 500));
+                    setCfg((c) => ({ ...c, attract: { ...c.attract, messages: { ...c.attract.messages, [messageLang]: messages } } }));
+                  }} />
+                </label>
                 <label className="block text-sm text-[color:var(--ink-3)]">{t('kio.subline')}<input className="glass-input mt-1 py-1.5" maxLength={120} placeholder={t('kio.default_hint')} value={cfg.attract.subline} onChange={(e) => set({ attract: { ...cfg.attract, subline: e.target.value } })} /></label>
               </Section>
             )}
@@ -264,18 +276,18 @@ export default function KioskCustomerCard({ parkId, parkName }: { parkId: string
                   {Object.entries(THEMES).map(([id, x]) => (
                     <button key={id} type="button" onClick={() => set({ theme: { ...cfg.theme, preset: id } })}
                       className={`rounded-lg p-1.5 text-left text-xs font-semibold ring-1 ring-inset ${cfg.theme.preset === id ? 'ring-2 ring-[color:var(--accent,#c2410c)]' : 'ring-[color:var(--line)]'}`}>
-                      <span className="mb-1 block h-6 rounded" style={{ background: `linear-gradient(135deg, ${x.bg}, ${x.bg2} 60%, ${x.brand})` }} />{x.label}
+                      <span className="mb-1 block h-6 rounded" style={{ background: x.bg, borderBottom: `4px solid ${x.brand}` }} />{x.label}
                     </button>
                   ))}
                 </div>
-                {(['brand', 'accent'] as const).map((k) => (
-                  <label key={k} className="flex items-center justify-between text-sm text-[color:var(--ink-3)]">{t(`kio.${k}`)}
-                    <span className="flex items-center gap-2">
-                      <input type="color" value={cfg.theme[k] ?? th[k]} onChange={(e) => set({ theme: { ...cfg.theme, [k]: e.target.value } })} />
-                      {cfg.theme[k] && <button type="button" className="text-xs underline" onClick={() => set({ theme: { ...cfg.theme, [k]: null } })}>{t('kio.reset_color')}</button>}
-                    </span>
-                  </label>
-                ))}
+                <label className="flex items-center justify-between text-sm text-[color:var(--ink-3)]">{t('kio.brand')}
+                  <span className="flex items-center gap-2">
+                    <input type="color" value={cfg.theme.brand ?? cfg.theme.accent ?? th.brand}
+                      onChange={(e) => set({ theme: { ...cfg.theme, brand: e.target.value, accent: null } })} />
+                    {(cfg.theme.brand || cfg.theme.accent) && <button type="button" className="text-xs underline"
+                      onClick={() => set({ theme: { ...cfg.theme, brand: null, accent: null } })}>{t('kio.reset_color')}</button>}
+                  </span>
+                </label>
                 <label className="block text-sm text-[color:var(--ink-3)]">{t('kio.logo')}<input className="glass-input mt-1 py-1.5" placeholder="https://…" value={cfg.theme.logo ?? ''} onChange={(e) => set({ theme: { ...cfg.theme, logo: e.target.value.trim() || null } })} /></label>
               </Section>
             )}

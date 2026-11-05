@@ -3089,6 +3089,13 @@ const dict: Record<string, string> = {
     'kio.saved': "Gespeichert – der Automat übernimmt es in wenigen Minuten.",
     'kio.save_failed': "Speichern fehlgeschlagen.",
     'kio.nothing_allowed': "Die Einstellungen pflegt Liftpictures für dich. Schreib uns, wenn du etwas ändern möchtest.",
+    'kio.message_language': "Sprache der Werbetexte",
+    'kio.messages': "Werbetexte (ein Text pro Zeile, bis zu 30)",
+    'kio.s.scan': "Code scannen",
+    'kio.s.detail': "Foto",
+    'kio.s.print_home': "Lieferung",
+    'kio.s.card': "Karte",
+    'kio.s.cash': "Bargeld",
 };
 
 export default dict;

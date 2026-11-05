@@ -3076,6 +3076,13 @@ const dict: Record<string, string> = {
     'kio.saved': "Opgeslagen – de kiosk neemt het binnen enkele minuten over.",
     'kio.save_failed': "Opslaan mislukt.",
     'kio.nothing_allowed': "Liftpictures beheert deze instellingen voor je. Laat het ons weten als je iets wilt aanpassen.",
+    'kio.message_language': "Taal van de reclameteksten",
+    'kio.messages': "Reclameteksten (één per regel, maximaal 30)",
+    'kio.s.scan': "Code scannen",
+    'kio.s.detail': "Foto",
+    'kio.s.print_home': "Bezorging",
+    'kio.s.card': "Kaart",
+    'kio.s.cash': "Contant",
 };
 
 export default dict;

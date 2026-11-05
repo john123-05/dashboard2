@@ -3076,6 +3076,13 @@ const dict: Record<string, string> = {
     'kio.saved': "Saglabāts – automāts to pārņems dažu minūšu laikā.",
     'kio.save_failed': "Neizdevās saglabāt.",
     'kio.nothing_allowed': "Šos iestatījumus tev pārvalda Liftpictures. Raksti mums, ja vēlies kaut ko mainīt.",
+    'kio.message_language': "Reklāmas teksta valoda",
+    'kio.messages': "Reklāmas teksti (pa vienam rindā, līdz 30)",
+    'kio.s.scan': "Skenēt kodu",
+    'kio.s.detail': "Foto",
+    'kio.s.print_home': "Piegāde",
+    'kio.s.card': "Karte",
+    'kio.s.cash': "Skaidra nauda",
 };
 
 export default dict;

@@ -26,10 +26,10 @@ type Obj = Record<string, unknown>;
 // Teil -> Pfade in den Einstellungen, die der Kunde damit aendern darf.
 const PARTS: Record<string, string[][]> = {
   prices: [['products', 'print', 'price'], ['products', 'digital', 'price'], ['products', 'combo', 'price'], ['packages'], ['currency']],
-  texts: [['park_name'], ['attract', 'headline'], ['attract', 'subline']],
+  texts: [['park_name'], ['attract', 'headline'], ['attract', 'subline'], ['attract', 'messages']],
   design: [['theme']],
   languages: [['language'], ['languages'], ['time_format']],
-  find: [['find']],
+  find: ['just_rode_minutes', 'time', 'number', 'face', 'phone'].map((key) => ['find', key]),
   express: [['express']],
   vouchers: [],
 };
