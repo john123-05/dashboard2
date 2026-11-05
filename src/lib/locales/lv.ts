@@ -370,6 +370,7 @@ const dict: Record<string, string> = {
     'setpw.save': "Saglabāt paroli un sākt",
     'setpw.too_short': "Izmanto vismaz 8 rakstzīmes.",
     'setpw.mismatch': "Abas paroles nesakrīt.",
+    'setpw.weak': "Parole ir pārāk vienkārša. Lūdzu, izmanto garāku ar burtiem, cipariem un simbolu.",
     'setpw.failed': "Paroli neizdevās saglabāt. Lūdzu, mēģini vēlreiz.",
     'setpw.expired_title': "Saite beigusies",
     'setpw.expired_text': "Šī saite vairs nav derīga. Sazinies ar mums, un mēs nosūtīsim jaunu.",

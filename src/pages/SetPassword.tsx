@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useI18n } from '../lib/i18n';
+import { usePark } from '../contexts/ParkContext';
 import LanguagePicker from '../components/layout/LanguagePicker';
 
 const BG = "url('https://xcrxltiiovpoladpaewd.supabase.co/storage/v1/object/public/test/Copy%20of%20Copy%20of%20Photo-%20und%20Videosystems%20since%202006.jpg')";
@@ -14,6 +15,7 @@ const BG = "url('https://xcrxltiiovpoladpaewd.supabase.co/storage/v1/object/publ
 export default function SetPassword() {
   const { t } = useI18n();
   const navigate = useNavigate();
+  const { setPark } = usePark();
   const [email, setEmail] = useState<string | null>(null);
   const [checked, setChecked] = useState(false);
   const [pw, setPw] = useState('');
@@ -44,8 +46,23 @@ export default function SetPassword() {
     if (pw !== pw2) { setError(t('setpw.mismatch')); return; }
     setBusy(true);
     const { error: err } = await supabase.auth.updateUser({ password: pw });
+    if (err) {
+      setBusy(false);
+      // Den echten Grund zeigen (z. B. Passwort zu einfach) - "fehlgeschlagen" allein hilft niemandem.
+      console.error('Passwort festlegen fehlgeschlagen', err);
+      const weak = (err as { code?: string }).code === 'weak_password' || /weak|pwned|character/i.test(err.message);
+      setError(`${weak ? t('setpw.weak') : t('setpw.failed')}${err.message ? ` (${err.message})` : ''}`);
+      return;
+    }
+    // Park gleich auswählen - sonst schickt das Dashboard ohne gewählten Park zurück zur Anmeldung.
+    try {
+      const { data } = await supabase.rpc('my_parks');
+      const parks = (data ?? []) as Array<{ id: string; name: string | null }>;
+      if (parks.length >= 1) setPark(String(parks[0].id), parks[0].name || null);
+    } catch {
+      // ohne Park geht es über die Anmeldeseite, die den Park selbst auswählt
+    }
     setBusy(false);
-    if (err) { setError(t('setpw.failed')); return; }
     navigate('/start', { replace: true });
   }
 

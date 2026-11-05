@@ -370,6 +370,7 @@ const dict: Record<string, string> = {
     'setpw.save': "Wachtwoord opslaan en beginnen",
     'setpw.too_short': "Gebruik minstens 8 tekens.",
     'setpw.mismatch': "De twee wachtwoorden komen niet overeen.",
+    'setpw.weak': "Dit wachtwoord is te eenvoudig. Gebruik een langer wachtwoord met letters, cijfers en een symbool.",
     'setpw.failed': "Het wachtwoord kon niet worden opgeslagen. Probeer het opnieuw.",
     'setpw.expired_title': "Link verlopen",
     'setpw.expired_text': "Deze link is niet meer geldig. Neem contact met ons op, dan sturen we je een nieuwe.",

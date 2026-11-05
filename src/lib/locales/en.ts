@@ -370,6 +370,7 @@ const dict: Record<string, string> = {
     'setpw.save': "Save password and get started",
     'setpw.too_short': "Please use at least 8 characters.",
     'setpw.mismatch': "The two passwords do not match.",
+    'setpw.weak': "This password is too simple. Please use a longer one with letters, numbers and a symbol.",
     'setpw.failed': "The password could not be saved. Please try again.",
     'setpw.expired_title': "Link expired",
     'setpw.expired_text': "This link is no longer valid. Please contact us and we will send you a new one.",
